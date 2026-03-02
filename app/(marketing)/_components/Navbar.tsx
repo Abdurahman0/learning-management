@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 import { Container } from "./Container";
@@ -107,11 +108,11 @@ export function Navbar() {
 
   return (
     <header
-      className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-[0_4px_18px_-16px_rgba(15,23,42,0.35)] backdrop-blur"
+      className="sticky top-0 z-50 border-b border-border bg-background/80 shadow-sm backdrop-blur"
       ref={mobileMenuRef}
     >
       <Container className="flex h-20 items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2.5 font-semibold text-slate-900">
+        <Link href="/" className="flex items-center gap-2.5 font-semibold text-foreground">
           <span
             className={cn(
               "flex size-8 items-center justify-center rounded-xl",
@@ -135,7 +136,7 @@ export function Navbar() {
               aria-expanded={isOpen}
               aria-haspopup="menu"
               onClick={() => setIsOpen((prev) => !prev)}
-              className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
               Practice Tests
               <ChevronDown
@@ -146,7 +147,7 @@ export function Navbar() {
 
             <div
               className={cn(
-                "absolute top-[calc(100%+12px)] left-1/2 z-50 w-[620px] -translate-x-1/2 rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-xl transition-all duration-200",
+                "absolute top-[calc(100%+12px)] left-1/2 z-50 w-[620px] -translate-x-1/2 rounded-2xl border border-border bg-card p-3 shadow-lg ring-1 ring-border/70 backdrop-blur transition-all duration-200",
                 isOpen
                   ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
                   : "pointer-events-none -translate-y-2 scale-[0.98] opacity-0"
@@ -166,14 +167,14 @@ export function Navbar() {
                         key={item.title}
                         href={item.href ?? "#"}
                         role="menuitem"
-                        className="group rounded-xl border border-blue-100 bg-white p-4 transition-colors hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                        className="group rounded-xl border border-border bg-background p-4 shadow-sm transition-colors hover:border-blue-300 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                         onClick={() => setIsOpen(false)}
                       >
                         <div className="mb-3 inline-flex size-9 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
                           <Icon className="size-[18px]" aria-hidden="true" />
                         </div>
-                        <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                        <p className="mt-1 text-sm leading-relaxed text-slate-600">{item.description}</p>
+                        <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
                       </Link>
                     );
                   }
@@ -182,19 +183,19 @@ export function Navbar() {
                     <div
                       key={item.title}
                       aria-disabled="true"
-                      className="cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100/80 p-4 opacity-60"
+                      className="cursor-not-allowed rounded-xl border border-border bg-muted/80 p-4 opacity-75"
                     >
-                      <div className="mb-3 inline-flex size-9 items-center justify-center rounded-lg bg-slate-200 text-slate-500">
+                      <div className="mb-3 inline-flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                         <Icon className="size-[18px]" aria-hidden="true" />
                       </div>
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-slate-700">{item.title}</p>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                        <p className="text-sm font-semibold text-muted-foreground">{item.title}</p>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                           <Lock className="size-3" aria-hidden="true" />
                           Coming soon
                         </span>
                       </div>
-                      <p className="mt-1 text-sm leading-relaxed text-slate-500">{item.description}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
                     </div>
                   );
                 })}
@@ -205,30 +206,31 @@ export function Navbar() {
           <Link
             href="#features"
             onClick={() => setIsOpen(false)}
-            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
-            <Sparkles className="size-4 text-slate-500" aria-hidden="true" />
+            <Sparkles className="size-4 text-muted-foreground" aria-hidden="true" />
             Features
           </Link>
           <Link
             href="#reviews"
             onClick={() => setIsOpen(false)}
-            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
-            <MessageSquareQuote className="size-4 text-slate-500" aria-hidden="true" />
+            <MessageSquareQuote className="size-4 text-muted-foreground" aria-hidden="true" />
             Reviews
           </Link>
           <Link
             href="#pricing"
             onClick={() => setIsOpen(false)}
-            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
-            <WalletCards className="size-4 text-slate-500" aria-hidden="true" />
+            <WalletCards className="size-4 text-muted-foreground" aria-hidden="true" />
             Pricing
           </Link>
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
           <Button asChild className="hidden rounded-xl bg-indigo-600 px-5 hover:bg-indigo-700 sm:inline-flex">
             <Link href="/register">Register</Link>
           </Button>
@@ -237,7 +239,7 @@ export function Navbar() {
             aria-label="Toggle mobile menu"
             aria-expanded={isMobileOpen}
             onClick={() => setIsMobileOpen((prev) => !prev)}
-            className="inline-flex size-10 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 lg:hidden"
+            className="inline-flex size-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 lg:hidden"
           >
             {isMobileOpen ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
           </button>
@@ -246,55 +248,55 @@ export function Navbar() {
 
       <div
         className={cn(
-          "border-t border-slate-200 bg-white/95 px-4 py-4 shadow-sm backdrop-blur lg:hidden",
+          "border-t border-border bg-background/95 px-4 py-4 shadow-sm backdrop-blur lg:hidden",
           isMobileOpen ? "block" : "hidden"
         )}
       >
         <nav aria-label="Mobile primary" className="mx-auto flex max-w-[1400px] flex-col gap-2">
-          <p className="px-2 pt-1 pb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase">
+          <p className="px-2 pt-1 pb-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
             Practice Tests
           </p>
           <Link
             href="/reading"
             onClick={() => setIsMobileOpen(false)}
-            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/60"
           >
             Reading Test
           </Link>
           <Link
             href="/listening"
             onClick={() => setIsMobileOpen(false)}
-            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/60"
           >
             Listening Test
           </Link>
-          <p className="cursor-not-allowed rounded-xl px-3 py-2 text-sm font-medium text-slate-400">
+          <p className="cursor-not-allowed rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground">
             Writing Test (Coming soon)
           </p>
-          <p className="cursor-not-allowed rounded-xl px-3 py-2 text-sm font-medium text-slate-400">
+          <p className="cursor-not-allowed rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground">
             Speaking Test (Coming soon)
           </p>
 
-          <div className="my-2 h-px bg-slate-200" />
+          <div className="my-2 h-px bg-border" />
 
           <Link
             href="#features"
             onClick={() => setIsMobileOpen(false)}
-            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/60"
           >
             Features
           </Link>
           <Link
             href="#reviews"
             onClick={() => setIsMobileOpen(false)}
-            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/60"
           >
             Reviews
           </Link>
           <Link
             href="#pricing"
             onClick={() => setIsMobileOpen(false)}
-            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+            className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/60"
           >
             Pricing
           </Link>

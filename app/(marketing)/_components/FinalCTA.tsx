@@ -7,7 +7,7 @@ export function FinalCTA() {
   return (
     <section className="py-16 sm:py-20">
       <Container>
-        <Card className="overflow-hidden border-0 bg-linear-to-r from-slate-950 via-slate-900 to-blue-950 py-0 text-white shadow-xl">
+        <Card className="overflow-hidden border-border bg-linear-to-r from-slate-950 via-slate-900 to-blue-950 py-0 text-white shadow-xl">
           <CardContent className="px-6 py-14 text-center sm:px-10">
             <h2 className="text-3xl font-bold sm:text-5xl">Ready to reach your target band?</h2>
             <p className="mx-auto mt-4 max-w-2xl text-slate-200 sm:text-lg">
@@ -19,7 +19,7 @@ export function FinalCTA() {
               <Button size="lg" className="rounded-lg px-8">
                 Get Started for Free
               </Button>
-              <Button size="lg" variant="secondary" className="rounded-lg bg-white px-8 text-slate-900 hover:bg-slate-100">
+              <Button size="lg" variant="secondary" className="rounded-lg border border-border bg-secondary px-8 text-secondary-foreground hover:bg-secondary/80">
                 View Practice Tests
               </Button>
             </div>

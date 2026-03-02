@@ -53,14 +53,14 @@ const reviews = [
 
 export function ReviewsSection() {
   return (
-    <section id="reviews" className="scroll-mt-24 bg-slate-50 py-16 sm:py-20">
+    <section id="reviews" className="scroll-mt-24 bg-muted/30 py-16 sm:py-20">
       <Container>
         <div className="mx-auto max-w-3xl text-center">
           <Badge className="mb-4 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100">
             Learner Feedback
           </Badge>
-          <h2 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Reviews</h2>
-          <p className="mt-3 text-slate-600 sm:text-lg">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Reviews</h2>
+          <p className="mt-3 text-muted-foreground sm:text-lg">
             Trusted by learners preparing for IELTS in Uzbekistan.
           </p>
         </div>
@@ -73,7 +73,7 @@ export function ReviewsSection() {
                   <li key={`${copyIndex}-${review.name}-${review.location}`}>
                     <Card
                       tabIndex={0}
-                      className="w-[320px] border-slate-200 bg-white py-0 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:w-[350px]"
+                      className="w-[320px] border-border bg-card py-0 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500 sm:w-[350px]"
                     >
                       <CardContent className="p-5">
                         <div className="mb-4 flex items-center gap-3">
@@ -83,8 +83,8 @@ export function ReviewsSection() {
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="text-sm font-semibold text-slate-900">{review.name}</p>
-                            <p className="text-xs text-slate-500">{review.location}</p>
+                            <p className="text-sm font-semibold text-foreground">{review.name}</p>
+                            <p className="text-xs text-muted-foreground">{review.location}</p>
                           </div>
                         </div>
 
@@ -95,14 +95,14 @@ export function ReviewsSection() {
                               className={
                                 index < review.rating
                                   ? "size-4 fill-amber-400 text-amber-400"
-                                  : "size-4 text-slate-300"
+                                  : "size-4 text-border"
                               }
                               aria-hidden="true"
                             />
                           ))}
                         </div>
 
-                        <p className="text-sm leading-relaxed text-slate-600">{review.text}</p>
+                        <p className="text-sm leading-relaxed text-muted-foreground">{review.text}</p>
                       </CardContent>
                     </Card>
                   </li>

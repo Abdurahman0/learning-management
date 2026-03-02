@@ -11,23 +11,23 @@ const FOOTER_LINKS = [
 
 export function Footer() {
   return (
-    <footer className="bg-slate-50/90 pb-6">
+    <footer className="pb-6">
       <Container>
-
-        <div className="flex mt-6 flex-col items-center justify-between gap-4 text-center text-sm text-slate-500 lg:flex-row lg:text-left">
-          <p className="font-semibold tracking-tight text-slate-700">IELTS MASTER</p>
+        <div className="flex mt-6 flex-col items-center justify-between gap-4 text-center text-sm text-muted-foreground lg:flex-row lg:text-left">
+          <p className="font-semibold tracking-tight text-foreground">IELTS MASTER</p>
 
           <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-4 lg:gap-6">
             {FOOTER_LINKS.map((item) => (
-              <Link key={item.label} href={item.href} className="transition-colors hover:text-slate-700">
+              <Link key={item.label} href={item.href} className="transition-colors hover:text-foreground">
                 {item.label}
               </Link>
             ))}
           </nav>
 
-          <p>© 2026 IELTS Master Practice. All rights reserved.</p>
+          <p>(c) 2026 IELTS Master Practice. All rights reserved.</p>
         </div>
       </Container>
     </footer>
   );
 }
+

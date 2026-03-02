@@ -9,7 +9,7 @@ import { Container } from "./Container";
 
 export function Hero() {
   return (
-    <section className="py-14 sm:py-16 lg:py-20">
+    <section className="bg-background py-14 dark:bg-linear-to-b dark:from-background dark:to-muted/20 sm:py-16 lg:py-20">
       <Container>
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
           <div>
@@ -17,11 +17,11 @@ export function Hero() {
               Updated for 2026 Exam
             </Badge>
 
-            <h1 className="max-w-xl text-4xl leading-[1.05] font-extrabold tracking-tight text-slate-950 sm:text-5xl lg:text-[62px]">
+            <h1 className="max-w-xl text-4xl leading-[1.05] font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-[62px]">
               Practice IELTS Reading & Listening. <span className="text-blue-600">Get Real Scores.</span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
               Master the IELTS exam with our comprehensive practice tests and instant AI-powered scoring. Everything you
               need to hit Band 8+.
             </p>
@@ -31,28 +31,28 @@ export function Hero() {
                 Start Reading Test
                 <ArrowRight className="size-4" aria-hidden="true" />
               </Button>
-              <Button size="lg" variant="outline" className="rounded-lg border-slate-300 bg-white px-6">
+              <Button size="lg" variant="outline" className="rounded-lg border-border bg-card px-6 text-foreground hover:bg-muted/50">
                 Start Listening Test
               </Button>
             </div>
 
             <div className="mt-8 flex items-center gap-4">
               <div className="flex -space-x-2">
-                <Avatar className="size-8 border-2 border-white">
+                <Avatar className="size-8 border-2 border-card">
                   <AvatarFallback className="bg-amber-200 text-[10px] font-semibold text-amber-900">AN</AvatarFallback>
                 </Avatar>
-                <Avatar className="size-8 border-2 border-white">
+                <Avatar className="size-8 border-2 border-card">
                   <AvatarFallback className="bg-emerald-200 text-[10px] font-semibold text-emerald-900">LU</AvatarFallback>
                 </Avatar>
-                <Avatar className="size-8 border-2 border-white">
+                <Avatar className="size-8 border-2 border-card">
                   <AvatarFallback className="bg-sky-200 text-[10px] font-semibold text-sky-900">MO</AvatarFallback>
                 </Avatar>
               </div>
-              <p className="text-sm text-slate-500">Joined by 10,000+ students this month</p>
+              <p className="text-sm text-muted-foreground">Joined by 10,000+ students this month</p>
             </div>
           </div>
 
-          <Card className="overflow-hidden border-slate-200/80 bg-linear-to-br from-emerald-300 via-teal-500 to-cyan-700 p-0 shadow-xl">
+          <Card className="overflow-hidden border-border bg-linear-to-br from-emerald-300 via-teal-500 to-cyan-700 p-0 shadow-sm dark:shadow-black/20">
             <div className="relative flex min-h-70 items-center justify-center sm:min-h-90">
               <button
                 type="button"
@@ -64,7 +64,7 @@ export function Hero() {
 
               <span className="absolute top-[58%] text-lg font-semibold text-white drop-shadow-sm">Watch Demo</span>
 
-              <div className="absolute inset-x-10 bottom-3 h-14 rounded-md border border-slate-200/25 bg-slate-700/35 backdrop-blur-sm" />
+              <div className="absolute inset-x-10 bottom-3 h-14 rounded-md border border-border/40 bg-muted/50 backdrop-blur-sm" />
             </div>
           </Card>
         </div>
