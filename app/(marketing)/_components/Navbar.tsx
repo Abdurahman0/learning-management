@@ -7,6 +7,8 @@ import {
   ChevronDown,
   GraduationCap,
   Headphones,
+  Menu,
+  X,
   Lock,
   MessageSquareQuote,
   Mic,
@@ -25,14 +27,14 @@ const practiceItems = [
     title: "Reading Test",
     description: "Practice full IELTS reading tests with real passages",
     icon: BookOpenCheck,
-    href: "#reading",
+    href: "/reading",
     enabled: true,
   },
   {
     title: "Listening Test",
     description: "Answer real IELTS listening questions with audio",
     icon: Headphones,
-    href: "#listening",
+    href: "/listening",
     enabled: true,
   },
   {
@@ -51,7 +53,9 @@ const practiceItems = [
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const openDropdown = () => {
@@ -77,11 +81,15 @@ export function Navbar() {
       if (!dropdownRef.current?.contains(event.target as Node)) {
         setIsOpen(false);
       }
+      if (!mobileMenuRef.current?.contains(event.target as Node)) {
+        setIsMobileOpen(false);
+      }
     }
 
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
+        setIsMobileOpen(false);
       }
     }
 
@@ -98,7 +106,10 @@ export function Navbar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-[0_4px_18px_-16px_rgba(15,23,42,0.35)] backdrop-blur">
+    <header
+      className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 shadow-[0_4px_18px_-16px_rgba(15,23,42,0.35)] backdrop-blur"
+      ref={mobileMenuRef}
+    >
       <Container className="flex h-20 items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-2.5 font-semibold text-slate-900">
           <span
@@ -193,6 +204,7 @@ export function Navbar() {
 
           <Link
             href="#features"
+            onClick={() => setIsOpen(false)}
             className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             <Sparkles className="size-4 text-slate-500" aria-hidden="true" />
@@ -200,6 +212,7 @@ export function Navbar() {
           </Link>
           <Link
             href="#reviews"
+            onClick={() => setIsOpen(false)}
             className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             <MessageSquareQuote className="size-4 text-slate-500" aria-hidden="true" />
@@ -207,6 +220,7 @@ export function Navbar() {
           </Link>
           <Link
             href="#pricing"
+            onClick={() => setIsOpen(false)}
             className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
             <WalletCards className="size-4 text-slate-500" aria-hidden="true" />
@@ -215,18 +229,83 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <Button
-            asChild
-            variant="ghost"
-            className="rounded-xl px-4 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
-          >
-            <Link href="/login">Login</Link>
-          </Button>
-          <Button asChild className="rounded-xl bg-indigo-600 px-5 hover:bg-indigo-700">
+          <Button asChild className="hidden rounded-xl bg-indigo-600 px-5 hover:bg-indigo-700 sm:inline-flex">
             <Link href="/register">Register</Link>
           </Button>
+          <button
+            type="button"
+            aria-label="Toggle mobile menu"
+            aria-expanded={isMobileOpen}
+            onClick={() => setIsMobileOpen((prev) => !prev)}
+            className="inline-flex size-10 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 lg:hidden"
+          >
+            {isMobileOpen ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
+          </button>
         </div>
       </Container>
+
+      <div
+        className={cn(
+          "border-t border-slate-200 bg-white/95 px-4 py-4 shadow-sm backdrop-blur lg:hidden",
+          isMobileOpen ? "block" : "hidden"
+        )}
+      >
+        <nav aria-label="Mobile primary" className="mx-auto flex max-w-[1400px] flex-col gap-2">
+          <p className="px-2 pt-1 pb-1 text-xs font-semibold tracking-wider text-slate-400 uppercase">
+            Practice Tests
+          </p>
+          <Link
+            href="/reading"
+            onClick={() => setIsMobileOpen(false)}
+            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          >
+            Reading Test
+          </Link>
+          <Link
+            href="/listening"
+            onClick={() => setIsMobileOpen(false)}
+            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          >
+            Listening Test
+          </Link>
+          <p className="cursor-not-allowed rounded-xl px-3 py-2 text-sm font-medium text-slate-400">
+            Writing Test (Coming soon)
+          </p>
+          <p className="cursor-not-allowed rounded-xl px-3 py-2 text-sm font-medium text-slate-400">
+            Speaking Test (Coming soon)
+          </p>
+
+          <div className="my-2 h-px bg-slate-200" />
+
+          <Link
+            href="#features"
+            onClick={() => setIsMobileOpen(false)}
+            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          >
+            Features
+          </Link>
+          <Link
+            href="#reviews"
+            onClick={() => setIsMobileOpen(false)}
+            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          >
+            Reviews
+          </Link>
+          <Link
+            href="#pricing"
+            onClick={() => setIsMobileOpen(false)}
+            className="rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          >
+            Pricing
+          </Link>
+
+          <Button asChild className="mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 sm:hidden">
+            <Link href="/register" onClick={() => setIsMobileOpen(false)}>
+              Register
+            </Link>
+          </Button>
+        </nav>
+      </div>
     </header>
   );
 }
