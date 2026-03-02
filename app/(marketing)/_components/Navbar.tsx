@@ -231,7 +231,7 @@ export function Navbar() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
-          <Button asChild className="hidden rounded-xl bg-indigo-600 px-5 hover:bg-indigo-700 sm:inline-flex">
+          <Button asChild className="hidden rounded-xl bg-linear-to-br from-blue-700 to-indigo-400 px-5 sm:inline-flex">
             <Link href="/register">Register</Link>
           </Button>
           <button
@@ -301,7 +301,7 @@ export function Navbar() {
             Pricing
           </Link>
 
-          <Button asChild className="mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 sm:hidden">
+          <Button asChild className="mt-2 rounded-xl bg-linear-to-br from-blue-700 to-indigo-400 sm:hidden">
             <Link href="/register" onClick={() => setIsMobileOpen(false)}>
               Register
             </Link>
