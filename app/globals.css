@@ -87,9 +87,16 @@
     will-change: transform;
   }
 
-  .reviews-marquee:hover .reviews-track,
-  .reviews-marquee:focus-within .reviews-track {
-    animation-play-state: paused;
+  @media (hover: hover) and (pointer: fine) {
+    .reviews-marquee:hover .reviews-track {
+      animation-play-state: paused;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .reviews-track {
+      animation-duration: 60s;
+    }
   }
 }
 

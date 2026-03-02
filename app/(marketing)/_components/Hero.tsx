@@ -14,7 +14,7 @@ export function Hero() {
         <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12">
           <div>
             <Badge className="mb-5 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold tracking-wide text-blue-700 uppercase hover:bg-blue-100">
-              Updated for 2024 Exam
+              Updated for 2026 Exam
             </Badge>
 
             <h1 className="max-w-xl text-4xl leading-[1.05] font-extrabold tracking-tight text-slate-950 sm:text-5xl lg:text-[62px]">
