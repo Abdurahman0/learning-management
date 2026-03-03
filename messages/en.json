@@ -1,0 +1,201 @@
+{
+  "nav": {
+    "brand": "IELTS MASTER",
+    "practiceTests": "Practice Tests",
+    "practiceMenu": "Practice Tests Menu",
+    "features": "Features",
+    "reviews": "Reviews",
+    "pricing": "Pricing",
+    "signIn": "Sign in",
+    "register": "Register",
+    "reading": "Reading Test",
+    "listening": "Listening Test",
+    "writing": "Writing Test",
+    "speaking": "Speaking Test",
+    "comingSoon": "Coming soon",
+    "readingDescription": "Practice full IELTS reading tests with real passages",
+    "listeningDescription": "Answer real IELTS listening questions with audio",
+    "writingDescription": "Task-based writing simulator and band feedback",
+    "speakingDescription": "Interactive speaking prompts with evaluation",
+    "toggleMobile": "Toggle mobile menu",
+    "language": {
+      "uz": "UZ",
+      "en": "EN"
+    }
+  },
+  "hero": {
+    "badge": "Updated for 2026 Exam",
+    "title": "Train Like the Real Exam. Improve Like a Pro.",
+    "titleAccent": "Practice. Analyse. Improve. Repeat.",
+    "description": "Want a higher IELTS score? You don't need endless practice, you need smart practice. On this platform, you work with real exam-style tasks and get clear feedback powered by AI, so you always know what to improve.",
+    "startReading": "Start Reading",
+    "startListening": "Start Listening",
+    "socialProof": "Joined by 10,000+ students this month",
+    "watchDemo": "Watch Demo",
+    "watchDemoAria": "Watch demo video"
+  },
+  "how": {
+    "title": "How It Works",
+    "steps": {
+      "choose": {
+        "title": "Choose",
+        "description": "Pick the practice module that matches your goal. Choose from full-length Academic reading or listening tests designed to reflect the latest IELTS exam format and difficulty."
+      },
+      "complete": {
+        "title": "Complete",
+        "description": "Take the test in a focused, distraction-free environment that closely mirrors the real computer-based IELTS exam, including timing, layout, and question flow."
+      },
+      "score": {
+        "title": "Get Score",
+        "description": "Submit your answers and receive instant results. See your overall score, detailed breakdowns by question type, and clear explanations for correct and incorrect answers."
+      },
+      "improve": {
+        "title": "Improve",
+        "description": "Get personalized AI suggestions based on your mistakes. Review targeted lessons, practice specific question types, and access recommended resources to strengthen your weak areas."
+      }
+    }
+  },
+  "features": {
+    "badge": "Platform Features",
+    "title": "Features",
+    "subtitle": "Built for authentic IELTS Reading and Listening preparation with exam-focused workflows.",
+    "comingSoon": "Coming soon",
+    "joinWaitlist": "Join waitlist",
+    "availableSoon": "Available soon",
+    "helper": "Launching soon in Uzbekistan. Join the waitlist.",
+    "bottomNote": "Writing and Speaking modules are planned next to complete full IELTS coverage.",
+    "items": {
+      "authentic": {
+        "title": "Authentic Interface",
+        "description": "Mirror the real IELTS computer-delivered exam layout under strict timing to reduce surprise on the exam day."
+      },
+      "instructor": {
+        "title": "Personal instructor",
+        "description": "Get AI-powered insights, targeted exercises, and curated learning materials designed to improve YOUR specific performance gaps."
+      },
+      "results": {
+        "title": "Immediate results",
+        "description": "Receive fast, structured feedback with full explanations right after completion for faster improvement."
+      },
+      "expert": {
+        "title": "1-to-1 Expert Support",
+        "description": "Schedule one-to-one coaching with a certified IELTS expert for focused feedback, clearer explanations, and a practical plan around your weakest areas."
+      }
+    }
+  },
+  "reviews": {
+    "badge": "Learner Feedback",
+    "title": "Reviews",
+    "subtitle": "Trusted by learners preparing for IELTS in Uzbekistan.",
+    "page": {
+      "badge": "LEARNER FEEDBACK",
+      "title": "Real Results from Real Students",
+      "subtitle": "Join over 10,000 students across Uzbekistan who used IELTS MASTER to achieve their dream band scores and study abroad."
+    },
+    "stats": {
+      "avgRating": "Average Rating",
+      "activeLearners": "Active Learners"
+    },
+    "sections": {
+      "featured": "Featured Success Stories",
+      "recent": "Recent Reviews"
+    },
+    "filters": {
+      "testTypeLabel": "Test Type",
+      "ratingLabel": "Rating",
+      "testType": {
+        "all": "All",
+        "reading": "Reading",
+        "listening": "Listening"
+      },
+      "sort": {
+        "highest": "Highest Rated",
+        "lowest": "Lowest Rated",
+        "recent": "Most Recent"
+      }
+    },
+    "actions": {
+      "viewAllStories": "View all stories",
+      "loadMore": "Load more reviews",
+      "moreReviews": "More reviews",
+      "getStarted": "Get Started Now",
+      "tryMock": "Try Free Mock Test"
+    },
+    "helpers": {
+      "showing": "Showing {visible} of {total}"
+    },
+    "cta": {
+      "title": "Ready to start your IELTS preparation?",
+      "subtitle": "Join the thousands of successful students who have achieved their target band score with IELTS MASTER."
+    },
+    "ratingLabel": "{rating} out of 5 stars",
+    "items": {
+      "one": {
+        "name": "Dilshod Karimov",
+        "location": "Tashkent, Uzbekistan",
+        "text": "Reading practice felt structured and realistic. I improved my time control in just a few mock attempts."
+      },
+      "two": {
+        "name": "Madina Ismoilova",
+        "location": "Samarkand, Uzbekistan",
+        "text": "Listening sessions with countdowns helped me stay calm under pressure. My score became much more stable."
+      },
+      "three": {
+        "name": "Rustam Gafurov",
+        "location": "Bukhara, Uzbekistan",
+        "text": "The interface is clean and close to the real exam format. Feedback after each attempt is very practical."
+      },
+      "four": {
+        "name": "Shahnoza Tursunova",
+        "location": "Namangan, Uzbekistan",
+        "text": "Progress tracking showed exactly which question types were slowing me down. It made my preparation focused."
+      },
+      "five": {
+        "name": "Azizbek Rakhimov",
+        "location": "Andijan, Uzbekistan",
+        "text": "The mock tests are consistent and professional. I now follow a daily routine without wasting time."
+      },
+      "six": {
+        "name": "Akmaljon Rasulov",
+        "location": "Fergana, Uzbekistan",
+        "text": "I liked the balanced mix of Reading and Listening tasks. It helped me prepare steadily every week."
+      }
+    }
+  },
+  "comparison": {
+    "title": "Maximize Your Preparation",
+    "subtitle": "See why creating an account is the best choice for your journey.",
+    "withoutLabel": "Without Account",
+    "withLabel": "With Free Account",
+    "freeForever": "Free Forever",
+    "recommended": "Recommended",
+    "cta": "Create Free Account",
+    "without": {
+      "one": "Only 2 practice tests available",
+      "two": "No score history tracking",
+      "three": "No detailed answer analysis",
+      "four": "No personalized recommendations"
+    },
+    "with": {
+      "one": "Unlimited practice tests",
+      "two": "Full score history dashboard",
+      "three": "Deep AI analysis of mistakes",
+      "four": "Weekly IELTS tips & newsletters",
+      "five": "Priority community support"
+    }
+  },
+  "finalCta": {
+    "title": "Ready to reach your target band?",
+    "subtitle": "Stop guessing. Start practicing with the platform that mirrors the real IELTS experience. No credit card required to start.",
+    "primary": "Get Started for Free",
+    "secondary": "View Practice Tests"
+  },
+  "footer": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "contact": "Contact Us",
+    "help": "Help Center",
+    "copyright": "© 2026 IELTS Master Practice. All rights reserved."
+  }
+}
+

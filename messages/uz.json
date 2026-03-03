@@ -1,0 +1,201 @@
+{
+  "nav": {
+    "brand": "IELTS MASTER",
+    "practiceTests": "Sinovlar",
+    "practiceMenu": "Sinovlar menyusi",
+    "features": "Imkoniyatlar",
+    "reviews": "Fikrlar",
+    "pricing": "Narxlar",
+    "signIn": "Kirish",
+    "register": "Ro'yxatdan o'tish",
+    "reading": "Reading testi",
+    "listening": "Listening testi",
+    "writing": "Writing testi",
+    "speaking": "Speaking testi",
+    "comingSoon": "Tez orada",
+    "readingDescription": "Haqiqiy matnlar bilan to'liq IELTS reading testlarini ishlang",
+    "listeningDescription": "Audio bilan IELTS listening savollariga javob bering",
+    "writingDescription": "Topshiriq asosidagi writing simulyatori va band tahlili",
+    "speakingDescription": "Baholashli interaktiv speaking mashqlari",
+    "toggleMobile": "Mobil menyuni ochish",
+    "language": {
+      "uz": "UZ",
+      "en": "EN"
+    }
+  },
+  "hero": {
+    "badge": "2026 imtihoni uchun yangilangan",
+    "title": "Haqiqiy imtihon kabi mashq qiling. Professional kabi yaxshilang.",
+    "titleAccent": "Amaliyot. Tahlil. Rivojlanish. Takrorlash.",
+    "description": "Yuqori IELTS ballini xohlaysizmi? Sizga cheksiz mashq emas, aqlli mashq kerak. Bu platformada siz haqiqiy imtihon formatidagi topshiriqlar bilan ishlaysiz va AI asosidagi aniq fikr-mulohaza olasiz, shuning uchun nima ustida ishlash kerakligini doim bilasiz.",
+    "startReading": "Readingni boshlash",
+    "startListening": "Listeningni boshlash",
+    "socialProof": "Bu oy 10 000+ talaba qo'shildi",
+    "watchDemo": "Demoni ko'rish",
+    "watchDemoAria": "Demo videoni ko'rish"
+  },
+  "how": {
+    "title": "Qanday ishlaydi",
+    "steps": {
+      "choose": {
+        "title": "Tanlang",
+        "description": "Maqsadingizga mos mashq modulini tanlang. So'nggi IELTS formati va murakkabligiga mos to'liq Academic reading yoki listening testlaridan foydalaning."
+      },
+      "complete": {
+        "title": "Bajaring",
+        "description": "Testni diqqatni chalg'itmaydigan muhitda bajaring. Platforma vaqt, joylashuv va savollar oqimi bo'yicha haqiqiy kompyuter imtihoniga juda yaqin."
+      },
+      "score": {
+        "title": "Natijani oling",
+        "description": "Javoblarni topshirgach, natijani darhol oling. Umumiy ball, savol turlari bo'yicha tahlil va to'g'ri/noto'g'ri javoblar izohini ko'rasiz."
+      },
+      "improve": {
+        "title": "Yaxshilang",
+        "description": "Xatolaringiz asosida shaxsiy AI tavsiyalarini oling. Maqsadli darslarni ko'rib chiqing, aniq savol turlarini mashq qiling va zaif joylarni mustahkamlang."
+      }
+    }
+  },
+  "features": {
+    "badge": "Platforma imkoniyatlari",
+    "title": "Imkoniyatlar",
+    "subtitle": "IELTS Reading va Listeningga imtihon formatida tayyorlanish uchun yaratilgan.",
+    "comingSoon": "Tez orada",
+    "joinWaitlist": "Kutish ro'yxatiga qo'shilish",
+    "availableSoon": "Yaqinda mavjud bo'ladi",
+    "helper": "O'zbekistonda tez orada ishga tushadi. Kutish ro'yxatiga qo'shiling.",
+    "bottomNote": "To'liq IELTS qamrovi uchun Writing va Speaking modullari navbatda.",
+    "items": {
+      "authentic": {
+        "title": "Haqiqiy interfeys",
+        "description": "Imtihon kuni kutilmagan holatlarni kamaytirish uchun IELTSning kompyuter formatini va vaqt cheklovlarini aniq takrorlaydi."
+      },
+      "instructor": {
+        "title": "Shaxsiy instruktor",
+        "description": "AI asosidagi tahlil, maqsadli mashqlar va aynan sizning bo'shliqlaringizga mos materiallarni oling."
+      },
+      "results": {
+        "title": "Tezkor natijalar",
+        "description": "Testdan so'ng darhol to'liq izohli fikr-mulohaza oling va tezroq rivojlaning."
+      },
+      "expert": {
+        "title": "1-to-1 Expert Support",
+        "description": "Sertifikatlangan IELTS mutaxassisi bilan individual darslarni rejalang: zaif joylar bo'yicha aniq feedback, tushunarli izohlar va amaliy reja."
+      }
+    }
+  },
+  "reviews": {
+    "badge": "Talabalar fikri",
+    "title": "Fikrlar",
+    "subtitle": "O'zbekistonda IELTSga tayyorlanayotgan talabalar ishonchini qozongan.",
+    "page": {
+      "badge": "TALABALAR FIKRI",
+      "title": "Haqiqiy talabalar, haqiqiy natijalar",
+      "subtitle": "IELTS MASTER orqali maqsad bandiga erishib, chet elda o'qish orzusiga yaqinlashgan O'zbekiston bo'ylab 10 000+ talabalarga qo'shiling."
+    },
+    "stats": {
+      "avgRating": "O'rtacha baho",
+      "activeLearners": "Faol o'quvchilar"
+    },
+    "sections": {
+      "featured": "Asosiy muvaffaqiyat hikoyalari",
+      "recent": "So'nggi fikrlar"
+    },
+    "filters": {
+      "testTypeLabel": "Test turi",
+      "ratingLabel": "Saralash",
+      "testType": {
+        "all": "Barchasi",
+        "reading": "Reading",
+        "listening": "Listening"
+      },
+      "sort": {
+        "highest": "Eng yuqori baho",
+        "lowest": "Eng past baho",
+        "recent": "Eng so'nggi"
+      }
+    },
+    "actions": {
+      "viewAllStories": "Barcha hikoyalar",
+      "loadMore": "Yana fikrlarni ko'rsatish",
+      "moreReviews": "Yana fikrlar",
+      "getStarted": "Hozir boshlash",
+      "tryMock": "Bepul mock testni sinash"
+    },
+    "helpers": {
+      "showing": "{total} tadan {visible} tasi ko'rsatilmoqda"
+    },
+    "cta": {
+      "title": "IELTS tayyorgarligini boshlashga tayyormisiz?",
+      "subtitle": "IELTS MASTER bilan maqsad bandiga erishgan minglab talabalar safiga qo'shiling."
+    },
+    "ratingLabel": "5 dan {rating} yulduz",
+    "items": {
+      "one": {
+        "name": "Dilshod Karimov",
+        "location": "Toshkent, O'zbekiston",
+        "text": "Reading mashqlari tartibli va real bo'ldi. Bir necha mock testdayoq vaqtni boshqarishim yaxshilandi."
+      },
+      "two": {
+        "name": "Madina Ismoilova",
+        "location": "Samarqand, O'zbekiston",
+        "text": "Listeningda countdown bilan ishlash bosim ostida xotirjam bo'lishimga yordam berdi. Natijam ancha barqarorlashdi."
+      },
+      "three": {
+        "name": "Rustam Gafurov",
+        "location": "Buxoro, O'zbekiston",
+        "text": "Interfeys toza va haqiqiy imtihonga juda yaqin. Har bir urinishdan keyingi izohlar juda amaliy."
+      },
+      "four": {
+        "name": "Shahnoza Tursunova",
+        "location": "Namangan, O'zbekiston",
+        "text": "Progress tracking qaysi savol turlari meni sekinlashtirayotganini aniq ko'rsatdi. Tayyorgarligim ancha maqsadli bo'ldi."
+      },
+      "five": {
+        "name": "Azizbek Rakhimov",
+        "location": "Andijon, O'zbekiston",
+        "text": "Mock testlar barqaror va professional. Endi vaqtni bekorga sarflamasdan kunlik rejimda ishlayapman."
+      },
+      "six": {
+        "name": "Akmaljon Rasulov",
+        "location": "Farg'ona, O'zbekiston",
+        "text": "Reading va Listening vazifalarining muvozanatli bo'lishi yoqdi. Har hafta izchil tayyorlanishimga yordam berdi."
+      }
+    }
+  },
+  "comparison": {
+    "title": "Tayyorgarlikni maksimal darajaga olib chiqing",
+    "subtitle": "Nega akkaunt ochish eng to'g'ri tanlov ekanini ko'ring.",
+    "withoutLabel": "Akkauntsiz",
+    "withLabel": "Bepul akkaunt bilan",
+    "freeForever": "Doim bepul",
+    "recommended": "Tavsiya etiladi",
+    "cta": "Bepul akkaunt yaratish",
+    "without": {
+      "one": "Faqat 2 ta amaliy test",
+      "two": "Ball tarixini kuzatib bo'lmaydi",
+      "three": "Batafsil javob tahlili yo'q",
+      "four": "Shaxsiy tavsiyalar yo'q"
+    },
+    "with": {
+      "one": "Cheksiz amaliy testlar",
+      "two": "To'liq ball tarixi paneli",
+      "three": "Xatolar bo'yicha chuqur AI tahlil",
+      "four": "Haftalik IELTS maslahatlari va yangiliklar",
+      "five": "Ustuvor hamjamiyat yordami"
+    }
+  },
+  "finalCta": {
+    "title": "Maqsad bandingizga erishishga tayyormisiz?",
+    "subtitle": "Taxminni to'xtating. Haqiqiy IELTS tajribasini takrorlaydigan platformada mashqni boshlang. Boshlash uchun karta kerak emas.",
+    "primary": "Bepul boshlash",
+    "secondary": "Amaliy testlarni ko'rish"
+  },
+  "footer": {
+    "privacy": "Maxfiylik siyosati",
+    "terms": "Foydalanish shartlari",
+    "contact": "Bog'lanish",
+    "help": "Yordam markazi",
+    "copyright": "© 2026 IELTS Master Practice. Barcha huquqlar himoyalangan."
+  }
+}
+
