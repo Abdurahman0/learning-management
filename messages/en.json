@@ -162,6 +162,85 @@
       }
     }
   },
+  "guest": {
+    "brand": "IELTS MASTER",
+    "banner": {
+      "title": "Guest mode active",
+      "desc": "You have access to 4 demo tests (2 Reading, 2 Listening). Register to unlock all tests, full review, history, and recommendations.",
+      "used": "Demo access",
+      "available": "tests available",
+      "badges": {
+        "demo": "4 demo tests",
+        "scoreOnly": "Score only",
+        "analysisAfterSignup": "Full analysis after signup"
+      },
+      "signup": "Sign Up Now"
+    },
+    "tabs": {
+      "all": "All Tests",
+      "free": "Free",
+      "premium": "Premium"
+    },
+    "filters": {
+      "searchPlaceholder": "Search test name, book number or topic...",
+      "difficulty": "Difficulty",
+      "sort": "Sort by",
+      "difficultyAll": "All",
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "sortNewest": "Newest",
+      "sortPopular": "Popular",
+      "sortHighest": "A-Z"
+    },
+    "card": {
+      "free": "FREE",
+      "premium": "PREMIUM",
+      "locked": "Locked",
+      "startReadingFull": "Start Full Reading Test",
+      "startListening": "Start Listening Test",
+      "startTest": "Start test",
+      "passage": "Passage",
+      "section": "Section"
+    },
+    "upgrade": {
+      "title": "Want access to 100+ more tests?",
+      "desc": "Upgrade to Premium to get unlimited access to all Cambridge materials, detailed explanations, and AI-powered feedback.",
+      "upgradeNow": "Upgrade Now",
+      "comparePlans": "Compare Plans"
+    },
+    "sidebar": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writingSoon": "Writing",
+      "speakingSoon": "Speaking",
+      "guestMode": "Guest mode",
+      "dailyProgress": "Daily progress",
+      "createAccount": "Create free account"
+    },
+    "meta": {
+      "minutes": "Minutes",
+      "questions": "Questions",
+      "sections": "Sections"
+    },
+    "reading": {
+      "title": "Practice Reading Tests",
+      "subtitle": "Improve speed and accuracy with real IELTS reading passages.",
+      "upgradeTitle": "Unlock more tests",
+      "upgradeDesc": "Create an account to access all tests and detailed analysis.",
+      "seePlans": "See plans"
+    },
+    "listening": {
+      "title": "Practice Listening Tests",
+      "subtitle": "Build accuracy and timing with exam-style listening sets.",
+      "upgradeTitle": "Unlock more tests",
+      "upgradeDesc": "Create an account to access all tests and detailed analysis.",
+      "seePlans": "See plans"
+    },
+    "mobile": {
+      "signIn": "Sign in"
+    }
+  },
   "comparison": {
     "title": "Maximize Your Preparation",
     "subtitle": "See why creating an account is the best choice for your journey.",
@@ -198,4 +277,3 @@
     "copyright": "© 2026 IELTS Master Practice. All rights reserved."
   }
 }
-

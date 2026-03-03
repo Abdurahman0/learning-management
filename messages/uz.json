@@ -162,6 +162,85 @@
       }
     }
   },
+  "guest": {
+    "brand": "IELTS MASTER",
+    "banner": {
+      "title": "Mehmon rejimi faol",
+      "desc": "Sizda 4 ta demo testga kirish bor (2 ta Reading, 2 ta Listening). Barcha testlar, to'liq tahlil, tarix va tavsiyalarni ochish uchun ro'yxatdan o'ting.",
+      "used": "Demo kirish",
+      "available": "ta test mavjud",
+      "badges": {
+        "demo": "4 ta demo test",
+        "scoreOnly": "Faqat score",
+        "analysisAfterSignup": "To'liq tahlil ro'yxatdan so'ng"
+      },
+      "signup": "Hoziroq ro'yxatdan o'ting"
+    },
+    "tabs": {
+      "all": "Barcha testlar",
+      "free": "Bepul",
+      "premium": "Premium"
+    },
+    "filters": {
+      "searchPlaceholder": "Test nomi, kitob raqami yoki mavzuni qidiring...",
+      "difficulty": "Qiyinlik",
+      "sort": "Saralash",
+      "difficultyAll": "Barchasi",
+      "easy": "Oson",
+      "medium": "O'rta",
+      "hard": "Qiyin",
+      "sortNewest": "Eng yangi",
+      "sortPopular": "Ommabop",
+      "sortHighest": "A-Z"
+    },
+    "card": {
+      "free": "BEPUL",
+      "premium": "PREMIUM",
+      "locked": "Qulflangan",
+      "startReadingFull": "To'liq Reading testini boshlash",
+      "startListening": "Listening testini boshlash",
+      "startTest": "Testni boshlash",
+      "passage": "Matn",
+      "section": "Bo'lim"
+    },
+    "upgrade": {
+      "title": "Yana 100+ testga kirishni xohlaysizmi?",
+      "desc": "Premiumga o'ting va barcha Cambridge materiallari, batafsil tushuntirishlar hamda AI tahlilidan cheksiz foydalaning.",
+      "upgradeNow": "Hozir yangilash",
+      "comparePlans": "Tariflarni solishtirish"
+    },
+    "sidebar": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writingSoon": "Writing",
+      "speakingSoon": "Speaking",
+      "guestMode": "Mehmon rejimi",
+      "dailyProgress": "Kunlik progress",
+      "createAccount": "Bepul akkaunt yaratish"
+    },
+    "meta": {
+      "minutes": "Daqiqa",
+      "questions": "Savol",
+      "sections": "Bo'lim"
+    },
+    "reading": {
+      "title": "Reading testlarini mashq qiling",
+      "subtitle": "Haqiqiy IELTS reading matnlari bilan tezlik va aniqlikni oshiring.",
+      "upgradeTitle": "Ko'proq testlarni oching",
+      "upgradeDesc": "Barcha testlar va batafsil tahlilga kirish uchun akkaunt yarating.",
+      "seePlans": "Tariflarni ko'rish"
+    },
+    "listening": {
+      "title": "Listening testlarini mashq qiling",
+      "subtitle": "Imtihon formatidagi listening setlar bilan aniqlik va tezlikni oshiring.",
+      "upgradeTitle": "Ko'proq testlarni oching",
+      "upgradeDesc": "Barcha testlar va batafsil tahlilga kirish uchun akkaunt yarating.",
+      "seePlans": "Tariflarni ko'rish"
+    },
+    "mobile": {
+      "signIn": "Kirish"
+    }
+  },
   "comparison": {
     "title": "Tayyorgarlikni maksimal darajaga olib chiqing",
     "subtitle": "Nega akkaunt ochish eng to'g'ri tanlov ekanini ko'ring.",
@@ -198,4 +277,3 @@
     "copyright": "© 2026 IELTS Master Practice. Barcha huquqlar himoyalangan."
   }
 }
-
