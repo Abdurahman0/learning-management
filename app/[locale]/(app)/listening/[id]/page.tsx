@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   BookOpen,
   Bookmark,
@@ -46,6 +46,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
+import { createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress, saveAttemptResult } from "@/lib/test-attempt-storage";
 
 function formatTime(seconds: number) {
   const safe = Math.max(0, seconds);
@@ -132,7 +133,9 @@ export default function ListeningTestPage() {
 }
 
 function ListeningTestClient({ testId }: { testId: string }) {
+  const router = useRouter();
   const t = useTranslations("listeningTest");
+  const locale = useLocale();
   const test = getListeningTestById(testId)!;
   const paletteTitle = t.has("questionPalette")
     ? t("questionPalette")
@@ -167,6 +170,9 @@ function ListeningTestClient({ testId }: { testId: string }) {
   const [activeSectionId, setActiveSectionId] = useState<
     "s1" | "s2" | "s3" | "s4"
   >("s1");
+  const [attemptId, setAttemptId] = useState("");
+  const [startedAt, setStartedAt] = useState(Date.now());
+  const [finishOpen, setFinishOpen] = useState(false);
   const [activeQuestionNumber, setActiveQuestionNumber] = useState(1);
   const [answers, setAnswers] = useState<AnswersMap>({});
   const [marked, setMarked] = useState<Set<number>>(new Set());
@@ -186,6 +192,31 @@ function ListeningTestClient({ testId }: { testId: string }) {
   const questionsScrollRef = useRef<HTMLDivElement | null>(null);
   const questionRefs = useRef<Map<number, HTMLElement>>(new Map());
   const pendingJumpRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const latestId = loadLatestAttemptId("listening", test.id);
+    const saved = latestId ? loadAttemptProgress("listening", test.id, latestId) : null;
+
+    if (saved) {
+      const restoredAnswers: AnswersMap = {};
+      Object.entries(saved.answers).forEach(([key, value]) => {
+        const num = Number(key.replace(`${test.id}-q`, ""));
+        if (Number.isFinite(num) && typeof value === "string") {
+          restoredAnswers[num] = value;
+        }
+      });
+
+      setAttemptId(saved.attemptId);
+      setStartedAt(saved.startedAt);
+      setAnswers(restoredAnswers);
+      setMarked(new Set(saved.markedQuestionIds.map((id) => Number(id.replace(`${test.id}-q`, ""))).filter((v) => Number.isFinite(v))));
+      setRemainingSeconds(saved.timeRemainingSec);
+      return;
+    }
+
+    setAttemptId(createAttemptId());
+    setStartedAt(Date.now());
+  }, [test.id]);
 
   const sectionByQuestion = useMemo(() => {
     const map = new Map<number, ListeningSectionFull["id"]>();
@@ -226,6 +257,25 @@ function ListeningTestClient({ testId }: { testId: string }) {
   }, [answers]);
   const markedCount = marked.size;
   const notAnsweredCount = test.totalQuestions - answeredCount;
+  const unansweredCount = test.totalQuestions - answeredCount;
+  const timeSpent = test.durationMinutes * 60 - remainingSeconds;
+
+  useEffect(() => {
+    if (!attemptId) return;
+    const persistedAnswers = Object.fromEntries(
+      Object.entries(answers).map(([number, value]) => [`${test.id}-q${number}`, value])
+    );
+    saveAttemptProgress({
+      attemptId,
+      module: "listening",
+      testId: test.id,
+      answers: persistedAnswers,
+      markedQuestionIds: [...marked].map((number) => `${test.id}-q${number}`),
+      startedAt,
+      timeRemainingSec: remainingSeconds,
+      timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
+    });
+  }, [answers, attemptId, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
 
   useEffect(() => {
     const compactMedia = window.matchMedia("(max-width: 1024px)");
@@ -365,6 +415,28 @@ function ListeningTestClient({ testId }: { testId: string }) {
   const setAnswer = (number: number, value: string) => {
     setActiveQuestionNumber(number);
     setAnswers((prev) => ({ ...prev, [number]: value }));
+  };
+
+  const finishTest = () => {
+    if (!attemptId) return;
+    const finishedAt = Date.now();
+    const persistedAnswers = Object.fromEntries(
+      Object.entries(answers).map(([number, value]) => [`${test.id}-q${number}`, value])
+    );
+
+    saveAttemptResult({
+      attemptId,
+      module: "listening",
+      testId: test.id,
+      answers: persistedAnswers,
+      markedQuestionIds: [...marked].map((number) => `${test.id}-q${number}`),
+      startedAt,
+      finishedAt,
+      timeRemainingSec: remainingSeconds,
+      timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
+    });
+
+    router.push(`/${locale}/listening/${test.id}/result?attempt=${attemptId}`);
   };
 
   const renderBlock = (block: ListeningBlock) => {
@@ -868,6 +940,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
                 isSmallLandscape && "h-8 px-2 text-xs",
               )}
               aria-label={t("finishTest")}
+              onClick={() => setFinishOpen(true)}
             >
               {t("finishTest")}
             </Button>
@@ -1285,6 +1358,22 @@ function ListeningTestClient({ testId }: { testId: string }) {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      {finishOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-5">
+            <h3 className="text-lg font-semibold">{t("finishTest")}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("finishSummary", { answered: answeredCount, total: test.totalQuestions, unanswered: unansweredCount })}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("timeSpent", { seconds: timeSpent })}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setFinishOpen(false)}>{t("cancel")}</Button>
+              <Button onClick={finishTest}>{t("confirmFinish")}</Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import {ChevronDown, Clock3, ListChecks, Lock, Play} from "lucide-react";
+import {ChevronDown, Clock3, ListChecks, Lock} from "lucide-react";
 import {useState} from "react";
 import {useRouter} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
@@ -102,7 +102,6 @@ export function ReadingTestCard({test, defaultOpen = false}: ReadingTestCardProp
                   className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90"
                 >
                   {t("card.startReadingFull")}
-                  <Play className="ml-2 size-4 fill-current" aria-hidden="true" />
                 </Button>
               )}
             </div>

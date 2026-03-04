@@ -1,5 +1,6 @@
-﻿import {ArrowRight, Play} from "lucide-react";
-import {useTranslations} from "next-intl";
+import Link from "next/link";
+import {ArrowRight, Play} from "lucide-react";
+import {useLocale, useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
 import {Badge} from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import {Container} from "./Container";
 
 export function Hero() {
   const t = useTranslations();
+  const locale = useLocale();
 
   return (
     <section className="bg-background py-14 dark:bg-linear-to-b dark:from-background dark:to-muted/20 sm:py-16 lg:py-20">
@@ -27,16 +29,19 @@ export function Hero() {
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">{t("hero.description")}</p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button size="lg" className="rounded-lg px-6">
-                {t("hero.startReading")}
-                <ArrowRight className="size-4" aria-hidden="true" />
+              <Button asChild size="lg" className="rounded-lg px-6">
+                <Link href={`/${locale}/reading`}>
+                  {t("hero.startReading")}
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
               </Button>
               <Button
+                asChild
                 size="lg"
                 variant="outline"
                 className="rounded-lg border-border bg-card px-6 text-foreground hover:bg-muted/50"
               >
-                {t("hero.startListening")}
+                <Link href={`/${locale}/listening`}>{t("hero.startListening")}</Link>
               </Button>
             </div>
 
@@ -76,4 +81,3 @@ export function Hero() {
     </section>
   );
 }
-

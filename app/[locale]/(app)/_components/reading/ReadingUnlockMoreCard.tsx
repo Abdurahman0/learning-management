@@ -21,7 +21,7 @@ export function ReadingUnlockMoreCard() {
             <Link href={`/${locale}/auth`}>{t("sidebar.createAccount")}</Link>
           </Button>
           <Button asChild variant="outline" className="h-10 rounded-xl border-border bg-background px-5 text-sm font-semibold">
-            <Link href={`/${locale}/reviews#pricing`}>{t("reading.seePlans")}</Link>
+            <Link href={`/${locale}#pricing`}>{t("reading.seePlans")}</Link>
           </Button>
         </div>
       </CardContent>

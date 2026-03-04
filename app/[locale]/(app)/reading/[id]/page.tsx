@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { BookOpen, Bookmark, Clock3, Grid2x2, MoveLeft, MoveRight, Play, Square, User } from "lucide-react";
+import { BookOpen, Bookmark, CheckCircle2, Clock3, Grid2x2, HelpCircle, MoveLeft, MoveRight, Play, Square, User, XCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { getReadingTestById, type ReadingQuestion } from "@/data/reading-tests";
@@ -19,6 +19,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
+import { createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress } from "@/lib/test-attempt-storage";
+import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 
 type AnswerValue = string | string[];
 
@@ -39,6 +41,47 @@ function isAnswered(value: AnswerValue | undefined) {
     return value.length > 0;
   }
   return false;
+}
+
+type HighlightItem = {
+  questionNumber: number;
+  phrase: string;
+  paragraphIndex: number;
+};
+
+type ParagraphMatch = {
+  start: number;
+  end: number;
+  phrase: string;
+  questionNumber: number;
+};
+
+function findParagraphMatches(paragraph: string, spans: HighlightItem[]): ParagraphMatch[] {
+  const lowerParagraph = paragraph.toLowerCase();
+  const raw = spans
+    .map((span) => {
+      const phrase = span.phrase.trim();
+      if (!phrase) return null;
+      const start = lowerParagraph.indexOf(phrase.toLowerCase());
+      if (start < 0) return null;
+      return {
+        start,
+        end: start + phrase.length,
+        phrase: paragraph.slice(start, start + phrase.length),
+        questionNumber: span.questionNumber,
+      } satisfies ParagraphMatch;
+    })
+    .filter((item): item is ParagraphMatch => Boolean(item))
+    .sort((a, b) => (a.start === b.start ? b.end - b.start - (a.end - a.start) : a.start - b.start));
+
+  const filtered: ParagraphMatch[] = [];
+  let cursor = -1;
+  for (const match of raw) {
+    if (match.start < cursor) continue;
+    filtered.push(match);
+    cursor = match.end;
+  }
+  return filtered;
 }
 
 export default function ReadingTestPage() {
@@ -72,6 +115,11 @@ type ReadingTestClientProps = {
 
 function ReadingTestClient({ test }: ReadingTestClientProps) {
   const t = useTranslations("readingTest");
+  const [attemptId, setAttemptId] = useState<string>("");
+  const [startedAt, setStartedAt] = useState<number>(Date.now());
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [expandedExplanations, setExpandedExplanations] = useState<Set<string>>(new Set());
   const [activePassageId, setActivePassageId] = useState<"p1" | "p2" | "p3">("p1");
   const [activeQuestionNumber, setActiveQuestionNumber] = useState(1);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
@@ -85,6 +133,25 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
   const questionsScrollRef = useRef<HTMLDivElement | null>(null);
   const passageScrollRef = useRef<HTMLDivElement | null>(null);
   const questionRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const pendingParagraphRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const latestId = loadLatestAttemptId("reading", test.id);
+    const saved = latestId ? loadAttemptProgress("reading", test.id, latestId) : null;
+
+    if (saved) {
+      setAttemptId(saved.attemptId);
+      setAnswers(saved.answers as Record<string, AnswerValue>);
+      setMarked(new Set(saved.markedQuestionIds));
+      setStartedAt(saved.startedAt);
+      setRemainingSeconds(saved.timeRemainingSec);
+      return;
+    }
+
+    const newAttemptId = createAttemptId();
+    setAttemptId(newAttemptId);
+    setStartedAt(Date.now());
+  }, [test.id]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
@@ -149,6 +216,33 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
     return groups;
   }, [passageQuestions]);
 
+  const gradeableQuestions = useMemo<GradeableQuestion[]>(
+    () =>
+      test.questions.map((question) => ({
+        id: question.id,
+        number: question.number,
+        type: question.type,
+        correctAnswer: question.correctAnswer,
+        acceptableAnswers: question.acceptableAnswers,
+      })),
+    [test.questions]
+  );
+
+  const grading = useMemo(() => gradeTest(gradeableQuestions, answers), [answers, gradeableQuestions]);
+
+  const highlightsForPassage = useMemo(() => {
+    if (!reviewMode) return [] as HighlightItem[];
+    return test.questions.flatMap((question) =>
+      question.evidenceSpans
+        .filter((span) => span.passageId === activePassageId)
+        .map((span) => ({
+          questionNumber: question.number,
+          phrase: span.phrase,
+          paragraphIndex: span.paragraphIndex,
+        }))
+    );
+  }, [activePassageId, reviewMode, test.questions]);
+
   useEffect(() => {
     passageScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     questionsScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -169,8 +263,33 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
     container.scrollTo({ top, behavior: "smooth" });
   }, [activeQuestionNumber, activePassageId]);
 
+  useEffect(() => {
+    const pendingId = pendingParagraphRef.current;
+    if (!pendingId) return;
+    const target = document.getElementById(pendingId);
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    pendingParagraphRef.current = null;
+  }, [activePassageId, reviewMode]);
+
+  useEffect(() => {
+    if (!attemptId) return;
+    saveAttemptProgress({
+      attemptId,
+      module: "reading",
+      testId: test.id,
+      answers,
+      markedQuestionIds: [...marked],
+      startedAt,
+      timeRemainingSec: remainingSeconds,
+      timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
+    });
+  }, [answers, attemptId, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
+
   const currentQuestion = questionsByNumber.get(activeQuestionNumber);
   const answeredCount = answeredNumbers.size;
+  const unansweredCount = test.totalQuestions - answeredCount;
+  const timeSpent = test.durationMinutes * 60 - remainingSeconds;
 
   const goToQuestion = (number: number) => {
     const target = questionsByNumber.get(number);
@@ -197,6 +316,35 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
     if (firstInPassage) {
       setActiveQuestionNumber(firstInPassage.number);
     }
+  };
+
+  const openExplanation = (question: ReadingQuestion) => {
+    setExpandedExplanations((prev) => {
+      const next = new Set(prev);
+      if (next.has(question.id)) {
+        next.delete(question.id);
+      } else {
+        next.add(question.id);
+      }
+      return next;
+    });
+
+    const evidence = question.evidenceSpans[0];
+    if (!evidence) return;
+    const paragraphId = `para-${evidence.passageId}-${evidence.paragraphIndex}`;
+    pendingParagraphRef.current = paragraphId;
+    if (evidence.passageId !== activePassageId) {
+      setActivePassageId(evidence.passageId);
+      return;
+    }
+    const target = document.getElementById(paragraphId);
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const finishTest = () => {
+    setReviewMode(true);
+    setFinishOpen(false);
+    setTimerRunning(false);
   };
 
   return (
@@ -239,8 +387,13 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
               <span className="block text-xs tracking-[0.14em] text-muted-foreground uppercase">{t("progress")}</span>
               {answeredCount} / {test.totalQuestions} {t("questions")}
             </p>
-            <Button aria-label={t("finishTest")} className="h-9 rounded-xl bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90 sm:h-10 sm:px-6">
-              {t("finishTest")}
+            <Button
+              aria-label={t("finishTest")}
+              onClick={() => setFinishOpen(true)}
+              disabled={reviewMode}
+              className="h-9 rounded-xl bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90 disabled:opacity-70 sm:h-10 sm:px-6"
+            >
+              {reviewMode ? (t.has("reviewMode") ? t("reviewMode") : "Review Mode") : t("finishTest")}
             </Button>
             <Avatar aria-label={t("userAvatar")}>
               <AvatarFallback className="bg-muted text-muted-foreground">
@@ -296,11 +449,52 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
               <div className="mx-auto flex max-w-[72ch] flex-col items-stretch justify-start space-y-5 pb-8">
                 <p className="text-xs font-semibold tracking-[0.18em] text-blue-600 uppercase dark:text-blue-400">{activePassageId.toUpperCase()}</p>
                 <h2 className="break-words text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{test.passages.find((p) => p.id === activePassageId)?.title}</h2>
-                {(test.passages.find((p) => p.id === activePassageId)?.text ?? "").split("\n\n").map((paragraph) => (
-                  <p key={paragraph} className="break-words text-[15px] leading-relaxed text-foreground/90 sm:text-base">
-                    {paragraph}
-                  </p>
-                ))}
+                {(test.passages.find((p) => p.id === activePassageId)?.text ?? "").split("\n\n").map((paragraph, index) => {
+                  const paragraphId = `para-${activePassageId}-${index}`;
+                  const paragraphHighlights = highlightsForPassage.filter((span) => span.paragraphIndex === index);
+                  const matches = findParagraphMatches(paragraph, paragraphHighlights);
+
+                  return (
+                    <p id={paragraphId} key={paragraphId} className="break-words text-[15px] leading-relaxed text-foreground/90 sm:text-base">
+                      {matches.length === 0
+                        ? paragraph
+                        : (() => {
+                            const segments: ReactNode[] = [];
+                            let cursor = 0;
+
+                            matches.forEach((match, matchIndex) => {
+                              if (match.start > cursor) {
+                                segments.push(
+                                  <Fragment key={`text-${paragraphId}-${matchIndex}`}>
+                                    {paragraph.slice(cursor, match.start)}
+                                  </Fragment>
+                                );
+                              }
+
+                              segments.push(
+                                <mark
+                                  key={`mark-${paragraphId}-${matchIndex}`}
+                                  className="mx-[1px] inline rounded-md bg-emerald-200/60 px-1 py-0.5 ring-1 ring-emerald-400/60 dark:bg-emerald-500/20 dark:ring-emerald-400/30"
+                                >
+                                  <span className="mr-1 inline-flex rounded-md bg-blue-600 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-white">
+                                    {match.questionNumber}
+                                  </span>
+                                  {paragraph.slice(match.start, match.end)}
+                                </mark>
+                              );
+                              cursor = match.end;
+                            });
+
+                            if (cursor < paragraph.length) {
+                              segments.push(
+                                <Fragment key={`tail-${paragraphId}`}>{paragraph.slice(cursor)}</Fragment>
+                              );
+                            }
+                            return segments;
+                          })()}
+                    </p>
+                  );
+                })}
               </div>
             </div>
           </Card>
@@ -335,6 +529,9 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                         {group.questions.map((question) => {
                           const active = activeQuestionNumber === question.number;
                           const value = answers[question.id];
+                          const result = grading.byQuestion[question.id];
+                          const answered = isAnswered(value);
+                          const isCorrect = result?.isCorrect;
 
                           return (
                             <article
@@ -352,11 +549,23 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                                 "hover:border-border hover:bg-accent/20",
                                 active
                                   ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/40"
-                                  : "border-border/80 bg-card/90"
+                                  : "border-border/80 bg-card/90",
+                                reviewMode && answered && isCorrect && "border-emerald-300 bg-emerald-50/40 dark:bg-emerald-500/10",
+                                reviewMode && answered && !isCorrect && "border-rose-300 bg-rose-50/40 dark:bg-rose-500/10",
+                                reviewMode && !answered && "border-border bg-muted/20"
                               )}
                               onClick={() => setActiveQuestionNumber(question.number)}
                             >
-                              <p className="mb-2 break-words text-base font-medium leading-relaxed text-foreground">{question.number}. {question.prompt}</p>
+                              <div className="mb-2 flex items-start justify-between gap-2">
+                                <p className="min-w-0 break-words text-base font-medium leading-relaxed text-foreground">
+                                  {question.number}. {question.prompt}
+                                </p>
+                                {reviewMode ? (
+                                  <span className="shrink-0 text-lg leading-none" aria-hidden="true">
+                                    {!answered ? "⏺" : isCorrect ? "✅" : "❌"}
+                                  </span>
+                                ) : null}
+                              </div>
 
                               {question.type === "tfng" ? (
                                 <div className="flex flex-wrap gap-4">
@@ -367,6 +576,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                                         name={question.id}
                                         value={option}
                                         checked={value === option}
+                                        disabled={reviewMode}
                                         onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
                                         className="size-4 accent-blue-600"
                                       />
@@ -385,6 +595,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                                         name={question.id}
                                         value={option}
                                         checked={value === option}
+                                        disabled={reviewMode}
                                         onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
                                         className="mt-0.5 size-4 accent-blue-600"
                                       />
@@ -397,6 +608,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                               {question.type === "matchingHeadings" ? (
                                 <Select
                                   value={typeof value === "string" ? value : ""}
+                                  disabled={reviewMode}
                                   onValueChange={(nextValue) => setAnswers((prev) => ({ ...prev, [question.id]: nextValue }))}
                                 >
                                   <SelectTrigger className="max-w-[280px] bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
@@ -413,6 +625,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                               {question.type === "matchingInfo" ? (
                                 <Select
                                   value={typeof value === "string" ? value : ""}
+                                  disabled={reviewMode}
                                   onValueChange={(nextValue) => setAnswers((prev) => ({ ...prev, [question.id]: nextValue }))}
                                 >
                                   <SelectTrigger className="max-w-[220px] bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
@@ -430,10 +643,29 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                                 <Input
                                   aria-label={`Question ${question.number}`}
                                   value={typeof value === "string" ? value : ""}
+                                  disabled={reviewMode}
                                   onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
                                   placeholder={t("oneWordOnly")}
                                   className="max-w-sm bg-background/70 placeholder:text-muted-foreground/80 dark:bg-muted/30"
                                 />
+                              ) : null}
+
+                              {reviewMode ? (
+                                <div className="mt-3 space-y-2">
+                                  <Button type="button" size="sm" variant="ghost" onClick={() => openExplanation(question)}>
+                                    <HelpCircle className="size-4" />
+                                    {t.has("explain") ? t("explain") : "Explain"}
+                                  </Button>
+                                  {expandedExplanations.has(question.id) ? (
+                                    <div className="rounded-md border border-border/80 bg-muted/25 p-3 text-sm">
+                                      <p className="text-foreground/90">{question.explanation}</p>
+                                      <p className="mt-2 text-xs text-muted-foreground">
+                                        {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
+                                        {Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : question.correctAnswer}
+                                      </p>
+                                    </div>
+                                  ) : null}
+                                </div>
                               ) : null}
                             </article>
                           );
@@ -559,6 +791,22 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      {finishOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-5">
+            <h3 className="text-lg font-semibold">{t("finishTest")}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("finishSummary", { answered: answeredCount, total: test.totalQuestions, unanswered: unansweredCount })}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("timeSpent", { seconds: timeSpent })}</p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setFinishOpen(false)}>{t("cancel")}</Button>
+              <Button onClick={finishTest}>{t("confirmFinish")}</Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
     </section>
   );
 }

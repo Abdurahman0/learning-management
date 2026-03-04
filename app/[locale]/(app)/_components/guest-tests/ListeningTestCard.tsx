@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import {ChevronDown, Clock3, ListChecks, Lock} from "lucide-react";
+import {ChevronDown, Clock3, ListChecks, Lock, Play} from "lucide-react";
 import {useState} from "react";
 import {useTranslations} from "next-intl";
 
@@ -94,6 +94,7 @@ export function ListeningTestCard({test, defaultOpen = false}: ListeningTestCard
               ) : (
                 <Button type="button" className="h-10 min-w-40 rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90">
                   {t("card.startTest")}
+                  <Play className="ml-2 size-4 fill-current" aria-hidden="true" />
                 </Button>
               )}
             </div>

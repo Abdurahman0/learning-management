@@ -265,7 +265,11 @@
     "passageRange": "Passage {passage}: {from}-{to}",
     "notFoundTitle": "Reading testi topilmadi",
     "notFoundDesc": "Bu test identifikatori hozirgi demo ma'lumotlarida mavjud emas.",
-    "backToReading": "Reading testlariga qaytish"
+    "backToReading": "Reading testlariga qaytish",
+    "finishSummary": "Siz {total} ta savoldan {answered} tasiga javob berdingiz. {unanswered} ta javobsiz qoldi.",
+    "timeSpent": "Sarflangan vaqt: {seconds} soniya",
+    "cancel": "Bekor qilish",
+    "confirmFinish": "Yakunlash va baholash"
   },
   "listeningTest": {
     "title": "Academic Listening Test",
@@ -300,7 +304,11 @@
     "selectOption": "Variantni tanlang",
     "notFoundTitle": "Listening testi topilmadi",
     "notFoundDesc": "Bu listening test identifikatori hozirgi demo ma'lumotlarda mavjud emas.",
-    "backToListening": "Listening testlariga qaytish"
+    "backToListening": "Listening testlariga qaytish",
+    "finishSummary": "Siz {total} ta savoldan {answered} tasiga javob berdingiz. {unanswered} ta javobsiz qoldi.",
+    "timeSpent": "Sarflangan vaqt: {seconds} soniya",
+    "cancel": "Bekor qilish",
+    "confirmFinish": "Yakunlash va baholash"
   },
   "auth": {
     "orContinueWithEmail": "YOKI EMAIL ORQALI DAVOM ETING",
@@ -428,5 +436,37 @@
     "contact": "Bog'lanish",
     "help": "Yordam markazi",
     "copyright": "© 2026 IELTS Master Practice. Barcha huquqlar himoyalangan."
+  },
+  "common": {
+    "explain": "Izoh",
+    "showEvidence": "Dalilni ko'rsatish",
+    "correctAnswer": "To'g'ri javob",
+    "yourAnswer": "Sizning javobingiz",
+    "notAvailable": "Mavjud emas"
+  },
+  "testResults": {
+    "title": "Test natijalari",
+    "scoreSummary": "{total} tadan {correct} ta to'g'ri ({percent}%)",
+    "estimatedBand": "Taxminiy band: 6.5 (beta)",
+    "reviewAnswers": "Javoblarni ko'rish",
+    "retakeTest": "Testni qayta ishlash",
+    "goToDashboard": "Dashboard'ga qaytish",
+    "correct": "To'g'ri",
+    "incorrect": "Noto'g'ri",
+    "unanswered": "Javobsiz",
+    "timeTaken": "Sarflangan vaqt",
+    "timerUsed": "Taymer ishlatilgan",
+    "timerNotUsed": "Taymer ishlatilmagan",
+    "questionPalette": "Savollar paneli",
+    "questionReview": "Savollar tahlili",
+    "yourAnswer": "Sizning javobingiz",
+    "correctAnswer": "To'g'ri javob",
+    "explain": "Izoh",
+    "showEvidence": "Matn/audio dalilini ko'rsatish",
+    "evidenceViewer": "Dalillar oynasi",
+    "passage": "{index}-matn",
+    "notAvailable": "Mavjud emas",
+    "missingAttemptTitle": "Natija topilmadi",
+    "missingAttemptDescription": "Ushbu test uchun yakunlangan urinish topilmadi."
   }
 }

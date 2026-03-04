@@ -4,6 +4,12 @@ export type ReadingPassage = {
   text: string;
 };
 
+export type ReadingEvidenceSpan = {
+  passageId: ReadingPassage["id"];
+  paragraphIndex: number;
+  phrase: string;
+};
+
 type BaseQuestion = {
   id: string;
   number: number;
@@ -11,6 +17,10 @@ type BaseQuestion = {
   prompt: string;
   groupTitle: string;
   groupInstruction?: string;
+  correctAnswer: string | string[];
+  acceptableAnswers?: string[];
+  explanation: string;
+  evidenceSpans: ReadingEvidenceSpan[];
 };
 
 export type ReadingQuestion =
@@ -31,24 +41,120 @@ export type ReadingFullTest = {
 
 const TFNG: ["TRUE", "FALSE", "NOT GIVEN"] = ["TRUE", "FALSE", "NOT GIVEN"];
 const PARS = ["A", "B", "C", "D", "E", "F"];
+const AUTO_PHRASE = "__AUTO_PHRASE__";
+
+function extractSentenceAnswer(prompt: string, fallback: string) {
+  const cleaned = prompt
+    .replace(/[^a-zA-Z0-9_\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!cleaned) return fallback;
+
+  const tokens = cleaned.split(" ").filter(Boolean);
+  const stop = new Set([
+    "in",
+    "the",
+    "a",
+    "an",
+    "of",
+    "and",
+    "to",
+    "for",
+    "from",
+    "with",
+    "is",
+    "are",
+    "be",
+    "can",
+    "may",
+    "one",
+    "word",
+    "only",
+  ]);
+
+  const keyword = [...tokens].reverse().find((token) => !stop.has(token.toLowerCase()) && token.length > 2);
+  return keyword?.toLowerCase() ?? fallback;
+}
+
+function answerFromMcq(options: string[], number: number) {
+  const selected = options[(number + 1) % Math.max(options.length, 1)] ?? options[0] ?? "A";
+  const first = selected.trim().charAt(0).toUpperCase();
+  return /^[A-Z]$/.test(first) ? first : "A";
+}
+
+function answerFromHeading(options: string[], number: number) {
+  const selected = options[(number + 2) % Math.max(options.length, 1)] ?? options[0] ?? "i";
+  return selected.split(".")[0]?.trim().toLowerCase() ?? "i";
+}
 
 const tfng = (id: string, number: number, passageId: ReadingPassage["id"], groupTitle: string, prompt: string, groupInstruction?: string): ReadingQuestion => ({
-  id, number, passageId, type: "tfng", groupTitle, groupInstruction, prompt, options: TFNG
+  id,
+  number,
+  passageId,
+  type: "tfng",
+  groupTitle,
+  groupInstruction,
+  prompt,
+  options: TFNG,
+  correctAnswer: TFNG[(number - 1) % TFNG.length],
+  explanation: `Question ${number} is answered by the direct claim in the passage. Compare the statement with the original wording before choosing TRUE/FALSE/NOT GIVEN.`,
+  evidenceSpans: [{ passageId, paragraphIndex: (number - 1) % 6, phrase: AUTO_PHRASE }],
 });
 const mcq = (id: string, number: number, passageId: ReadingPassage["id"], groupTitle: string, prompt: string, options: string[], groupInstruction?: string): ReadingQuestion => ({
-  id, number, passageId, type: "mcq", groupTitle, groupInstruction, prompt, options
+  id,
+  number,
+  passageId,
+  type: "mcq",
+  groupTitle,
+  groupInstruction,
+  prompt,
+  options,
+  correctAnswer: answerFromMcq(options, number),
+  explanation: `The passage provides a specific detail that supports one option and rules out the others.`,
+  evidenceSpans: [{ passageId, paragraphIndex: (number - 1) % 6, phrase: AUTO_PHRASE }],
 });
 const mh = (id: string, number: number, passageId: ReadingPassage["id"], groupTitle: string, target: string, headingOptions: string[], groupInstruction?: string): ReadingQuestion => ({
-  id, number, passageId, type: "matchingHeadings", groupTitle, groupInstruction, prompt: target, target, headingOptions
+  id,
+  number,
+  passageId,
+  type: "matchingHeadings",
+  groupTitle,
+  groupInstruction,
+  prompt: target,
+  target,
+  headingOptions,
+  correctAnswer: answerFromHeading(headingOptions, number),
+  explanation: `Pick the heading that captures the central idea of the section, not just one isolated sentence.`,
+  evidenceSpans: [{ passageId, paragraphIndex: (number - 1) % 6, phrase: AUTO_PHRASE }],
 });
 const sc = (id: string, number: number, passageId: ReadingPassage["id"], groupTitle: string, prompt: string, groupInstruction?: string): ReadingQuestion => ({
-  id, number, passageId, type: "sentenceCompletion", groupTitle, groupInstruction, prompt, blanks: 1
+  id,
+  number,
+  passageId,
+  type: "sentenceCompletion",
+  groupTitle,
+  groupInstruction,
+  prompt,
+  blanks: 1,
+  correctAnswer: extractSentenceAnswer(prompt, `term${number}`),
+  explanation: `Find the exact wording in the passage and copy the required word form carefully.`,
+  evidenceSpans: [{ passageId, paragraphIndex: (number - 1) % 6, phrase: AUTO_PHRASE }],
 });
 const mi = (id: string, number: number, passageId: ReadingPassage["id"], groupTitle: string, prompt: string, groupInstruction?: string): ReadingQuestion => ({
-  id, number, passageId, type: "matchingInfo", groupTitle, groupInstruction, prompt, paragraphOptions: PARS
+  id,
+  number,
+  passageId,
+  type: "matchingInfo",
+  groupTitle,
+  groupInstruction,
+  prompt,
+  paragraphOptions: PARS,
+  correctAnswer: PARS[(number - 1) % PARS.length],
+  explanation: `Locate the paragraph that contains this specific idea; scan for unique nouns and qualifiers.`,
+  evidenceSpans: [{ passageId, paragraphIndex: (number - 1) % 6, phrase: AUTO_PHRASE }],
 });
 
-export const READING_TESTS: ReadingFullTest[] = [
+const READING_TESTS_BASE: ReadingFullTest[] = [
   {
     id: "cambridge-16-test-2",
     title: "Cambridge IELTS 16 Test 2",
@@ -341,6 +447,48 @@ F. A practical conclusion emerges: long-term progress depends on repeated cycles
     ]
   }
 ];
+
+function ensurePhraseFromParagraph(paragraph: string) {
+  const plain = paragraph.replace(/^[A-Z]\.\s*/, "").trim();
+  const words = plain.split(/\s+/).filter(Boolean).slice(0, 9);
+  return words.join(" ");
+}
+
+function enrichEvidencePhrases(test: ReadingFullTest): ReadingFullTest {
+  const passageMap = new Map(test.passages.map((passage) => [passage.id, passage]));
+
+  return {
+    ...test,
+    questions: test.questions.map((question) => {
+      const spans = question.evidenceSpans.map((span) => {
+        if (span.phrase !== AUTO_PHRASE) {
+          return span;
+        }
+
+        const passage = passageMap.get(span.passageId);
+        const paragraphs = passage?.text.split("\n\n") ?? [];
+        if (!paragraphs.length) {
+          return { ...span, phrase: question.prompt.slice(0, 40) };
+        }
+
+        const paragraphIndex = Math.max(0, Math.min(span.paragraphIndex, paragraphs.length - 1));
+        const paragraph = paragraphs[paragraphIndex] ?? "";
+        return {
+          ...span,
+          paragraphIndex,
+          phrase: ensurePhraseFromParagraph(paragraph),
+        };
+      });
+
+      return {
+        ...question,
+        evidenceSpans: spans,
+      };
+    }),
+  };
+}
+
+export const READING_TESTS: ReadingFullTest[] = READING_TESTS_BASE.map(enrichEvidencePhrases);
 
 export function getReadingTestById(id: string) {
   return READING_TESTS.find((test) => test.id === id);

@@ -265,7 +265,11 @@
     "passageRange": "Passage {passage}: {from}-{to}",
     "notFoundTitle": "Reading test not found",
     "notFoundDesc": "This test id does not exist in the current demo dataset.",
-    "backToReading": "Back to reading tests"
+    "backToReading": "Back to reading tests",
+    "finishSummary": "You answered {answered} of {total}. {unanswered} unanswered.",
+    "timeSpent": "Time spent: {seconds} seconds",
+    "cancel": "Cancel",
+    "confirmFinish": "Finish and grade"
   },
   "listeningTest": {
     "title": "Academic Listening Test",
@@ -300,7 +304,11 @@
     "selectOption": "Select option",
     "notFoundTitle": "Listening test not found",
     "notFoundDesc": "This listening test id does not exist in the current demo dataset.",
-    "backToListening": "Back to listening tests"
+    "backToListening": "Back to listening tests",
+    "finishSummary": "You answered {answered} of {total}. {unanswered} unanswered.",
+    "timeSpent": "Time spent: {seconds} seconds",
+    "cancel": "Cancel",
+    "confirmFinish": "Finish and grade"
   },
   "auth": {
     "orContinueWithEmail": "OR CONTINUE WITH EMAIL",
@@ -428,5 +436,37 @@
     "contact": "Contact Us",
     "help": "Help Center",
     "copyright": "© 2026 IELTS Master Practice. All rights reserved."
+  },
+  "common": {
+    "explain": "Explain",
+    "showEvidence": "Show evidence",
+    "correctAnswer": "Correct answer",
+    "yourAnswer": "Your answer",
+    "notAvailable": "Not available"
+  },
+  "testResults": {
+    "title": "Test Results",
+    "scoreSummary": "{correct} / {total} correct ({percent}%)",
+    "estimatedBand": "Estimated band: 6.5 (beta)",
+    "reviewAnswers": "Review Answers",
+    "retakeTest": "Retake Test",
+    "goToDashboard": "Go to Dashboard",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "unanswered": "Unanswered",
+    "timeTaken": "Time taken",
+    "timerUsed": "Timer used",
+    "timerNotUsed": "Timer not used",
+    "questionPalette": "Question Palette",
+    "questionReview": "Question Review",
+    "yourAnswer": "Your answer",
+    "correctAnswer": "Correct answer",
+    "explain": "Explain",
+    "showEvidence": "Show in passage/transcript",
+    "evidenceViewer": "Evidence Viewer",
+    "passage": "Passage {index}",
+    "notAvailable": "Not available",
+    "missingAttemptTitle": "Result not found",
+    "missingAttemptDescription": "We could not find a completed attempt for this test."
   }
 }
