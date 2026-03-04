@@ -2,7 +2,8 @@
 
 import {ChevronDown, Clock3, ListChecks, Lock, Play} from "lucide-react";
 import {useState} from "react";
-import {useTranslations} from "next-intl";
+import {useRouter} from "next/navigation";
+import {useLocale, useTranslations} from "next-intl";
 
 import type {ReadingGuestTest} from "@/data/guest-tests";
 import {Badge} from "@/components/ui/badge";
@@ -18,6 +19,8 @@ type ReadingTestCardProps = {
 
 export function ReadingTestCard({test, defaultOpen = false}: ReadingTestCardProps) {
   const t = useTranslations("guest");
+  const locale = useLocale();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -93,7 +96,11 @@ export function ReadingTestCard({test, defaultOpen = false}: ReadingTestCardProp
                   {t("card.locked")}
                 </Button>
               ) : (
-                <Button type="button" className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90">
+                <Button
+                  type="button"
+                  onClick={() => router.push(`/${locale}/reading/${test.id}`)}
+                  className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90"
+                >
                   {t("card.startReadingFull")}
                   <Play className="ml-2 size-4 fill-current" aria-hidden="true" />
                 </Button>

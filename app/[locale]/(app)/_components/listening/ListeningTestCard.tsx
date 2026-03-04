@@ -2,7 +2,8 @@
 
 import {ChevronDown, Clock3, ListChecks, Lock} from "lucide-react";
 import {useState} from "react";
-import {useTranslations} from "next-intl";
+import {useRouter} from "next/navigation";
+import {useLocale, useTranslations} from "next-intl";
 
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
@@ -18,6 +19,8 @@ type ListeningTestCardProps = {
 
 export function ListeningTestCard({test, defaultOpen = false}: ListeningTestCardProps) {
   const t = useTranslations("guest");
+  const locale = useLocale();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
@@ -91,7 +94,11 @@ export function ListeningTestCard({test, defaultOpen = false}: ListeningTestCard
                   {t("card.locked")}
                 </Button>
               ) : (
-                <Button type="button" className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90">
+                <Button
+                  type="button"
+                  onClick={() => router.push(`/${locale}/listening/${test.id}`)}
+                  className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90"
+                >
                   {t("card.startListening")}
                 </Button>
               )}

@@ -28,7 +28,7 @@ export type ListeningGuestTest = {
 
 export const READING_TESTS: ReadingGuestTest[] = [
   {
-    id: "r-001",
+    id: "cambridge-18-test-1",
     title: "Cambridge IELTS 18 Test 1",
     isPremium: false,
     durationMinutes: 60,
@@ -41,7 +41,7 @@ export const READING_TESTS: ReadingGuestTest[] = [
     ]
   },
   {
-    id: "r-002",
+    id: "cambridge-18-test-2",
     title: "Cambridge IELTS 18 Test 2",
     isPremium: false,
     durationMinutes: 60,
@@ -80,7 +80,7 @@ export const READING_TESTS: ReadingGuestTest[] = [
     ]
   },
   {
-    id: "r-005",
+    id: "cambridge-16-test-2",
     title: "Cambridge IELTS 16 Test 2",
     isPremium: false,
     durationMinutes: 60,

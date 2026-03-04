@@ -17,7 +17,7 @@ export type ListeningTestItem = {
 
 export const LISTENING_TESTS: ListeningTestItem[] = [
   {
-    id: "l-008",
+    id: "cambridge-19-listening-2",
     title: "Cambridge IELTS 19 Listening Test 2",
     isPremium: false,
     difficulty: "medium",
@@ -31,7 +31,7 @@ export const LISTENING_TESTS: ListeningTestItem[] = [
     ]
   },
   {
-    id: "l-007",
+    id: "cambridge-19-listening-1",
     title: "Cambridge IELTS 19 Listening Test 1",
     isPremium: false,
     difficulty: "easy",
@@ -59,7 +59,7 @@ export const LISTENING_TESTS: ListeningTestItem[] = [
     ]
   },
   {
-    id: "l-005",
+    id: "recent-real-exam-jan-2024",
     title: "Recent Real Exam - Jan 2024",
     isPremium: false,
     difficulty: "easy",
