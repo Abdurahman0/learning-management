@@ -444,8 +444,8 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
     ]
   },
   {
-    id: "recent-real-exam-jan-2024",
-    title: "Recent Real Exam - Jan 2024",
+    id: "recent-real-exam-jan-2026",
+    title: "Recent Real Exam - Jan 2026",
     durationMinutes: 30,
     totalQuestions: 40,
     sections: [

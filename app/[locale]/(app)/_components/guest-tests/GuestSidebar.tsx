@@ -116,7 +116,7 @@ export function GuestSidebar({usedTests, totalTests}: GuestSidebarProps) {
       </div>
 
       <Button asChild className="mt-auto h-12 rounded-xl bg-blue-600 text-base font-semibold hover:bg-blue-600/90">
-        <Link href={`/${locale}/register`}>{t("sidebar.createAccount")}</Link>
+        <Link href={`/${locale}/auth`}>{t("sidebar.createAccount")}</Link>
       </Button>
     </aside>
   );

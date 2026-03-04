@@ -1,3 +1,5 @@
+import { AuthShell } from "../auth/components/AuthShell";
+
 export default function Page() {
-  return null;
+  return <AuthShell initialMode="signin" />;
 }

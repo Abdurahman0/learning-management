@@ -27,7 +27,7 @@ export function ReadingMobileHeader() {
         <div className="flex items-center gap-1">
           <ThemeToggle />
           <Button asChild variant="ghost" size="icon" className="rounded-xl text-muted-foreground hover:text-foreground">
-            <Link href={`/${locale}/register`} aria-label={t("mobile.signIn")}>
+            <Link href={`/${locale}/auth`} aria-label={t("mobile.signIn")}>
               <CircleUserRound className="size-[18px]" aria-hidden="true" />
             </Link>
           </Button>

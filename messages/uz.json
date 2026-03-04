@@ -302,6 +302,98 @@
     "notFoundDesc": "Bu listening test identifikatori hozirgi demo ma'lumotlarda mavjud emas.",
     "backToListening": "Listening testlariga qaytish"
   },
+  "auth": {
+    "orContinueWithEmail": "YOKI EMAIL ORQALI DAVOM ETING",
+    "or": "YOKI",
+    "brand": "IELTS MASTER",
+    "nav": {
+      "features": "Imkoniyatlar",
+      "pricing": "Narxlar",
+      "about": "Haqida",
+      "signIn": "Kirish",
+      "createAccount": "Akkaunt yaratish"
+    },
+    "common": {
+      "continueWithGoogle": "Google orqali davom etish",
+      "submitting": "Yuklanmoqda...",
+      "showPassword": "Parolni ko'rsatish",
+      "hidePassword": "Parolni yashirish"
+    },
+    "fields": {
+      "fullName": "To'liq ism",
+      "email": "Email manzil",
+      "password": "Parol",
+      "confirmPassword": "Parolni tasdiqlash"
+    },
+    "placeholders": {
+      "fullName": "John Doe",
+      "email": "name@example.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
+    },
+    "signup": {
+      "title": "Akkauntingizni yarating",
+      "subtitle": "Bir necha soniyada ro'yxatdan o'ting va tayyorgarlikni boshlang.",
+      "divider": "YOKI EMAIL ORQALI DAVOM ETING",
+      "termsPrefix": "Akkaunt yaratish orqali siz",
+      "terms": "Foydalanish shartlari",
+      "and": "va",
+      "privacy": "Maxfiylik siyosati",
+      "submit": "Akkaunt yaratish",
+      "bottomText": "Akkauntingiz bormi?",
+      "bottomLink": "Bu yerda kiring",
+      "success": "Akkaunt yaratildi. Endi backend auth ulashingiz mumkin."
+    },
+    "signin": {
+      "title": "Kirish",
+      "subtitle": "Akkauntingizga kirish uchun ma'lumotlaringizni kiriting",
+      "divider": "YOKI",
+      "remember": "Eslab qolish",
+      "forgot": "Parolni unutdingizmi?",
+      "submit": "Kirish",
+      "bottomText": "Akkauntingiz yo'qmi?",
+      "bottomLink": "Yaratish",
+      "success": "Muvaffaqiyatli kirildi. Endi backend auth ulashingiz mumkin."
+    },
+    "signupMarketing": {
+      "title": "IELTS imtihonini ishonch bilan egallang",
+      "description": "Dunyo bo'ylab 10 000+ talaba kabi platformamizdan foydalanib, maqsad band natijangizga tezroq erishing.",
+      "bullets": {
+        "unlimited": {
+          "title": "Cheksiz testlar",
+          "desc": "Barcha modullarda cheklovsiz mashq qiling"
+        },
+        "history": {
+          "title": "Tarixni kuzatish",
+          "desc": "Natijangizning o'sishini kuzating"
+        },
+        "analysis": {
+          "title": "Xatolar tahlili",
+          "desc": "Takrorlanuvchi xatolar bo'yicha chuqur tahlil"
+        },
+        "ai": {
+          "title": "AI yordami",
+          "desc": "Zaif joylar bo'yicha tezkor tavsiyalar"
+        }
+      },
+      "trustLine": "O'zbekiston va dunyo bo'ylab talabalar ishonch bildirgan"
+    },
+    "signinMarketing": {
+      "title": "Qaytganingizdan xursandmiz.",
+      "description": "Ingliz tili yo'lingizni davom ettiring. Testlaringiz va shaxsiy AI feedbackga qayting.",
+      "proTip": "PRO MASLAHAT",
+      "proTipText": "Shunchaki ko'rib chiqyapsizmi?",
+      "guestLink": "Guest mode'ni sinab ko'ring",
+      "socialProof": "50k+ talabalar biz bilan"
+    },
+    "validation": {
+      "fullName": "To'liq ismni kiriting.",
+      "email": "To'g'ri email manzil kiriting.",
+      "password": "Parol kamida 8 ta belgidan iborat bo'lsin.",
+      "confirmPassword": "Parollar bir xil emas.",
+      "agree": "Davom etish uchun shartlarga rozilik berish kerak."
+    }
+  },
   "comparison": {
     "title": "Tayyorgarlikni maksimal darajaga olib chiqing",
     "subtitle": "Nega akkaunt ochish eng to'g'ri tanlov ekanini ko'ring.",

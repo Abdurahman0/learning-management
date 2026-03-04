@@ -18,7 +18,7 @@ export function UnlockMoreCard() {
 
         <div className="mt-4 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
           <Button asChild className="h-10 rounded-xl bg-blue-600 px-5 text-sm font-semibold hover:bg-blue-600/90">
-            <Link href={`/${locale}/register`}>{t("sidebar.createAccount")}</Link>
+            <Link href={`/${locale}/auth`}>{t("sidebar.createAccount")}</Link>
           </Button>
           <Button asChild variant="outline" className="h-10 rounded-xl border-border bg-background px-5 text-sm font-semibold">
             <Link href={`/${locale}/reviews#pricing`}>{t("listening.seePlans")}</Link>

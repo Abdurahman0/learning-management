@@ -302,6 +302,98 @@
     "notFoundDesc": "This listening test id does not exist in the current demo dataset.",
     "backToListening": "Back to listening tests"
   },
+  "auth": {
+    "orContinueWithEmail": "OR CONTINUE WITH EMAIL",
+    "or": "OR",
+    "brand": "IELTS MASTER",
+    "nav": {
+      "features": "Features",
+      "pricing": "Pricing",
+      "about": "About",
+      "signIn": "Sign In",
+      "createAccount": "Create account"
+    },
+    "common": {
+      "continueWithGoogle": "Continue with Google",
+      "submitting": "Please wait...",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "fields": {
+      "fullName": "Full Name",
+      "email": "Email Address",
+      "password": "Password",
+      "confirmPassword": "Confirm Password"
+    },
+    "placeholders": {
+      "fullName": "John Doe",
+      "email": "name@example.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
+    },
+    "signup": {
+      "title": "Create your account",
+      "subtitle": "Sign up in seconds and start your preparation.",
+      "divider": "OR CONTINUE WITH EMAIL",
+      "termsPrefix": "By creating an account, you agree to our",
+      "terms": "Terms of Service",
+      "and": "and",
+      "privacy": "Privacy Policy",
+      "submit": "Create Account",
+      "bottomText": "Already have an account?",
+      "bottomLink": "Sign in here",
+      "success": "Account created. You can connect backend auth next."
+    },
+    "signin": {
+      "title": "Sign In",
+      "subtitle": "Enter your credentials to access your account",
+      "divider": "OR",
+      "remember": "Remember me",
+      "forgot": "Forgot password?",
+      "submit": "Sign In",
+      "bottomText": "Don't have an account?",
+      "bottomLink": "Create one",
+      "success": "Signed in. You can connect backend auth next."
+    },
+    "signupMarketing": {
+      "title": "Master the IELTS exam with confidence",
+      "description": "Join over 10,000 students worldwide who use our platform to hit their band scores in record time.",
+      "bullets": {
+        "unlimited": {
+          "title": "Unlimited tests",
+          "desc": "Practice without limits on all modules"
+        },
+        "history": {
+          "title": "History tracking",
+          "desc": "Monitor your score progression"
+        },
+        "analysis": {
+          "title": "Mistake analysis",
+          "desc": "Deep insights into recurring errors"
+        },
+        "ai": {
+          "title": "AI Support",
+          "desc": "Get instant feedback on weak areas"
+        }
+      },
+      "trustLine": "Trusted by students in Uzbekistan and worldwide"
+    },
+    "signinMarketing": {
+      "title": "Welcome back.",
+      "description": "Continue your journey to English proficiency. Access your practice tests and personalized AI feedback.",
+      "proTip": "PRO TIP",
+      "proTipText": "Just browsing?",
+      "guestLink": "Try our Guest mode",
+      "socialProof": "Join 50k+ students worldwide"
+    },
+    "validation": {
+      "fullName": "Please enter your full name.",
+      "email": "Please enter a valid email address.",
+      "password": "Password must be at least 8 characters.",
+      "confirmPassword": "Passwords do not match.",
+      "agree": "You need to accept the terms to continue."
+    }
+  },
   "comparison": {
     "title": "Maximize Your Preparation",
     "subtitle": "See why creating an account is the best choice for your journey.",

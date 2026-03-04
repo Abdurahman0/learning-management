@@ -50,7 +50,7 @@ export function GuestCallout() {
             <p className="text-xl font-bold text-blue-600 leading-none">4</p>
           </div>
           <Button asChild className="h-9 rounded-lg bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90">
-            <Link href={`/${locale}/register`}>{t("banner.signup")}</Link>
+            <Link href={`/${locale}/auth`}>{t("banner.signup")}</Link>
           </Button>
         </div>
       </CardContent>

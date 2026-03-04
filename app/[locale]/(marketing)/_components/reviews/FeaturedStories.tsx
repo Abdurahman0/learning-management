@@ -27,7 +27,7 @@ const featuredStories: FeaturedStory[] = [
     quote:
       "The mock tests here are very close to the real exam. I improved from 6.0 to 7.5 in under two months. Highly recommended for Uzbek students aiming for UK universities.",
     band: "BAND 8.0",
-    date: "September 2023"
+    date: "September 2026"
   },
   {
     name: "Madina R.",
@@ -37,7 +37,7 @@ const featuredStories: FeaturedStory[] = [
     quote:
       "The AI-powered writing evaluation changed my preparation completely. It highlighted grammar and coherence issues I had missed before and helped me get my required score.",
     band: "BAND 7.0",
-    date: "October 2023"
+    date: "October 2026"
   },
   {
     name: "Jasur B.",
@@ -47,7 +47,7 @@ const featuredStories: FeaturedStory[] = [
     quote:
       "Honestly the best platform for IELTS Academic prep. Reading passages are very diverse and challenging. It really prepares you for the actual pressure on exam day.",
     band: "BAND 8.5",
-    date: "August 2023"
+    date: "August 2026"
   }
 ];
 

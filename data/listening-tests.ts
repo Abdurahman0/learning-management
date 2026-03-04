@@ -59,8 +59,8 @@ export const LISTENING_TESTS: ListeningTestItem[] = [
     ]
   },
   {
-    id: "recent-real-exam-jan-2024",
-    title: "Recent Real Exam - Jan 2024",
+    id: "recent-real-exam-jan-2026",
+    title: "Recent Real Exam - Jan 2026",
     isPremium: false,
     difficulty: "easy",
     durationMins: 30,

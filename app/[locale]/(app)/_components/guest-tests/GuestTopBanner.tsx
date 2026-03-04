@@ -43,7 +43,7 @@ export function GuestTopBanner() {
             <p className="text-[11px] text-muted-foreground">{t("banner.available")}</p>
           </div>
           <Button asChild className="h-10 rounded-xl bg-blue-600 px-5 text-sm font-semibold hover:bg-blue-600/90">
-            <Link href={`/${locale}/register`}>{t("banner.signup")}</Link>
+            <Link href={`/${locale}/auth`}>{t("banner.signup")}</Link>
           </Button>
         </div>
       </CardContent>

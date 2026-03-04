@@ -23,7 +23,7 @@ export function GuestUpgradeCard() {
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Button asChild className="h-11 rounded-xl bg-blue-600 px-7 text-base font-semibold hover:bg-blue-600/90">
-            <Link href={`/${locale}/register`}>{t("upgrade.upgradeNow")}</Link>
+            <Link href={`/${locale}/auth`}>{t("upgrade.upgradeNow")}</Link>
           </Button>
           <Button asChild variant="outline" className="h-11 rounded-xl border-border bg-background px-7 text-base font-semibold">
             <Link href={`/${locale}/reviews#pricing`}>{t("upgrade.comparePlans")}</Link>

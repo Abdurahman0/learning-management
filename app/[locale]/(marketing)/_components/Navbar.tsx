@@ -326,7 +326,7 @@ export function Navbar() {
           </div>
           <ThemeToggle />
           <Button asChild className="hidden rounded-xl bg-linear-to-br from-blue-700 to-indigo-400 px-5 sm:inline-flex">
-            <Link href={localeHref("/register")}>{t("nav.register")}</Link>
+            <Link href={localeHref("/auth")}>{t("nav.register")}</Link>
           </Button>
           <button
             type="button"
@@ -396,7 +396,7 @@ export function Navbar() {
           </Link>
 
           <Button asChild className="mt-2 rounded-xl bg-linear-to-br from-blue-700 to-indigo-400 sm:hidden">
-            <Link href={localeHref("/register")} onClick={() => setIsMobileOpen(false)}>
+            <Link href={localeHref("/auth")} onClick={() => setIsMobileOpen(false)}>
               {t("nav.register")}
             </Link>
           </Button>
