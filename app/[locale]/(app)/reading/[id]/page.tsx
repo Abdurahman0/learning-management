@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { BookOpen, Bookmark, CheckCircle2, Clock3, Grid2x2, HelpCircle, MoveLeft, MoveRight, Play, Square, User, XCircle } from "lucide-react";
+import { BookOpen, Bookmark, BookmarkCheck, CheckCircle2, Clock3, Grid2x2, HelpCircle, MoveLeft, MoveRight, Play, Square, User, XCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { getReadingTestById, type ReadingQuestion } from "@/data/reading-tests";
@@ -21,6 +21,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import { createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress } from "@/lib/test-attempt-storage";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
+import { Highlightable } from "@/components/test/Highlightable";
 
 type AnswerValue = string | string[];
 
@@ -84,6 +85,42 @@ function findParagraphMatches(paragraph: string, spans: HighlightItem[]): Paragr
   return filtered;
 }
 
+type HighlightClassOptions = {
+  mode: "light" | "dark";
+  isActive: boolean;
+};
+
+// Light theme preserves the existing look; dark theme uses softer fill + clearer ring.
+function getHighlightClasses({ mode, isActive }: HighlightClassOptions) {
+  if (mode === "light") {
+    return cn(
+      "border-l-2 border-emerald-500/40 bg-emerald-200/40 ring-emerald-300/40",
+      "hover:bg-emerald-200/55",
+      isActive && "bg-emerald-300/45 ring-emerald-400/60"
+    );
+  }
+
+  return cn(
+    "dark:border-l-2 dark:border-emerald-300/45 dark:bg-emerald-400/10 dark:ring-emerald-300/25",
+    "dark:shadow-[0_0_0_1px_rgba(16,185,129,0.10)] dark:hover:bg-emerald-400/15 dark:hover:ring-emerald-300/35",
+    isActive && "dark:bg-emerald-400/18 dark:ring-emerald-300/50"
+  );
+}
+
+function getBadgeClasses({ mode, isActive }: HighlightClassOptions) {
+  if (mode === "light") {
+    return cn(
+      "bg-blue-600 ring-1 ring-blue-400/30",
+      isActive && "bg-blue-700 ring-blue-500/45"
+    );
+  }
+
+  return cn(
+    "dark:bg-blue-500 dark:ring-2 dark:ring-slate-900/40",
+    isActive && "dark:bg-blue-400 dark:ring-blue-100/20"
+  );
+}
+
 export default function ReadingTestPage() {
   const params = useParams<{ id: string }>();
   const locale = useLocale();
@@ -116,7 +153,7 @@ type ReadingTestClientProps = {
 function ReadingTestClient({ test }: ReadingTestClientProps) {
   const t = useTranslations("readingTest");
   const [attemptId, setAttemptId] = useState<string>("");
-  const [startedAt, setStartedAt] = useState<number>(Date.now());
+  const [startedAt, setStartedAt] = useState<number>(0);
   const [finishOpen, setFinishOpen] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
   const [expandedExplanations, setExpandedExplanations] = useState<Set<string>>(new Set());
@@ -129,11 +166,25 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
   const [mobilePanel, setMobilePanel] = useState<"passage" | "questions">("passage");
   const [remainingSeconds, setRemainingSeconds] = useState(test.durationMinutes * 60);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [leftPanePct, setLeftPanePct] = useState(() => {
+    if (typeof window === "undefined") return 50;
+    try {
+      const raw = window.localStorage.getItem(`reading-split:${test.id}`);
+      if (!raw) return 50;
+      const parsed = Number(raw);
+      if (!Number.isFinite(parsed)) return 50;
+      return Math.min(70, Math.max(30, parsed));
+    } catch {
+      return 50;
+    }
+  });
 
+  const splitContainerRef = useRef<HTMLDivElement | null>(null);
   const questionsScrollRef = useRef<HTMLDivElement | null>(null);
   const passageScrollRef = useRef<HTMLDivElement | null>(null);
   const questionRefs = useRef<Map<number, HTMLElement>>(new Map());
   const pendingParagraphRef = useRef<string | null>(null);
+  const splitStorageKey = `reading-split:${test.id}`;
 
   useEffect(() => {
     const latestId = loadLatestAttemptId("reading", test.id);
@@ -160,6 +211,14 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
     media.addEventListener("change", onChange);
     return () => media.removeEventListener("change", onChange);
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(splitStorageKey, String(leftPanePct));
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [leftPanePct, splitStorageKey]);
 
   useEffect(() => {
     if (!timerRunning || remainingSeconds <= 0) {
@@ -347,6 +406,33 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
     setTimerRunning(false);
   };
 
+  const updateSplitFromClientX = (clientX: number) => {
+    const container = splitContainerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    if (rect.width <= 0) return;
+
+    const pct = ((clientX - rect.left) / rect.width) * 100;
+    setLeftPanePct(Math.min(70, Math.max(30, pct)));
+  };
+
+  const handleDividerPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (isCompact) return;
+    event.preventDefault();
+
+    const onMove = (moveEvent: PointerEvent) => {
+      updateSplitFromClientX(moveEvent.clientX);
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    updateSplitFromClientX(event.clientX);
+  };
+
   return (
     <section className="-mx-4 -my-4 flex h-[calc(100vh-2rem)] flex-col overflow-x-hidden overflow-y-hidden bg-background text-foreground sm:-mx-5 lg:-mx-10 lg:-my-8">
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
@@ -427,8 +513,12 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
         </div>
       </div>
 
-      <main className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden px-2 py-2 sm:px-3 sm:py-3 lg:grid-cols-[minmax(0,1.02fr)_minmax(0,1fr)] lg:gap-0 lg:px-0 lg:py-0">
-        <div className={cn("min-h-0 min-w-0 px-1 sm:px-0 lg:border-r lg:border-border lg:px-5 lg:py-4", isCompact && mobilePanel !== "passage" && "hidden")}>
+      <main
+        ref={splitContainerRef}
+        className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden px-2 py-2 sm:px-3 sm:py-3 lg:[grid-template-columns:var(--reading-grid)] lg:gap-0 lg:px-0 lg:py-0"
+        style={{ "--reading-grid": `${leftPanePct}% 8px minmax(0, 1fr)` } as CSSProperties}
+      >
+        <div className={cn("min-h-0 min-w-0 px-1 sm:px-0 lg:px-5 lg:py-4", isCompact && mobilePanel !== "passage" && "hidden")}>
           <Card className="flex h-full min-h-0 flex-col justify-start overflow-hidden border-border/80 bg-card/80 py-0 shadow-sm dark:shadow-black/25">
             <Tabs value={activePassageId} onValueChange={handlePassageChange} className="shrink-0">
               <div className="sticky top-0 z-10 border-b border-border/80 bg-card/95 px-3 pt-1 backdrop-blur supports-[backdrop-filter]:bg-card/90">
@@ -446,7 +536,12 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
               ref={passageScrollRef}
               className="h-[calc(100vh-16.3rem)] overflow-y-auto px-4 py-4 sm:h-[calc(100vh-16.9rem)] sm:px-6 sm:py-5 lg:h-[calc(100vh-14.6rem)] [scrollbar-color:hsl(var(--border))_transparent]"
             >
-              <div className="mx-auto flex max-w-[72ch] flex-col items-stretch justify-start space-y-5 pb-8">
+              <Highlightable
+                key={`reading-passage-${activePassageId}`}
+                storageKey={`reading:${test.id}:passage:${activePassageId}`}
+                contentVersion={`${activePassageId}:${reviewMode ? "review" : "attempt"}`}
+                className="mx-auto flex max-w-[72ch] min-w-0 flex-col items-stretch justify-start space-y-5 pb-8"
+              >
                 <p className="text-xs font-semibold tracking-[0.18em] text-blue-600 uppercase dark:text-blue-400">{activePassageId.toUpperCase()}</p>
                 <h2 className="break-words text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{test.passages.find((p) => p.id === activePassageId)?.title}</h2>
                 {(test.passages.find((p) => p.id === activePassageId)?.text ?? "").split("\n\n").map((paragraph, index) => {
@@ -463,6 +558,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                             let cursor = 0;
 
                             matches.forEach((match, matchIndex) => {
+                              const isActiveHighlight = activeQuestionNumber === match.questionNumber;
                               if (match.start > cursor) {
                                 segments.push(
                                   <Fragment key={`text-${paragraphId}-${matchIndex}`}>
@@ -474,9 +570,19 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                               segments.push(
                                 <mark
                                   key={`mark-${paragraphId}-${matchIndex}`}
-                                  className="mx-[1px] inline rounded-md bg-emerald-200/60 px-1 py-0.5 ring-1 ring-emerald-400/60 dark:bg-emerald-500/20 dark:ring-emerald-400/30"
+                                  className={cn(
+                                    "mx-[1px] inline rounded-md px-1.5 py-0.5 align-baseline leading-relaxed text-foreground ring-1 transition-colors",
+                                    getHighlightClasses({ mode: "light", isActive: isActiveHighlight }),
+                                    getHighlightClasses({ mode: "dark", isActive: isActiveHighlight })
+                                  )}
                                 >
-                                  <span className="mr-1 inline-flex rounded-md bg-blue-600 px-1.5 py-0.5 align-middle text-[11px] font-semibold text-white">
+                                  <span
+                                    className={cn(
+                                      "mr-1 inline-flex rounded-md px-1.5 py-0.5 align-middle text-[11px] font-semibold text-white",
+                                      getBadgeClasses({ mode: "light", isActive: isActiveHighlight }),
+                                      getBadgeClasses({ mode: "dark", isActive: isActiveHighlight })
+                                    )}
+                                  >
                                     {match.questionNumber}
                                   </span>
                                   {paragraph.slice(match.start, match.end)}
@@ -495,15 +601,48 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                     </p>
                   );
                 })}
-              </div>
+              </Highlightable>
             </div>
           </Card>
         </div>
 
+        <div
+          role="separator"
+          aria-label="Resize passage and questions panes"
+          aria-orientation="vertical"
+          aria-valuemin={30}
+          aria-valuemax={70}
+          aria-valuenow={Math.round(leftPanePct)}
+          tabIndex={isCompact ? -1 : 0}
+          className={cn(
+            "relative hidden w-2 cursor-col-resize items-center justify-center bg-transparent outline-none lg:flex",
+            "after:h-16 after:w-[3px] after:rounded-full after:bg-border/80 hover:after:bg-blue-500/70 focus-visible:ring-2 focus-visible:ring-blue-500"
+          )}
+          onPointerDown={handleDividerPointerDown}
+          onDoubleClick={() => setLeftPanePct(50)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft") {
+              event.preventDefault();
+              setLeftPanePct((prev) => Math.max(30, prev - 3));
+            } else if (event.key === "ArrowRight") {
+              event.preventDefault();
+              setLeftPanePct((prev) => Math.min(70, prev + 3));
+            } else if (event.key === "Home") {
+              event.preventDefault();
+              setLeftPanePct(50);
+            }
+          }}
+        />
+
         <div className={cn("min-h-0 min-w-0 px-1 sm:px-0 lg:px-5 lg:py-4", isCompact && mobilePanel !== "questions" && "hidden")}>
           <Card className="h-full min-h-0 gap-0 overflow-hidden border-border/80 bg-card/80 py-0 shadow-sm dark:shadow-black/25">
             <div ref={questionsScrollRef} className="h-[calc(100vh-16.3rem)] min-w-0 overflow-y-auto px-3 py-4 sm:h-[calc(100vh-16.9rem)] sm:px-4 lg:h-[calc(100vh-18rem)] lg:px-5 lg:py-5 [scrollbar-color:hsl(var(--border))_transparent]">
-              <div className="space-y-7 pb-20">
+              <Highlightable
+                key={`reading-questions-${activePassageId}`}
+                storageKey={`reading:${test.id}:questions:${activePassageId}`}
+                contentVersion={`${activePassageId}:${reviewMode ? "review" : "attempt"}`}
+                className="space-y-7 pb-20"
+              >
                 {groupedQuestions.map((group) => {
                   const headings = group.questions.find((q) => q.type === "matchingHeadings") as Extract<ReadingQuestion, { type: "matchingHeadings" }> | undefined;
 
@@ -532,6 +671,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                           const result = grading.byQuestion[question.id];
                           const answered = isAnswered(value);
                           const isCorrect = result?.isCorrect;
+                          const isMarked = marked.has(question.id);
 
                           return (
                             <article
@@ -550,6 +690,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                                 active
                                   ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/40"
                                   : "border-border/80 bg-card/90",
+                                isMarked && "border-l-4 border-l-amber-400 bg-amber-50/40 dark:bg-amber-500/10",
                                 reviewMode && answered && isCorrect && "border-emerald-300 bg-emerald-50/40 dark:bg-emerald-500/10",
                                 reviewMode && answered && !isCorrect && "border-rose-300 bg-rose-50/40 dark:bg-rose-500/10",
                                 reviewMode && !answered && "border-border bg-muted/20"
@@ -560,6 +701,12 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                                 <p className="min-w-0 break-words text-base font-medium leading-relaxed text-foreground">
                                   {question.number}. {question.prompt}
                                 </p>
+                                {isMarked && !reviewMode ? (
+                                  <Badge variant="secondary" className="shrink-0 rounded-full border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/20 dark:text-amber-200">
+                                    <Bookmark className="size-3.5" />
+                                    Marked
+                                  </Badge>
+                                ) : null}
                                 {reviewMode ? (
                                   <span className="shrink-0 text-lg leading-none" aria-hidden="true">
                                     {!answered ? "⏺" : isCorrect ? "✅" : "❌"}
@@ -674,7 +821,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                     </section>
                   );
                 })}
-              </div>
+              </Highlightable>
             </div>
 
             <div className="sticky bottom-0 z-20 border-t border-border/80 bg-card/95 px-3 py-3 backdrop-blur sm:px-4">
@@ -709,8 +856,10 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                       });
                     }}
                   >
-                    <Bookmark className="size-4" />
-                    {t("markForReview")}
+                    {currentQuestion && marked.has(currentQuestion.id) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
+                    {currentQuestion && marked.has(currentQuestion.id)
+                      ? (t.has("unmark") ? t("unmark") : "Unmark")
+                      : t("markForReview")}
                   </Toggle>
 
                   <Button type="button" variant="secondary" aria-label={t("questionPalette")} onClick={() => setPaletteOpen(true)} className="bg-muted/70">
@@ -770,7 +919,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                             isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
                             !isCurrent && answered && "border-blue-300 bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
                             !isCurrent && !answered && "border-border bg-card",
-                            isMarked && "ring-2 ring-amber-400 ring-offset-1"
+                            isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-400 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
                           )}
                           onClick={() => {
                             goToQuestion(num);
