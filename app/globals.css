@@ -122,6 +122,42 @@
       animation-duration: 60s;
     }
   }
+
+  .highlight-mark {
+    color: inherit;
+  }
+
+  .hl-yellow {
+    background: rgba(250, 204, 21, 0.35);
+  }
+
+  .hl-green {
+    background: rgba(34, 197, 94, 0.28);
+  }
+
+  .hl-blue {
+    background: rgba(59, 130, 246, 0.22);
+  }
+
+  .hl-pink {
+    background: rgba(236, 72, 153, 0.2);
+  }
+
+  .dark .hl-yellow {
+    background: rgba(250, 204, 21, 0.45);
+  }
+
+  .dark .hl-green {
+    background: rgba(34, 197, 94, 0.36);
+  }
+
+  .dark .hl-blue {
+    background: rgba(59, 130, 246, 0.3);
+  }
+
+  .dark .hl-pink {
+    background: rgba(236, 72, 153, 0.3);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

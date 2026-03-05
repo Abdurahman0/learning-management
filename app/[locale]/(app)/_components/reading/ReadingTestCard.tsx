@@ -14,14 +14,13 @@ import {DifficultySignal} from "../guest-tests/DifficultySignal";
 
 type ReadingTestCardProps = {
   test: ReadingGuestTest;
-  defaultOpen?: boolean;
 };
 
-export function ReadingTestCard({test, defaultOpen = false}: ReadingTestCardProps) {
+export function ReadingTestCard({test}: ReadingTestCardProps) {
   const t = useTranslations("guest");
   const locale = useLocale();
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Card className={cn("border-border bg-card py-0 shadow-sm", test.isPremium && "opacity-85", isOpen && !test.isPremium && "border-blue-600")}>

@@ -14,14 +14,13 @@ import {DifficultySignal} from "./DifficultySignal";
 
 type ListeningTestCardProps = {
   test: ListeningTestItem;
-  defaultOpen?: boolean;
 };
 
-export function ListeningTestCard({test, defaultOpen = false}: ListeningTestCardProps) {
+export function ListeningTestCard({test}: ListeningTestCardProps) {
   const t = useTranslations("guest");
   const locale = useLocale();
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Card className={cn("max-w-full overflow-hidden border-border bg-card py-0 shadow-sm", test.isPremium && "opacity-85", isOpen && !test.isPremium && "border-blue-600")}>

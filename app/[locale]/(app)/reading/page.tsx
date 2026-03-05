@@ -7,7 +7,6 @@ import {READING_TESTS, type Difficulty, type ReadingGuestTest} from "@/data/gues
 
 import {GuestCallout} from "../_components/listening/GuestCallout";
 import {ReadingFilters} from "../_components/reading/ReadingFilters";
-import {ReadingMobileHeader} from "../_components/reading/ReadingMobileHeader";
 import {ReadingTestCard} from "../_components/reading/ReadingTestCard";
 import {ReadingUnlockMoreCard} from "../_components/reading/ReadingUnlockMoreCard";
 
@@ -62,8 +61,6 @@ export default function ReadingPage() {
 
   return (
     <div>
-      <ReadingMobileHeader />
-
       <div className="mx-auto w-full max-w-[980px] pb-8 pt-4 lg:pt-0">
         <GuestCallout />
 
@@ -85,8 +82,8 @@ export default function ReadingPage() {
           </div>
 
           <div className="mt-4 space-y-3.5">
-            {filteredTests.map((test, index) => (
-              <ReadingTestCard key={test.id} test={test} defaultOpen={index === 0 && !test.isPremium} />
+            {filteredTests.map((test) => (
+              <ReadingTestCard key={test.id} test={test} />
             ))}
           </div>
 

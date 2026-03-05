@@ -1,0 +1,76 @@
+{
+  "dashboard": {
+    "nav": {
+      "dashboard": "Dashboard",
+      "tests": "Tests",
+      "practice": "Practice",
+      "analytics": "Analytics",
+      "community": "Community",
+      "searchPlaceholder": "Search resources...",
+      "upgradePro": "Upgrade Pro"
+    },
+    "title": "Dashboard",
+    "welcome": "Welcome back, {name}! You're {bandsAway} bands away from your goal.",
+    "practiceWeakAreas": "Practice Weak Areas",
+    "startNewTest": "Start New Test",
+    "resumePractice": "Resume Practice",
+    "continueTest": "Continue Test",
+    "reviewDetails": "Review Details",
+    "days": "days",
+    "lastActive": "Last active: {time}",
+    "progressMeta": "Progress: {done} / {total} Questions",
+    "filters": {
+      "lastMonth": "Last 1 month",
+      "last3Months": "Last 3 months",
+      "last6Months": "Last 6 months"
+    },
+    "kpis": {
+      "currentBand": "Current Band",
+      "testsTaken": "Tests Taken",
+      "avgScore": "Avg Score",
+      "studyStreak": "Study Streak"
+    },
+    "scoreProgress": {
+      "title": "Score Progress",
+      "subtitle": "Your band trend over the last 10 tests"
+    },
+    "skillsSnapshot": {
+      "title": "Skills Snapshot"
+    },
+    "skills": {
+      "listening": "Listening",
+      "reading": "Reading",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "targetGoal": {
+      "title": "Target Goal: Band {band}",
+      "description": "You're making great progress. Focus on your weak areas this week to reach your target.",
+      "overallJourney": "Overall Journey"
+    },
+    "weakAreas": {
+      "title": "Weak Areas"
+    },
+    "aiRecommendations": {
+      "title": "AI Recommendations",
+      "startTutorial": "Start AI Tutorial"
+    },
+    "recentHistory": {
+      "title": "Recent Test History",
+      "viewAll": "View All History",
+      "review": "Review",
+      "columns": {
+        "testName": "Test Name",
+        "date": "Date",
+        "module": "Module",
+        "score": "Score/Band",
+        "action": "Action"
+      }
+    },
+    "achievements": {
+      "title": "Your Achievements",
+      "subtitle": "Collect badges as you progress towards your goal"
+    },
+    "copyright": "All rights reserved."
+  }
+}

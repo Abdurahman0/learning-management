@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   BookOpen,
   Bookmark,
+  BookmarkCheck,
   Clock3,
   Grid2x2,
   MoveLeft,
@@ -47,6 +48,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import { createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress, saveAttemptResult } from "@/lib/test-attempt-storage";
+import { Highlightable } from "@/components/test/Highlightable";
 
 function formatTime(seconds: number) {
   const safe = Math.max(0, seconds);
@@ -171,7 +173,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
     "s1" | "s2" | "s3" | "s4"
   >("s1");
   const [attemptId, setAttemptId] = useState("");
-  const [startedAt, setStartedAt] = useState(Date.now());
+  const [startedAt, setStartedAt] = useState(0);
   const [finishOpen, setFinishOpen] = useState(false);
   const [activeQuestionNumber, setActiveQuestionNumber] = useState(1);
   const [answers, setAnswers] = useState<AnswersMap>({});
@@ -439,6 +441,12 @@ function ListeningTestClient({ testId }: { testId: string }) {
     router.push(`/${locale}/listening/${test.id}/result?attempt=${attemptId}`);
   };
 
+  const isQuestionMarked = (questionNumber: number) => marked.has(questionNumber);
+  const markedQuestionClass = (questionNumber: number) =>
+    isQuestionMarked(questionNumber)
+      ? "border-l-4 border-l-amber-400 bg-amber-50/40 dark:bg-amber-500/10"
+      : "";
+
   const renderBlock = (block: ListeningBlock) => {
     if (block.type === "noteForm") {
       return (
@@ -472,6 +480,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
                   "grid min-w-0 grid-cols-[32px_minmax(0,1fr)] items-center gap-2 scroll-mt-24 sm:grid-cols-[140px_32px_minmax(0,1fr)]",
                   isSmallLandscape &&
                     "rounded-lg border border-border/60 p-2 grid-cols-[32px_minmax(0,1fr)]",
+                  markedQuestionClass(field.questionNumber),
                 )}
               >
                 <p
@@ -538,7 +547,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
                       }
                       questionRefs.current.set(row.questionNumber, el);
                     }}
-                    className="scroll-mt-24"
+                    className={cn("scroll-mt-24", markedQuestionClass(row.questionNumber))}
                   >
                     <td className="border-b border-border px-3 py-2 break-words">
                       {row.values[0]}
@@ -597,7 +606,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
                 }
                 questionRefs.current.set(question.questionNumber, el);
               }}
-              className="min-w-0 rounded-lg border border-border bg-card p-4 scroll-mt-24 overflow-hidden"
+              className={cn("min-w-0 rounded-lg border border-border bg-card p-4 scroll-mt-24 overflow-hidden", markedQuestionClass(question.questionNumber))}
               onClick={() => setActiveQuestionNumber(question.questionNumber)}
             >
               <p className="break-words text-sm font-medium">
@@ -669,6 +678,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
                   "grid min-w-0 grid-cols-1 items-center gap-2 scroll-mt-24",
                   !isSmallLandscape &&
                     "md:grid-cols-[32px_minmax(0,1fr)_minmax(0,220px)]",
+                  markedQuestionClass(item.questionNumber),
                 )}
                 onClick={() => setActiveQuestionNumber(item.questionNumber)}
               >
@@ -776,7 +786,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
                       }
                       questionRefs.current.set(item.questionNumber, el);
                     }}
-                    className="grid grid-cols-[32px_minmax(0,1fr)] items-center gap-2 scroll-mt-24"
+                    className={cn("grid grid-cols-[32px_minmax(0,1fr)] items-center gap-2 scroll-mt-24", markedQuestionClass(item.questionNumber))}
                     onClick={() => setActiveQuestionNumber(item.questionNumber)}
                   >
                     <QuestionChip
@@ -825,7 +835,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
                 }
                 questionRefs.current.set(line.questionNumber, el);
               }}
-              className="flex flex-wrap items-center gap-2 scroll-mt-24"
+              className={cn("flex flex-wrap items-center gap-2 scroll-mt-24", markedQuestionClass(line.questionNumber))}
               onClick={() => setActiveQuestionNumber(line.questionNumber)}
             >
               <span className="break-words">{line.before}</span>
@@ -1075,7 +1085,10 @@ function ListeningTestClient({ testId }: { testId: string }) {
                 isSmallLandscape && "h-[calc(100vh-11.2rem)] py-2",
               )}
             >
-              <div
+              <Highlightable
+                key={`listening-section-${activeSection.id}`}
+                storageKey={`listening:${test.id}:section:${activeSection.id}`}
+                contentVersion={`${activeSection.id}:${isSmallLandscape ? "compact" : "full"}`}
                 className={cn(
                   "space-y-4 pb-28 lg:pb-10",
                   isSmallLandscape && "pb-24",
@@ -1098,7 +1111,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
                     {renderBlock(block)}
                   </div>
                 ))}
-              </div>
+              </Highlightable>
             </div>
 
             <div
@@ -1139,8 +1152,10 @@ function ListeningTestClient({ testId }: { testId: string }) {
                     });
                   }}
                 >
-                  <Bookmark className="size-4" />
-                  {t("markForReview")}
+                  {marked.has(activeQuestionNumber) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
+                  {marked.has(activeQuestionNumber)
+                    ? (t.has("unmark") ? t("unmark") : "Unmark")
+                    : t("markForReview")}
                 </Toggle>
 
                 <Button
@@ -1214,7 +1229,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
                         !answered &&
                         "border-slate-200 bg-slate-50 text-slate-700",
                       isMarked &&
-                        "border-amber-300 ring-2 ring-amber-300/60 ring-offset-1",
+                        "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100",
                       isCurrentSection && "shadow-sm",
                     )}
                   >
@@ -1303,13 +1318,13 @@ function ListeningTestClient({ testId }: { testId: string }) {
                         activeQuestionNumber !== number &&
                           answered &&
                           "border-blue-300 bg-blue-50 text-blue-700",
-                        activeQuestionNumber !== number &&
-                          !answered &&
-                          "border-slate-200 bg-slate-50 text-slate-700",
-                        isMarked &&
-                          "border-amber-300 ring-2 ring-amber-300/60 ring-offset-1",
-                        isCurrentSection && "shadow-sm",
-                      )}
+                      activeQuestionNumber !== number &&
+                        !answered &&
+                        "border-slate-200 bg-slate-50 text-slate-700",
+                      isMarked &&
+                          "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100",
+                      isCurrentSection && "shadow-sm",
+                    )}
                     >
                       {number}
                       {isMarked ? (

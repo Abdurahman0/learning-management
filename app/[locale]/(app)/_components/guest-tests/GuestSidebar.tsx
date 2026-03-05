@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {usePathname} from "next/navigation";
-import {BookOpen, Headphones, Lock, Mic, PenLine} from "lucide-react";
+import {BookOpen, Headphones, Home, Lock, Mic, PenLine} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {Button} from "@/components/ui/button";
@@ -21,8 +21,16 @@ export function GuestSidebar({usedTests, totalTests}: GuestSidebarProps) {
 
   const readingHref = `/${locale}/reading`;
   const listeningHref = `/${locale}/listening`;
+  const dashboardHref = `/${locale}/dashboard`;
 
   const navItems = [
+    {
+      key: "dashboard",
+      label: t("sidebar.dashboard"),
+      href: dashboardHref,
+      icon: Home,
+      disabled: false
+    },
     {
       key: "reading",
       label: t("sidebar.reading"),
@@ -64,7 +72,7 @@ export function GuestSidebar({usedTests, totalTests}: GuestSidebarProps) {
       <nav className="mt-7 space-y-1.5">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const active = !item.disabled && pathname === item.href;
+          const active = !item.disabled && pathname.startsWith(item.href);
 
           if (item.disabled) {
             return (
@@ -121,4 +129,3 @@ export function GuestSidebar({usedTests, totalTests}: GuestSidebarProps) {
     </aside>
   );
 }
-

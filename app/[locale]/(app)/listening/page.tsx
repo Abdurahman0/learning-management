@@ -11,7 +11,6 @@ import {
 
 import { GuestCallout } from "../_components/listening/GuestCallout";
 import { ListeningFilters } from "../_components/listening/ListeningFilters";
-import { ListeningMobileHeader } from "../_components/listening/ListeningMobileHeader";
 import { ListeningTestCard } from "../_components/listening/ListeningTestCard";
 import { UnlockMoreCard } from "../_components/listening/UnlockMoreCard";
 
@@ -68,8 +67,6 @@ export default function ListeningPage() {
 
   return (
     <div>
-      <ListeningMobileHeader />
-
       <div className="mx-auto w-full max-w-[980px] pb-8 pt-4 lg:pt-0">
         <GuestCallout />
 
@@ -95,11 +92,10 @@ export default function ListeningPage() {
           </div>
 
           <div className="mt-4 space-y-3.5">
-            {filteredTests.map((test, index) => (
+            {filteredTests.map((test) => (
               <ListeningTestCard
                 key={test.id}
                 test={test}
-                defaultOpen={index === 0 && !test.isPremium}
               />
             ))}
           </div>
