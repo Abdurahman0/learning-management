@@ -543,5 +543,808 @@
       "subtitle": "Collect badges as you progress towards your goal"
     },
     "copyright": "All rights reserved."
+  },
+  "adminDashboard": {
+    "sidebar": {
+      "brand": "IELTS MASTER",
+      "subtitle": "Admin Panel",
+      "openMenu": "Admin menyusini ochish",
+      "items": {
+        "dashboard": "Dashboard",
+        "tests": "Testlar",
+        "questionBank": "Savollar bazasi",
+        "users": "Foydalanuvchilar",
+        "analytics": "Analitika",
+        "mistakesAnalysis": "Xatolar tahlili",
+        "subscriptions": "Obunalar",
+        "achievements": "Yutuqlar",
+        "reports": "Hisobotlar",
+        "blog": "Blog",
+        "settings": "Sozlamalar"
+      }
+    },
+    "topbar": {
+      "title": "Admin Dashboard",
+      "searchPlaceholder": "Analitikani qidirish...",
+      "notificationsLabel": "Bildirishnomalar"
+    },
+    "stats": {
+      "totalUsers": "Jami foydalanuvchilar",
+      "testsCompleted": "Yakunlangan testlar",
+      "activeUsers": "Faol foydalanuvchilar",
+      "premiumSubscribers": "Premium obunachilar"
+    },
+    "charts": {
+      "userGrowth": "Foydalanuvchi o'sishi",
+      "testsCompleted": "Yakunlangan testlar",
+      "last7Months": "Oxirgi 7 oy",
+      "filters": {
+        "last7Months": "Oxirgi 7 oy"
+      },
+      "badges": {
+        "academic": "Akademik"
+      },
+      "legend": {
+        "academic": "Akademik"
+      },
+      "months": {
+        "jan": "Yan",
+        "feb": "Fev",
+        "mar": "Mar",
+        "apr": "Apr",
+        "may": "May",
+        "jun": "Iyn",
+        "jul": "Iyl"
+      }
+    },
+    "insights": {
+      "title": "Platforma insightlari",
+      "mostDifficult": {
+        "label": "Eng qiyin bo'lim",
+        "score": "O'rtacha ball: {score}"
+      },
+      "averageScore": {
+        "label": "O'rtacha natija",
+        "bandSuffix": "Umumiy band",
+        "basedOn": "Oxirgi {count} test asosida"
+      },
+      "quickAction": {
+        "kicker": "Tezkor amal",
+        "title": "Oylik hisobot yaratish",
+        "description": "Joriy faol davr uchun batafsil analitikani ko'rib chiqing.",
+        "download": "PDF yuklab olish"
+      }
+    },
+    "activity": {
+      "title": "So'nggi foydalanuvchi faolligi",
+      "viewAll": "Barchasini ko'rish",
+      "columns": {
+        "user": "Foydalanuvchi",
+        "action": "Amal",
+        "score": "Ball",
+        "status": "Holat"
+      },
+      "statuses": {
+        "verified": "Tasdiqlangan",
+        "active": "Faol",
+        "pendingReview": "Ko'rib chiqilmoqda"
+      }
+    }
+  },
+  "adminTests": {
+    "topbar": {
+      "title": "Testlar boshqaruvi",
+      "searchPlaceholder": "Testlarni qidiring...",
+      "createTest": "Yangi test yaratish",
+      "createMenuLabel": "Test turini tanlang",
+      "createReadingDefault": "Reading (Asosiy)",
+      "createListening": "Listening",
+      "notificationsLabel": "Bildirishnomalar"
+    },
+    "toolbar": {
+      "importCambridge": "Cambridge testini import qilish",
+      "duplicate": "Testni nusxalash"
+    },
+    "filters": {
+      "moduleLabel": "Modul",
+      "difficultyLabel": "Daraja",
+      "statusLabel": "Holat",
+      "sortLabel": "Saralash",
+      "reset": "Filtrlarni tozalash",
+      "module": {
+        "all": "Barcha modullar",
+        "reading": "Reading",
+        "listening": "Listening"
+      },
+      "difficulty": {
+        "all": "Barcha darajalar",
+        "beginner": "Boshlang'ich",
+        "intermediate": "O'rta",
+        "advanced": "Yuqori"
+      },
+      "status": {
+        "all": "Barcha holatlar",
+        "published": "Nashr qilingan",
+        "draft": "Qoralama"
+      },
+      "sort": {
+        "newest": "Eng yangi avval",
+        "oldest": "Eng eski avval",
+        "alphabetical": "Alifbo bo'yicha"
+      }
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening"
+    },
+    "difficulty": {
+      "beginner": "Boshlang'ich",
+      "intermediate": "O'rta",
+      "advanced": "Yuqori"
+    },
+    "status": {
+      "published": "Nashr qilingan",
+      "draft": "Qoralama"
+    },
+    "table": {
+      "columns": {
+        "testName": "Test nomi",
+        "module": "Modul",
+        "book": "Kitob",
+        "questions": "Savollar",
+        "difficulty": "Daraja",
+        "status": "Holat",
+        "createdDate": "Yaratilgan sana",
+        "actions": "Amallar"
+      },
+      "empty": "Tanlangan filtrlar uchun test topilmadi.",
+      "expandRow": "Qatorni ochish",
+      "collapseRow": "Qatorni yopish",
+      "noPassages": "Ushbu test uchun passage mavjud emas.",
+      "noSections": "Ushbu listening test uchun bo'limlar mavjud emas.",
+      "passageLabel": "{index}-passage",
+      "sectionLabel": "{index}-bo'lim",
+      "questionsShort": "Savol",
+      "editPassage": "Passageni tahrirlash",
+      "actions": {
+        "open": "Amallar menyusini ochish",
+        "edit": "Testni tahrirlash",
+        "preview": "Testni ko'rish",
+        "duplicate": "Testni nusxalash",
+        "delete": "Testni o'chirish"
+      }
+    },
+    "pagination": {
+      "summary": "{total} tadan {from} - {to} ko'rsatilmoqda",
+      "previous": "Oldingi sahifa",
+      "next": "Keyingi sahifa"
+    },
+    "row": {
+      "copySuffix": "(Nusxa {index})",
+      "newDraftTitle": "Maxsus test {index}",
+      "customBook": "Maxsus",
+      "defaultPassageTitle": "Yangi passage",
+      "defaultPassageDescription": "Backend ulangandan keyin to'liq passage matni va savollarni qo'shing.",
+      "edited": "(tahrirlangan)"
+    },
+    "dates": {
+      "months": {
+        "jan": "Yan",
+        "feb": "Fev",
+        "mar": "Mar",
+        "apr": "Apr",
+        "may": "May",
+        "jun": "Iyn",
+        "jul": "Iyl",
+        "aug": "Avg",
+        "sep": "Sen",
+        "oct": "Okt",
+        "nov": "Noy",
+        "dec": "Dek"
+      }
+    }
+  },
+  "adminTestBuilder": {
+    "topbar": {
+      "title": "Test Builder",
+      "breadcrumb": {
+        "tests": "Testlar",
+        "builder": {
+          "reading": "Reading Builder",
+          "listening": "Listening Builder"
+        }
+      },
+      "mode": {
+        "editor": "Editor",
+        "preview": "Preview"
+      },
+      "actions": {
+        "saveDraft": "Qoralama saqlash",
+        "publish": "Testni nashr qilish"
+      }
+    },
+    "status": {
+      "draft": "Qoralama",
+      "published": "Nashr qilingan"
+    },
+    "structure": {
+      "title": "Test tuzilmasi",
+      "labels": {
+        "passage": "Passage {index}",
+        "section": "Section {index}"
+      },
+      "readingRule": "Reading bo'limida aynan 3 ta passage bo'lishi kerak va jami 40 ta savol bo'ladi (Q1–13, Q14–26, Q27–40).",
+      "listeningRule": "Listening bo'limida aynan 4 ta section bo'lishi kerak va jami 40 ta savol bo'ladi (Q1–10, Q11–20, Q21–30, Q31–40).",
+      "actions": {
+        "add": "Qo'shish",
+        "remove": "O'chirish"
+      }
+    },
+    "editor": {
+      "passageEditorTitle": "Passage tahrirlash",
+      "transcriptEditorTitle": "Transkript tahrirlash",
+      "toolbar": {
+        "bold": "Qalin",
+        "italic": "Kursiv",
+        "underline": "Tagi chizilgan",
+        "link": "Havola qo'shish",
+        "addEvidence": "Dalil qo'shish"
+      },
+      "evidenceHint": "Avval savolni tanlang, so'ng matnni belgilang va Dalil qo'shish tugmasini bosing.",
+      "evidenceTarget": "Dalil biriktiriladigan savol: {question}",
+      "audioLabel": "Audio yorlig'i",
+      "audioPlaceholder": "section-1-audio.mp3",
+      "lastEvidence": "Oxirgi biriktirilgan dalil"
+    },
+    "preview": {
+      "activeContent": "Preview kontent"
+    },
+    "groups": {
+      "title": "Savol guruhlari",
+      "totalCount": "{count} ta jami",
+      "questionCount": "{count} ta savol",
+      "addGroup": "Savol guruhi qo'shish",
+      "createTitle": "Savol guruhi yaratish",
+      "editTitle": "Savol guruhini tahrirlash",
+      "editorDescription": "Savol turini tanlang va Q{from} hamda Q{to} oralig'ida diapazon kiriting.",
+      "fields": {
+        "type": "Savol turi",
+        "from": "Dan",
+        "to": "Gacha"
+      },
+      "validationRange": "Faol passage/section ichida to'g'ri diapazon tanlang.",
+      "createAction": "Guruh yaratish",
+      "saveAction": "Saqlash",
+      "copySuffix": "(Nusxa)",
+      "actions": {
+        "editGroup": "Guruhni tahrirlash",
+        "duplicateGroup": "Guruhdan nusxa olish",
+        "deleteGroup": "Guruhni o'chirish"
+      }
+    },
+    "questions": {
+      "editorTitle": "Savol tahrirlash",
+      "editorDescription": "Savol matni, javob kaliti, izoh va dalil maydonlarini sozlang.",
+      "questionNumber": "Q{number}",
+      "emptyPrompt": "Savol matni kiritilmagan",
+      "actions": {
+        "moveUp": "Yuqoriga",
+        "moveDown": "Pastga",
+        "duplicate": "Savoldan nusxa olish",
+        "delete": "Savolni o'chirish",
+        "edit": "Tahrirlash",
+        "addQuestion": "Savol qo'shish"
+      },
+      "fields": {
+        "prompt": "Savol matni",
+        "correctAnswer": "To'g'ri javob",
+        "options": "Variantlar",
+        "correctOption": "To'g'ri variant",
+        "headingOptions": "Sarlavha variantlari",
+        "correctHeading": "To'g'ri sarlavha",
+        "items": "Elementlar",
+        "choices": "Tanlovlar",
+        "mapping": "Moslash",
+        "selectChoice": "Tanlovni belgilang",
+        "acceptableAnswers": "Qabul qilinadigan javoblar",
+        "acceptableAnswersPlaceholder": "Javob 1, Javob 2",
+        "explanation": "Izoh",
+        "evidence": "Dalil",
+        "evidencePlaceholder": "Passage/transkriptdan ajratilgan matnni kiriting"
+      }
+    },
+    "questionTypes": {
+      "tfng": "True / False / Not Given",
+      "multiple_choice": "Multiple Choice",
+      "matching_headings": "Matching Headings",
+      "sentence_completion": "Sentence Completion",
+      "summary_completion": "Summary Completion",
+      "table_completion": "Table Completion",
+      "diagram_labeling": "Diagram Labeling",
+      "form_completion": "Form Completion",
+      "note_completion": "Note Completion",
+      "matching_information": "Matching Information",
+      "short_answer": "Short Answer"
+    },
+    "common": {
+      "cancel": "Bekor qilish"
+    }
+  },
+  "adminAnalytics": {
+    "title": "Platform analitikasi",
+    "exportReport": "Hisobotni eksport qilish",
+    "dateRanges": {
+      "last7Days": "Oxirgi 7 kun",
+      "last30Days": "Oxirgi 30 kun",
+      "last3Months": "Oxirgi 3 oy"
+    },
+    "stats": {
+      "totalTestsTaken": "Jami topshirilgan testlar",
+      "avgReadingScore": "O'rtacha Reading balli",
+      "avgListeningScore": "O'rtacha Listening balli",
+      "activeStudents": "Faol talabalar"
+    },
+    "studentScoreTrend": "Talabalar ballari trendi",
+    "testsCompletedPerDay": "Kunlik yakunlangan testlar",
+    "dailyAverage": "Kunlik o'rtacha: {value}",
+    "legend": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "academic": "Academic"
+    },
+    "accuracyByQuestionType": "Savol turi bo'yicha aniqlik",
+    "questionTypes": {
+      "multipleChoice": "Multiple Choice (MCQ)",
+      "tfng": "True/False/Not Given (TFNG)",
+      "matchingHeadings": "Matching Headings",
+      "diagramLabeling": "Diagram Labeling",
+      "summaryCompletion": "Summary Completion",
+      "tableCompletion": "Table Completion"
+    },
+    "skillDistribution": "Talaba ko'nikmalari taqsimoti",
+    "skills": {
+      "reading": "READING",
+      "listening": "LISTENING",
+      "writing": "WRITING",
+      "speaking": "SPEAKING"
+    },
+    "hardestQuestions": "Eng qiyin savollar",
+    "hardest": {
+      "searchPlaceholder": "Savol/test bo'yicha qidiring...",
+      "columns": {
+        "questionPreview": "Savol preview",
+        "type": "Turi",
+        "testName": "Test nomi",
+        "accuracy": "Aniqlik",
+        "attempts": "Urinishlar"
+      }
+    },
+    "passagePerformance": "Passage samaradorligi",
+    "avgScore": "O'rtacha ball: {value}",
+    "aiInsights": "AI asosidagi platforma insightlari",
+    "insights": {
+      "badges": {
+        "optimize": "Optimallashtirish",
+        "strength": "Kuchli tomon",
+        "segment": "Foydalanuvchi segmenti"
+      },
+      "titles": {
+        "risingDifficultyGap": "Qiyinchilik tafovuti oshmoqda",
+        "vocabularyRetention": "Lug'atni saqlab qolish",
+        "regionalPerformance": "Hududiy samaradorlik"
+      },
+      "descriptions": {
+        "risingDifficultyGapDesc": "Talabalar Diagram Labeling savollarida o'rtachadan 35% ko'proq vaqt sarflamoqda, bu qo'shimcha mashq kontentiga ehtiyoj borligini ko'rsatadi.",
+        "vocabularyRetentionDesc": "Daily Flashcard funksiyasi tanlangan davrda Passage 3 aniqligini 18% ga oshirdi.",
+        "regionalPerformanceDesc": "Ushbu davrda Janubi-Sharqiy Osiyodagi foydalanuvchilarning Listening ballari global o'rtachadan 12% yuqori."
+      }
+    }
+  },
+  "adminUsers": {
+    "title": "Foydalanuvchilar",
+    "searchPlaceholder": "Ism, email yoki ID bo'yicha qidiring...",
+    "notificationsLabel": "Bildirishnomalar",
+    "stats": {
+      "totalUsers": "Jami foydalanuvchilar",
+      "activeToday": "Bugun faol",
+      "newThisMonth": "Bu oy qo'shilgan",
+      "payingUsers": "To'lovchi foydalanuvchilar"
+    },
+    "filters": {
+      "labels": {
+        "status": "Holat",
+        "role": "Rol",
+        "plan": "Tarif",
+        "locale": "Til"
+      },
+      "reset": "Filtrlarni tozalash",
+      "status": {
+        "all": "Barcha holatlar",
+        "verified": "Tasdiqlangan",
+        "active": "Faol",
+        "suspended": "To'xtatilgan"
+      },
+      "role": {
+        "all": "Barcha rollar",
+        "student": "Talaba",
+        "admin": "Admin",
+        "tutor": "Tutor"
+      },
+      "plan": {
+        "all": "Barcha tariflar",
+        "free": "Bepul",
+        "pro": "Pro",
+        "premium": "Premium"
+      },
+      "locale": {
+        "all": "Barcha tillar",
+        "en": "EN",
+        "uz": "UZ"
+      }
+    },
+    "table": {
+      "columns": {
+        "user": "Foydalanuvchi",
+        "plan": "Tarif",
+        "band": "Band",
+        "moduleStats": "Modul statistikasi"
+      },
+      "empty": "Joriy filtrlar uchun foydalanuvchi topilmadi.",
+      "showingResults": "{total} tadan {from}-{to} foydalanuvchi ko'rsatilmoqda",
+      "userId": "ID: {id}"
+    },
+    "pagination": {
+      "previous": "Oldingi sahifa",
+      "next": "Keyingi sahifa"
+    },
+    "drawer": {
+      "title": "Foydalanuvchi profili",
+      "memberSince": "{date} dan beri a'zo",
+      "confirmResetPassword": "{name} uchun parolni tiklaysizmi?",
+      "tabs": {
+        "overview": "Umumiy",
+        "history": "Test tarixi",
+        "payments": "To'lovlar"
+      },
+      "actions": {
+        "sendMessage": "Xabar yuborish",
+        "resetPassword": "Parolni tiklash"
+      }
+    },
+    "overview": {
+      "overallBand": "Umumiy band",
+      "targetScore": "Maqsad band",
+      "bandProgress": "Band o'sishi",
+      "growthLabel": "+{value} band o'sish",
+      "moduleStats": "Modul bo'yicha natija",
+      "identifiedWeakAreas": "Aniqlangan zaif joylar",
+      "noWeakAreas": "Bu foydalanuvchi uchun zaif joylar topilmadi."
+    },
+    "history": {
+      "columns": {
+        "testName": "Test nomi",
+        "module": "Modul",
+        "score": "Ball",
+        "date": "Sana"
+      },
+      "empty": "Hali test tarixi mavjud emas."
+    },
+    "payments": {
+      "columns": {
+        "title": "To'lov",
+        "amount": "Miqdor",
+        "status": "Holat",
+        "date": "Sana"
+      },
+      "empty": "Hali to'lov yozuvlari mavjud emas."
+    },
+    "plan": {
+      "free": "Bepul",
+      "pro": "Pro",
+      "premium": "Premium"
+    },
+    "role": {
+      "student": "Talaba",
+      "admin": "Admin",
+      "tutor": "Tutor"
+    },
+    "status": {
+      "verified": "Tasdiqlangan",
+      "active": "Faol",
+      "suspended": "To'xtatilgan"
+    },
+    "paymentStatus": {
+      "paid": "To'langan",
+      "pending": "Kutilmoqda",
+      "failed": "Muvaffaqiyatsiz"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "modulesShort": {
+      "reading": "R",
+      "listening": "L",
+      "writing": "W",
+      "speaking": "S"
+    },
+    "weakAreaSeverity": {
+      "critical": "Kritik",
+      "improving": "Yaxshilanmoqda",
+      "stable": "Barqaror"
+    },
+    "dates": {
+      "months": {
+        "jan": "Yan",
+        "feb": "Fev",
+        "mar": "Mar",
+        "apr": "Apr",
+        "may": "May",
+        "jun": "Iyn",
+        "jul": "Iyl",
+        "aug": "Avg",
+        "sep": "Sen",
+        "oct": "Okt",
+        "nov": "Noy",
+        "dec": "Dek"
+      }
+    },
+    "actionFeedback": {
+      "sendMessage": "{name} uchun xabar yuborish amali ishga tushdi.",
+      "resetPassword": "{name} uchun parolni tiklash amali ishga tushdi.",
+      "resetCancelled": "{name} uchun parolni tiklash bekor qilindi."
+    }
+  },
+  "adminSubscriptions": {
+    "title": "Obunalar va tariflar",
+    "searchPlaceholder": "Tarif yoki foydalanuvchini qidiring...",
+    "createPlan": "Tarif yaratish",
+    "saveChanges": "O'zgarishlarni saqlash",
+    "resetChanges": "O'zgarishlarni bekor qilish",
+    "notificationsLabel": "Bildirishnomalar",
+    "stats": {
+      "totalSubscribers": "Jami obunachilar",
+      "monthlyRevenue": "Oylik daromad",
+      "freeUsers": "Bepul foydalanuvchilar",
+      "conversionRate": "Konversiya darajasi"
+    },
+    "billing": {
+      "forever": "doimiy",
+      "month": "oy"
+    },
+    "editPlan": "Tarifni tahrirlash",
+    "globalSettings": {
+      "title": "Global tarif sozlamalari",
+      "guestTestLimit": "Guest test limiti",
+      "guestTestLimitHint": "Guest sessiya uchun maksimal testlar",
+      "aiRecommendationsAccess": "AI tavsiyalariga kirish",
+      "aiRecommendationsAccessHint": "Barcha ro'yxatdan o'tgan foydalanuvchilarga ochish",
+      "premiumExplanations": "Premium tushuntirishlar",
+      "premiumExplanationsHint": "Batafsil yechim kalitlarini yoqish"
+    },
+    "distribution": {
+      "title": "Tarif taqsimoti",
+      "users": "Foydalanuvchilar",
+      "plans": {
+        "free": "Bepul",
+        "pro": "Pro",
+        "premium": "Premium"
+      }
+    },
+    "recentActions": {
+      "title": "So'nggi obuna amallari",
+      "empty": "Joriy qidiruv bo'yicha amal topilmadi.",
+      "columns": {
+        "user": "Foydalanuvchi",
+        "action": "Amal",
+        "date": "Sana",
+        "status": "Holat"
+      }
+    },
+    "downloadCsv": "CSV yuklab olish",
+    "status": {
+      "success": "Muvaffaqiyatli",
+      "pending": "Kutilmoqda",
+      "closed": "Yopilgan"
+    },
+    "editDialog": {
+      "title": "Tarifni tahrirlash",
+      "description": "Tarif tafsilotlari va kiritilgan imkoniyatlarni yangilang.",
+      "fields": {
+        "planName": "Tarif nomi",
+        "tagline": "Tagline",
+        "price": "Narx",
+        "billingPeriod": "To'lov davri",
+        "features": "Imkoniyatlar"
+      },
+      "removeFeature": "Imkoniyatni o'chirish",
+      "newFeaturePlaceholder": "Yangi imkoniyat qo'shing...",
+      "addFeature": "Imkoniyat qo'shish"
+    },
+    "common": {
+      "cancel": "Bekor qilish",
+      "save": "Saqlash"
+    },
+    "toast": {
+      "savedTitle": "O'zgarishlar saqlandi",
+      "savedDescription": "Obuna tariflari va sozlamalar yangilandi."
+    },
+    "dates": {
+      "months": {
+        "jan": "Yan",
+        "feb": "Fev",
+        "mar": "Mar",
+        "apr": "Apr",
+        "may": "May",
+        "jun": "Iyn",
+        "jul": "Iyl",
+        "aug": "Avg",
+        "sep": "Sen",
+        "oct": "Okt",
+        "nov": "Noy",
+        "dec": "Dek"
+      }
+    }
+  },
+  "adminMistakesAnalysis": {
+    "title": "Xatolar tahlili",
+    "searchPlaceholder": "Aniq savollar, mavzular yoki testlarni qidiring...",
+    "exportInsights": "Insightlarni eksport qilish",
+    "notificationsLabel": "Bildirishnomalar",
+    "dateRanges": {
+      "last7Days": "Oxirgi 7 kun",
+      "last30Days": "Oxirgi 30 kun",
+      "last3Months": "Oxirgi 3 oy"
+    },
+    "summary": {
+      "mostDifficultType": "Eng qiyin tur",
+      "lowestAccuracyPassage": "Eng past aniqlikdagi passage",
+      "avgReadingAccuracy": "Reading o'rtacha aniqlik",
+      "avgListeningAccuracy": "Listening o'rtacha aniqlik"
+    },
+    "accuracyByQuestionType": "Savol turi bo'yicha aniqlik",
+    "accuracyByQuestionTypeHint": "Barcha modullar bo'yicha natijalarni solishtirish",
+    "severity": {
+      "critical": "Kritik",
+      "warning": "Ogohlantirish",
+      "good": "Yaxshi"
+    },
+    "mistakeDistribution": "Xatolar taqsimoti",
+    "totalErrors": "Jami xatolar",
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "mostMissedQuestions": "Eng ko'p xato qilingan savollar",
+    "viewDetailedList": "Batafsil ro'yxatni ko'rish",
+    "table": {
+      "columns": {
+        "questionPreview": "Savol preview",
+        "testName": "Test nomi",
+        "type": "Turi",
+        "accuracyRate": "Aniqlik darajasi",
+        "totalAttempts": "Jami urinishlar"
+      },
+      "empty": "Xato qilingan savollar topilmadi."
+    },
+    "passageDifficultyRank": "Passage qiyinlik reytingi",
+    "accShort": "Aniq.",
+    "noPassages": "Passage topilmadi.",
+    "commonMistakeTopics": "Keng tarqalgan xato mavzulari",
+    "noTopics": "Mavzular topilmadi.",
+    "aiGeneratedInsights": "AI yaratgan insightlar",
+    "actionPlanGenerateModules": "Harakat rejasi: Yaxshilash modullarini yaratish",
+    "aiRecommendationSettings": "AI tavsiya sozlamalari",
+    "enableAiRecommendations": "AI tavsiyalarini yoqish",
+    "enableAiRecommendationsHint": "Talabalarga avtomatik qiyinlik signalini ko'rsatish",
+    "weaknessDetectionThreshold": "Zaiflikni aniqlash chegarasi",
+    "accuracyShort": "Aniqlik",
+    "threshold": {
+      "strict": "Qattiq (10%)",
+      "moderate": "O'rtacha (35%)",
+      "relaxed": "Yengil (60%)"
+    }
+  },
+  "adminAchievements": {
+    "title": "Yutuqlar va gamifikatsiya",
+    "searchPlaceholder": "Yutuqlarni qidiring...",
+    "createAchievement": "Yutuq yaratish",
+    "notificationsLabel": "Bildirishnomalar",
+    "stats": {
+      "totalAchievements": "Jami yutuqlar",
+      "earnedToday": "Bugun olingan",
+      "mostEarnedBadge": "Eng ko'p olingan badge",
+      "activeStreakUsers": "Faol streak foydalanuvchilar"
+    },
+    "activeAchievements": "Faol yutuqlar",
+    "viewLibrary": "Kutubxonani ko'rish",
+    "timesEarned": "Olganlar soni",
+    "recentUserProgress": "So'nggi foydalanuvchi progressi",
+    "viewAll": "Barchasini ko'rish",
+    "table": {
+      "columns": {
+        "user": "Foydalanuvchi",
+        "achievement": "Yutuq",
+        "dateEarned": "Olingan sana",
+        "currentStreak": "Joriy streak"
+      },
+      "empty": "Joriy qidiruv bo'yicha progress topilmadi."
+    },
+    "gamificationSettings": "Gamifikatsiya sozlamalari",
+    "settings": {
+      "streakTracking": "Streak kuzatuvi",
+      "streakTrackingHint": "Kunlik faoliyat streaklarini yoqing",
+      "badgeNotifications": "Badge bildirishnomalari",
+      "badgeNotificationsHint": "Olinganda foydalanuvchini xabardor qilish",
+      "publicLeaderboard": "Ochiq leaderboard",
+      "publicLeaderboardHint": "Foydalanuvchi reytinglarini ochiq ko'rsatish"
+    },
+    "quickPreview": "Tezkor preview",
+    "preview": {
+      "streakTitle": "Streak yangilanishi tayyor",
+      "badgeTitle": "Yangi yutuq ochildi",
+      "leaderboardEnabled": "Leaderboard ko'rinishi yoqilgan.",
+      "leaderboardDisabled": "Leaderboard hozircha yopiq holatda."
+    },
+    "engagementAnalytics": "Engagement analitika: vaqt bo'yicha olingan yutuqlar",
+    "weekly": "Haftalik",
+    "monthly": "Oylik",
+    "earnedLabel": "Olingan",
+    "badgeLibraryPreview": "Badge kutubxonasi preview",
+    "newBadge": "Yangi badge",
+    "actions": {
+      "openMenu": "Yutuq amallari menyusini ochish",
+      "edit": "Tahrirlash",
+      "duplicate": "Nusxalash",
+      "disable": "O'chirish"
+    },
+    "iconTypes": {
+      "trophy": "Kubok",
+      "award": "Mukofot",
+      "flame": "Olov",
+      "sparkles": "Yulduzcha"
+    },
+    "categories": {
+      "streak": "Streak",
+      "score": "Ball",
+      "module": "Modul",
+      "engagement": "Faollik"
+    },
+    "createDialog": {
+      "title": "Yutuq yaratish",
+      "description": "Yangi yutuq sozlamalarini kiriting va faol ro'yxatga qo'shing.",
+      "fields": {
+        "name": "Yutuq nomi",
+        "description": "Tavsif",
+        "iconType": "Ikona turi",
+        "category": "Kategoriya",
+        "timesEarnedDefault": "Olganlar soni (standart)"
+      },
+      "placeholders": {
+        "name": "Masalan: Listening Sprint",
+        "description": "Foydalanuvchi bajarishi kerak bo'lgan shartni yozing..."
+      },
+      "defaultDescription": "Admin paneldan yaratilgan maxsus yutuq."
+    },
+    "common": {
+      "cancel": "Bekor qilish",
+      "create": "Yaratish"
+    },
+    "empty": {
+      "achievements": "Qidiruv bo'yicha yutuqlar topilmadi.",
+      "badges": "Qidiruv bo'yicha badge topilmadi."
+    },
+    "toast": {
+      "createdTitle": "Yutuq yaratildi",
+      "createdDescription": "{title} faol yutuqlarga qo'shildi.",
+      "actionTitle": "Amal qabul qilindi",
+      "actionDescription": "{title} uchun {action} amali yuborildi.",
+      "viewAllTitle": "Barcha progress ko'rinmoqda",
+      "viewAllDescription": "Batafsil progress ro'yxati placeholder ishga tushdi."
+    }
   }
 }

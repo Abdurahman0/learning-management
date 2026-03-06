@@ -543,5 +543,808 @@
       "subtitle": "Collect badges as you progress towards your goal"
     },
     "copyright": "All rights reserved."
+  },
+  "adminDashboard": {
+    "sidebar": {
+      "brand": "IELTS MASTER",
+      "subtitle": "Admin Panel",
+      "openMenu": "Open admin menu",
+      "items": {
+        "dashboard": "Dashboard",
+        "tests": "Tests",
+        "questionBank": "Question Bank",
+        "users": "Users",
+        "analytics": "Analytics",
+        "mistakesAnalysis": "Mistakes Analysis",
+        "subscriptions": "Subscriptions",
+        "achievements": "Achievements",
+        "reports": "Reports",
+        "blog": "Blog",
+        "settings": "Settings"
+      }
+    },
+    "topbar": {
+      "title": "Admin Dashboard",
+      "searchPlaceholder": "Search analytics...",
+      "notificationsLabel": "Notifications"
+    },
+    "stats": {
+      "totalUsers": "Total Users",
+      "testsCompleted": "Tests Completed",
+      "activeUsers": "Active Users",
+      "premiumSubscribers": "Premium Subscribers"
+    },
+    "charts": {
+      "userGrowth": "User Growth",
+      "testsCompleted": "Tests Completed",
+      "last7Months": "Last 7 months",
+      "filters": {
+        "last7Months": "Last 7 months"
+      },
+      "badges": {
+        "academic": "Academic"
+      },
+      "legend": {
+        "academic": "Academic"
+      },
+      "months": {
+        "jan": "Jan",
+        "feb": "Feb",
+        "mar": "Mar",
+        "apr": "Apr",
+        "may": "May",
+        "jun": "Jun",
+        "jul": "Jul"
+      }
+    },
+    "insights": {
+      "title": "Platform Insights",
+      "mostDifficult": {
+        "label": "Most Difficult",
+        "score": "Average Score: {score}"
+      },
+      "averageScore": {
+        "label": "Average Score",
+        "bandSuffix": "Overall Band",
+        "basedOn": "Based on last {count} tests"
+      },
+      "quickAction": {
+        "kicker": "Quick Action",
+        "title": "Generate Monthly Report",
+        "description": "Review detailed analytics for the current active period.",
+        "download": "Download PDF"
+      }
+    },
+    "activity": {
+      "title": "Recent User Activity",
+      "viewAll": "View All",
+      "columns": {
+        "user": "User",
+        "action": "Action",
+        "score": "Score",
+        "status": "Status"
+      },
+      "statuses": {
+        "verified": "Verified",
+        "active": "Active",
+        "pendingReview": "Pending Review"
+      }
+    }
+  },
+  "adminTests": {
+    "topbar": {
+      "title": "Tests Management",
+      "searchPlaceholder": "Search tests...",
+      "createTest": "Create New Test",
+      "createMenuLabel": "Create Test Type",
+      "createReadingDefault": "Reading (Default)",
+      "createListening": "Listening",
+      "notificationsLabel": "Notifications"
+    },
+    "toolbar": {
+      "importCambridge": "Import Cambridge Test",
+      "duplicate": "Duplicate Test"
+    },
+    "filters": {
+      "moduleLabel": "Module",
+      "difficultyLabel": "Difficulty",
+      "statusLabel": "Status",
+      "sortLabel": "Sort By",
+      "reset": "Reset filters",
+      "module": {
+        "all": "All Modules",
+        "reading": "Reading",
+        "listening": "Listening"
+      },
+      "difficulty": {
+        "all": "All Levels",
+        "beginner": "Beginner",
+        "intermediate": "Intermediate",
+        "advanced": "Advanced"
+      },
+      "status": {
+        "all": "All Status",
+        "published": "Published",
+        "draft": "Draft"
+      },
+      "sort": {
+        "newest": "Newest First",
+        "oldest": "Oldest First",
+        "alphabetical": "Alphabetical"
+      }
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening"
+    },
+    "difficulty": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "status": {
+      "published": "Published",
+      "draft": "Draft"
+    },
+    "table": {
+      "columns": {
+        "testName": "Test Name",
+        "module": "Module",
+        "book": "Book",
+        "questions": "Questions",
+        "difficulty": "Difficulty",
+        "status": "Status",
+        "createdDate": "Created Date",
+        "actions": "Actions"
+      },
+      "empty": "No tests found for current filters.",
+      "expandRow": "Expand row",
+      "collapseRow": "Collapse row",
+      "noPassages": "No passages found for this test.",
+      "noSections": "No sections found for this listening test.",
+      "passageLabel": "Passage {index}",
+      "sectionLabel": "Section {index}",
+      "questionsShort": "Qs",
+      "editPassage": "Edit Passage",
+      "actions": {
+        "open": "Open actions menu",
+        "edit": "Edit test",
+        "preview": "Preview test",
+        "duplicate": "Duplicate test",
+        "delete": "Delete test"
+      }
+    },
+    "pagination": {
+      "summary": "Showing {from} to {to} of {total} results",
+      "previous": "Previous page",
+      "next": "Next page"
+    },
+    "row": {
+      "copySuffix": "(Copy {index})",
+      "newDraftTitle": "Custom Test {index}",
+      "customBook": "Custom",
+      "defaultPassageTitle": "New Passage",
+      "defaultPassageDescription": "Add full passage content and questions when backend is connected.",
+      "edited": "(edited)"
+    },
+    "dates": {
+      "months": {
+        "jan": "Jan",
+        "feb": "Feb",
+        "mar": "Mar",
+        "apr": "Apr",
+        "may": "May",
+        "jun": "Jun",
+        "jul": "Jul",
+        "aug": "Aug",
+        "sep": "Sep",
+        "oct": "Oct",
+        "nov": "Nov",
+        "dec": "Dec"
+      }
+    }
+  },
+  "adminTestBuilder": {
+    "topbar": {
+      "title": "Test Builder",
+      "breadcrumb": {
+        "tests": "Tests",
+        "builder": {
+          "reading": "Reading Builder",
+          "listening": "Listening Builder"
+        }
+      },
+      "mode": {
+        "editor": "Editor",
+        "preview": "Preview"
+      },
+      "actions": {
+        "saveDraft": "Save Draft",
+        "publish": "Publish Test"
+      }
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published"
+    },
+    "structure": {
+      "title": "Test Structure",
+      "labels": {
+        "passage": "Passage {index}",
+        "section": "Section {index}"
+      },
+      "readingRule": "Reading must contain exactly 3 passages and total 40 questions (Q1–13, Q14–26, Q27–40).",
+      "listeningRule": "Listening must contain exactly 4 sections and total 40 questions (Q1–10, Q11–20, Q21–30, Q31–40).",
+      "actions": {
+        "add": "Add",
+        "remove": "Remove"
+      }
+    },
+    "editor": {
+      "passageEditorTitle": "Passage Editor",
+      "transcriptEditorTitle": "Transcript Editor",
+      "toolbar": {
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "link": "Insert Link",
+        "addEvidence": "Add Evidence"
+      },
+      "evidenceHint": "Select a question first, then highlight text and click Add Evidence.",
+      "evidenceTarget": "Evidence target: {question}",
+      "audioLabel": "Audio Label",
+      "audioPlaceholder": "section-1-audio.mp3",
+      "lastEvidence": "Last Attached Evidence"
+    },
+    "preview": {
+      "activeContent": "Preview Content"
+    },
+    "groups": {
+      "title": "Question Groups",
+      "totalCount": "{count} total",
+      "questionCount": "{count} questions",
+      "addGroup": "Add Question Group",
+      "createTitle": "Create Question Group",
+      "editTitle": "Edit Question Group",
+      "editorDescription": "Select a question type and valid range between Q{from} and Q{to}.",
+      "fields": {
+        "type": "Question Type",
+        "from": "From",
+        "to": "To"
+      },
+      "validationRange": "Please choose a valid range inside the active passage/section.",
+      "createAction": "Create Group",
+      "saveAction": "Save Group",
+      "copySuffix": "(Copy)",
+      "actions": {
+        "editGroup": "Edit Group",
+        "duplicateGroup": "Duplicate Group",
+        "deleteGroup": "Delete Group"
+      }
+    },
+    "questions": {
+      "editorTitle": "Question Editor",
+      "editorDescription": "Configure question content, answer key, explanation, and evidence.",
+      "questionNumber": "Q{number}",
+      "emptyPrompt": "No prompt yet",
+      "actions": {
+        "moveUp": "Move Up",
+        "moveDown": "Move Down",
+        "duplicate": "Duplicate Question",
+        "delete": "Delete Question",
+        "edit": "Edit",
+        "addQuestion": "Add Question"
+      },
+      "fields": {
+        "prompt": "Prompt",
+        "correctAnswer": "Correct Answer",
+        "options": "Options",
+        "correctOption": "Correct Option",
+        "headingOptions": "Heading Options",
+        "correctHeading": "Correct Heading",
+        "items": "Items",
+        "choices": "Choices",
+        "mapping": "Mapping",
+        "selectChoice": "Select choice",
+        "acceptableAnswers": "Acceptable Answers",
+        "acceptableAnswersPlaceholder": "Answer 1, Answer 2",
+        "explanation": "Explanation",
+        "evidence": "Evidence",
+        "evidencePlaceholder": "Attach highlighted text from passage/transcript"
+      }
+    },
+    "questionTypes": {
+      "tfng": "True / False / Not Given",
+      "multiple_choice": "Multiple Choice",
+      "matching_headings": "Matching Headings",
+      "sentence_completion": "Sentence Completion",
+      "summary_completion": "Summary Completion",
+      "table_completion": "Table Completion",
+      "diagram_labeling": "Diagram Labeling",
+      "form_completion": "Form Completion",
+      "note_completion": "Note Completion",
+      "matching_information": "Matching Information",
+      "short_answer": "Short Answer"
+    },
+    "common": {
+      "cancel": "Cancel"
+    }
+  },
+  "adminAnalytics": {
+    "title": "Platform Analytics",
+    "exportReport": "Export Report",
+    "dateRanges": {
+      "last7Days": "Last 7 Days",
+      "last30Days": "Last 30 Days",
+      "last3Months": "Last 3 Months"
+    },
+    "stats": {
+      "totalTestsTaken": "Total Tests Taken",
+      "avgReadingScore": "Avg Reading Score",
+      "avgListeningScore": "Avg Listening Score",
+      "activeStudents": "Active Students"
+    },
+    "studentScoreTrend": "Student Score Trend",
+    "testsCompletedPerDay": "Tests Completed Per Day",
+    "dailyAverage": "Daily Average: {value}",
+    "legend": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "academic": "Academic"
+    },
+    "accuracyByQuestionType": "Accuracy by Question Type",
+    "questionTypes": {
+      "multipleChoice": "Multiple Choice (MCQ)",
+      "tfng": "True/False/Not Given (TFNG)",
+      "matchingHeadings": "Matching Headings",
+      "diagramLabeling": "Diagram Labeling",
+      "summaryCompletion": "Summary Completion",
+      "tableCompletion": "Table Completion"
+    },
+    "skillDistribution": "Student Skill Distribution",
+    "skills": {
+      "reading": "READING",
+      "listening": "LISTENING",
+      "writing": "WRITING",
+      "speaking": "SPEAKING"
+    },
+    "hardestQuestions": "Hardest Questions",
+    "hardest": {
+      "searchPlaceholder": "Search question/test...",
+      "columns": {
+        "questionPreview": "Question Preview",
+        "type": "Type",
+        "testName": "Test Name",
+        "accuracy": "Accuracy",
+        "attempts": "Attempts"
+      }
+    },
+    "passagePerformance": "Passage Performance",
+    "avgScore": "Avg. Score: {value}",
+    "aiInsights": "AI-Driven Platform Insights",
+    "insights": {
+      "badges": {
+        "optimize": "Optimize",
+        "strength": "Strength",
+        "segment": "User Segment"
+      },
+      "titles": {
+        "risingDifficultyGap": "Rising Difficulty Gap",
+        "vocabularyRetention": "Vocabulary Retention",
+        "regionalPerformance": "Regional Performance"
+      },
+      "descriptions": {
+        "risingDifficultyGapDesc": "Students are spending 35% more time on Diagram Labeling questions than average, indicating a need for focused practice content.",
+        "vocabularyRetentionDesc": "The Daily Flashcard feature has resulted in an 18% improvement in Passage 3 accuracy during the selected period.",
+        "regionalPerformanceDesc": "Students from Southeast Asia show a 12% higher Listening score compared to the global average in this date range."
+      }
+    }
+  },
+  "adminUsers": {
+    "title": "Users",
+    "searchPlaceholder": "Search by name, email or ID...",
+    "notificationsLabel": "Notifications",
+    "stats": {
+      "totalUsers": "Total Users",
+      "activeToday": "Active Today",
+      "newThisMonth": "New This Month",
+      "payingUsers": "Paying Users"
+    },
+    "filters": {
+      "labels": {
+        "status": "Status",
+        "role": "Role",
+        "plan": "Plan",
+        "locale": "Locale"
+      },
+      "reset": "Reset filters",
+      "status": {
+        "all": "All Status",
+        "verified": "Verified",
+        "active": "Active",
+        "suspended": "Suspended"
+      },
+      "role": {
+        "all": "All Roles",
+        "student": "Student",
+        "admin": "Admin",
+        "tutor": "Tutor"
+      },
+      "plan": {
+        "all": "All Plans",
+        "free": "Free",
+        "pro": "Pro",
+        "premium": "Premium"
+      },
+      "locale": {
+        "all": "All Locales",
+        "en": "EN",
+        "uz": "UZ"
+      }
+    },
+    "table": {
+      "columns": {
+        "user": "User",
+        "plan": "Plan",
+        "band": "Band",
+        "moduleStats": "Module Stats"
+      },
+      "empty": "No users found for current filters.",
+      "showingResults": "Showing {from}-{to} of {total} users",
+      "userId": "ID: {id}"
+    },
+    "pagination": {
+      "previous": "Previous page",
+      "next": "Next page"
+    },
+    "drawer": {
+      "title": "User Profile Details",
+      "memberSince": "Member since {date}",
+      "confirmResetPassword": "Reset password for {name}?",
+      "tabs": {
+        "overview": "Overview",
+        "history": "Test History",
+        "payments": "Payments"
+      },
+      "actions": {
+        "sendMessage": "Send Message",
+        "resetPassword": "Reset Password"
+      }
+    },
+    "overview": {
+      "overallBand": "Overall Band",
+      "targetScore": "Target Score",
+      "bandProgress": "Band Progress",
+      "growthLabel": "+{value} band growth",
+      "moduleStats": "Module Performance",
+      "identifiedWeakAreas": "Identified Weak Areas",
+      "noWeakAreas": "No weak areas found for this user."
+    },
+    "history": {
+      "columns": {
+        "testName": "Test Name",
+        "module": "Module",
+        "score": "Score",
+        "date": "Date"
+      },
+      "empty": "No test history records yet."
+    },
+    "payments": {
+      "columns": {
+        "title": "Payment",
+        "amount": "Amount",
+        "status": "Status",
+        "date": "Date"
+      },
+      "empty": "No payment records yet."
+    },
+    "plan": {
+      "free": "Free",
+      "pro": "Pro",
+      "premium": "Premium"
+    },
+    "role": {
+      "student": "Student",
+      "admin": "Admin",
+      "tutor": "Tutor"
+    },
+    "status": {
+      "verified": "Verified",
+      "active": "Active",
+      "suspended": "Suspended"
+    },
+    "paymentStatus": {
+      "paid": "Paid",
+      "pending": "Pending",
+      "failed": "Failed"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "modulesShort": {
+      "reading": "R",
+      "listening": "L",
+      "writing": "W",
+      "speaking": "S"
+    },
+    "weakAreaSeverity": {
+      "critical": "Critical",
+      "improving": "Improving",
+      "stable": "Stable"
+    },
+    "dates": {
+      "months": {
+        "jan": "Jan",
+        "feb": "Feb",
+        "mar": "Mar",
+        "apr": "Apr",
+        "may": "May",
+        "jun": "Jun",
+        "jul": "Jul",
+        "aug": "Aug",
+        "sep": "Sep",
+        "oct": "Oct",
+        "nov": "Nov",
+        "dec": "Dec"
+      }
+    },
+    "actionFeedback": {
+      "sendMessage": "Message action triggered for {name}.",
+      "resetPassword": "Password reset action triggered for {name}.",
+      "resetCancelled": "Password reset cancelled for {name}."
+    }
+  },
+  "adminSubscriptions": {
+    "title": "Subscriptions & Plans",
+    "searchPlaceholder": "Search plans or users...",
+    "createPlan": "Create Plan",
+    "saveChanges": "Save Changes",
+    "resetChanges": "Reset Changes",
+    "notificationsLabel": "Notifications",
+    "stats": {
+      "totalSubscribers": "Total Subscribers",
+      "monthlyRevenue": "Monthly Revenue",
+      "freeUsers": "Free Users",
+      "conversionRate": "Conversion Rate"
+    },
+    "billing": {
+      "forever": "forever",
+      "month": "month"
+    },
+    "editPlan": "Edit Plan",
+    "globalSettings": {
+      "title": "Global Plan Settings",
+      "guestTestLimit": "Guest test limit",
+      "guestTestLimitHint": "Max tests per guest session",
+      "aiRecommendationsAccess": "AI recommendation access",
+      "aiRecommendationsAccessHint": "Unlock for all registered users",
+      "premiumExplanations": "Premium explanations",
+      "premiumExplanationsHint": "Enable detailed solution keys"
+    },
+    "distribution": {
+      "title": "Plan Distribution",
+      "users": "Users",
+      "plans": {
+        "free": "Free",
+        "pro": "Pro",
+        "premium": "Premium"
+      }
+    },
+    "recentActions": {
+      "title": "Recent Subscription Actions",
+      "empty": "No actions match the current search.",
+      "columns": {
+        "user": "User",
+        "action": "Action",
+        "date": "Date",
+        "status": "Status"
+      }
+    },
+    "downloadCsv": "Download CSV",
+    "status": {
+      "success": "Success",
+      "pending": "Pending",
+      "closed": "Closed"
+    },
+    "editDialog": {
+      "title": "Edit Plan",
+      "description": "Update plan details and included features.",
+      "fields": {
+        "planName": "Plan Name",
+        "tagline": "Tagline",
+        "price": "Price",
+        "billingPeriod": "Billing Period",
+        "features": "Features"
+      },
+      "removeFeature": "Remove feature",
+      "newFeaturePlaceholder": "Add a new feature...",
+      "addFeature": "Add Feature"
+    },
+    "common": {
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "toast": {
+      "savedTitle": "Changes saved",
+      "savedDescription": "Subscription plans and settings were updated."
+    },
+    "dates": {
+      "months": {
+        "jan": "Jan",
+        "feb": "Feb",
+        "mar": "Mar",
+        "apr": "Apr",
+        "may": "May",
+        "jun": "Jun",
+        "jul": "Jul",
+        "aug": "Aug",
+        "sep": "Sep",
+        "oct": "Oct",
+        "nov": "Nov",
+        "dec": "Dec"
+      }
+    }
+  },
+  "adminMistakesAnalysis": {
+    "title": "Mistakes Analysis",
+    "searchPlaceholder": "Search specific questions, topics, or tests...",
+    "exportInsights": "Export Insights",
+    "notificationsLabel": "Notifications",
+    "dateRanges": {
+      "last7Days": "Last 7 Days",
+      "last30Days": "Last 30 Days",
+      "last3Months": "Last 3 Months"
+    },
+    "summary": {
+      "mostDifficultType": "Most Difficult Type",
+      "lowestAccuracyPassage": "Lowest Accuracy Passage",
+      "avgReadingAccuracy": "Avg Reading Accuracy",
+      "avgListeningAccuracy": "Avg Listening Accuracy"
+    },
+    "accuracyByQuestionType": "Accuracy by Question Type",
+    "accuracyByQuestionTypeHint": "Comparing performance across all modules",
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "good": "Good"
+    },
+    "mistakeDistribution": "Mistake Distribution",
+    "totalErrors": "Total Errors",
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "mostMissedQuestions": "Most Missed Questions",
+    "viewDetailedList": "View Detailed List",
+    "table": {
+      "columns": {
+        "questionPreview": "Question Preview",
+        "testName": "Test Name",
+        "type": "Type",
+        "accuracyRate": "Accuracy Rate",
+        "totalAttempts": "Total Attempts"
+      },
+      "empty": "No missed questions found."
+    },
+    "passageDifficultyRank": "Passage Difficulty Rank",
+    "accShort": "Acc.",
+    "noPassages": "No passages found.",
+    "commonMistakeTopics": "Common Mistake Topics",
+    "noTopics": "No topics found.",
+    "aiGeneratedInsights": "AI-Generated Insights",
+    "actionPlanGenerateModules": "Action Plan: Generate Improvement Modules",
+    "aiRecommendationSettings": "AI Recommendation Settings",
+    "enableAiRecommendations": "Enable AI Recommendations",
+    "enableAiRecommendationsHint": "Show automated struggle area alerts to students",
+    "weaknessDetectionThreshold": "Weakness Detection Threshold",
+    "accuracyShort": "Accuracy",
+    "threshold": {
+      "strict": "Strict (10%)",
+      "moderate": "Moderate (35%)",
+      "relaxed": "Relaxed (60%)"
+    }
+  },
+  "adminAchievements": {
+    "title": "Achievements & Gamification",
+    "searchPlaceholder": "Search achievements...",
+    "createAchievement": "Create Achievement",
+    "notificationsLabel": "Notifications",
+    "stats": {
+      "totalAchievements": "Total Achievements",
+      "earnedToday": "Earned Today",
+      "mostEarnedBadge": "Most Earned Badge",
+      "activeStreakUsers": "Active Streak Users"
+    },
+    "activeAchievements": "Active Achievements",
+    "viewLibrary": "View Library",
+    "timesEarned": "Times Earned",
+    "recentUserProgress": "Recent User Progress",
+    "viewAll": "View All",
+    "table": {
+      "columns": {
+        "user": "User",
+        "achievement": "Achievement",
+        "dateEarned": "Date Earned",
+        "currentStreak": "Current Streak"
+      },
+      "empty": "No recent progress matches the current search."
+    },
+    "gamificationSettings": "Gamification Settings",
+    "settings": {
+      "streakTracking": "Streak Tracking",
+      "streakTrackingHint": "Enable daily activity streaks",
+      "badgeNotifications": "Badge Notifications",
+      "badgeNotificationsHint": "Notify users when earned",
+      "publicLeaderboard": "Public Leaderboard",
+      "publicLeaderboardHint": "Show user rankings publicly"
+    },
+    "quickPreview": "Quick Preview",
+    "preview": {
+      "streakTitle": "Streak update ready",
+      "badgeTitle": "New achievement unlocked",
+      "leaderboardEnabled": "Leaderboard visibility is enabled.",
+      "leaderboardDisabled": "Leaderboard visibility is currently private."
+    },
+    "engagementAnalytics": "Engagement Analytics: Achievements Earned Over Time",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "earnedLabel": "Earned",
+    "badgeLibraryPreview": "Badge Library Preview",
+    "newBadge": "New Badge",
+    "actions": {
+      "openMenu": "Open achievement actions menu",
+      "edit": "Edit",
+      "duplicate": "Duplicate",
+      "disable": "Disable"
+    },
+    "iconTypes": {
+      "trophy": "Trophy",
+      "award": "Award",
+      "flame": "Flame",
+      "sparkles": "Sparkles"
+    },
+    "categories": {
+      "streak": "Streak",
+      "score": "Score",
+      "module": "Module",
+      "engagement": "Engagement"
+    },
+    "createDialog": {
+      "title": "Create Achievement",
+      "description": "Configure a new achievement and add it to the active list.",
+      "fields": {
+        "name": "Achievement Name",
+        "description": "Description",
+        "iconType": "Icon Type",
+        "category": "Category",
+        "timesEarnedDefault": "Times Earned (default)"
+      },
+      "placeholders": {
+        "name": "e.g. Listening Sprint",
+        "description": "Describe what the learner needs to complete..."
+      },
+      "defaultDescription": "Custom achievement created from admin panel."
+    },
+    "common": {
+      "cancel": "Cancel",
+      "create": "Create"
+    },
+    "empty": {
+      "achievements": "No achievements match your search.",
+      "badges": "No badges found for this search."
+    },
+    "toast": {
+      "createdTitle": "Achievement created",
+      "createdDescription": "{title} was added to active achievements.",
+      "actionTitle": "Action received",
+      "actionDescription": "{action} requested for {title}.",
+      "viewAllTitle": "Viewing all progress",
+      "viewAllDescription": "Detailed progress list placeholder triggered."
+    }
   }
 }
