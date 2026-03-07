@@ -132,9 +132,6 @@ export default function ReadingResultPage() {
             <Button variant="outline" asChild>
               <Link href={`/${locale}/reading/${test.id}`}><RotateCcw className="size-4" />{t("retakeTest")}</Link>
             </Button>
-            <Button variant="ghost" asChild>
-              <Link href={`/${locale}`}>{t("goToDashboard")}</Link>
-            </Button>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             <Card className="p-3">

@@ -3,13 +3,12 @@
 import {Bell, Plus, Search} from "lucide-react";
 import {useTranslations} from "next-intl";
 
-import {Avatar, AvatarFallback} from "@/components/ui/avatar";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Separator} from "@/components/ui/separator";
 import {ThemeToggle} from "@/components/theme-toggle";
-import {adminProfile} from "@/data/admin-dashboard";
 
+import {AdminProfileMenu} from "../../_components/AdminProfileMenu";
 import {AdminSidebarMobileNav} from "../../_components/AdminSidebar";
 
 type AchievementsHeaderProps = {
@@ -63,16 +62,7 @@ export function AchievementsHeader({searchValue, onSearchChange, onCreateAchieve
           </Button>
 
           <Separator orientation="vertical" className="mx-1 hidden h-6 md:block" />
-
-          <div className="hidden items-center gap-2.5 md:flex">
-            <div className="text-right leading-tight">
-              <p className="text-sm font-medium">{adminProfile.name}</p>
-              <p className="text-xs text-muted-foreground">{adminProfile.role}</p>
-            </div>
-            <Avatar className="ring-2 ring-border/70" size="lg">
-              <AvatarFallback className="bg-primary/18 text-primary">{adminProfile.initials}</AvatarFallback>
-            </Avatar>
-          </div>
+          <AdminProfileMenu />
         </div>
       </div>
 

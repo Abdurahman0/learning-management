@@ -3,12 +3,11 @@
 import {CalendarDays, Download} from "lucide-react";
 import {useTranslations} from "next-intl";
 
-import {Avatar, AvatarFallback} from "@/components/ui/avatar";
 import {Button} from "@/components/ui/button";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import {adminProfile} from "@/data/admin-dashboard";
 import type {AnalyticsRangeKey} from "@/data/admin-analytics";
 
+import {AdminProfileMenu} from "../../_components/AdminProfileMenu";
 import {AdminSidebarMobileNav} from "../../_components/AdminSidebar";
 
 type AnalyticsHeaderProps = {
@@ -46,10 +45,7 @@ export function AnalyticsHeader({selectedRange, onRangeChange, onExport}: Analyt
             <Download className="size-4" />
             {t("exportReport")}
           </Button>
-
-          <Avatar className="ml-1 hidden ring-2 ring-border/70 md:flex" size="lg">
-            <AvatarFallback className="bg-primary/18 text-primary">{adminProfile.initials}</AvatarFallback>
-          </Avatar>
+          <AdminProfileMenu compact className="ml-1" />
         </div>
       </div>
     </header>

@@ -150,6 +150,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
   const passageScrollRef = useRef<HTMLDivElement | null>(null);
   const questionRefs = useRef<Map<number, HTMLElement>>(new Map());
   const pendingParagraphRef = useRef<string | null>(null);
+  const shouldAutoScrollQuestionRef = useRef(false);
   const splitStorageKey = "readingSplitPct";
 
   useEffect(() => {
@@ -300,13 +301,18 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
   }, [mobilePanel]);
 
   useEffect(() => {
+    if (!shouldAutoScrollQuestionRef.current) {
+      return;
+    }
     const el = questionRefs.current.get(activeQuestionNumber);
     const container = questionsScrollRef.current;
     if (!el || !container) {
+      shouldAutoScrollQuestionRef.current = false;
       return;
     }
     const top = Math.max(el.offsetTop - 84, 0);
     container.scrollTo({ top, behavior: "smooth" });
+    shouldAutoScrollQuestionRef.current = false;
   }, [activeQuestionNumber, activePassageId]);
 
   useEffect(() => {
@@ -380,6 +386,20 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
       .filter((item) => item.end > item.start);
   };
 
+  const getPassageTitleLocalHighlights = (passageId: string, length: number) => {
+    const key = `passage-title:${passageId}`;
+    return highlights
+      .filter((item) => item.scope === "question" && item.questionId === key)
+      .filter((item) => item.start < length && item.end > 0)
+      .map((item) => ({
+        id: item.id,
+        start: Math.max(0, item.start),
+        end: Math.min(length, item.end),
+        color: item.color,
+      }))
+      .filter((item) => item.end > item.start);
+  };
+
   const toggleHighlight = (
     payload:
       | { scope: "question"; questionId: string; start: number; end: number; color: ReadingHighlightColor; action: "mark" | "unmark" }
@@ -409,7 +429,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
             passageId: payload.passageId,
             start: range.start,
             end: range.end,
-            color: payload.color,
+            color: existing?.color ?? payload.color,
             createdAt: existing?.createdAt ?? Date.now(),
           };
         });
@@ -437,7 +457,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
           questionId: payload.questionId,
           start: range.start,
           end: range.end,
-          color: payload.color,
+          color: existing?.color ?? payload.color,
           createdAt: existing?.createdAt ?? Date.now(),
         };
       });
@@ -450,6 +470,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
     if (!target) {
       return;
     }
+    shouldAutoScrollQuestionRef.current = true;
     if (isCompact) {
       setMobilePanel("questions");
     }
@@ -643,7 +664,25 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
             >
               <div className="mx-auto flex max-w-[72ch] min-w-0 flex-col items-stretch justify-start space-y-5 pb-8">
                 <p className="text-xs font-semibold tracking-[0.18em] text-blue-600 uppercase dark:text-blue-400">{activePassageId.toUpperCase()}</p>
-                <h2 className="break-words text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{activePassage?.title}</h2>
+                <h2 className="break-words text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                  <HighlightableText
+                    text={activePassage?.title ?? ""}
+                    userHighlights={getPassageTitleLocalHighlights(activePassageId, (activePassage?.title ?? "").length)}
+                    interactive={!reviewMode}
+                    markLabel={t.has("markText") ? t("markText") : "Mark"}
+                    unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
+                    onToggle={({ start, end, color, action }) =>
+                      toggleHighlight({
+                        scope: "question",
+                        questionId: `passage-title:${activePassageId}`,
+                        start,
+                        end,
+                        color,
+                        action,
+                      })
+                    }
+                  />
+                </h2>
                 {passageParagraphs.map(({ paragraph, index, start: paragraphStart }) => {
                   const paragraphId = `para-${activePassageId}-${index}`;
                   const paragraphHighlights = highlightsForPassage.filter((span) => span.paragraphIndex === index);

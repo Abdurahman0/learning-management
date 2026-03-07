@@ -5,6 +5,7 @@ import {useTranslations} from "next-intl";
 
 import {READING_TESTS, type Difficulty, type ReadingGuestTest} from "@/data/guest-tests";
 
+import {useAppSessionRole} from "../_components/session/AppSessionContext";
 import {GuestCallout} from "../_components/listening/GuestCallout";
 import {ReadingFilters} from "../_components/reading/ReadingFilters";
 import {ReadingTestCard} from "../_components/reading/ReadingTestCard";
@@ -32,6 +33,8 @@ function sortReadingTests(tests: ReadingGuestTest[], sort: SortFilter) {
 
 export default function ReadingPage() {
   const t = useTranslations("guest");
+  const role = useAppSessionRole();
+  const isGuest = role === "guest";
 
   const [tab, setTab] = useState<ReadingTab>("all");
   const [search, setSearch] = useState("");
@@ -62,7 +65,7 @@ export default function ReadingPage() {
   return (
     <div>
       <div className="mx-auto w-full max-w-[980px] pb-8 pt-4 lg:pt-0">
-        <GuestCallout />
+        {isGuest ? <GuestCallout /> : null}
 
         <section className="mt-6">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t("reading.title")}</h1>
@@ -87,9 +90,11 @@ export default function ReadingPage() {
             ))}
           </div>
 
-          <div className="mt-6">
-            <ReadingUnlockMoreCard />
-          </div>
+          {isGuest ? (
+            <div className="mt-6">
+              <ReadingUnlockMoreCard />
+            </div>
+          ) : null}
         </section>
       </div>
     </div>

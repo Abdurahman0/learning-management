@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Eraser, Highlighter } from "lucide-react";
 
 import { buildRanges, type SourceHighlight } from "@/lib/build-ranges";
 import { isRangeFullyCoveredByHighlights, mergeRanges } from "@/lib/reading-highlights";
@@ -43,17 +44,22 @@ type SelectionInfo = {
   hasIntersecting: boolean;
 };
 
-const MIN_SELECTION_CHARS = 2;
+const MIN_SELECTION_CHARS = 1;
+const COLORS: ReadingHighlightColor[] = ["yellow", "green", "blue", "pink"];
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function highlightClass(kind: "user" | "answer") {
-  if (kind === "user") {
-    return "rounded-sm px-0.5 bg-amber-500/30 ring-1 ring-amber-600/25 dark:bg-amber-300/14 dark:ring-amber-300/35 dark:shadow-[0_0_0_1px_rgba(252,211,77,.35),0_0_18px_rgba(252,211,77,.22)]";
-  }
+function answerHighlightClass() {
   return "rounded-sm px-0.5 bg-emerald-500/22 ring-1 ring-emerald-600/20 dark:bg-emerald-300/12 dark:ring-emerald-300/35 dark:shadow-[0_0_0_1px_rgba(110,231,183,.35),0_0_18px_rgba(110,231,183,.20)]";
+}
+
+function userHighlightClass(color: ReadingHighlightColor) {
+  if (color === "green") return "hl-green";
+  if (color === "blue") return "hl-blue";
+  if (color === "pink") return "hl-pink";
+  return "hl-yellow";
 }
 
 export function HighlightableText({
@@ -74,6 +80,10 @@ export function HighlightableText({
 
   const mergedUserRanges = useMemo(
     () => mergeRanges(userHighlights.map((item) => ({ start: item.start, end: item.end }))),
+    [userHighlights]
+  );
+  const userColorsById = useMemo(
+    () => new Map(userHighlights.map((item) => [item.id, item.color])),
     [userHighlights]
   );
 
@@ -195,7 +205,7 @@ export function HighlightableText({
             return (
               <span
                 key={`answer-${range.start}-${range.end}`}
-                className={cn("py-[0.5px]", highlightClass("answer"))}
+                className={cn("py-[0.5px]", answerHighlightClass())}
               >
                 {showAnswerBadges && range.answerQuestionNumbers?.length
                   ? range.answerQuestionNumbers.map((questionNumber) => (
@@ -212,10 +222,15 @@ export function HighlightableText({
             );
           }
 
+          const rangeColor =
+            (range.highlightId ? userColorsById.get(range.highlightId) : undefined) ?? "yellow";
           return (
             <span
               key={`user-${range.start}-${range.end}`}
-              className={cn("py-[0.5px]", highlightClass("user"))}
+              className={cn(
+                "rounded-[2px] px-[1px] py-[0.5px] highlight-mark",
+                userHighlightClass(rangeColor)
+              )}
             >
               {value}
             </span>
@@ -239,26 +254,40 @@ export function HighlightableText({
                 type="button"
                 disabled={!selection.isMeaningful}
                 className={cn(
-                  "h-8 rounded-md px-2.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60",
+                  "inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60",
                   selection.isMeaningful && selection.hasIntersecting
                     ? "border border-border bg-accent text-accent-foreground hover:bg-accent/80"
                     : "bg-blue-600 text-white hover:bg-blue-600/90"
                 )}
                 onClick={applyToggle}
               >
+                {selection.isMeaningful && selection.hasIntersecting ? (
+                  <Eraser className="size-3.5" />
+                ) : (
+                  <Highlighter className="size-3.5" />
+                )}
                 {selection.isMeaningful && selection.hasIntersecting ? unmarkLabel : markLabel}
               </button>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  aria-label="Amber highlight"
-                  className={cn(
-                    "size-5 rounded-full border border-border bg-amber-500",
-                    color === "yellow" && "ring-2 ring-blue-500 ring-offset-1"
-                  )}
-                  onClick={() => setColor("yellow")}
-                />
-              </div>
+              {selection.isMeaningful && selection.hasIntersecting ? null : (
+                <div className="flex items-center gap-1">
+                  {COLORS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      aria-label={`Mark ${item}`}
+                      className={cn(
+                        "size-6 rounded-full border border-border transition-transform",
+                        item === "yellow" && "bg-yellow-300",
+                        item === "green" && "bg-green-400",
+                        item === "blue" && "bg-blue-400",
+                        item === "pink" && "bg-pink-400",
+                        color === item && "scale-110 ring-2 ring-blue-500 ring-offset-1"
+                      )}
+                      onClick={() => setColor(item)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>,
             document.body
           )

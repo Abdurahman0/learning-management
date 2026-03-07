@@ -29,7 +29,7 @@ import {cn} from "@/lib/utils";
 const navIcons: Record<AdminNavKey, LucideIcon> = {
   dashboard: LayoutDashboard,
   tests: ClipboardList,
-  questionBank: Database,
+  contentBank: Database,
   users: Users,
   analytics: BarChart3,
   mistakesAnalysis: AlertCircle,

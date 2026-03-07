@@ -5,13 +5,11 @@ import {useTranslations} from "next-intl";
 
 import {
   ADMIN_USERS,
-  LOCALE_FILTER_OPTIONS,
   PLAN_FILTER_OPTIONS,
   ROLE_FILTER_OPTIONS,
   STATUS_FILTER_OPTIONS,
   deriveUserStats,
   type AdminUser,
-  type LocaleFilterValue,
   type PlanFilterValue,
   type RoleFilterValue,
   type StatusFilterValue
@@ -32,7 +30,6 @@ export function UsersPageClient() {
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("all");
   const [roleFilter, setRoleFilter] = useState<RoleFilterValue>("all");
   const [planFilter, setPlanFilter] = useState<PlanFilterValue>("all");
-  const [localeFilter, setLocaleFilter] = useState<LocaleFilterValue>("all");
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -55,17 +52,13 @@ export function UsersPageClient() {
         return false;
       }
 
-      if (localeFilter !== "all" && user.locale !== localeFilter) {
-        return false;
-      }
-
       if (!query) {
         return true;
       }
 
       return user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query) || user.id.toLowerCase().includes(query);
     });
-  }, [searchValue, statusFilter, roleFilter, planFilter, localeFilter]);
+  }, [searchValue, statusFilter, roleFilter, planFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -87,7 +80,6 @@ export function UsersPageClient() {
     setStatusFilter("all");
     setRoleFilter("all");
     setPlanFilter("all");
-    setLocaleFilter("all");
     setPage(1);
   };
 
@@ -133,15 +125,12 @@ export function UsersPageClient() {
               statusValue={statusFilter}
               roleValue={roleFilter}
               planValue={planFilter}
-              localeValue={localeFilter}
               statusOptions={STATUS_FILTER_OPTIONS}
               roleOptions={ROLE_FILTER_OPTIONS}
               planOptions={PLAN_FILTER_OPTIONS}
-              localeOptions={LOCALE_FILTER_OPTIONS}
               onStatusChange={(value) => setFilterAndResetPage(setStatusFilter, value)}
               onRoleChange={(value) => setFilterAndResetPage(setRoleFilter, value)}
               onPlanChange={(value) => setFilterAndResetPage(setPlanFilter, value)}
-              onLocaleChange={(value) => setFilterAndResetPage(setLocaleFilter, value)}
               onReset={handleResetFilters}
             />
 

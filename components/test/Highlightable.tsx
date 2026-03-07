@@ -20,12 +20,11 @@ type HighlightableProps = {
 };
 
 type SelectionState = {
-  quote: string;
-  before: string;
-  after: string;
+  start: number;
+  end: number;
   x: number;
   y: number;
-  intersectingIds: string[];
+  isFullyMarked: boolean;
 };
 
 const COLORS: HighlightColor[] = ["yellow", "green", "blue", "pink"];
@@ -41,8 +40,75 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function overlaps(range: { start: number; end: number }, used: Array<{ start: number; end: number }>) {
-  return used.some((item) => range.start < item.end && item.start < range.end);
+function normalizeRanges(ranges: Array<{ start: number; end: number }>) {
+  const sanitized = ranges
+    .map((item) => ({
+      start: Math.max(0, Math.min(item.start, item.end)),
+      end: Math.max(item.start, item.end),
+    }))
+    .filter((item) => item.end > item.start)
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+
+  const merged: Array<{ start: number; end: number }> = [];
+
+  for (const range of sanitized) {
+    const prev = merged[merged.length - 1];
+    if (!prev || prev.end < range.start) {
+      merged.push({ ...range });
+      continue;
+    }
+
+    prev.end = Math.max(prev.end, range.end);
+  }
+
+  return merged;
+}
+
+function isRangeFullyCovered(
+  selectionStart: number,
+  selectionEnd: number,
+  mergedRanges: Array<{ start: number; end: number }>
+) {
+  if (selectionEnd <= selectionStart) return false;
+
+  let cursor = selectionStart;
+  for (const range of mergedRanges) {
+    if (range.end <= cursor) continue;
+    if (range.start > cursor) return false;
+
+    cursor = Math.max(cursor, range.end);
+    if (cursor >= selectionEnd) return true;
+  }
+
+  return false;
+}
+
+function subtractRangeFromMerged(
+  mergedRanges: Array<{ start: number; end: number }>,
+  selectionStart: number,
+  selectionEnd: number
+) {
+  const s = Math.max(0, Math.min(selectionStart, selectionEnd));
+  const e = Math.max(selectionStart, selectionEnd);
+  if (e <= s) return mergedRanges;
+
+  const output: Array<{ start: number; end: number }> = [];
+  for (const range of mergedRanges) {
+    if (range.end <= s || range.start >= e) {
+      output.push(range);
+      continue;
+    }
+
+    if (range.start < s) {
+      output.push({ start: range.start, end: s });
+    }
+
+    if (range.end > e) {
+      output.push({ start: e, end: range.end });
+    }
+  }
+
+  return normalizeRanges(output);
 }
 
 function unwrapAllHighlights(root: HTMLElement) {
@@ -58,62 +124,6 @@ function unwrapAllHighlights(root: HTMLElement) {
   });
 }
 
-function findAllOccurrences(text: string, query: string) {
-  const result: number[] = [];
-  if (!query) return result;
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase();
-  let cursor = 0;
-
-  while (cursor < lowerText.length) {
-    const found = lowerText.indexOf(lowerQuery, cursor);
-    if (found < 0) break;
-    result.push(found);
-    cursor = found + lowerQuery.length;
-  }
-
-  return result;
-}
-
-function selectBestMatch(
-  fullText: string,
-  highlight: StoredHighlight,
-  used: Array<{ start: number; end: number }>
-) {
-  const quote = highlight.quote.trim();
-  if (!quote) return null;
-
-  const candidates = findAllOccurrences(fullText, quote);
-  if (!candidates.length) return null;
-
-  const before = highlight.before.toLowerCase();
-  const after = highlight.after.toLowerCase();
-  const lowerText = fullText.toLowerCase();
-  let best: { start: number; end: number; score: number } | null = null;
-
-  for (const start of candidates) {
-    const end = start + quote.length;
-    const candidate = { start, end };
-    if (overlaps(candidate, used)) continue;
-
-    let score = 0;
-    if (before) {
-      const left = lowerText.slice(clamp(start - before.length, 0, lowerText.length), start);
-      if (left === before) score += 2;
-    }
-    if (after) {
-      const right = lowerText.slice(end, clamp(end + after.length, 0, lowerText.length));
-      if (right === after) score += 2;
-    }
-
-    if (!best || score > best.score) {
-      best = { start, end, score };
-    }
-  }
-
-  return best ? { start: best.start, end: best.end } : null;
-}
-
 function createRangeFromOffsets(root: HTMLElement, startOffset: number, endOffset: number) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let node: Node | null = walker.nextNode();
@@ -127,15 +137,19 @@ function createRangeFromOffsets(root: HTMLElement, startOffset: number, endOffse
   while (node) {
     const value = node.textContent ?? "";
     const nextCursor = cursor + value.length;
-    if (!startNode && startOffset <= nextCursor) {
+
+    // At text-node boundaries, start should map to the next node start (not previous node end).
+    if (!startNode && startOffset < nextCursor) {
       startNode = node;
       startNodeOffset = clamp(startOffset - cursor, 0, value.length);
     }
+
     if (!endNode && endOffset <= nextCursor) {
       endNode = node;
       endNodeOffset = clamp(endOffset - cursor, 0, value.length);
       break;
     }
+
     cursor = nextCursor;
     node = walker.nextNode();
   }
@@ -160,10 +174,6 @@ function rangeToOffsets(root: HTMLElement, range: Range) {
     start: startRange.toString().length,
     end: endRange.toString().length,
   };
-}
-
-function intersects(rangeA: Range, rangeB: Range) {
-  return !(rangeA.compareBoundaryPoints(Range.END_TO_START, rangeB) <= 0 || rangeA.compareBoundaryPoints(Range.START_TO_END, rangeB) >= 0);
 }
 
 function safeId() {
@@ -191,14 +201,11 @@ export function Highlightable({ storageKey, className, contentVersion, children 
     const root = rootRef.current;
 
     unwrapAllHighlights(root);
-    const text = root.textContent ?? "";
-    const used: Array<{ start: number; end: number }> = [];
 
-    highlights.forEach((item) => {
-      const match = selectBestMatch(text, item, used);
-      if (!match || match.start >= match.end) return;
-      const range = createRangeFromOffsets(root, match.start, match.end);
-      if (!range) return;
+    for (const item of highlights) {
+      if (item.end <= item.start) continue;
+      const range = createRangeFromOffsets(root, item.start, item.end);
+      if (!range) continue;
 
       const mark = document.createElement("mark");
       mark.setAttribute("data-hl-id", item.id);
@@ -206,12 +213,12 @@ export function Highlightable({ storageKey, className, contentVersion, children 
       const fragment = range.extractContents();
       mark.appendChild(fragment);
       range.insertNode(mark);
-      used.push(match);
-    });
+    }
   }, [contentToken, highlights]);
 
   useEffect(() => {
     if (!selection) return;
+
     const onPointerDown = (event: MouseEvent | TouchEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target) return;
@@ -251,8 +258,8 @@ export function Highlightable({ storageKey, className, contentVersion, children 
     }
 
     const range = sel.getRangeAt(0).cloneRange();
-    const selectedText = range.toString().trim();
-    if (!selectedText) {
+    const rawText = range.toString();
+    if (!rawText.trim()) {
       setSelection(null);
       return;
     }
@@ -269,25 +276,23 @@ export function Highlightable({ storageKey, className, contentVersion, children 
       return;
     }
 
-    const fullText = root.textContent ?? "";
-    const before = fullText.slice(Math.max(0, start - 24), start);
-    const after = fullText.slice(end, Math.min(fullText.length, end + 24));
+    const leadingWhitespace = rawText.match(/^\s*/)?.[0].length ?? 0;
+    const trailingWhitespace = rawText.match(/\s*$/)?.[0].length ?? 0;
+    const normalizedStart = start + leadingWhitespace;
+    const normalizedEnd = end - trailingWhitespace;
 
-    const intersectingIds: string[] = [];
-    root.querySelectorAll("mark[data-hl-id]").forEach((mark) => {
-      const markerRange = document.createRange();
-      markerRange.selectNodeContents(mark);
-      if (intersects(range, markerRange)) {
-        const id = mark.getAttribute("data-hl-id");
-        if (id) intersectingIds.push(id);
-      }
-    });
+    if (normalizedEnd <= normalizedStart) {
+      setSelection(null);
+      return;
+    }
+
+    const mergedRanges = normalizeRanges(highlights.map((item) => ({ start: item.start, end: item.end })));
+    const isFullyMarked = isRangeFullyCovered(normalizedStart, normalizedEnd, mergedRanges);
 
     setSelection({
-      quote: selectedText,
-      before,
-      after,
-      intersectingIds,
+      start: normalizedStart,
+      end: normalizedEnd,
+      isFullyMarked,
       x: rect.left + rect.width / 2,
       y: rect.top - 8,
     });
@@ -297,26 +302,27 @@ export function Highlightable({ storageKey, className, contentVersion, children 
     window.setTimeout(readSelection, 0);
   };
 
-  const applyHighlight = () => {
+  const toggleSelection = () => {
     if (!selection) return;
-    setHighlights((prev) => [
-      ...prev,
-      {
-        id: safeId(),
-        quote: selection.quote,
-        before: selection.before,
-        after: selection.after,
-        color,
-      },
-    ]);
-    window.getSelection()?.removeAllRanges();
-    setSelection(null);
-  };
 
-  const removeHighlights = () => {
-    if (!selection || selection.intersectingIds.length === 0) return;
-    const ids = new Set(selection.intersectingIds);
-    setHighlights((prev) => prev.filter((item) => !ids.has(item.id)));
+    setHighlights((prev) => {
+      const merged = normalizeRanges(prev.map((item) => ({ start: item.start, end: item.end })));
+      const nextRanges = selection.isFullyMarked
+        ? subtractRangeFromMerged(merged, selection.start, selection.end)
+        : normalizeRanges([...merged, { start: selection.start, end: selection.end }]);
+
+      return nextRanges.map((range) => {
+        const existing = prev.find((item) => item.start === range.start && item.end === range.end);
+        return {
+          id: existing?.id ?? safeId(),
+          start: range.start,
+          end: range.end,
+          color: existing?.color ?? color,
+          createdAt: existing?.createdAt ?? Date.now(),
+        };
+      });
+    });
+
     window.getSelection()?.removeAllRanges();
     setSelection(null);
   };
@@ -347,40 +353,37 @@ export function Highlightable({ storageKey, className, contentVersion, children 
             >
               <button
                 type="button"
-                className="inline-flex h-8 items-center gap-1 rounded-md bg-blue-600 px-2.5 text-xs font-semibold text-white hover:bg-blue-600/90"
-                onClick={applyHighlight}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1 rounded-md px-2.5 text-xs font-semibold",
+                  selection.isFullyMarked
+                    ? "border border-border bg-accent text-accent-foreground hover:bg-accent/85"
+                    : "bg-blue-600 text-white hover:bg-blue-600/90"
+                )}
+                onClick={toggleSelection}
               >
-                <Highlighter className="size-3.5" />
-                Highlight
+                {selection.isFullyMarked ? <Eraser className="size-3.5" /> : <Highlighter className="size-3.5" />}
+                {selection.isFullyMarked ? "Unmark" : "Mark"}
               </button>
-              <div className="flex items-center gap-1">
-                {COLORS.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    aria-label={`Highlight ${item}`}
-                    className={cn(
-                      "size-6 rounded-full border border-border transition-transform",
-                      item === "yellow" && "bg-yellow-300",
-                      item === "green" && "bg-green-400",
-                      item === "blue" && "bg-blue-400",
-                      item === "pink" && "bg-pink-400",
-                      color === item && "scale-110 ring-2 ring-blue-500 ring-offset-1"
-                    )}
-                    onClick={() => setColor(item)}
-                  />
-                ))}
-              </div>
-              {selection.intersectingIds.length > 0 ? (
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-2.5 text-xs font-medium text-foreground hover:bg-accent"
-                  onClick={removeHighlights}
-                >
-                  <Eraser className="size-3.5" />
-                  Remove
-                </button>
-              ) : null}
+              {selection.isFullyMarked ? null : (
+                <div className="flex items-center gap-1">
+                  {COLORS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      aria-label={`Mark ${item}`}
+                      className={cn(
+                        "size-6 rounded-full border border-border transition-transform",
+                        item === "yellow" && "bg-yellow-300",
+                        item === "green" && "bg-green-400",
+                        item === "blue" && "bg-blue-400",
+                        item === "pink" && "bg-pink-400",
+                        color === item && "scale-110 ring-2 ring-blue-500 ring-offset-1"
+                      )}
+                      onClick={() => setColor(item)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>,
             document.body
           )

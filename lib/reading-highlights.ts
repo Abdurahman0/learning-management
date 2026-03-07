@@ -1,4 +1,4 @@
-export type ReadingHighlightColor = "yellow" | "blue";
+export type ReadingHighlightColor = "yellow" | "green" | "blue" | "pink";
 export type UserRange = { start: number; end: number; id: string };
 export type IndexRange = { start: number; end: number };
 
@@ -21,7 +21,11 @@ export function isValidReadingHighlight(value: unknown): value is ReadingHighlig
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<ReadingHighlight>;
   const validScope = candidate.scope === "passage" || candidate.scope === "question";
-  const validColor = candidate.color === "yellow" || candidate.color === "blue";
+  const validColor =
+    candidate.color === "yellow" ||
+    candidate.color === "green" ||
+    candidate.color === "blue" ||
+    candidate.color === "pink";
   const validBounds =
     typeof candidate.start === "number" &&
     typeof candidate.end === "number" &&

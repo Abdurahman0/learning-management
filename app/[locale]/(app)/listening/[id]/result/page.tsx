@@ -93,7 +93,6 @@ export default function ListeningResultPage() {
       <Card className="flex flex-wrap gap-2 p-4">
         <Button asChild><Link href="#question-review">{t("reviewAnswers")}</Link></Button>
         <Button variant="outline" asChild><Link href={`/${locale}/listening/${test.id}`}><RotateCcw className="size-4" />{t("retakeTest")}</Link></Button>
-        <Button variant="ghost" asChild><Link href={`/${locale}`}>{t("goToDashboard")}</Link></Button>
         <p className="ml-auto text-sm text-muted-foreground">{t("timeTaken")}: {minutes}:{seconds}</p>
       </Card>
 

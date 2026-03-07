@@ -8,8 +8,9 @@ import {
   SKILL_DISTRIBUTION_BY_RANGE,
   USER_TEST_ATTEMPT_ENTITIES
 } from "./analytics";
+import {PASSAGE_ASSET_ENTITIES, QUESTION_VARIANT_SET_ENTITIES} from "./content";
 import {MISTAKES_BY_RANGE, DEFAULT_RECOMMENDATION_SETTINGS_ENTITY} from "./mistakes";
-import {ADMIN_NAV_ITEMS, ADMIN_PROFILE, type AdminNavItem, type AdminNavKey} from "./profile";
+import {ADMIN_NAV_ITEMS, ADMIN_PROFILE, type AdminNavItem} from "./profile";
 import {GLOBAL_PLAN_SETTINGS_ENTITY, PLAN_ENTITIES, SUBSCRIPTION_ACTION_ENTITIES} from "./subscriptions";
 import {TEST_ENTITIES, getTestById} from "./tests";
 import {USER_ENTITIES, getUserById} from "./users";
@@ -188,6 +189,78 @@ export type MistakesDataset = {
   passageDifficulty: Array<{id: string; title: string; accuracy: number; rank: number}>;
   commonTopics: Array<{id: string; label: string; count: number}>;
   aiInsights: Array<{id: string; title: string; description: string}>;
+};
+
+export type AdminTestSummary = {
+  id: string;
+  name: string;
+  module: "reading" | "listening";
+};
+
+export type ContentBankPassage = {
+  id: string;
+  title: string;
+  module: "reading" | "listening";
+  wordCount?: number;
+  durationMinutes?: number;
+  difficulty: "easy" | "medium" | "hard";
+  topic: string;
+  source: "cambridge" | "practice" | "custom";
+  previewText: string;
+  fullText: string[];
+  estimatedTimeLabel?: string;
+  createdAt: string;
+  linkedStructureIds: string[];
+  linkedTestIds: string[];
+  usedInTestIds: string[];
+  variantIds: string[];
+  variantCount: number;
+  usageAttempts: number;
+  difficultyAccuracy?: number;
+  averageBandScore?: number;
+};
+
+export type ContentBankVariantSet = {
+  id: string;
+  passageId: string;
+  passageTitle: string;
+  module: "reading" | "listening";
+  name: string;
+  status: "draft" | "published" | "used";
+  questionTypesSummary: string;
+  questionTypeKeys: Array<
+    | "tfng"
+    | "multiple_choice"
+    | "matching_headings"
+    | "sentence_completion"
+    | "summary_completion"
+    | "table_completion"
+    | "diagram_labeling"
+    | "form_completion"
+    | "note_completion"
+    | "matching_information"
+    | "short_answer"
+  >;
+  questionSignature: string;
+  usedInTestIds: string[];
+  usedInTests: AdminTestSummary[];
+  createdAt: string;
+};
+
+export type ContentBankMeta = {
+  linkedTestsCount: number;
+  linkedStructuresCount: number;
+  activeLearnersCount: number;
+  premiumPlansCount: number;
+  achievementTracksCount: number;
+  topMistakeTopics: string[];
+};
+
+export type ContentBankData = {
+  passages: ContentBankPassage[];
+  variants: ContentBankVariantSet[];
+  tests: AdminTestSummary[];
+  meta: ContentBankMeta;
 };
 
 function toPlanTitle(planId: PlanId | "cancelled") {
@@ -679,6 +752,137 @@ export function getMistakesAnalysisData(range: AnalyticsRangeKey): MistakesDatas
     })),
     commonTopics: source.commonTopics,
     aiInsights: source.insights
+  };
+}
+
+function uniqueIds(values: string[]) {
+  return [...new Set(values)];
+}
+
+export function getContentBankData(): ContentBankData {
+  const tests: AdminTestSummary[] = TEST_ENTITIES.map((test) => ({
+    id: test.id,
+    name: test.name,
+    module: test.module
+  }));
+  const testsById = new Map(tests.map((test) => [test.id, test]));
+
+  const attemptsByTestId = USER_TEST_ATTEMPT_ENTITIES.reduce<Record<string, number>>((accumulator, attempt) => {
+    accumulator[attempt.testId] = (accumulator[attempt.testId] ?? 0) + 1;
+    return accumulator;
+  }, {});
+
+  const bandAvgByTestId = USER_TEST_ATTEMPT_ENTITIES.reduce<Record<string, {sum: number; count: number}>>((accumulator, attempt) => {
+    const current = accumulator[attempt.testId] ?? {sum: 0, count: 0};
+    current.sum += attempt.scoreBand;
+    current.count += 1;
+    accumulator[attempt.testId] = current;
+    return accumulator;
+  }, {});
+
+  const passageDifficultyByTestId = MISTAKES_BY_RANGE.last30Days.passageDifficulty.reduce<Record<string, number>>((accumulator, item) => {
+    accumulator[item.testId] = item.accuracy;
+    return accumulator;
+  }, {});
+
+  const variants = QUESTION_VARIANT_SET_ENTITIES.map<ContentBankVariantSet>((variant) => {
+    const passage = PASSAGE_ASSET_ENTITIES.find((item) => item.id === variant.passageId);
+    const usedInTests = variant.usedInTestIds
+      .map((testId) => testsById.get(testId))
+      .filter((item): item is AdminTestSummary => Boolean(item));
+
+    return {
+      id: variant.id,
+      passageId: variant.passageId,
+      passageTitle: passage?.title ?? "Unknown Passage",
+      module: passage?.module ?? "reading",
+      name: variant.name,
+      status: variant.status,
+      questionTypesSummary: variant.questionTypesSummary,
+      questionTypeKeys: variant.questionTypeKeys,
+      questionSignature: variant.questionSignature,
+      usedInTestIds: [...variant.usedInTestIds],
+      usedInTests,
+      createdAt: variant.createdAt
+    };
+  });
+
+  const variantIdsByPassage = variants.reduce<Record<string, string[]>>((accumulator, variant) => {
+    const current = accumulator[variant.passageId] ?? [];
+    accumulator[variant.passageId] = [...current, variant.id];
+    return accumulator;
+  }, {});
+
+  const usedInByPassage = variants.reduce<Record<string, string[]>>((accumulator, variant) => {
+    const current = accumulator[variant.passageId] ?? [];
+    accumulator[variant.passageId] = uniqueIds([...current, ...variant.usedInTestIds]);
+    return accumulator;
+  }, {});
+
+  const passages = PASSAGE_ASSET_ENTITIES.map<ContentBankPassage>((passage) => {
+    const usedInTestIds = uniqueIds([...(usedInByPassage[passage.id] ?? []), ...passage.linkedTestIds]);
+    const usageAttempts = usedInTestIds.reduce((sum, testId) => sum + (attemptsByTestId[testId] ?? 0), 0);
+
+    const averageBandScoreSource = usedInTestIds
+      .map((testId) => bandAvgByTestId[testId])
+      .filter((item): item is {sum: number; count: number} => Boolean(item));
+    const averageBandScore =
+      averageBandScoreSource.length > 0
+        ? Number(
+            (
+              averageBandScoreSource.reduce((sum, item) => sum + item.sum, 0) /
+              Math.max(
+                averageBandScoreSource.reduce((sum, item) => sum + item.count, 0),
+                1
+              )
+            ).toFixed(1)
+          )
+        : undefined;
+
+    const difficultyAccuracyCandidates = usedInTestIds
+      .map((testId) => passageDifficultyByTestId[testId])
+      .filter((item): item is number => typeof item === "number");
+    const difficultyAccuracy =
+      difficultyAccuracyCandidates.length > 0 ? Math.min(...difficultyAccuracyCandidates) : undefined;
+
+    return {
+      id: passage.id,
+      title: passage.title,
+      module: passage.module,
+      wordCount: passage.wordCount,
+      durationMinutes: passage.durationMinutes,
+      difficulty: passage.difficulty,
+      topic: passage.topic,
+      source: passage.source,
+      previewText: passage.previewText,
+      fullText: passage.fullText,
+      estimatedTimeLabel: passage.estimatedTimeLabel,
+      createdAt: passage.createdAt,
+      linkedStructureIds: [...passage.linkedStructureIds],
+      linkedTestIds: [...passage.linkedTestIds],
+      usedInTestIds,
+      variantIds: variantIdsByPassage[passage.id] ?? [],
+      variantCount: (variantIdsByPassage[passage.id] ?? []).length,
+      usageAttempts,
+      difficultyAccuracy,
+      averageBandScore
+    };
+  });
+
+  const meta: ContentBankMeta = {
+    linkedTestsCount: tests.length,
+    linkedStructuresCount: PASSAGE_ASSET_ENTITIES.reduce((sum, item) => sum + item.linkedStructureIds.length, 0),
+    activeLearnersCount: USER_ENTITIES.filter((user) => user.isActiveToday).length,
+    premiumPlansCount: PLAN_ENTITIES.filter((plan) => plan.price > 0).length,
+    achievementTracksCount: ACHIEVEMENT_ENTITIES.length,
+    topMistakeTopics: MISTAKES_BY_RANGE.last30Days.commonTopics.slice(0, 3).map((item) => item.label)
+  };
+
+  return {
+    passages,
+    variants,
+    tests,
+    meta
   };
 }
 

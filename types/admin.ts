@@ -7,6 +7,9 @@ export type BillingPeriod = "forever" | "month";
 export type TestModule = "reading" | "listening";
 export type TestStatus = "published" | "draft";
 export type TestDifficulty = "beginner" | "intermediate" | "advanced";
+export type ContentModule = TestModule;
+export type PassageDifficulty = "easy" | "medium" | "hard";
+export type PassageSource = "cambridge" | "practice" | "custom";
 
 export type QuestionType =
   | "tfng"
@@ -20,6 +23,37 @@ export type QuestionType =
   | "note_completion"
   | "matching_information"
   | "short_answer";
+
+export type PassageAssetEntity = {
+  id: string;
+  title: string;
+  module: ContentModule;
+  wordCount?: number;
+  durationMinutes?: number;
+  difficulty: PassageDifficulty;
+  topic: string;
+  source: PassageSource;
+  previewText: string;
+  fullText: string[];
+  estimatedTimeLabel?: string;
+  createdAt: string;
+  linkedStructureIds: string[];
+  linkedTestIds: string[];
+};
+
+export type QuestionVariantStatus = "draft" | "published" | "used";
+
+export type QuestionVariantSetEntity = {
+  id: string;
+  passageId: string;
+  name: string;
+  status: QuestionVariantStatus;
+  questionTypesSummary: string;
+  questionTypeKeys: QuestionType[];
+  questionSignature: string;
+  usedInTestIds: string[];
+  createdAt: string;
+};
 
 export type TestStructureKind = "passage" | "section";
 

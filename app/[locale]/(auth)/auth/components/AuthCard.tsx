@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Mail, User } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -44,11 +45,13 @@ const initialForm: FormState = {
 export function AuthCard({ mode }: AuthCardProps) {
   const t = useTranslations("auth");
   const locale = useLocale();
+  const router = useRouter();
 
   const [form, setForm] = useState<FormState>(initialForm);
   const [errors, setErrors] = useState<Errors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [statusType, setStatusType] = useState<"success" | "error" | null>(null);
 
   const isSignup = mode === "signup";
 
@@ -97,15 +100,46 @@ export function AuthCard({ mode }: AuthCardProps) {
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setStatus(null);
+    setStatusType(null);
 
     if (!validate()) return;
 
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    setIsSubmitting(false);
 
-    console.log("Auth submit", { mode, form });
-    setStatus(successLabel);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => null)) as {role?: "user" | "admin"; error?: string} | null;
+
+      if (!response.ok || !payload?.role) {
+        setStatus(payload?.error ?? "Invalid credentials.");
+        setStatusType("error");
+        return;
+      }
+
+      setStatus(successLabel);
+      setStatusType("success");
+
+      if (payload.role === "admin") {
+        router.replace(`/${locale}/admin`);
+      } else {
+        router.replace(`/${locale}/reading`);
+      }
+
+      router.refresh();
+    } catch {
+      setStatus("Something went wrong. Please try again.");
+      setStatusType("error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -255,7 +289,16 @@ export function AuthCard({ mode }: AuthCardProps) {
           {isSubmitting ? t("common.submitting") : submitLabel}
         </Button>
 
-        {status ? <p className="text-center text-sm text-emerald-600">{status}</p> : null}
+        {status ? (
+          <p className={cn("text-center text-sm", statusType === "error" ? "text-destructive" : "text-emerald-600")}>
+            {status}
+          </p>
+        ) : null}
+        {!isSignup ? (
+          <p className="text-center text-xs text-muted-foreground">
+            Demo credentials: string@gmail.com/string1234 (user), admin@gmail.com/admin1234 (admin)
+          </p>
+        ) : null}
       </form>
 
       <Separator />

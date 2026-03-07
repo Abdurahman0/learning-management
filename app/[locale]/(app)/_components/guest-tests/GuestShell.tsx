@@ -13,6 +13,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "@/components/ui/sheet";
 import {cn} from "@/lib/utils";
 
+import {useAppSessionRole} from "../session/AppSessionContext";
 import {GuestSidebar} from "./GuestSidebar";
 
 type GuestShellProps = {
@@ -25,15 +26,19 @@ export function GuestShell({children}: GuestShellProps) {
   const locale = useLocale();
   const t = useTranslations("guest");
   const tNav = useTranslations("nav");
+  const role = useAppSessionRole();
+  const isGuest = role === "guest";
 
   // TODO: Replace with real guest usage counters from backend/session.
   const usedTests = 0;
   const totalTests = 4;
   const baseRoute = `/${locale}`;
-  const isMobileHeaderVisible = new RegExp(`^${baseRoute}/(dashboard|reading|listening|settings)/?$`).test(pathname);
+  const dashboardHref = role === "admin" ? `/${locale}/admin` : `/${locale}/dashboard`;
+  const topLevelRoutes = isGuest ? "(reading|listening|settings)" : "(dashboard|reading|listening|settings)";
+  const isMobileHeaderVisible = new RegExp(`^${baseRoute}/${topLevelRoutes}/?$`).test(pathname);
 
   const mobileNavItems = [
-    {key: "dashboard", label: t("sidebar.dashboard"), href: `/${locale}/dashboard`, icon: Home, disabled: false},
+    ...(!isGuest ? [{key: "dashboard", label: t("sidebar.dashboard"), href: dashboardHref, icon: Home, disabled: false}] : []),
     {key: "reading", label: t("sidebar.reading"), href: `/${locale}/reading`, icon: BookOpen, disabled: false},
     {key: "listening", label: t("sidebar.listening"), href: `/${locale}/listening`, icon: Headphones, disabled: false},
     {key: "writing", label: t("sidebar.writingSoon"), href: "#", icon: PenLine, disabled: true},
@@ -53,7 +58,7 @@ export function GuestShell({children}: GuestShellProps) {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex">
-        <GuestSidebar usedTests={usedTests} totalTests={totalTests} />
+        <GuestSidebar usedTests={usedTests} totalTests={totalTests} role={role} />
         <main className="min-h-screen min-w-0 flex-1 px-4 py-4 sm:px-5 lg:px-10 lg:py-8">
           {isMobileHeaderVisible ? (
             <header className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border/80 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:-mx-5 sm:px-5 lg:hidden">
@@ -67,14 +72,14 @@ export function GuestShell({children}: GuestShellProps) {
                 <div className="flex items-center gap-1">
                   <ThemeToggle />
                   <Button asChild variant="ghost" size="icon" className="rounded-xl">
-                    <Link href={`/${locale}/auth`} aria-label={t("mobile.signIn")}>
+                    <Link href={isGuest ? `/${locale}/auth` : dashboardHref} aria-label={isGuest ? t("mobile.signIn") : "Open dashboard"}>
                       <CircleUserRound className="size-[18px]" />
                     </Link>
                   </Button>
 
                   <Sheet key={pathname}>
                     <SheetTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-xl" aria-label={t("sidebar.guestMode")}>
+                      <Button variant="ghost" size="icon" className="rounded-xl" aria-label={isGuest ? t("sidebar.guestMode") : "Open menu"}>
                         <Menu className="size-[18px]" />
                       </Button>
                     </SheetTrigger>

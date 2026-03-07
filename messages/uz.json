@@ -552,7 +552,7 @@
       "items": {
         "dashboard": "Dashboard",
         "tests": "Testlar",
-        "questionBank": "Savollar bazasi",
+        "contentBank": "Kontent banki",
         "users": "Foydalanuvchilar",
         "analytics": "Analitika",
         "mistakesAnalysis": "Xatolar tahlili",
@@ -1345,6 +1345,181 @@
       "actionDescription": "{title} uchun {action} amali yuborildi.",
       "viewAllTitle": "Barcha progress ko'rinmoqda",
       "viewAllDescription": "Batafsil progress ro'yxati placeholder ishga tushdi."
+    }
+  },
+  "adminContentBank": {
+    "title": "Kontent banki",
+    "subtitle": "IELTS testlari uchun passage va noyob savol to'plamlarini boshqaring.",
+    "searchPlaceholder": "Kontent bank bo'ylab qidiring...",
+    "notificationsLabel": "Bildirishnomalar",
+    "importCsv": "CSV import",
+    "addNewPassage": "Yangi passage qo'shish",
+    "quickPublish": "Tez nashr qilish",
+    "viewGuidelines": "Yo'riqnomani ko'rish",
+    "selectedPassage": "Tanlangan passage",
+    "wordCount": "So'zlar soni",
+    "estimatedTime": "Taxminiy vaqt",
+    "passagePreview": "Passage preview",
+    "readFullPassage": "To'liq passageni o'qish",
+    "questionVariantGroups": "Savol variant guruhlari",
+    "createNew": "Yangi yaratish",
+    "wordCountLabel": "so'z",
+    "minutesLabel": "daq",
+    "variantSummaryFallback": "Aralash to'plam ({count} tur)",
+    "fullPassageMeta": "{module} - {count}",
+    "platformRule": {
+      "title": "Platforma qoidasi",
+      "description": "Nashr qilingan testlarda savollar hech qachon takrorlanmasligi kerak. Passagelar qayta ishlatilishi mumkin, lekin savol to'plamlari noyob bo'lishi shart."
+    },
+    "tabs": {
+      "passageBank": "Passage bank",
+      "questionVariants": "Savol variantlari"
+    },
+    "filters": {
+      "module": {
+        "allModules": "Barcha modullar",
+        "reading": "Reading",
+        "listening": "Listening"
+      },
+      "difficulty": {
+        "allDifficulty": "Barcha qiyinliklar",
+        "easy": "Oson",
+        "medium": "O'rtacha",
+        "hard": "Qiyin"
+      },
+      "topic": {
+        "allTopics": "Barcha mavzular"
+      },
+      "source": {
+        "anySource": "Har qanday manba",
+        "cambridge": "Cambridge",
+        "practice": "Practice",
+        "custom": "Custom"
+      },
+      "moreFilters": "Ko'proq filtr",
+      "moreFiltersLabel": "Qo'shimcha filtrlar",
+      "onlyUnused": "Faqat testda ishlatilmagan passage/variantlar",
+      "onlyPublishedVariants": "Draft variantlarni yashirish"
+    },
+    "topics": {
+      "environment": "Atrof-muhit",
+      "economics": "Iqtisodiyot",
+      "technology": "Texnologiya",
+      "science": "Ilm-fan",
+      "education": "Ta'lim"
+    },
+    "difficulty": {
+      "easy": "Oson",
+      "medium": "O'rtacha",
+      "hard": "Qiyin"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Nashr qilingan",
+      "used": "Ishlatilgan"
+    },
+    "table": {
+      "columns": {
+        "titleAndModule": "Sarlavha va modul",
+        "difficulty": "Qiyinlik",
+        "topic": "Mavzu",
+        "variants": "Variantlar",
+        "usedIn": "Qaysi testda",
+        "actions": "Amallar"
+      },
+      "showingResults": "{total} tadan {visible} ta passage ko'rsatilmoqda"
+    },
+    "variantsTable": {
+      "columns": {
+        "variantSet": "Variant to'plami",
+        "passage": "Passage",
+        "module": "Modul",
+        "questionTypes": "Savol turlari",
+        "status": "Holat",
+        "usedInTest": "Ishlatilgan test",
+        "actions": "Amallar"
+      },
+      "showingResults": "{total} tadan {visible} ta variant to'plami ko'rsatilmoqda"
+    },
+    "labels": {
+      "notUsed": "Ishlatilmagan",
+      "variantsCount": "{count} variant",
+      "usedInCount": "{count} ta testda ishlatilgan",
+      "copySuffix": "Nusxa",
+      "unknownPassage": "Noma'lum passage"
+    },
+    "actions": {
+      "openMenu": "Amallar menyusini ochish",
+      "selectPassage": "Passageni tanlash",
+      "readFullPassage": "To'liq passageni o'qish",
+      "createVariantSet": "Variant to'plam yaratish",
+      "previewQuestions": "Savollar preview",
+      "edit": "Tahrirlash",
+      "duplicateAsNewVariant": "Yangi variant sifatida nusxalash",
+      "archive": "Arxivlash"
+    },
+    "createVariantDialog": {
+      "title": "Yangi variant to'plam yaratish",
+      "description": "Qayta ishlatiladigan passage uchun noyob savol to'plamini yarating.",
+      "fields": {
+        "variantName": "Variant nomi",
+        "variantNamePlaceholder": "masalan, Variant Set C",
+        "passage": "Passage",
+        "status": "Holat",
+        "usedInTest": "Ishlatilgan test",
+        "selectTestPlaceholder": "Nashr qilingan testni tanlang",
+        "questionTypes": "Savol turlari",
+        "summary": "Savol turlari xulosasi",
+        "summaryPlaceholder": "masalan, TFNG (5) + Matching Headings (7)"
+      },
+      "create": "Variant to'plam yaratish"
+    },
+    "questionTypes": {
+      "tfng": "TFNG",
+      "multiple_choice": "Multiple Choice",
+      "matching_headings": "Matching Headings",
+      "matching_information": "Matching Information",
+      "summary_completion": "Summary Completion",
+      "table_completion": "Table Completion",
+      "form_completion": "Form Completion",
+      "note_completion": "Note Completion"
+    },
+    "meta": {
+      "linkedTests": "{count} bog'langan test",
+      "activeLearners": "{count} faol o'quvchi",
+      "achievementTracks": "{count} yutuq yo'nalishi",
+      "wordCountShort": "{count} so'z",
+      "durationShort": "{count} daq"
+    },
+    "guidelines": {
+      "title": "Kontent nashr qilish yo'riqnomasi",
+      "subtitle": "Har bir nashr qilingan testni noyob va kuzatiladigan qilib saqlang.",
+      "rule1": "Nashr qilingan testlarda bir xil savol signature qayta ishlatilmasin. Nusxa variantlar qayta yozilmaguncha draft bo'lib qolishi kerak.",
+      "rule2": "Passagelar turli testlarda qayta ishlatilishi mumkin, lekin har bir variant to'plamida prompt va javob kombinatsiyasi noyob bo'lishi shart.",
+      "rule3": "Variant arxivlanganda uning analytics va xatolar tahlili bog'lanishlarini saqlang."
+    },
+    "feedback": {
+      "importCsvRequested": "CSV import amali ishga tushdi.",
+      "addPassageRequested": "Yangi passage qo'shish amali ishga tushdi.",
+      "quickPublishRequested": "Tez nashr qilish amali ishga tushdi.",
+      "variantCreated": "{name} yaratildi.",
+      "variantDuplicated": "{name} yangi draft sifatida nusxalandi.",
+      "variantArchived": "{name} arxivlandi.",
+      "variantEditRequested": "{name} uchun tahrirlash so'rovi yuborildi.",
+      "previewQuestionsRequested": "{name} uchun preview so'rovi yuborildi."
+    },
+    "empty": {
+      "passages": "Joriy qidiruv va filtrlar bo'yicha passage topilmadi.",
+      "selectPassage": "Tafsilotlar va bog'langan variantlarni ko'rish uchun jadvaldan passage tanlang.",
+      "variantGroups": "Bu passage uchun hali variant guruhi yo'q.",
+      "variants": "Joriy qidiruv va filtrlar bo'yicha variantlar topilmadi."
+    },
+    "common": {
+      "cancel": "Bekor qilish"
     }
   }
 }

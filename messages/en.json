@@ -552,7 +552,7 @@
       "items": {
         "dashboard": "Dashboard",
         "tests": "Tests",
-        "questionBank": "Question Bank",
+        "contentBank": "Content Bank",
         "users": "Users",
         "analytics": "Analytics",
         "mistakesAnalysis": "Mistakes Analysis",
@@ -1345,6 +1345,181 @@
       "actionDescription": "{action} requested for {title}.",
       "viewAllTitle": "Viewing all progress",
       "viewAllDescription": "Detailed progress list placeholder triggered."
+    }
+  },
+  "adminContentBank": {
+    "title": "Content Bank",
+    "subtitle": "Manage passages and generate unique question sets for IELTS tests.",
+    "searchPlaceholder": "Search across content bank...",
+    "notificationsLabel": "Notifications",
+    "importCsv": "Import CSV",
+    "addNewPassage": "Add New Passage",
+    "quickPublish": "Quick Publish",
+    "viewGuidelines": "View Guidelines",
+    "selectedPassage": "Selected Passage",
+    "wordCount": "Word Count",
+    "estimatedTime": "Estimated Time",
+    "passagePreview": "Passage Preview",
+    "readFullPassage": "Read Full Passage",
+    "questionVariantGroups": "Question Variant Groups",
+    "createNew": "Create New",
+    "wordCountLabel": "words",
+    "minutesLabel": "min",
+    "variantSummaryFallback": "Mixed set ({count} types)",
+    "fullPassageMeta": "{module} - {count}",
+    "platformRule": {
+      "title": "Platform Rule",
+      "description": "Questions must never repeat across published tests. Passages may be reused but question sets must be unique."
+    },
+    "tabs": {
+      "passageBank": "Passage Bank",
+      "questionVariants": "Question Variants"
+    },
+    "filters": {
+      "module": {
+        "allModules": "All Modules",
+        "reading": "Reading",
+        "listening": "Listening"
+      },
+      "difficulty": {
+        "allDifficulty": "All Difficulty",
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard"
+      },
+      "topic": {
+        "allTopics": "All Topics"
+      },
+      "source": {
+        "anySource": "Any Source",
+        "cambridge": "Cambridge",
+        "practice": "Practice",
+        "custom": "Custom"
+      },
+      "moreFilters": "More Filters",
+      "moreFiltersLabel": "Advanced Filters",
+      "onlyUnused": "Only passages/variants not used in tests",
+      "onlyPublishedVariants": "Hide draft variants"
+    },
+    "topics": {
+      "environment": "Environment",
+      "economics": "Economics",
+      "technology": "Technology",
+      "science": "Science",
+      "education": "Education"
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening"
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "used": "Used"
+    },
+    "table": {
+      "columns": {
+        "titleAndModule": "Title & Module",
+        "difficulty": "Difficulty",
+        "topic": "Topic",
+        "variants": "Variants",
+        "usedIn": "Used In",
+        "actions": "Actions"
+      },
+      "showingResults": "Showing {visible} of {total} passages"
+    },
+    "variantsTable": {
+      "columns": {
+        "variantSet": "Variant Set",
+        "passage": "Passage",
+        "module": "Module",
+        "questionTypes": "Question Types",
+        "status": "Status",
+        "usedInTest": "Used In Test",
+        "actions": "Actions"
+      },
+      "showingResults": "Showing {visible} of {total} variant sets"
+    },
+    "labels": {
+      "notUsed": "Not used",
+      "variantsCount": "{count} variants",
+      "usedInCount": "Used in {count} tests",
+      "copySuffix": "Copy",
+      "unknownPassage": "Unknown Passage"
+    },
+    "actions": {
+      "openMenu": "Open actions menu",
+      "selectPassage": "Select Passage",
+      "readFullPassage": "Read Full Passage",
+      "createVariantSet": "Create Variant Set",
+      "previewQuestions": "Preview Questions",
+      "edit": "Edit",
+      "duplicateAsNewVariant": "Duplicate as New Variant",
+      "archive": "Archive"
+    },
+    "createVariantDialog": {
+      "title": "Create New Variant Set",
+      "description": "Create a unique question set linked to a reusable passage.",
+      "fields": {
+        "variantName": "Variant Name",
+        "variantNamePlaceholder": "e.g. Variant Set C",
+        "passage": "Passage",
+        "status": "Status",
+        "usedInTest": "Used In Test",
+        "selectTestPlaceholder": "Select published test",
+        "questionTypes": "Question Types",
+        "summary": "Question Types Summary",
+        "summaryPlaceholder": "e.g. TFNG (5) + Matching Headings (7)"
+      },
+      "create": "Create Variant Set"
+    },
+    "questionTypes": {
+      "tfng": "TFNG",
+      "multiple_choice": "Multiple Choice",
+      "matching_headings": "Matching Headings",
+      "matching_information": "Matching Information",
+      "summary_completion": "Summary Completion",
+      "table_completion": "Table Completion",
+      "form_completion": "Form Completion",
+      "note_completion": "Note Completion"
+    },
+    "meta": {
+      "linkedTests": "{count} linked tests",
+      "activeLearners": "{count} active learners",
+      "achievementTracks": "{count} achievement tracks",
+      "wordCountShort": "{count} words",
+      "durationShort": "{count} min"
+    },
+    "guidelines": {
+      "title": "Content Publishing Guidelines",
+      "subtitle": "Keep every published test unique and trackable.",
+      "rule1": "Never reuse a question signature across published tests. Duplicate variants must remain in draft until rewritten.",
+      "rule2": "Passages can be reused across modules and tests, but each variant set must use a unique combination of prompts and answers.",
+      "rule3": "When archiving a variant, preserve its usage references for analytics and mistakes analysis traceability."
+    },
+    "feedback": {
+      "importCsvRequested": "Import CSV action triggered.",
+      "addPassageRequested": "Add new passage action triggered.",
+      "quickPublishRequested": "Quick publish action triggered.",
+      "variantCreated": "{name} was created.",
+      "variantDuplicated": "{name} was duplicated as a new draft.",
+      "variantArchived": "{name} was archived.",
+      "variantEditRequested": "Edit requested for {name}.",
+      "previewQuestionsRequested": "Preview requested for {name}."
+    },
+    "empty": {
+      "passages": "No passages match current search and filters.",
+      "selectPassage": "Select a passage from the table to inspect details and connected variant sets.",
+      "variantGroups": "No variant groups linked to this passage yet.",
+      "variants": "No variant sets match current search and filters."
+    },
+    "common": {
+      "cancel": "Cancel"
     }
   }
 }

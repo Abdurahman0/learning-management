@@ -9,6 +9,7 @@ import {
   type ListeningTestItem,
 } from "@/data/listening-tests";
 
+import { useAppSessionRole } from "../_components/session/AppSessionContext";
 import { GuestCallout } from "../_components/listening/GuestCallout";
 import { ListeningFilters } from "../_components/listening/ListeningFilters";
 import { ListeningTestCard } from "../_components/listening/ListeningTestCard";
@@ -36,6 +37,8 @@ function sortListeningTests(tests: ListeningTestItem[], sort: SortFilter) {
 
 export default function ListeningPage() {
   const t = useTranslations("guest");
+  const role = useAppSessionRole();
+  const isGuest = role === "guest";
 
   const [tab, setTab] = useState<ListeningTab>("all");
   const [search, setSearch] = useState("");
@@ -68,7 +71,7 @@ export default function ListeningPage() {
   return (
     <div>
       <div className="mx-auto w-full max-w-[980px] pb-8 pt-4 lg:pt-0">
-        <GuestCallout />
+        {isGuest ? <GuestCallout /> : null}
 
         <section className="mt-6">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
@@ -100,9 +103,11 @@ export default function ListeningPage() {
             ))}
           </div>
 
-          <div className="mt-6">
-            <UnlockMoreCard />
-          </div>
+          {isGuest ? (
+            <div className="mt-6">
+              <UnlockMoreCard />
+            </div>
+          ) : null}
         </section>
       </div>
     </div>

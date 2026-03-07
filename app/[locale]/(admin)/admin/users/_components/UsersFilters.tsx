@@ -6,21 +6,18 @@ import {useTranslations} from "next-intl";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import type {FilterOption, LocaleFilterValue, PlanFilterValue, RoleFilterValue, StatusFilterValue} from "@/data/admin-users";
+import type {FilterOption, PlanFilterValue, RoleFilterValue, StatusFilterValue} from "@/data/admin-users";
 
 type UsersFiltersProps = {
   statusValue: StatusFilterValue;
   roleValue: RoleFilterValue;
   planValue: PlanFilterValue;
-  localeValue: LocaleFilterValue;
   statusOptions: FilterOption<StatusFilterValue>[];
   roleOptions: FilterOption<RoleFilterValue>[];
   planOptions: FilterOption<PlanFilterValue>[];
-  localeOptions: FilterOption<LocaleFilterValue>[];
   onStatusChange: (value: StatusFilterValue) => void;
   onRoleChange: (value: RoleFilterValue) => void;
   onPlanChange: (value: PlanFilterValue) => void;
-  onLocaleChange: (value: LocaleFilterValue) => void;
   onReset: () => void;
 };
 
@@ -57,15 +54,12 @@ export function UsersFilters({
   statusValue,
   roleValue,
   planValue,
-  localeValue,
   statusOptions,
   roleOptions,
   planOptions,
-  localeOptions,
   onStatusChange,
   onRoleChange,
   onPlanChange,
-  onLocaleChange,
   onReset
 }: UsersFiltersProps) {
   const t = useTranslations("adminUsers");
@@ -73,11 +67,10 @@ export function UsersFilters({
   return (
     <Card className="rounded-2xl border-border/70 bg-card/70 py-0">
       <CardContent className="px-4 py-4 sm:px-5">
-        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+        <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]">
           <FilterSelect ariaLabel={t("filters.labels.status")} value={statusValue} options={statusOptions} onValueChange={onStatusChange} />
           <FilterSelect ariaLabel={t("filters.labels.role")} value={roleValue} options={roleOptions} onValueChange={onRoleChange} />
           <FilterSelect ariaLabel={t("filters.labels.plan")} value={planValue} options={planOptions} onValueChange={onPlanChange} />
-          <FilterSelect ariaLabel={t("filters.labels.locale")} value={localeValue} options={localeOptions} onValueChange={onLocaleChange} />
 
           <Button
             type="button"
