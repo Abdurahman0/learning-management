@@ -559,7 +559,6 @@
         "subscriptions": "Subscriptions",
         "achievements": "Achievements",
         "reports": "Reports",
-        "blog": "Blog",
         "settings": "Settings"
       }
     },
@@ -873,6 +872,7 @@
   "adminAnalytics": {
     "title": "Platform Analytics",
     "exportReport": "Export Report",
+    "notificationsLabel": "Notifications",
     "dateRanges": {
       "last7Days": "Last 7 Days",
       "last30Days": "Last 30 Days",
@@ -938,6 +938,27 @@
         "vocabularyRetentionDesc": "The Daily Flashcard feature has resulted in an 18% improvement in Passage 3 accuracy during the selected period.",
         "regionalPerformanceDesc": "Students from Southeast Asia show a 12% higher Listening score compared to the global average in this date range."
       }
+    }
+  },
+  "adminSettings": {
+    "title": "Settings",
+    "subtitle": "Configure platform behavior and system preferences.",
+    "notificationsLabel": "Notifications",
+    "resetToDefault": "Reset to Default",
+    "saveChanges": "Save Changes",
+    "unsavedChanges": "Unsaved changes",
+    "allChangesSaved": "All changes saved",
+    "generalSettings": "General Settings",
+    "generalSettingsDescription": "Manage core platform identity and support preferences.",
+    "platformName": "Platform Name",
+    "supportEmail": "Support Email",
+    "timezone": "Timezone",
+    "timezonePlaceholder": "Select timezone",
+    "maintenanceMode": "Maintenance Mode",
+    "maintenanceModeDescription": "Offline for all users",
+    "toast": {
+      "savedTitle": "Settings saved",
+      "savedDescription": "General platform settings were updated."
     }
   },
   "adminUsers": {

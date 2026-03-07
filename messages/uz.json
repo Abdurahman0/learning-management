@@ -559,7 +559,6 @@
         "subscriptions": "Obunalar",
         "achievements": "Yutuqlar",
         "reports": "Hisobotlar",
-        "blog": "Blog",
         "settings": "Sozlamalar"
       }
     },
@@ -873,6 +872,7 @@
   "adminAnalytics": {
     "title": "Platform analitikasi",
     "exportReport": "Hisobotni eksport qilish",
+    "notificationsLabel": "Bildirishnomalar",
     "dateRanges": {
       "last7Days": "Oxirgi 7 kun",
       "last30Days": "Oxirgi 30 kun",
@@ -938,6 +938,27 @@
         "vocabularyRetentionDesc": "Daily Flashcard funksiyasi tanlangan davrda Passage 3 aniqligini 18% ga oshirdi.",
         "regionalPerformanceDesc": "Ushbu davrda Janubi-Sharqiy Osiyodagi foydalanuvchilarning Listening ballari global o'rtachadan 12% yuqori."
       }
+    }
+  },
+  "adminSettings": {
+    "title": "Sozlamalar",
+    "subtitle": "Platforma ishlashi va tizim sozlamalarini boshqaring.",
+    "notificationsLabel": "Bildirishnomalar",
+    "resetToDefault": "Standartga qaytarish",
+    "saveChanges": "O'zgarishlarni saqlash",
+    "unsavedChanges": "Saqlanmagan o'zgarishlar",
+    "allChangesSaved": "Barcha o'zgarishlar saqlandi",
+    "generalSettings": "Umumiy sozlamalar",
+    "generalSettingsDescription": "Platforma nomi va qo'llab-quvvatlash sozlamalarini boshqaring.",
+    "platformName": "Platforma nomi",
+    "supportEmail": "Yordam emaili",
+    "timezone": "Vaqt zonasi",
+    "timezonePlaceholder": "Vaqt zonasini tanlang",
+    "maintenanceMode": "Texnik xizmat rejimi",
+    "maintenanceModeDescription": "Barcha foydalanuvchilar uchun offline",
+    "toast": {
+      "savedTitle": "Sozlamalar saqlandi",
+      "savedDescription": "Platformaning umumiy sozlamalari yangilandi."
     }
   },
   "adminUsers": {

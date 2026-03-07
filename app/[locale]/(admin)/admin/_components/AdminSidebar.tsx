@@ -13,7 +13,6 @@ import {
   FileText,
   LayoutDashboard,
   Menu,
-  Rss,
   Settings,
   ShieldCheck,
   Users
@@ -36,7 +35,6 @@ const navIcons: Record<AdminNavKey, LucideIcon> = {
   subscriptions: CreditCard,
   achievements: Award,
   reports: FileText,
-  blog: Rss,
   settings: Settings
 };
 

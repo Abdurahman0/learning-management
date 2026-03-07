@@ -8,7 +8,6 @@ export type AdminNavKey =
   | "subscriptions"
   | "achievements"
   | "reports"
-  | "blog"
   | "settings";
 
 export type AdminNavItem = {
@@ -32,7 +31,6 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {key: "subscriptions", segment: "subscriptions"},
   {key: "achievements", segment: "achievements"},
   {key: "reports", segment: "reports"},
-  {key: "blog", segment: "blog"},
   {key: "settings", segment: "settings"}
 ];
 
