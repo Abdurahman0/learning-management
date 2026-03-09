@@ -19,7 +19,6 @@ type TestsTableProps = {
   onToggleExpand: (testId: string) => void;
   onEdit: (testId: string) => void;
   onPreview: (testId: string) => void;
-  onDuplicate: (testId: string) => void;
   onDelete: (testId: string) => void;
   onEditPassage: (testId: string, passageId: string) => void;
   page: number;
@@ -75,7 +74,6 @@ export function TestsTable({
   onToggleExpand,
   onEdit,
   onPreview,
-  onDuplicate,
   onDelete,
   onEditPassage,
   page,
@@ -158,13 +156,7 @@ export function TestsTable({
                             event.stopPropagation();
                           }}
                         >
-                          <TestActionsMenu
-                            test={test}
-                            onEdit={onEdit}
-                            onPreview={onPreview}
-                            onDuplicate={onDuplicate}
-                            onDelete={onDelete}
-                          />
+                          <TestActionsMenu test={test} onEdit={onEdit} onPreview={onPreview} onDelete={onDelete} />
                         </TableCell>
                       </TableRow>
 

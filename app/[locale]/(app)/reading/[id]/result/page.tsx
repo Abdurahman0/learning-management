@@ -85,7 +85,7 @@ export default function ReadingResultPage() {
           <h1 className="text-xl font-semibold">{t("missingAttemptTitle")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{t("missingAttemptDescription")}</p>
           <Button className="mt-4" asChild>
-            <Link href={`/${locale}/reading/${testId}`}>{t("retakeTest")}</Link>
+            <Link href={`/${locale}/reading/${testId}?restart=1`}>{t("retakeTest")}</Link>
           </Button>
         </Card>
       </div>
@@ -130,7 +130,7 @@ export default function ReadingResultPage() {
               <Link href="#question-review">{t("reviewAnswers")}</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href={`/${locale}/reading/${test.id}`}><RotateCcw className="size-4" />{t("retakeTest")}</Link>
+              <Link href={`/${locale}/reading/${test.id}?restart=1`}><RotateCcw className="size-4" />{t("retakeTest")}</Link>
             </Button>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

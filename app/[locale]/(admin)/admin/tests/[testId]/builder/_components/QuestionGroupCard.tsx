@@ -188,9 +188,9 @@ export function QuestionGroupCard({
 
                 <p className="line-clamp-2 text-sm text-foreground/90">{question.prompt || t("questions.emptyPrompt")}</p>
 
-                {question.evidenceText ? (
+                {question.evidence || question.evidenceText ? (
                   <p className="mt-2 line-clamp-2 rounded-lg border border-primary/25 bg-primary/10 px-2 py-1 text-xs text-primary/90">
-                    {question.evidenceText}
+                    {question.evidence ?? question.evidenceText}
                   </p>
                 ) : null}
 

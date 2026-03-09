@@ -8,13 +8,32 @@ import {
   SKILL_DISTRIBUTION_BY_RANGE,
   USER_TEST_ATTEMPT_ENTITIES
 } from "./analytics";
-import {PASSAGE_ASSET_ENTITIES, QUESTION_VARIANT_SET_ENTITIES} from "./content";
+import {
+  MAX_VARIANT_QUESTION_TYPES,
+  PASSAGE_ASSET_ENTITIES,
+  buildVariantSummaryFromGroups,
+  getQuestionVariantSetEntities
+} from "./content-bank";
 import {MISTAKES_BY_RANGE, DEFAULT_RECOMMENDATION_SETTINGS_ENTITY} from "./mistakes";
 import {ADMIN_NAV_ITEMS, ADMIN_PROFILE, type AdminNavItem} from "./profile";
 import {GLOBAL_PLAN_SETTINGS_ENTITY, PLAN_ENTITIES, SUBSCRIPTION_ACTION_ENTITIES} from "./subscriptions";
 import {TEST_ENTITIES, getTestById} from "./tests";
 import {USER_ENTITIES, getUserById} from "./users";
-import type {AdminLocale, AdminStatus, AnalyticsRangeKey, PlanId, TestDifficulty, TestModule, TestStatus} from "@/types/admin";
+import type {
+  AdminLocale,
+  AdminStatus,
+  AnalyticsRangeKey,
+  BuilderQuestion,
+  BuilderQuestionGroup,
+  ContentModule,
+  PlanId,
+  QuestionType,
+  QuestionVariantSetEntity,
+  TestDifficulty,
+  TestModule,
+  TestStatus,
+  VariantGroupTemplate
+} from "@/types/admin";
 
 export type DashboardMonthKey = "jan" | "feb" | "mar" | "apr" | "may" | "jun" | "jul";
 export type ActivityStatus = "verified" | "active" | "pendingReview";
@@ -227,20 +246,10 @@ export type ContentBankVariantSet = {
   module: "reading" | "listening";
   name: string;
   status: "draft" | "published" | "used";
+  maxQuestionTypes: number;
+  groups: VariantGroupTemplate[];
   questionTypesSummary: string;
-  questionTypeKeys: Array<
-    | "tfng"
-    | "multiple_choice"
-    | "matching_headings"
-    | "sentence_completion"
-    | "summary_completion"
-    | "table_completion"
-    | "diagram_labeling"
-    | "form_completion"
-    | "note_completion"
-    | "matching_information"
-    | "short_answer"
-  >;
+  questionTypeKeys: QuestionType[];
   questionSignature: string;
   usedInTestIds: string[];
   usedInTests: AdminTestSummary[];
@@ -759,7 +768,200 @@ function uniqueIds(values: string[]) {
   return [...new Set(values)];
 }
 
+type QuestionRange = {
+  start: number;
+  end: number;
+  total: number;
+  from: number;
+  to: number;
+};
+
+function createQuestionRange(start: number, end: number): QuestionRange {
+  return {
+    start,
+    end,
+    total: end - start + 1,
+    from: start,
+    to: end
+  };
+}
+
+export type VariantGroupsValidation = {
+  isValid: boolean;
+  selectedTypesCount: number;
+  maxQuestionTypes: number;
+  totalSelected: number;
+  allowedTotal: number;
+  remaining: number;
+  hasDuplicateTypes: boolean;
+  hasInvalidCounts: boolean;
+  exceedsMaxTypes: boolean;
+  hasTotalMismatch: boolean;
+};
+
+export function getQuestionRangeForSlot(module: ContentModule, slotIndex: number): QuestionRange {
+  if (module === "reading") {
+    if (slotIndex === 2) return createQuestionRange(14, 26);
+    if (slotIndex === 3) return createQuestionRange(27, 40);
+    return createQuestionRange(1, 13);
+  }
+
+  if (slotIndex === 2) return createQuestionRange(11, 20);
+  if (slotIndex === 3) return createQuestionRange(21, 30);
+  if (slotIndex === 4) return createQuestionRange(31, 40);
+  return createQuestionRange(1, 10);
+}
+
+export function getAllowedQuestionCount(module: ContentModule, slotIndex: number) {
+  const range = getQuestionRangeForSlot(module, slotIndex);
+  return range.total;
+}
+
+export function buildVariantSummary(groups: VariantGroupTemplate[]) {
+  return buildVariantSummaryFromGroups(groups);
+}
+
+export function getVariantQuestionTotal(variantSet: Pick<ContentBankVariantSet, "groups"> | Pick<QuestionVariantSetEntity, "groups">) {
+  return variantSet.groups.reduce((sum, group) => sum + group.count, 0);
+}
+
+export function isVariantCompatibleWithSlot(
+  module: ContentModule,
+  slotIndex: number,
+  variantSet: Pick<ContentBankVariantSet, "module" | "groups"> | Pick<QuestionVariantSetEntity, "groups"> & {module?: ContentModule}
+) {
+  const variantModule = "module" in variantSet && variantSet.module ? variantSet.module : module;
+  if (variantModule !== module) {
+    return false;
+  }
+  return getVariantQuestionTotal(variantSet) === getAllowedQuestionCount(module, slotIndex);
+}
+
+export function validateVariantGroups(
+  module: ContentModule,
+  slotIndex: number,
+  groups: VariantGroupTemplate[],
+  maxQuestionTypes = MAX_VARIANT_QUESTION_TYPES
+): VariantGroupsValidation {
+  const selectedTypesCount = groups.length;
+  const totalSelected = groups.reduce((sum, group) => sum + group.count, 0);
+  const allowedTotal = getAllowedQuestionCount(module, slotIndex);
+  const remaining = allowedTotal - totalSelected;
+  const hasDuplicateTypes = new Set(groups.map((group) => group.type)).size !== groups.length;
+  const hasInvalidCounts = groups.some((group) => !Number.isFinite(group.count) || group.count <= 0);
+  const exceedsMaxTypes = selectedTypesCount > maxQuestionTypes;
+  const hasTotalMismatch = totalSelected !== allowedTotal;
+  const isValid =
+    selectedTypesCount > 0 &&
+    !hasDuplicateTypes &&
+    !hasInvalidCounts &&
+    !exceedsMaxTypes &&
+    !hasTotalMismatch;
+
+  return {
+    isValid,
+    selectedTypesCount,
+    maxQuestionTypes,
+    totalSelected,
+    allowedTotal,
+    remaining,
+    hasDuplicateTypes,
+    hasInvalidCounts,
+    exceedsMaxTypes,
+    hasTotalMismatch
+  };
+}
+
+function createGeneratedBuilderQuestion(type: QuestionType, number: number): BuilderQuestion {
+  const base = {
+    id: `${type}-${number}`,
+    number,
+    type,
+    prompt: "",
+    explanation: "",
+    evidence: "",
+    evidenceText: ""
+  } as const;
+
+  if (type === "tfng") {
+    return {...base, type, correctAnswer: ""};
+  }
+
+  if (type === "multiple_choice") {
+    return {
+      ...base,
+      type,
+      options: ["", "", "", ""],
+      correctAnswer: ""
+    };
+  }
+
+  if (type === "matching_headings") {
+    return {
+      ...base,
+      type,
+      headings: [],
+      correctAnswer: ""
+    };
+  }
+
+  if (type === "matching_information") {
+    return {
+      ...base,
+      type,
+      items: [],
+      choices: [],
+      correctAnswer: {}
+    };
+  }
+
+  return {
+    ...base,
+    type,
+    correctAnswer: [],
+    acceptableAnswers: []
+  };
+}
+
+export function generateQuestionGroupsFromVariant(input: {
+  module: ContentModule;
+  slotIndex: number;
+  variantSet: Pick<ContentBankVariantSet, "id" | "groups">;
+}): BuilderQuestionGroup[] {
+  const range = getQuestionRangeForSlot(input.module, input.slotIndex);
+  let cursor = range.from;
+
+  return input.variantSet.groups.map((group, index) => {
+    const from = cursor;
+    const to = cursor + group.count - 1;
+    const questions: BuilderQuestion[] = [];
+    for (let number = from; number <= to; number += 1) {
+      questions.push(createGeneratedBuilderQuestion(group.type, number));
+    }
+    cursor = to + 1;
+
+    return {
+      id: `${input.variantSet.id}-group-${index + 1}`,
+      title: `Questions ${from}-${to}`,
+      type: group.type,
+      from,
+      to,
+      questions,
+      variantSetId: input.variantSet.id
+    };
+  });
+}
+
+export function getPassageVariantSets(passageId: string) {
+  return getContentBankData().variants.filter((variant) => variant.passageId === passageId);
+}
+
+export function getCompatibleVariantsForSlot(passageId: string, module: ContentModule, slotIndex: number) {
+  return getPassageVariantSets(passageId).filter((variant) => isVariantCompatibleWithSlot(module, slotIndex, variant));
+}
+
 export function getContentBankData(): ContentBankData {
+  const runtimeVariantEntities = getQuestionVariantSetEntities();
   const tests: AdminTestSummary[] = TEST_ENTITIES.map((test) => ({
     id: test.id,
     name: test.name,
@@ -785,7 +987,7 @@ export function getContentBankData(): ContentBankData {
     return accumulator;
   }, {});
 
-  const variants = QUESTION_VARIANT_SET_ENTITIES.map<ContentBankVariantSet>((variant) => {
+  const variants = runtimeVariantEntities.map<ContentBankVariantSet>((variant) => {
     const passage = PASSAGE_ASSET_ENTITIES.find((item) => item.id === variant.passageId);
     const usedInTests = variant.usedInTestIds
       .map((testId) => testsById.get(testId))
@@ -798,8 +1000,10 @@ export function getContentBankData(): ContentBankData {
       module: passage?.module ?? "reading",
       name: variant.name,
       status: variant.status,
-      questionTypesSummary: variant.questionTypesSummary,
-      questionTypeKeys: variant.questionTypeKeys,
+      maxQuestionTypes: variant.maxQuestionTypes,
+      groups: variant.groups.map((group) => ({...group})),
+      questionTypesSummary: variant.questionTypesSummary || buildVariantSummaryFromGroups(variant.groups),
+      questionTypeKeys: [...variant.questionTypeKeys],
       questionSignature: variant.questionSignature,
       usedInTestIds: [...variant.usedInTestIds],
       usedInTests,

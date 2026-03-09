@@ -63,7 +63,7 @@ export default function ListeningResultPage() {
           <h1 className="text-xl font-semibold">{t("missingAttemptTitle")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{t("missingAttemptDescription")}</p>
           <Button className="mt-4" asChild>
-            <Link href={`/${locale}/listening/${testId}`}>{t("retakeTest")}</Link>
+            <Link href={`/${locale}/listening/${testId}?restart=1`}>{t("retakeTest")}</Link>
           </Button>
         </Card>
       </div>
@@ -92,7 +92,7 @@ export default function ListeningResultPage() {
 
       <Card className="flex flex-wrap gap-2 p-4">
         <Button asChild><Link href="#question-review">{t("reviewAnswers")}</Link></Button>
-        <Button variant="outline" asChild><Link href={`/${locale}/listening/${test.id}`}><RotateCcw className="size-4" />{t("retakeTest")}</Link></Button>
+        <Button variant="outline" asChild><Link href={`/${locale}/listening/${test.id}?restart=1`}><RotateCcw className="size-4" />{t("retakeTest")}</Link></Button>
         <p className="ml-auto text-sm text-muted-foreground">{t("timeTaken")}: {minutes}:{seconds}</p>
       </Card>
 

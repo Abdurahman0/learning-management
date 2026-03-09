@@ -5,14 +5,18 @@ import {useTranslations} from "next-intl"
 
 import {AdminSidebar} from "../../_components/AdminSidebar"
 import {
-  CONTENT_BANK_DATA,
   CONTENT_DIFFICULTY_OPTIONS,
   CONTENT_MODULE_OPTIONS,
   CONTENT_SOURCE_OPTIONS,
   CONTENT_TOPIC_OPTIONS,
+  createContentBankPassage,
+  createContentBankVariantSet,
+  getContentBankSnapshot,
+  updateContentBankVariantSet,
   type ContentBankPassage,
   type ContentBankTab,
   type ContentBankVariantSet,
+  type CreateContentBankPassagePayload,
   type ContentDifficultyFilterValue,
   type ContentModuleFilterValue,
   type ContentSourceFilterValue,
@@ -24,7 +28,8 @@ import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle} from "@/
 import {ContentBankHeader} from "./ContentBankHeader"
 import {ContentBankTabs} from "./ContentBankTabs"
 import {ContentFilters} from "./ContentFilters"
-import {CreateVariantSetDialog, type CreateVariantSetInput} from "./CreateVariantSetDialog"
+import {AddPassageDialog} from "./AddPassageDialog"
+import {CreateVariantSetDialog, type CreateVariantSetInput, type UpdateVariantSetInput} from "./CreateVariantSetDialog"
 import {PassagesTable} from "./PassagesTable"
 import {PlatformRuleBanner} from "./PlatformRuleBanner"
 import {QuestionVariantsTable} from "./QuestionVariantsTable"
@@ -38,6 +43,7 @@ function matchesSearch(value: string, query: string) {
 
 export function ContentBankPageClient() {
   const t = useTranslations("adminContentBank")
+  const initialContentData = useMemo(() => getContentBankSnapshot(), [])
   const [activeTab, setActiveTab] = useState<ContentBankTab>("passages")
   const [searchValue, setSearchValue] = useState("")
   const [moduleFilter, setModuleFilter] = useState<ContentModuleFilterValue>("all")
@@ -46,22 +52,26 @@ export function ContentBankPageClient() {
   const [sourceFilter, setSourceFilter] = useState<ContentSourceFilterValue>("all")
   const [onlyUnused, setOnlyUnused] = useState(false)
   const [onlyPublishedVariants, setOnlyPublishedVariants] = useState(false)
-  const [variants, setVariants] = useState<ContentBankVariantSet[]>(CONTENT_BANK_DATA.variants)
+  const [passagesState, setPassagesState] = useState<ContentBankPassage[]>(initialContentData.passages)
+  const [variants, setVariants] = useState<ContentBankVariantSet[]>(initialContentData.variants)
   const [archivedVariantIds, setArchivedVariantIds] = useState<Set<string>>(new Set())
-  const [selectedPassageId, setSelectedPassageId] = useState<string | null>(CONTENT_BANK_DATA.passages[0]?.id ?? null)
+  const [selectedPassageId, setSelectedPassageId] = useState<string | null>(initialContentData.passages[0]?.id ?? null)
+  const [addPassageDialogOpen, setAddPassageDialogOpen] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createDialogPassageId, setCreateDialogPassageId] = useState<string | undefined>(undefined)
+  const [editVariantDialogOpen, setEditVariantDialogOpen] = useState(false)
+  const [editingVariantId, setEditingVariantId] = useState<string | null>(null)
   const [guidelinesOpen, setGuidelinesOpen] = useState(false)
   const [fullPassageId, setFullPassageId] = useState<string | null>(null)
   const [actionNote, setActionNote] = useState<string | null>(null)
 
   const testsById = useMemo(
-    () => new Map(CONTENT_BANK_DATA.tests.map((test) => [test.id, test])),
-    []
+    () => new Map(initialContentData.tests.map((test) => [test.id, test])),
+    [initialContentData.tests]
   )
   const basePassagesById = useMemo(
-    () => new Map(CONTENT_BANK_DATA.passages.map((passage) => [passage.id, passage])),
-    []
+    () => new Map(passagesState.map((passage) => [passage.id, passage])),
+    [passagesState]
   )
 
   const activeVariants = useMemo(
@@ -70,7 +80,7 @@ export function ContentBankPageClient() {
   )
 
   const passages = useMemo<ContentBankPassage[]>(() => {
-    return CONTENT_BANK_DATA.passages.map((passage) => {
+    return passagesState.map((passage) => {
       const attachedVariants = activeVariants.filter((variant) => variant.passageId === passage.id)
       const usedInTestIds = [...new Set([...passage.usedInTestIds, ...attachedVariants.flatMap((variant) => variant.usedInTestIds)])]
 
@@ -81,7 +91,7 @@ export function ContentBankPageClient() {
         usedInTestIds
       }
     })
-  }, [activeVariants])
+  }, [activeVariants, passagesState])
 
   const query = searchValue.trim().toLowerCase()
 
@@ -178,6 +188,10 @@ export function ContentBankPageClient() {
     () => passages.find((passage) => passage.id === fullPassageId) ?? null,
     [fullPassageId, passages]
   )
+  const editingVariant = useMemo(
+    () => activeVariants.find((variant) => variant.id === editingVariantId) ?? null,
+    [activeVariants, editingVariantId]
+  )
 
   const postAction = (message: string) => {
     setActionNote(message)
@@ -188,49 +202,24 @@ export function ContentBankPageClient() {
     setCreateDialogOpen(true)
   }
 
-  const handleCreateVariant = (payload: CreateVariantSetInput) => {
-    const now = Date.now()
-    const passage = basePassagesById.get(payload.passageId)
-    const usedInTests = payload.usedInTestIds
-      .map((testId) => testsById.get(testId))
-      .filter((test): test is NonNullable<typeof test> => Boolean(test))
-
-    const nextVariant: ContentBankVariantSet = {
-      id: `variant-${now}`,
-      passageId: payload.passageId,
-      passageTitle: passage?.title ?? t("labels.unknownPassage"),
-      module: passage?.module ?? "reading",
-      name: payload.name,
-      status: payload.status,
-      questionTypesSummary: payload.questionTypesSummary,
-      questionTypeKeys: payload.questionTypeKeys,
-      questionSignature: `custom-${now}`,
-      usedInTestIds: [...payload.usedInTestIds],
-      usedInTests,
-      createdAt: new Date(now).toISOString().slice(0, 10)
+  const handleCreatePassage = (payload: CreateContentBankPassagePayload) => {
+    createContentBankPassage(payload)
+    const snapshot = getContentBankSnapshot()
+    setPassagesState(snapshot.passages)
+    const created = snapshot.passages[0]
+    if (created) {
+      setSelectedPassageId(created.id)
+      postAction(t("feedback.passageCreated", {name: created.title}))
     }
-
-    setVariants((current) => [nextVariant, ...current])
-    setSelectedPassageId(payload.passageId)
-    postAction(t("feedback.variantCreated", {name: payload.name}))
   }
 
-  const handleDuplicateVariant = (variantId: string) => {
-    const source = activeVariants.find((variant) => variant.id === variantId)
-    if (!source) return
-    const now = Date.now()
-    const copy: ContentBankVariantSet = {
-      ...source,
-      id: `variant-copy-${now}`,
-      name: `${source.name} ${t("labels.copySuffix")}`,
-      status: "draft",
-      usedInTestIds: [],
-      usedInTests: [],
-      questionSignature: `${source.questionSignature}-copy-${now}`,
-      createdAt: new Date(now).toISOString().slice(0, 10)
-    }
-    setVariants((current) => [copy, ...current])
-    postAction(t("feedback.variantDuplicated", {name: source.name}))
+  const handleCreateVariant = (payload: CreateVariantSetInput) => {
+    createContentBankVariantSet(payload)
+    const snapshot = getContentBankSnapshot()
+    setVariants(snapshot.variants)
+    setPassagesState(snapshot.passages)
+    setSelectedPassageId(payload.passageId)
+    postAction(t("feedback.variantCreated", {name: payload.name}))
   }
 
   const handleArchiveVariant = (variantId: string) => {
@@ -243,7 +232,18 @@ export function ContentBankPageClient() {
   const handleEditVariant = (variantId: string) => {
     const source = activeVariants.find((variant) => variant.id === variantId)
     if (!source) return
-    postAction(t("feedback.variantEditRequested", {name: source.name}))
+    setEditingVariantId(source.id)
+    setEditVariantDialogOpen(true)
+  }
+
+  const handleSaveVariant = (payload: UpdateVariantSetInput) => {
+    const updated = updateContentBankVariantSet(payload)
+    if (!updated) return
+    const snapshot = getContentBankSnapshot()
+    setVariants(snapshot.variants)
+    setPassagesState(snapshot.passages)
+    setSelectedPassageId(payload.passageId)
+    postAction(t("feedback.variantUpdated", {name: payload.name}))
   }
 
   return (
@@ -256,8 +256,7 @@ export function ContentBankPageClient() {
             searchValue={searchValue}
             onSearchChange={setSearchValue}
             onImportCsv={() => postAction(t("feedback.importCsvRequested"))}
-            onAddNewPassage={() => postAction(t("feedback.addPassageRequested"))}
-            onQuickPublish={() => postAction(t("feedback.quickPublishRequested"))}
+            onAddNewPassage={() => setAddPassageDialogOpen(true)}
           />
 
           <main className="mx-auto min-w-0 w-full max-w-[1480px] space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
@@ -267,7 +266,7 @@ export function ContentBankPageClient() {
               </Card>
             ) : null}
 
-            <PlatformRuleBanner meta={CONTENT_BANK_DATA.meta} onViewGuidelines={() => setGuidelinesOpen(true)} />
+            <PlatformRuleBanner meta={initialContentData.meta} onViewGuidelines={() => setGuidelinesOpen(true)} />
 
             <ContentBankTabs
               activeTab={activeTab}
@@ -322,7 +321,6 @@ export function ContentBankPageClient() {
                       if (!variant) return
                       postAction(t("feedback.previewQuestionsRequested", {name: variant.name}))
                     }}
-                    onDuplicateVariant={handleDuplicateVariant}
                     onArchiveVariant={handleArchiveVariant}
                   />
                 </div>
@@ -332,7 +330,6 @@ export function ContentBankPageClient() {
                 <QuestionVariantsTable
                   variants={filteredVariants}
                   onEdit={handleEditVariant}
-                  onDuplicate={handleDuplicateVariant}
                   onArchive={handleArchiveVariant}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -345,12 +342,32 @@ export function ContentBankPageClient() {
       </div>
 
       <CreateVariantSetDialog
+        mode="create"
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         passages={passages}
-        tests={CONTENT_BANK_DATA.tests}
+        tests={initialContentData.tests}
         defaultPassageId={createDialogPassageId}
         onCreate={handleCreateVariant}
+      />
+
+      <CreateVariantSetDialog
+        mode="edit"
+        open={editVariantDialogOpen}
+        onOpenChange={(open) => {
+          setEditVariantDialogOpen(open)
+          if (!open) setEditingVariantId(null)
+        }}
+        passages={passages}
+        tests={initialContentData.tests}
+        variant={editingVariant}
+        onSave={handleSaveVariant}
+      />
+
+      <AddPassageDialog
+        open={addPassageDialogOpen}
+        onOpenChange={setAddPassageDialogOpen}
+        onCreate={handleCreatePassage}
       />
 
       <Sheet open={guidelinesOpen} onOpenChange={setGuidelinesOpen}>

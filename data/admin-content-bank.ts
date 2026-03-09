@@ -6,6 +6,8 @@ import {
   type ContentBankPassage,
   type ContentBankVariantSet
 } from "@/data/admin/selectors"
+import {createPassageAssetEntity, createQuestionVariantSetEntity, updateQuestionVariantSetEntity} from "@/data/admin/content-bank"
+import type {QuestionVariantStatus, VariantGroupTemplate} from "@/types/admin"
 
 export type ContentBankTab = "passages" | "variants"
 export type ContentModuleFilterValue = "all" | "reading" | "listening"
@@ -21,6 +23,49 @@ export type Option<Value extends string> = {
 export type {ContentBankPassage, ContentBankVariantSet, AdminTestSummary, ContentBankMeta, ContentBankData}
 
 export const CONTENT_BANK_DATA = getContentBankData()
+export const getContentBankSnapshot = getContentBankData
+
+export type CreateContentBankVariantPayload = {
+  passageId: string
+  name: string
+  status: QuestionVariantStatus
+  groups: VariantGroupTemplate[]
+  usedInTestIds?: string[]
+}
+
+export type UpdateContentBankVariantPayload = {
+  id: string
+  passageId: string
+  name: string
+  status: QuestionVariantStatus
+  groups: VariantGroupTemplate[]
+  usedInTestIds?: string[]
+}
+
+export type CreateContentBankPassagePayload = {
+  title: string
+  module: ContentBankPassage["module"]
+  difficulty: ContentBankPassage["difficulty"]
+  topic: string
+  source: ContentBankPassage["source"]
+  previewText: string
+  fullText?: string[]
+  wordCount?: number
+  durationMinutes?: number
+  estimatedTimeLabel?: string
+}
+
+export function createContentBankVariantSet(payload: CreateContentBankVariantPayload) {
+  return createQuestionVariantSetEntity(payload)
+}
+
+export function updateContentBankVariantSet(payload: UpdateContentBankVariantPayload) {
+  return updateQuestionVariantSetEntity(payload)
+}
+
+export function createContentBankPassage(payload: CreateContentBankPassagePayload) {
+  return createPassageAssetEntity(payload)
+}
 
 const TOPIC_VALUES = [...new Set(CONTENT_BANK_DATA.passages.map((passage) => passage.topic))].sort((left, right) =>
   left.localeCompare(right)
@@ -55,4 +100,3 @@ export const CONTENT_TOPIC_OPTIONS: Option<ContentTopicFilterValue>[] = [
   {value: "all", labelKey: "filters.topic.allTopics"},
   ...TOPIC_VALUES.map((topic) => ({value: topic, labelKey: `topics.${topic.toLowerCase().replace(/\s+/g, "_")}`}))
 ]
-

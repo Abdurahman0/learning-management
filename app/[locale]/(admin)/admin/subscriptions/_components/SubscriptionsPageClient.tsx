@@ -50,6 +50,7 @@ export function SubscriptionsPageClient() {
   const [searchValue, setSearchValue] = useState("");
   const [editable, setEditable] = useState<SubscriptionEditableState>(() => makeInitialState());
   const [savedSnapshot, setSavedSnapshot] = useState(() => toSnapshot(makeInitialState()));
+  const [planDialogMode, setPlanDialogMode] = useState<"create" | "edit">("edit");
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [saveToastOpen, setSaveToastOpen] = useState(false);
@@ -112,7 +113,9 @@ export function SubscriptionsPageClient() {
             searchValue={searchValue}
             onSearchChange={setSearchValue}
             onCreatePlan={() => {
-              console.info("[admin-subscriptions] create-plan", {source: "header"});
+              setPlanDialogMode("create");
+              setEditingPlanId(null);
+              setEditOpen(true);
             }}
             onSaveChanges={() => {
               console.info("[admin-subscriptions] save-changes", editable);
@@ -136,6 +139,7 @@ export function SubscriptionsPageClient() {
               plans={editable.plans}
               highlightedPlanIds={highlightedPlanIds}
               onEditPlan={(plan) => {
+                setPlanDialogMode("edit");
                 setEditingPlanId(plan.id);
                 setEditOpen(true);
               }}
@@ -187,14 +191,24 @@ export function SubscriptionsPageClient() {
 
       <EditPlanDialog
         open={editOpen}
+        mode={planDialogMode}
         plan={editingPlan}
+        existingPlanIds={editable.plans.map((plan) => plan.id)}
         onOpenChange={setEditOpen}
-        onSave={(nextPlan) =>
+        onSave={(nextPlan, mode) => {
+          if (mode === "create") {
+            setEditable((current) => ({
+              ...current,
+              plans: [...current.plans, nextPlan]
+            }));
+            return;
+          }
+
           setEditable((current) => ({
             ...current,
             plans: current.plans.map((item) => (item.id === nextPlan.id ? nextPlan : item))
-          }))
-        }
+          }));
+        }}
       />
 
       <div aria-live="polite" className="pointer-events-none fixed top-20 right-4 z-[60]">

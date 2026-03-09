@@ -224,8 +224,8 @@ export function QuestionTypeFields({question, onChange}: QuestionTypeFieldsProps
       <div className="space-y-1.5">
         <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.evidence")}</Label>
         <textarea
-          value={question.evidenceText ?? ""}
-          onChange={(event) => onChange({...question, evidenceText: event.target.value})}
+          value={question.evidence ?? question.evidenceText ?? ""}
+          onChange={(event) => onChange({...question, evidence: event.target.value, evidenceText: event.target.value})}
           className={fieldClassName}
           placeholder={t("questions.fields.evidencePlaceholder")}
         />

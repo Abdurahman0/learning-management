@@ -1,6 +1,6 @@
 import {getSubscriptionsPageData} from "@/data/admin/selectors";
 
-export type PlanId = "guest" | "free" | "pro" | "premium";
+export type PlanId = "guest" | "free" | "pro" | "premium" | `custom-${string}` | "new-plan";
 export type BillingPeriod = "forever" | "month";
 export type SubscriptionActionStatus = "success" | "pending" | "closed";
 

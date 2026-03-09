@@ -1,6 +1,6 @@
 "use client"
 
-import {Bell, FileUp, Plus, Search, Sparkles} from "lucide-react"
+import {Bell, FileUp, Plus, Search} from "lucide-react"
 import {useTranslations} from "next-intl"
 
 import {ThemeToggle} from "@/components/theme-toggle"
@@ -16,15 +16,13 @@ type ContentBankHeaderProps = {
   onSearchChange: (value: string) => void
   onImportCsv: () => void
   onAddNewPassage: () => void
-  onQuickPublish: () => void
 }
 
 export function ContentBankHeader({
   searchValue,
   onSearchChange,
   onImportCsv,
-  onAddNewPassage,
-  onQuickPublish
+  onAddNewPassage
 }: ContentBankHeaderProps) {
   const t = useTranslations("adminContentBank")
 
@@ -72,10 +70,6 @@ export function ContentBankHeader({
               <FileUp className="size-4" />
               {t("importCsv")}
             </Button>
-            <Button variant="outline" className="h-10 rounded-xl border-border/70 bg-card/55 px-4 font-semibold" onClick={onQuickPublish}>
-              <Sparkles className="size-4" />
-              {t("quickPublish")}
-            </Button>
             <Button className="h-10 rounded-xl px-4 font-semibold" onClick={onAddNewPassage}>
               <Plus className="size-4" />
               {t("addNewPassage")}
@@ -86,4 +80,3 @@ export function ContentBankHeader({
     </header>
   )
 }
-

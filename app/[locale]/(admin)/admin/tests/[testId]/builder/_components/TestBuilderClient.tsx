@@ -4,7 +4,23 @@ import {useMemo, useState} from "react";
 import {useTranslations} from "next-intl";
 
 import type {BuilderQuestion, QuestionGroup, QuestionType} from "@/data/admin-test-builder";
-import {createDefaultQuestion, createQuestionGroup, getInitialBuilderTest, getStructureRange, type BuilderMode} from "@/data/admin-test-builder";
+import {
+  createDefaultQuestion,
+  createQuestionGroup,
+  getInitialBuilderTest,
+  getStructureRange,
+  hasQuestionContent,
+  type BuilderMode
+} from "@/data/admin-test-builder";
+import {
+  generateQuestionGroupsFromVariant,
+  getAllowedQuestionCount,
+  getCompatibleVariantsForSlot,
+  getContentBankData,
+  getPassageVariantSets,
+  type ContentBankPassage,
+  type ContentBankVariantSet
+} from "@/data/admin/selectors";
 
 import {AdminSidebar, AdminSidebarMobileNav} from "../../../../_components/AdminSidebar";
 import {BuilderTopbar} from "./BuilderTopbar";
@@ -46,6 +62,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   const [selectedQuestion, setSelectedQuestion] = useState<SelectedQuestionRef | null>(null);
   const [questionEditorOpen, setQuestionEditorOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [contentBankData] = useState(() => getContentBankData());
 
   const activeStructure = useMemo(() => {
     return test.structures.find((item) => item.id === activeStructureId) ?? test.structures[0];
@@ -69,6 +86,45 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     }
     return {group, question};
   }, [activeGroups, selectedQuestion]);
+
+  const availableContentBankPassages = useMemo<ContentBankPassage[]>(() => {
+    if (!activeStructure) return [];
+    const assignedInOtherSlots = new Set(
+      test.structures
+        .filter((structure) => structure.id !== activeStructure.id)
+        .map((structure) => structure.linkedPassageId)
+        .filter((passageId): passageId is string => Boolean(passageId))
+    );
+
+    return contentBankData.passages
+      .filter((passage) => passage.module === test.module)
+      .filter((passage) => {
+        if (passage.id === activeStructure.linkedPassageId) {
+          return true;
+        }
+        return !assignedInOtherSlots.has(passage.id);
+      });
+  }, [activeStructure, contentBankData.passages, test.module, test.structures]);
+
+  const passageVariantSets = useMemo<ContentBankVariantSet[]>(() => {
+    if (!activeStructure?.linkedPassageId) return [];
+    return getPassageVariantSets(activeStructure.linkedPassageId).filter((variant) => variant.module === test.module);
+  }, [activeStructure, test.module]);
+
+  const availableVariantSets = useMemo<ContentBankVariantSet[]>(() => {
+    if (!activeStructure?.linkedPassageId) return [];
+    return getCompatibleVariantsForSlot(activeStructure.linkedPassageId, test.module, activeStructure.index);
+  }, [activeStructure, test.module]);
+
+  const selectedVariantSet = useMemo(() => {
+    if (!activeStructure?.linkedVariantSetId) return null;
+    return availableVariantSets.find((variant) => variant.id === activeStructure.linkedVariantSetId) ?? null;
+  }, [activeStructure, availableVariantSets]);
+
+  const slotRequiredQuestions = useMemo(() => {
+    if (!activeStructure) return 0;
+    return getAllowedQuestionCount(test.module, activeStructure.index);
+  }, [activeStructure, test.module]);
 
   const selectedQuestionLabel = selectedQuestionData ? t("questions.questionNumber", {number: selectedQuestionData.question.number}) : null;
 
@@ -102,6 +158,15 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           : group
       )
     );
+  };
+
+  const updateActiveStructure = (updater: (structure: typeof test.structures[number]) => typeof test.structures[number]) => {
+    if (!activeStructure) return;
+
+    setTest((current) => ({
+      ...current,
+      structures: current.structures.map((structure) => (structure.id === activeStructure.id ? updater(structure) : structure))
+    }));
   };
 
   const handleCreateGroup = (type: QuestionType, from: number, to: number) => {
@@ -276,6 +341,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
     updateQuestion(selectedQuestion.groupId, selectedQuestion.questionId, (question) => ({
       ...question,
+      evidence: text.trim(),
       evidenceText: text.trim()
     }));
     return true;
@@ -300,6 +366,97 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       ...current,
       structures: current.structures.map((structure) => (structure.id === structureId ? {...structure, audioLabel} : structure))
     }));
+  };
+
+  const handleSelectContentBankPassage = (passageId: string) => {
+    if (!activeStructure) return;
+    const selectedInOtherSlot = test.structures.some(
+      (structure) => structure.id !== activeStructure.id && structure.linkedPassageId === passageId
+    );
+    if (selectedInOtherSlot) {
+      return;
+    }
+
+    const passage = availableContentBankPassages.find((item) => item.id === passageId);
+    if (!passage) return;
+
+    const currentGroups = test.questionGroupsByStructure[activeStructure.id] ?? [];
+    if (currentGroups.length > 0 && hasQuestionContent(currentGroups)) {
+      const shouldReplace = window.confirm(t("confirmReplaceGeneratedGroups"));
+      if (!shouldReplace) return;
+    }
+
+    setTest((current) => ({
+      ...current,
+      structures: current.structures.map((structure) =>
+        structure.id === activeStructure.id
+          ? {
+              ...structure,
+              linkedPassageId: passage.id,
+              linkedVariantSetId: undefined,
+              title: passage.title,
+              content: passage.fullText.length ? [...passage.fullText] : [passage.previewText]
+            }
+          : structure
+      ),
+      questionGroupsByStructure: {
+        ...current.questionGroupsByStructure,
+        [activeStructure.id]: []
+      }
+    }));
+
+    setSelectedQuestion(null);
+    setQuestionEditorOpen(false);
+  };
+
+  const handleSelectVariantSet = (variantSetId: string) => {
+    if (!activeStructure) return;
+    if (!variantSetId) {
+      updateActiveStructure((structure) => ({...structure, linkedVariantSetId: undefined}));
+      return;
+    }
+
+    const variantSet = availableVariantSets.find((item) => item.id === variantSetId);
+    if (!variantSet) return;
+
+    const currentGroups = test.questionGroupsByStructure[activeStructure.id] ?? [];
+    if (hasQuestionContent(currentGroups)) {
+      const shouldReplace = window.confirm(t("confirmReplaceGeneratedGroups"));
+      if (!shouldReplace) return;
+    }
+
+    const generatedGroups = generateQuestionGroupsFromVariant({
+      module: test.module,
+      slotIndex: activeStructure.index,
+      variantSet
+    });
+
+    setTest((current) => ({
+      ...current,
+      structures: current.structures.map((structure) =>
+        structure.id === activeStructure.id
+          ? {
+              ...structure,
+              linkedPassageId: variantSet.passageId,
+              linkedVariantSetId: variantSet.id
+            }
+          : structure
+      ),
+      questionGroupsByStructure: {
+        ...current.questionGroupsByStructure,
+        [activeStructure.id]: generatedGroups
+      }
+    }));
+
+    setCollapsedGroups((current) => {
+      const next = {...current};
+      for (const group of generatedGroups) {
+        next[group.id] = false;
+      }
+      return next;
+    });
+    setSelectedQuestion(null);
+    setQuestionEditorOpen(false);
   };
 
   const handleSaveDraft = () => {
@@ -357,6 +514,15 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
                 module={test.module}
                 structure={activeStructure}
                 selectedQuestionLabel={selectedQuestionLabel}
+                contentBankPassages={availableContentBankPassages}
+                selectedPassageId={activeStructure.linkedPassageId ?? ""}
+                onSelectContentBankPassage={handleSelectContentBankPassage}
+                variantSets={availableVariantSets}
+                hasAnyVariantSets={passageVariantSets.length > 0}
+                requiredQuestionCount={slotRequiredQuestions}
+                selectedVariantSetId={activeStructure.linkedVariantSetId ?? ""}
+                selectedVariantSetName={selectedVariantSet?.name ?? null}
+                onSelectVariantSet={handleSelectVariantSet}
                 onUpdateContent={handleUpdateStructureContent}
                 onUpdateAudioLabel={handleUpdateAudioLabel}
                 onAttachEvidence={handleAttachEvidence}

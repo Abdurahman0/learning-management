@@ -10,7 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table"
@@ -134,9 +133,7 @@ export function PassagesTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => onSelectPassage(passage.id)}>{t("actions.selectPassage")}</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => onReadFullPassage(passage.id)}>{t("actions.readFullPassage")}</DropdownMenuItem>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem onSelect={() => onOpenCreateVariant(passage.id)}>{t("actions.createVariantSet")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

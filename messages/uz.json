@@ -269,6 +269,9 @@
     "backToReading": "Reading testlariga qaytish",
     "finishSummary": "Siz {total} ta savoldan {answered} tasiga javob berdingiz. {unanswered} ta javobsiz qoldi.",
     "timeSpent": "Sarflangan vaqt: {seconds} soniya",
+    "restartTest": "Testni qayta boshlash",
+    "restartConfirm": "Testni qayta boshlaysizmi? Joriy javoblaringiz tozalanadi.",
+    "leaveWarning": "Test hali yakunlanmagan. Ushbu sahifani tark etmoqchimisiz?",
     "cancel": "Bekor qilish",
     "confirmFinish": "Yakunlash va baholash"
   },
@@ -308,6 +311,7 @@
     "backToListening": "Listening testlariga qaytish",
     "finishSummary": "Siz {total} ta savoldan {answered} tasiga javob berdingiz. {unanswered} ta javobsiz qoldi.",
     "timeSpent": "Sarflangan vaqt: {seconds} soniya",
+    "leaveWarning": "Test hali yakunlanmagan. Ushbu sahifani tark etmoqchimisiz?",
     "cancel": "Bekor qilish",
     "confirmFinish": "Yakunlash va baholash"
   },
@@ -641,8 +645,7 @@
       "notificationsLabel": "Bildirishnomalar"
     },
     "toolbar": {
-      "importCambridge": "Cambridge testini import qilish",
-      "duplicate": "Testni nusxalash"
+      "importCambridge": "Cambridge testini import qilish"
     },
     "filters": {
       "moduleLabel": "Modul",
@@ -709,9 +712,23 @@
         "open": "Amallar menyusini ochish",
         "edit": "Testni tahrirlash",
         "preview": "Testni ko'rish",
-        "duplicate": "Testni nusxalash",
         "delete": "Testni o'chirish"
       }
+    },
+    "importDialog": {
+      "title": "Cambridge testini import qilish",
+      "description": "Yuklab olish uchun Cambridge testini tanlang. Backend tayyor bo'lgach PDF yuklab olish ulanadi.",
+      "selectLabel": "Testni tanlang",
+      "selectPlaceholder": "Testni tanlang",
+      "empty": "Hozircha import qilish uchun test topilmadi.",
+      "actions": {
+        "cancel": "Bekor qilish",
+        "download": "Yuklab olish"
+      }
+    },
+    "toast": {
+      "downloadSuccessTitle": "Muvaffaqiyatli yuklab olindi",
+      "downloadSuccessDescription": "{testName} muvaffaqiyatli yuklab olindi."
     },
     "pagination": {
       "summary": "{total} tadan {from} - {to} ko'rsatilmoqda",
@@ -719,7 +736,6 @@
       "next": "Keyingi sahifa"
     },
     "row": {
-      "copySuffix": "(Nusxa {index})",
       "newDraftTitle": "Maxsus test {index}",
       "customBook": "Maxsus",
       "defaultPassageTitle": "Yangi passage",
@@ -766,6 +782,17 @@
       "draft": "Qoralama",
       "published": "Nashr qilingan"
     },
+    "contentBankPassage": "Content Bank passage",
+    "selectPassagePlaceholder": "Passage tanlang",
+    "variantSet": "Variant to'plam",
+    "selectVariantPlaceholder": "Variant to'plamni tanlang",
+    "noVariantSets": "Bu passage uchun hali variant to'plam yo'q.",
+    "noCompatibleVariants": "Bu slot uchun mos variantlar topilmadi. Bu slot {count} ta savol talab qiladi.",
+    "thisSlotRequires": "Bu slot {count} ta savol talab qiladi.",
+    "slotDeterminesNumbering": "Bu passage turli slotlarda qayta ishlatilishi mumkin. Savol raqamlari slot asosida avtomatik belgilanadi.",
+    "importedFromContentBank": "Content Bankdan import qilindi: {name}",
+    "replaceGeneratedGroups": "Bu slotdagi joriy savol guruhlari almashtiriladi. Davom etilsinmi?",
+    "confirmReplaceGeneratedGroups": "Bu slotdagi joriy savol guruhlari almashtiriladi. Davom etilsinmi?",
     "structure": {
       "title": "Test tuzilmasi",
       "labels": {
@@ -1184,6 +1211,11 @@
       "newFeaturePlaceholder": "Yangi imkoniyat qo'shing...",
       "addFeature": "Imkoniyat qo'shish"
     },
+    "createDialog": {
+      "title": "Tarif yaratish",
+      "description": "Yangi obuna tarifini yarating va imkoniyatlarini sozlang.",
+      "createAction": "Tarif yaratish"
+    },
     "common": {
       "cancel": "Bekor qilish",
       "save": "Saqlash"
@@ -1471,8 +1503,13 @@
       "variantsCount": "{count} variant",
       "usedInCount": "{count} ta testda ishlatilgan",
       "copySuffix": "Nusxa",
-      "unknownPassage": "Noma'lum passage"
+      "unknownPassage": "Noma'lum passage",
+      "none": "Yo'q",
+      "passageSlot": "Passage {index}",
+      "sectionSlot": "Section {index}"
     },
+    "compatibleWith": "Mos keladi: {slots}",
+    "notCompatibleWith": "Mos kelmaydi: {slots}",
     "actions": {
       "openMenu": "Amallar menyusini ochish",
       "selectPassage": "Passageni tanlash",
@@ -1486,6 +1523,8 @@
     "createVariantDialog": {
       "title": "Yangi variant to'plam yaratish",
       "description": "Qayta ishlatiladigan passage uchun noyob savol to'plamini yarating.",
+      "editTitle": "Variant to'plamni tahrirlash",
+      "editDescription": "Variant to'plam sozlamalarini yangilang.",
       "fields": {
         "variantName": "Variant nomi",
         "variantNamePlaceholder": "masalan, Variant Set C",
@@ -1494,20 +1533,65 @@
         "usedInTest": "Ishlatilgan test",
         "selectTestPlaceholder": "Nashr qilingan testni tanlang",
         "questionTypes": "Savol turlari",
-        "summary": "Savol turlari xulosasi",
-        "summaryPlaceholder": "masalan, TFNG (5) + Matching Headings (7)"
+        "selectQuestionTypePlaceholder": "Savol turini tanlang",
+        "countPlaceholder": "Soni",
+        "autoSummary": "Avto xulosa"
       },
-      "create": "Variant to'plam yaratish"
+      "actions": {
+        "addType": "Tur qo'shish"
+      },
+      "metrics": {
+        "totalSelected": "Tanlangan jami: {selected} / {total}",
+        "remaining": "Qoldi: {count}",
+        "allowedTotalsByModule": "{module} varianti jami: {totals} bo'lishi kerak"
+      },
+      "validation": {
+        "maxSixTypes": "Eng ko'pi bilan 6 ta savol turini tanlash mumkin.",
+        "duplicateQuestionType": "Bir xil savol turini ikki marta tanlab bo'lmaydi.",
+        "invalidCount": "Har bir tanlangan tur uchun son 0 dan katta bo'lishi kerak.",
+        "invalidTotal": "Jami savollar soni quyidagilardan biriga teng bo'lishi kerak: {totals}. Hozir: {selected}."
+      },
+      "toast": {
+        "totalExceededTitle": "Savollar soni limitdan oshdi",
+        "totalExceededDescription": "Maksimal ruxsat etilgan: {max}. Siz {overflow} taga oshirdingiz. Yana {remaining} ta savol qo'sha olasiz."
+      },
+      "summaryEmpty": "To'g'ri guruhlar kiritilgandan keyin xulosa avtomatik yaratiladi.",
+      "create": "Variant to'plam yaratish",
+      "save": "Variant to'plamni saqlash"
+    },
+    "addPassageDialog": {
+      "title": "Yangi passage qo'shish",
+      "description": "Content Bank va Test Builder uchun qayta ishlatiladigan kontent yarating.",
+      "fields": {
+        "title": "Sarlavha",
+        "titlePlaceholder": "masalan, Smart Cities and Public Transport",
+        "module": "Modul",
+        "difficulty": "Qiyinlik",
+        "topic": "Mavzu",
+        "topicPlaceholder": "masalan, Technology",
+        "source": "Manba",
+        "previewText": "Preview matn",
+        "previewPlaceholder": "Jadval va yon panelda ko'rinadigan qisqa preview matn...",
+        "fullText": "To'liq matn (paragraflar)",
+        "fullTextPlaceholder": "To'liq passage/transkriptni yozing. Paragraflar uchun yangi qatordan foydalaning.",
+        "estimatedTimeLabel": "Taxminiy vaqt yorlig'i",
+        "estimatedTimePlaceholder": "masalan, 12 - 15 min",
+        "durationMinutes": "Davomiylik (daqiqalarda)"
+      },
+      "create": "Passage qo'shish"
     },
     "questionTypes": {
       "tfng": "TFNG",
       "multiple_choice": "Multiple Choice",
       "matching_headings": "Matching Headings",
       "matching_information": "Matching Information",
+      "sentence_completion": "Sentence Completion",
       "summary_completion": "Summary Completion",
       "table_completion": "Table Completion",
+      "diagram_labeling": "Diagram Labeling",
       "form_completion": "Form Completion",
-      "note_completion": "Note Completion"
+      "note_completion": "Note Completion",
+      "short_answer": "Short Answer"
     },
     "meta": {
       "linkedTests": "{count} bog'langan test",
@@ -1527,7 +1611,9 @@
       "importCsvRequested": "CSV import amali ishga tushdi.",
       "addPassageRequested": "Yangi passage qo'shish amali ishga tushdi.",
       "quickPublishRequested": "Tez nashr qilish amali ishga tushdi.",
+      "passageCreated": "{name} qo'shildi.",
       "variantCreated": "{name} yaratildi.",
+      "variantUpdated": "{name} yangilandi.",
       "variantDuplicated": "{name} yangi draft sifatida nusxalandi.",
       "variantArchived": "{name} arxivlandi.",
       "variantEditRequested": "{name} uchun tahrirlash so'rovi yuborildi.",

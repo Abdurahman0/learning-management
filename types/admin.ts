@@ -24,6 +24,12 @@ export type QuestionType =
   | "matching_information"
   | "short_answer";
 
+export type VariantGroupTemplate = {
+  id: string;
+  type: QuestionType;
+  count: number;
+};
+
 export type PassageAssetEntity = {
   id: string;
   title: string;
@@ -48,11 +54,94 @@ export type QuestionVariantSetEntity = {
   passageId: string;
   name: string;
   status: QuestionVariantStatus;
+  maxQuestionTypes: number;
+  groups: VariantGroupTemplate[];
   questionTypesSummary: string;
   questionTypeKeys: QuestionType[];
   questionSignature: string;
   usedInTestIds: string[];
   createdAt: string;
+};
+
+export type BuilderQuestionBase = {
+  id: string;
+  number: number;
+  type: QuestionType;
+  prompt: string;
+  explanation?: string;
+  evidence?: string;
+  evidenceText?: string;
+};
+
+export type TFNGAnswer = "TRUE" | "FALSE" | "NOT GIVEN" | "";
+export type MultipleChoiceAnswer = "A" | "B" | "C" | "D" | "";
+
+export type TFNGBuilderQuestion = BuilderQuestionBase & {
+  type: "tfng";
+  correctAnswer: TFNGAnswer;
+};
+
+export type MultipleChoiceBuilderQuestion = BuilderQuestionBase & {
+  type: "multiple_choice";
+  options: string[];
+  correctAnswer: MultipleChoiceAnswer;
+};
+
+export type MatchingHeadingsBuilderQuestion = BuilderQuestionBase & {
+  type: "matching_headings";
+  headings: string[];
+  correctAnswer: string;
+};
+
+export type MatchingInformationBuilderQuestion = BuilderQuestionBase & {
+  type: "matching_information";
+  items: string[];
+  choices: string[];
+  correctAnswer: Record<string, string>;
+};
+
+export type TextAnswerBuilderQuestion = BuilderQuestionBase & {
+  type:
+    | "sentence_completion"
+    | "summary_completion"
+    | "table_completion"
+    | "diagram_labeling"
+    | "form_completion"
+    | "note_completion"
+    | "short_answer";
+  correctAnswer: string | string[];
+  acceptableAnswers?: string[];
+};
+
+export type BuilderQuestion =
+  | TFNGBuilderQuestion
+  | MultipleChoiceBuilderQuestion
+  | MatchingHeadingsBuilderQuestion
+  | MatchingInformationBuilderQuestion
+  | TextAnswerBuilderQuestion;
+
+export type BuilderQuestionGroup = {
+  id: string;
+  title: string;
+  type: QuestionType;
+  from: number;
+  to: number;
+  questions: BuilderQuestion[];
+  variantSetId?: string;
+};
+
+export type BuilderPassageSlot = {
+  id: string;
+  index: 1 | 2 | 3 | 4;
+  module: ContentModule;
+  linkedPassageId?: string;
+  linkedVariantSetId?: string;
+  title: string;
+  questionRangeStart: number;
+  questionRangeEnd: number;
+  content: string[];
+  audioLabel?: string;
+  questionGroups: BuilderQuestionGroup[];
 };
 
 export type TestStructureKind = "passage" | "section";

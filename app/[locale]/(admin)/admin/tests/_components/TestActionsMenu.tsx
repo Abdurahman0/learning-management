@@ -1,6 +1,6 @@
 "use client";
 
-import {EllipsisVertical, Eye, FilePenLine, Files, Trash2} from "lucide-react";
+import {EllipsisVertical, Eye, FilePenLine, Trash2} from "lucide-react";
 import {useTranslations} from "next-intl";
 import {useState} from "react";
 
@@ -18,11 +18,10 @@ type TestActionsMenuProps = {
   test: AdminTest;
   onEdit: (testId: string) => void;
   onPreview: (testId: string) => void;
-  onDuplicate: (testId: string) => void;
   onDelete: (testId: string) => void;
 };
 
-export function TestActionsMenu({test, onEdit, onPreview, onDuplicate, onDelete}: TestActionsMenuProps) {
+export function TestActionsMenu({test, onEdit, onPreview, onDelete}: TestActionsMenuProps) {
   const t = useTranslations("adminTests");
   const [open, setOpen] = useState(false);
 
@@ -54,10 +53,6 @@ export function TestActionsMenu({test, onEdit, onPreview, onDuplicate, onDelete}
         <DropdownMenuItem onSelect={() => handleAction(() => onPreview(test.id))}>
           <Eye className="size-4" />
           {t("table.actions.preview")}
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => handleAction(() => onDuplicate(test.id))}>
-          <Files className="size-4" />
-          {t("table.actions.duplicate")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

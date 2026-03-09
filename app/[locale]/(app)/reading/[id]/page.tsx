@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { type CSSProperties, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "next/navigation";
-import { BookOpen, Bookmark, BookmarkCheck, CheckCircle2, Clock3, Grid2x2, HelpCircle, MoveLeft, MoveRight, Play, Square, User, XCircle } from "lucide-react";
+import { useParams, useSearchParams } from "next/navigation";
+import { BookOpen, Bookmark, BookmarkCheck, CheckCircle2, Clock3, Grid2x2, HelpCircle, MoveLeft, MoveRight, Play, RotateCcw, Square, User, XCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { getReadingTestById, type ReadingQuestion } from "@/data/reading-tests";
@@ -31,6 +31,7 @@ import {
   type ReadingHighlight,
   type ReadingHighlightColor,
 } from "@/lib/reading-highlights";
+import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
 
 const DEFAULT_SPLIT = 50;
 
@@ -98,10 +99,12 @@ function findParagraphMatches(paragraph: string, spans: HighlightItem[]): Paragr
 
 export default function ReadingTestPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const locale = useLocale();
   const t = useTranslations("readingTest");
 
   const testId = typeof params?.id === "string" ? params.id : "";
+  const restartRequested = searchParams.get("restart") === "1";
   const test = getReadingTestById(testId);
 
   if (!test) {
@@ -118,14 +121,15 @@ export default function ReadingTestPage() {
     );
   }
 
-  return <ReadingTestClient key={test.id} test={test} />;
+  return <ReadingTestClient key={test.id} test={test} restartRequested={restartRequested} />;
 }
 
 type ReadingTestClientProps = {
   test: NonNullable<ReturnType<typeof getReadingTestById>>;
+  restartRequested?: boolean;
 };
 
-function ReadingTestClient({ test }: ReadingTestClientProps) {
+function ReadingTestClient({ test, restartRequested = false }: ReadingTestClientProps) {
   const t = useTranslations("readingTest");
   const [attemptId, setAttemptId] = useState<string>("");
   const [startedAt, setStartedAt] = useState<number>(0);
@@ -152,8 +156,46 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
   const pendingParagraphRef = useRef<string | null>(null);
   const shouldAutoScrollQuestionRef = useRef(false);
   const splitStorageKey = "readingSplitPct";
+  const leaveWarningMessage = t.has("leaveWarning")
+    ? t("leaveWarning")
+    : "You are taking a test. Leaving this page will interrupt your attempt. Continue?";
+
+  useTestLeaveWarning({
+    enabled: Boolean(attemptId) && !reviewMode,
+    message: leaveWarningMessage,
+  });
+
+  const resetAttemptState = () => {
+    const freshAttemptId = createAttemptId();
+    setAttemptId(freshAttemptId);
+    setStartedAt(Date.now());
+    setFinishOpen(false);
+    setReviewMode(false);
+    setExpandedExplanations(new Set());
+    setActivePassageId("p1");
+    setActiveQuestionNumber(1);
+    setAnswers({});
+    setMarked(new Set());
+    setPaletteOpen(false);
+    setMobilePanel("passage");
+    setRemainingSeconds(test.durationMinutes * 60);
+    setTimerRunning(false);
+    setHighlights([]);
+    shouldAutoScrollQuestionRef.current = false;
+    pendingParagraphRef.current = null;
+  };
 
   useEffect(() => {
+    if (restartRequested) {
+      resetAttemptState();
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("restart");
+        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+      }
+      return;
+    }
+
     const latestId = loadLatestAttemptId("reading", test.id);
     const saved = latestId ? loadAttemptProgress("reading", test.id, latestId) : null;
 
@@ -169,7 +211,7 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
     const newAttemptId = createAttemptId();
     setAttemptId(newAttemptId);
     setStartedAt(Date.now());
-  }, [test.id]);
+  }, [restartRequested, test.id]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
@@ -522,6 +564,16 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
     setTimerRunning(false);
   };
 
+  const handleRestartTest = () => {
+    const confirmMessage = t.has("restartConfirm")
+      ? t("restartConfirm")
+      : "Restart this test? Your current answers will be cleared.";
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+    resetAttemptState();
+  };
+
   const updateSplitFromClientX = (clientX: number) => {
     const container = splitContainerRef.current;
     if (!container) return;
@@ -599,14 +651,25 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
             >
               {t.has("clearHighlights") ? t("clearHighlights") : "Clear highlights"}
             </Button>
-            <Button
-              aria-label={t("finishTest")}
-              onClick={() => setFinishOpen(true)}
-              disabled={reviewMode}
-              className="h-9 rounded-xl bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90 disabled:opacity-70 sm:h-10 sm:px-6"
-            >
-              {reviewMode ? (t.has("reviewMode") ? t("reviewMode") : "Review Mode") : t("finishTest")}
-            </Button>
+            {reviewMode ? (
+              <Button
+                type="button"
+                aria-label={t.has("restartTest") ? t("restartTest") : "Restart test"}
+                onClick={handleRestartTest}
+                className="h-9 rounded-xl bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90 sm:h-10 sm:px-6"
+              >
+                <RotateCcw className="size-4" />
+                {t.has("restartTest") ? t("restartTest") : "Restart test"}
+              </Button>
+            ) : (
+              <Button
+                aria-label={t("finishTest")}
+                onClick={() => setFinishOpen(true)}
+                className="h-9 rounded-xl bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90 disabled:opacity-70 sm:h-10 sm:px-6"
+              >
+                {t("finishTest")}
+              </Button>
+            )}
             <Avatar aria-label={t("userAvatar")}>
               <AvatarFallback className="bg-muted text-muted-foreground">
                 <User className="size-4" aria-hidden="true" />
@@ -757,6 +820,19 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
               <div className="space-y-7 pb-20">
                 {groupedQuestions.map((group) => {
                   const headings = group.questions.find((q) => q.type === "matchingHeadings") as Extract<ReadingQuestion, { type: "matchingHeadings" }> | undefined;
+                  const headingsHighlightKey = headings ? `matching-headings:${headings.id}` : null;
+                  const headingOptionStarts = headings
+                    ? headings.headingOptions.reduce<number[]>((acc, option, index) => {
+                        if (index === 0) {
+                          acc.push(0);
+                          return acc;
+                        }
+                        const previousStart = acc[index - 1] ?? 0;
+                        const previousOption = headings.headingOptions[index - 1] ?? "";
+                        acc.push(previousStart + previousOption.length + 1);
+                        return acc;
+                      }, [])
+                    : [];
 
                   return (
                     <section key={group.title} className="space-y-4">
@@ -769,9 +845,37 @@ function ReadingTestClient({ test }: ReadingTestClientProps) {
                         <div className="rounded-lg border border-border/80 bg-muted/35 p-3">
                           <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{t("headingsList")}</p>
                           <ul className="mt-2 space-y-1 text-sm">
-                            {headings.headingOptions.map((heading) => (
-                              <li key={heading} className="break-words text-foreground/90">{heading}</li>
-                            ))}
+                            {headings.headingOptions.map((heading, headingIndex) => {
+                              const optionBase = headingOptionStarts[headingIndex] ?? 0;
+
+                              return (
+                                <li key={heading} className="break-words text-foreground/90">
+                                  <HighlightableText
+                                    text={heading}
+                                    userHighlights={
+                                      headingsHighlightKey
+                                        ? getQuestionLocalHighlights(headingsHighlightKey, optionBase, heading.length)
+                                        : []
+                                    }
+                                    markLabel={t.has("markText") ? t("markText") : "Mark"}
+                                    unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
+                                    onToggle={
+                                      headingsHighlightKey
+                                        ? ({ start, end, color, action }) =>
+                                            toggleHighlight({
+                                              scope: "question",
+                                              questionId: headingsHighlightKey,
+                                              start: optionBase + start,
+                                              end: optionBase + end,
+                                              color,
+                                              action,
+                                            })
+                                        : undefined
+                                    }
+                                  />
+                                </li>
+                              );
+                            })}
                           </ul>
                         </div>
                       ) : null}

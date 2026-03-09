@@ -16,7 +16,6 @@ type SelectedPassagePanelProps = {
   onReadFullPassage: (passageId: string) => void
   onCreateNewVariant: (passageId: string) => void
   onPreviewVariant: (variantId: string) => void
-  onDuplicateVariant: (variantId: string) => void
   onArchiveVariant: (variantId: string) => void
 }
 
@@ -26,7 +25,6 @@ export function SelectedPassagePanel({
   onReadFullPassage,
   onCreateNewVariant,
   onPreviewVariant,
-  onDuplicateVariant,
   onArchiveVariant
 }: SelectedPassagePanelProps) {
   const t = useTranslations("adminContentBank")
@@ -91,11 +89,9 @@ export function SelectedPassagePanel({
         <VariantGroupsList
           variants={variants}
           onPreviewVariant={onPreviewVariant}
-          onDuplicateVariant={onDuplicateVariant}
           onArchiveVariant={onArchiveVariant}
         />
       </div>
     </Card>
   )
 }
-

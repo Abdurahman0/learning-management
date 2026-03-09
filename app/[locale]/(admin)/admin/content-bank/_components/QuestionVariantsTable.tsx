@@ -20,7 +20,6 @@ import {cn} from "@/lib/utils"
 type QuestionVariantsTableProps = {
   variants: ContentBankVariantSet[]
   onEdit: (variantId: string) => void
-  onDuplicate: (variantId: string) => void
   onArchive: (variantId: string) => void
 }
 
@@ -30,7 +29,7 @@ function statusClass(status: ContentBankVariantSet["status"]) {
   return "border-amber-500/45 bg-amber-500/15 text-amber-300"
 }
 
-export function QuestionVariantsTable({variants, onEdit, onDuplicate, onArchive}: QuestionVariantsTableProps) {
+export function QuestionVariantsTable({variants, onEdit, onArchive}: QuestionVariantsTableProps) {
   const t = useTranslations("adminContentBank")
 
   if (!variants.length) {
@@ -95,7 +94,6 @@ export function QuestionVariantsTable({variants, onEdit, onDuplicate, onArchive}
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onSelect={() => onEdit(variant.id)}>{t("actions.edit")}</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => onDuplicate(variant.id)}>{t("actions.duplicateAsNewVariant")}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-rose-400 focus:text-rose-300" onSelect={() => onArchive(variant.id)}>
                         {t("actions.archive")}
@@ -126,9 +124,6 @@ export function QuestionVariantsTable({variants, onEdit, onDuplicate, onArchive}
               <Button variant="outline" className="h-8 rounded-lg border-border/70 bg-background/45 text-xs" onClick={() => onEdit(variant.id)}>
                 {t("actions.edit")}
               </Button>
-              <Button variant="outline" className="h-8 rounded-lg border-border/70 bg-background/45 text-xs" onClick={() => onDuplicate(variant.id)}>
-                {t("actions.duplicateAsNewVariant")}
-              </Button>
               <Button variant="outline" className="h-8 rounded-lg border-border/70 bg-background/45 text-xs text-rose-400" onClick={() => onArchive(variant.id)}>
                 {t("actions.archive")}
               </Button>
@@ -139,4 +134,3 @@ export function QuestionVariantsTable({variants, onEdit, onDuplicate, onArchive}
     </>
   )
 }
-

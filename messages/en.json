@@ -269,6 +269,9 @@
     "backToReading": "Back to reading tests",
     "finishSummary": "You answered {answered} of {total}. {unanswered} unanswered.",
     "timeSpent": "Time spent: {seconds} seconds",
+    "restartTest": "Restart Test",
+    "restartConfirm": "Restart this test? Your current answers will be cleared.",
+    "leaveWarning": "You have an active test in progress. Are you sure you want to leave this page?",
     "cancel": "Cancel",
     "confirmFinish": "Finish and grade"
   },
@@ -308,6 +311,7 @@
     "backToListening": "Back to listening tests",
     "finishSummary": "You answered {answered} of {total}. {unanswered} unanswered.",
     "timeSpent": "Time spent: {seconds} seconds",
+    "leaveWarning": "You have an active test in progress. Are you sure you want to leave this page?",
     "cancel": "Cancel",
     "confirmFinish": "Finish and grade"
   },
@@ -641,8 +645,7 @@
       "notificationsLabel": "Notifications"
     },
     "toolbar": {
-      "importCambridge": "Import Cambridge Test",
-      "duplicate": "Duplicate Test"
+      "importCambridge": "Import Cambridge Test"
     },
     "filters": {
       "moduleLabel": "Module",
@@ -709,9 +712,23 @@
         "open": "Open actions menu",
         "edit": "Edit test",
         "preview": "Preview test",
-        "duplicate": "Duplicate test",
         "delete": "Delete test"
       }
+    },
+    "importDialog": {
+      "title": "Import Cambridge Test",
+      "description": "Select a Cambridge test to download. PDF download will be connected when backend is ready.",
+      "selectLabel": "Choose test",
+      "selectPlaceholder": "Select a test",
+      "empty": "No available tests to import right now.",
+      "actions": {
+        "cancel": "Cancel",
+        "download": "Download"
+      }
+    },
+    "toast": {
+      "downloadSuccessTitle": "Downloaded successfully",
+      "downloadSuccessDescription": "{testName} has been downloaded successfully."
     },
     "pagination": {
       "summary": "Showing {from} to {to} of {total} results",
@@ -719,7 +736,6 @@
       "next": "Next page"
     },
     "row": {
-      "copySuffix": "(Copy {index})",
       "newDraftTitle": "Custom Test {index}",
       "customBook": "Custom",
       "defaultPassageTitle": "New Passage",
@@ -766,6 +782,17 @@
       "draft": "Draft",
       "published": "Published"
     },
+    "contentBankPassage": "Content Bank Passage",
+    "selectPassagePlaceholder": "Select a passage",
+    "variantSet": "Variant Set",
+    "selectVariantPlaceholder": "Select a variant set",
+    "noVariantSets": "No variant sets linked to this passage yet.",
+    "noCompatibleVariants": "No compatible variants for this slot. This slot requires {count} questions.",
+    "thisSlotRequires": "This slot requires {count} questions.",
+    "slotDeterminesNumbering": "This passage can be reused in different slots. Question numbering is assigned automatically based on slot.",
+    "importedFromContentBank": "Imported from Content Bank: {name}",
+    "replaceGeneratedGroups": "This will replace current question groups for this slot. Continue?",
+    "confirmReplaceGeneratedGroups": "This will replace current question groups for this slot. Continue?",
     "structure": {
       "title": "Test Structure",
       "labels": {
@@ -1184,6 +1211,11 @@
       "newFeaturePlaceholder": "Add a new feature...",
       "addFeature": "Add Feature"
     },
+    "createDialog": {
+      "title": "Create Plan",
+      "description": "Create a new subscription plan and configure its features.",
+      "createAction": "Create Plan"
+    },
     "common": {
       "cancel": "Cancel",
       "save": "Save"
@@ -1471,8 +1503,13 @@
       "variantsCount": "{count} variants",
       "usedInCount": "Used in {count} tests",
       "copySuffix": "Copy",
-      "unknownPassage": "Unknown Passage"
+      "unknownPassage": "Unknown Passage",
+      "none": "None",
+      "passageSlot": "Passage {index}",
+      "sectionSlot": "Section {index}"
     },
+    "compatibleWith": "Compatible with: {slots}",
+    "notCompatibleWith": "Not compatible with: {slots}",
     "actions": {
       "openMenu": "Open actions menu",
       "selectPassage": "Select Passage",
@@ -1486,6 +1523,8 @@
     "createVariantDialog": {
       "title": "Create New Variant Set",
       "description": "Create a unique question set linked to a reusable passage.",
+      "editTitle": "Edit Variant Set",
+      "editDescription": "Update the variant set configuration.",
       "fields": {
         "variantName": "Variant Name",
         "variantNamePlaceholder": "e.g. Variant Set C",
@@ -1494,20 +1533,65 @@
         "usedInTest": "Used In Test",
         "selectTestPlaceholder": "Select published test",
         "questionTypes": "Question Types",
-        "summary": "Question Types Summary",
-        "summaryPlaceholder": "e.g. TFNG (5) + Matching Headings (7)"
+        "selectQuestionTypePlaceholder": "Select question type",
+        "countPlaceholder": "Count",
+        "autoSummary": "Auto-generated summary"
       },
-      "create": "Create Variant Set"
+      "actions": {
+        "addType": "Add Type"
+      },
+      "metrics": {
+        "totalSelected": "Total selected: {selected} / {total}",
+        "remaining": "Remaining: {count}",
+        "allowedTotalsByModule": "{module} variants must total: {totals}"
+      },
+      "validation": {
+        "maxSixTypes": "You can select a maximum of 6 question types.",
+        "duplicateQuestionType": "The same question type cannot be selected twice.",
+        "invalidCount": "Each selected question type must have count greater than 0.",
+        "invalidTotal": "Total questions must match one of: {totals}. Currently selected: {selected}."
+      },
+      "toast": {
+        "totalExceededTitle": "Question total exceeded",
+        "totalExceededDescription": "Maximum allowed is {max}. You exceeded by {overflow}. You can still add {remaining} more questions."
+      },
+      "summaryEmpty": "Summary will be generated after valid groups are entered.",
+      "create": "Create Variant Set",
+      "save": "Save Variant Set"
+    },
+    "addPassageDialog": {
+      "title": "Add New Passage",
+      "description": "Create a reusable content item for Content Bank and Test Builder.",
+      "fields": {
+        "title": "Title",
+        "titlePlaceholder": "e.g. Smart Cities and Public Transport",
+        "module": "Module",
+        "difficulty": "Difficulty",
+        "topic": "Topic",
+        "topicPlaceholder": "e.g. Technology",
+        "source": "Source",
+        "previewText": "Preview Text",
+        "previewPlaceholder": "Short preview text shown in table and side panel...",
+        "fullText": "Full Text (Paragraphs)",
+        "fullTextPlaceholder": "Write full passage/transcript. Use new lines for paragraphs.",
+        "estimatedTimeLabel": "Estimated Time Label",
+        "estimatedTimePlaceholder": "e.g. 12 - 15 min",
+        "durationMinutes": "Duration (minutes)"
+      },
+      "create": "Add Passage"
     },
     "questionTypes": {
       "tfng": "TFNG",
       "multiple_choice": "Multiple Choice",
       "matching_headings": "Matching Headings",
       "matching_information": "Matching Information",
+      "sentence_completion": "Sentence Completion",
       "summary_completion": "Summary Completion",
       "table_completion": "Table Completion",
+      "diagram_labeling": "Diagram Labeling",
       "form_completion": "Form Completion",
-      "note_completion": "Note Completion"
+      "note_completion": "Note Completion",
+      "short_answer": "Short Answer"
     },
     "meta": {
       "linkedTests": "{count} linked tests",
@@ -1527,7 +1611,9 @@
       "importCsvRequested": "Import CSV action triggered.",
       "addPassageRequested": "Add new passage action triggered.",
       "quickPublishRequested": "Quick publish action triggered.",
+      "passageCreated": "{name} was added.",
       "variantCreated": "{name} was created.",
+      "variantUpdated": "{name} was updated.",
       "variantDuplicated": "{name} was duplicated as a new draft.",
       "variantArchived": "{name} was archived.",
       "variantEditRequested": "Edit requested for {name}.",

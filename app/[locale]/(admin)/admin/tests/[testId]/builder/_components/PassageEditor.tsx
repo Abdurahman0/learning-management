@@ -7,7 +7,9 @@ import {useTranslations} from "next-intl";
 import {Badge} from "@/components/ui/badge";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import type {BuilderMode, BuilderStructureItem, TestModule} from "@/data/admin-test-builder";
+import type {ContentBankPassage, ContentBankVariantSet} from "@/data/admin/selectors";
 
 import {EvidenceToolbar} from "./EvidenceToolbar";
 
@@ -16,6 +18,15 @@ type PassageEditorProps = {
   module: TestModule;
   structure: BuilderStructureItem;
   selectedQuestionLabel: string | null;
+  contentBankPassages: ContentBankPassage[];
+  selectedPassageId: string;
+  onSelectContentBankPassage: (passageId: string) => void;
+  variantSets: ContentBankVariantSet[];
+  hasAnyVariantSets: boolean;
+  requiredQuestionCount: number;
+  selectedVariantSetId: string;
+  selectedVariantSetName: string | null;
+  onSelectVariantSet: (variantSetId: string) => void;
   onUpdateContent: (structureId: string, content: string[]) => void;
   onUpdateAudioLabel: (structureId: string, audioLabel: string) => void;
   onAttachEvidence: (text: string) => boolean;
@@ -33,6 +44,15 @@ export function PassageEditor({
   module,
   structure,
   selectedQuestionLabel,
+  contentBankPassages,
+  selectedPassageId,
+  onSelectContentBankPassage,
+  variantSets,
+  hasAnyVariantSets,
+  requiredQuestionCount,
+  selectedVariantSetId,
+  selectedVariantSetName,
+  onSelectVariantSet,
   onUpdateContent,
   onUpdateAudioLabel,
   onAttachEvidence
@@ -78,6 +98,60 @@ export function PassageEditor({
       <CardContent className="space-y-4 pt-4 pb-5">
         {mode === "editor" ? (
           <>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("contentBankPassage")}</label>
+                <Select value={selectedPassageId || "__none"} onValueChange={(value) => onSelectContentBankPassage(value === "__none" ? "" : value)}>
+                  <SelectTrigger className="h-10 rounded-xl border-border/70 bg-background/50">
+                    <SelectValue placeholder={t("selectPassagePlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">{t("selectPassagePlaceholder")}</SelectItem>
+                    {contentBankPassages.map((passage) => (
+                      <SelectItem key={passage.id} value={passage.id}>
+                        {passage.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("variantSet")}</label>
+                <Select
+                  value={selectedVariantSetId || "__none"}
+                  onValueChange={(value) => onSelectVariantSet(value === "__none" ? "" : value)}
+                  disabled={!selectedPassageId || variantSets.length === 0}
+                >
+                  <SelectTrigger className="h-10 rounded-xl border-border/70 bg-background/50">
+                    <SelectValue placeholder={t("selectVariantPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">{t("selectVariantPlaceholder")}</SelectItem>
+                    {variantSets.map((variant) => (
+                      <SelectItem key={variant.id} value={variant.id}>
+                        {variant.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {selectedVariantSetName ? (
+              <p className="text-xs text-primary">{t("importedFromContentBank", {name: selectedVariantSetName})}</p>
+            ) : null}
+
+            {selectedPassageId ? <p className="text-xs text-muted-foreground">{t("slotDeterminesNumbering")}</p> : null}
+
+            {selectedPassageId && !hasAnyVariantSets ? <p className="text-xs text-muted-foreground">{t("noVariantSets")}</p> : null}
+            {selectedPassageId && hasAnyVariantSets && !variantSets.length ? (
+              <p className="text-xs text-amber-300">{t("noCompatibleVariants", {count: requiredQuestionCount})}</p>
+            ) : null}
+            {selectedPassageId && hasAnyVariantSets ? (
+              <p className="text-xs text-muted-foreground">{t("thisSlotRequires", {count: requiredQuestionCount})}</p>
+            ) : null}
+
             <EvidenceToolbar
               onFormatClick={(format) => {
                 console.info("[builder] format click", format);

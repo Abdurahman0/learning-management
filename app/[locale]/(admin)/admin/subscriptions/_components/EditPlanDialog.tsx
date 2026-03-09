@@ -8,40 +8,79 @@ import {Button} from "@/components/ui/button";
 import {Checkbox} from "@/components/ui/checkbox";
 import {Input} from "@/components/ui/input";
 import {Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle} from "@/components/ui/sheet";
-import type {SubscriptionPlan} from "@/data/admin-subscriptions";
+import type {PlanId, SubscriptionPlan} from "@/data/admin-subscriptions";
 
 type EditPlanDialogProps = {
   open: boolean;
+  mode: "create" | "edit";
   plan: SubscriptionPlan | null;
+  existingPlanIds: string[];
   onOpenChange: (open: boolean) => void;
-  onSave: (nextPlan: SubscriptionPlan) => void;
+  onSave: (nextPlan: SubscriptionPlan, mode: "create" | "edit") => void;
 };
 
-export function EditPlanDialog({open, plan, onOpenChange, onSave}: EditPlanDialogProps) {
+function slugifyPlanId(value: string) {
+  const normalized = value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  return normalized || "plan";
+}
+
+function createPlanId(name: string, existingPlanIds: string[]): PlanId {
+  const used = new Set(existingPlanIds.map((id) => id.toLowerCase()));
+  const base = `custom-${slugifyPlanId(name)}`;
+  let candidate = base;
+  let suffix = 2;
+
+  while (used.has(candidate.toLowerCase())) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+
+  return candidate as PlanId;
+}
+
+function createEmptyDraft(): SubscriptionPlan {
+  return {
+    id: "new-plan",
+    name: "",
+    tagline: "",
+    price: 0,
+    billingPeriod: "month",
+    highlight: false,
+    badge: "",
+    features: [{id: "new-plan-feature-1", label: "", included: true}]
+  };
+}
+
+export function EditPlanDialog({open, mode, plan, existingPlanIds, onOpenChange, onSave}: EditPlanDialogProps) {
   const t = useTranslations("adminSubscriptions");
   const [draft, setDraft] = useState<SubscriptionPlan | null>(plan);
   const [newFeatureLabel, setNewFeatureLabel] = useState("");
 
   useEffect(() => {
-    if (plan) {
+    if (mode === "edit" && plan) {
       setDraft({
         ...plan,
         features: plan.features.map((feature) => ({...feature}))
       });
     } else {
-      setDraft(null);
+      setDraft(createEmptyDraft());
     }
     setNewFeatureLabel("");
-  }, [plan, open]);
+  }, [mode, plan, open]);
 
-  const saveDisabled = !draft || !draft.name.trim() || draft.price < 0;
+  const saveDisabled =
+    !draft || !draft.name.trim() || !draft.tagline.trim() || draft.price < 0 || !draft.features.some((feature) => feature.label.trim());
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full max-w-[560px] overflow-y-auto border-l border-border/70 bg-background/95 p-0 sm:max-w-[560px]">
         <SheetHeader className="border-b border-border/70 p-5 pr-14">
-          <SheetTitle className="text-xl">{t("editDialog.title")}</SheetTitle>
-          <SheetDescription>{t("editDialog.description")}</SheetDescription>
+          <SheetTitle className="text-xl">{mode === "create" ? t("createDialog.title") : t("editDialog.title")}</SheetTitle>
+          <SheetDescription>{mode === "create" ? t("createDialog.description") : t("editDialog.description")}</SheetDescription>
         </SheetHeader>
 
         {draft ? (
@@ -219,12 +258,48 @@ export function EditPlanDialog({open, plan, onOpenChange, onSave}: EditPlanDialo
             type="button"
             onClick={() => {
               if (!draft) return;
-              onSave(draft);
+              const cleanedFeatures = draft.features
+                .map((feature, index) => ({
+                  id: feature.id || `${draft.id}-feature-${index + 1}`,
+                  label: feature.label.trim(),
+                  included: feature.included
+                }))
+                .filter((feature) => feature.label.length > 0);
+              const features = cleanedFeatures.length ? cleanedFeatures : [{id: `${draft.id}-feature-1`, label: "Feature", included: true}];
+
+              if (mode === "create") {
+                const id = createPlanId(draft.name, existingPlanIds);
+                onSave(
+                  {
+                    ...draft,
+                    id,
+                    name: draft.name.trim(),
+                    tagline: draft.tagline.trim(),
+                    badge: draft.badge?.trim() || undefined,
+                    features: features.map((feature, index) => ({
+                      ...feature,
+                      id: `${id}-feature-${index + 1}`
+                    }))
+                  },
+                  mode
+                );
+              } else {
+                onSave(
+                  {
+                    ...draft,
+                    name: draft.name.trim(),
+                    tagline: draft.tagline.trim(),
+                    badge: draft.badge?.trim() || undefined,
+                    features
+                  },
+                  mode
+                );
+              }
               onOpenChange(false);
             }}
             disabled={saveDisabled}
           >
-            {t("common.save")}
+            {mode === "create" ? t("createDialog.createAction") : t("common.save")}
           </Button>
         </SheetFooter>
       </SheetContent>

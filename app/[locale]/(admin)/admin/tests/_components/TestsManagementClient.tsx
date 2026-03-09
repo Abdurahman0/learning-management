@@ -1,14 +1,16 @@
 "use client";
 
-import {useMemo, useRef, useState} from "react";
-import {Bell, CopyPlus, Plus, Search, Upload} from "lucide-react";
+import {useEffect, useMemo, useRef, useState} from "react";
+import {Bell, CheckCircle2, Plus, Search, Upload} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {useRouter} from "next/navigation";
 
 import {Button} from "@/components/ui/button";
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
 import {Input} from "@/components/ui/input";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Separator} from "@/components/ui/separator";
+import {Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle} from "@/components/ui/sheet";
 import {ThemeToggle} from "@/components/theme-toggle";
 import {
   ADMIN_TESTS,
@@ -44,6 +46,10 @@ export function TestsManagementClient() {
   const [page, setPage] = useState(1);
   const seedRef = useRef(1);
   const [expandedTestIds, setExpandedTestIds] = useState<Set<string>>(() => new Set());
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedImportTestId, setSelectedImportTestId] = useState("");
+  const [downloadToastOpen, setDownloadToastOpen] = useState(false);
+  const [lastDownloadedTestName, setLastDownloadedTestName] = useState("");
 
   const filteredTests = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
@@ -97,6 +103,34 @@ export function TestsManagementClient() {
     () => sortedTests.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
     [sortedTests, safePage]
   );
+  const importableTests = useMemo(() => {
+    const cambridgeTests = tests.filter((item) => item.name.toLowerCase().includes("cambridge"));
+    return cambridgeTests.length ? cambridgeTests : tests;
+  }, [tests]);
+
+  useEffect(() => {
+    if (!importDialogOpen) {
+      return;
+    }
+
+    if (!importableTests.length) {
+      setSelectedImportTestId("");
+      return;
+    }
+
+    if (!importableTests.some((item) => item.id === selectedImportTestId)) {
+      setSelectedImportTestId(importableTests[0].id);
+    }
+  }, [importDialogOpen, importableTests, selectedImportTestId]);
+
+  useEffect(() => {
+    if (!downloadToastOpen) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setDownloadToastOpen(false), 2400);
+    return () => window.clearTimeout(timer);
+  }, [downloadToastOpen]);
 
   const makeCreatedDate = (value: number) => {
     const day = String((value % 28) + 1).padStart(2, "0");
@@ -120,22 +154,6 @@ export function TestsManagementClient() {
 
     const basePath = `/${locale}/admin/tests/${testId}/builder`;
     router.push(query.size ? `${basePath}?${query.toString()}` : basePath);
-  };
-
-  const duplicateFromSource = (source: AdminTest) => {
-    const seed = seedRef.current;
-    seedRef.current += 1;
-
-    const duplicate: AdminTest = {
-      ...source,
-      id: `${source.id}-copy-${seed}`,
-      name: `${source.name} ${t("row.copySuffix", {index: seed})}`,
-      createdAt: makeCreatedDate(seed)
-    };
-
-    setTests((currentTests) => [duplicate, ...currentTests]);
-    setPage(1);
-    console.info("[admin-tests] duplicated", duplicate.id);
   };
 
   const handleCreateTest = (module: TestModule = "reading") => {
@@ -212,28 +230,19 @@ export function TestsManagementClient() {
   };
 
   const handleImportCambridge = () => {
-    const source = ADMIN_TESTS.find((item) => item.id === "cam-19-r-3") ?? ADMIN_TESTS[0];
-    duplicateFromSource(source);
-    console.info("[admin-tests] import clicked");
+    setImportDialogOpen(true);
   };
 
-  const handleDuplicateFirstVisible = () => {
-    if (!sortedTests.length) {
+  const handleConfirmImport = () => {
+    const selectedTest = importableTests.find((item) => item.id === selectedImportTestId);
+    if (!selectedTest) {
       return;
     }
 
-    duplicateFromSource(sortedTests[0]);
-    console.info("[admin-tests] duplicate quick action clicked");
-  };
-
-  const handleDuplicateById = (testId: string) => {
-    const source = tests.find((item) => item.id === testId);
-
-    if (!source) {
-      return;
-    }
-
-    duplicateFromSource(source);
+    setImportDialogOpen(false);
+    setLastDownloadedTestName(selectedTest.name);
+    setDownloadToastOpen(true);
+    console.info("[admin-tests] cambridge-download-placeholder", selectedTest.id);
   };
 
   const handleDelete = (testId: string) => {
@@ -411,15 +420,6 @@ export function TestsManagementClient() {
                 <Upload className="size-4" />
                 {t("toolbar.importCambridge")}
               </Button>
-              <Button
-                variant="outline"
-                className="h-10 rounded-xl border-border/70 bg-card/55"
-                onClick={handleDuplicateFirstVisible}
-                disabled={!sortedTests.length}
-              >
-                <CopyPlus className="size-4" />
-                {t("toolbar.duplicate")}
-              </Button>
             </div>
 
             <TestsTable
@@ -428,7 +428,6 @@ export function TestsManagementClient() {
               onToggleExpand={handleToggleExpand}
               onEdit={handleEditTest}
               onPreview={handlePreviewTest}
-              onDuplicate={handleDuplicateById}
               onDelete={handleDelete}
               onEditPassage={handleEditPassage}
               page={safePage}
@@ -439,6 +438,65 @@ export function TestsManagementClient() {
             />
           </main>
         </div>
+      </div>
+
+      <Sheet open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <SheetContent side="right" className="w-full max-w-[440px] border-l border-border/70 bg-background/95 p-0">
+          <SheetHeader className="space-y-1">
+            <SheetTitle>{t("importDialog.title")}</SheetTitle>
+            <SheetDescription>{t("importDialog.description")}</SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-2 px-6 pb-3">
+            <p className="text-sm font-medium">{t("importDialog.selectLabel")}</p>
+
+            {importableTests.length ? (
+              <Select value={selectedImportTestId} onValueChange={setSelectedImportTestId}>
+                <SelectTrigger className="rounded-xl border-border/70 bg-card/55">
+                  <SelectValue placeholder={t("importDialog.selectPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {importableTests.map((test) => (
+                    <SelectItem key={test.id} value={test.id}>
+                      {test.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="rounded-xl border border-border/70 bg-card/45 px-3 py-2.5 text-sm text-muted-foreground">
+                {t("importDialog.empty")}
+              </div>
+            )}
+          </div>
+
+          <SheetFooter className="gap-2">
+            <Button variant="ghost" className="rounded-xl" onClick={() => setImportDialogOpen(false)}>
+              {t("importDialog.actions.cancel")}
+            </Button>
+            <Button className="rounded-xl" onClick={handleConfirmImport} disabled={!selectedImportTestId}>
+              {t("importDialog.actions.download")}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <div aria-live="polite" className="pointer-events-none fixed top-20 right-4 z-[60]">
+        {downloadToastOpen ? (
+          <div className="min-w-[280px] rounded-xl border border-emerald-500/35 bg-background/95 px-4 py-3 shadow-lg backdrop-blur-md">
+            <div className="flex items-start gap-2.5">
+              <span className="mt-0.5 inline-flex size-5 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+                <CheckCircle2 className="size-3.5" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold">{t("toast.downloadSuccessTitle")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("toast.downloadSuccessDescription", {testName: lastDownloadedTestName})}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   BookOpen,
   Bookmark,
@@ -49,6 +49,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import { createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress, saveAttemptResult } from "@/lib/test-attempt-storage";
 import { Highlightable } from "@/components/test/Highlightable";
+import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
 
 function formatTime(seconds: number) {
   const safe = Math.max(0, seconds);
@@ -136,9 +137,11 @@ export default function ListeningTestPage() {
 
 function ListeningTestClient({ testId }: { testId: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useTranslations("listeningTest");
   const locale = useLocale();
   const test = getListeningTestById(testId)!;
+  const restartRequested = searchParams.get("restart") === "1";
   const paletteTitle = t.has("questionPalette")
     ? t("questionPalette")
     : "Question palette";
@@ -194,8 +197,43 @@ function ListeningTestClient({ testId }: { testId: string }) {
   const questionsScrollRef = useRef<HTMLDivElement | null>(null);
   const questionRefs = useRef<Map<number, HTMLElement>>(new Map());
   const pendingJumpRef = useRef<number | null>(null);
+  const leaveWarningMessage = t.has("leaveWarning")
+    ? t("leaveWarning")
+    : "You are taking a test. Leaving this page will interrupt your attempt. Continue?";
+
+  useTestLeaveWarning({
+    enabled: Boolean(attemptId),
+    message: leaveWarningMessage,
+  });
+
+  const resetAttemptState = () => {
+    const freshAttemptId = createAttemptId();
+    setAttemptId(freshAttemptId);
+    setStartedAt(Date.now());
+    setFinishOpen(false);
+    setActiveSectionId("s1");
+    setActiveQuestionNumber(1);
+    setAnswers({});
+    setMarked(new Set());
+    setRemainingSeconds(test.durationMinutes * 60);
+    setTimerRunning(false);
+    setAudioPlaying(false);
+    setAudioProgress(37);
+    setPaletteOpen(false);
+    pendingJumpRef.current = null;
+  };
 
   useEffect(() => {
+    if (restartRequested) {
+      resetAttemptState();
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("restart");
+        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+      }
+      return;
+    }
+
     const latestId = loadLatestAttemptId("listening", test.id);
     const saved = latestId ? loadAttemptProgress("listening", test.id, latestId) : null;
 
@@ -218,7 +256,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
 
     setAttemptId(createAttemptId());
     setStartedAt(Date.now());
-  }, [test.id]);
+  }, [restartRequested, test.id]);
 
   const sectionByQuestion = useMemo(() => {
     const map = new Map<number, ListeningSectionFull["id"]>();
