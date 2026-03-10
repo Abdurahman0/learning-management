@@ -828,6 +828,7 @@
     "groups": {
       "title": "Question Groups",
       "totalCount": "{count} total",
+      "totalCountWithLimit": "{assigned}/{required} total",
       "questionCount": "{count} questions",
       "addGroup": "Add Question Group",
       "createTitle": "Create Question Group",
@@ -839,6 +840,7 @@
         "to": "To"
       },
       "validationRange": "Please choose a valid range inside the active passage/section.",
+      "validationOverlap": "This range overlaps existing question numbers. Choose unused numbers only.",
       "createAction": "Create Group",
       "saveAction": "Save Group",
       "copySuffix": "(Copy)",
@@ -879,17 +881,27 @@
         "evidencePlaceholder": "Attach highlighted text from passage/transcript"
       }
     },
+    "validation": {
+      "publishQuestionCount": "Cannot publish yet. Total questions must be {required} and each passage/section must be filled exactly. Current total: {current}.",
+      "overlapIssue": "overlap",
+      "outOfRangeIssue": "out of range"
+    },
     "questionTypes": {
       "tfng": "True / False / Not Given",
+      "yes_no_not_given": "Yes / No / Not Given",
       "multiple_choice": "Multiple Choice",
+      "selecting_from_a_list": "Selecting from a List",
       "matching_headings": "Matching Headings",
+      "matching_information": "Matching Information",
+      "matching_features": "Matching Features",
       "sentence_completion": "Sentence Completion",
       "summary_completion": "Summary Completion",
       "table_completion": "Table Completion",
+      "flow_chart": "Flow Chart",
+      "map": "Map",
       "diagram_labeling": "Diagram Labeling",
       "form_completion": "Form Completion",
       "note_completion": "Note Completion",
-      "matching_information": "Matching Information",
       "short_answer": "Short Answer"
     },
     "common": {
@@ -1582,12 +1594,17 @@
     },
     "questionTypes": {
       "tfng": "TFNG",
+      "yes_no_not_given": "Yes / No / Not Given",
       "multiple_choice": "Multiple Choice",
+      "selecting_from_a_list": "Selecting from a List",
       "matching_headings": "Matching Headings",
       "matching_information": "Matching Information",
+      "matching_features": "Matching Features",
       "sentence_completion": "Sentence Completion",
       "summary_completion": "Summary Completion",
       "table_completion": "Table Completion",
+      "flow_chart": "Flow Chart",
+      "map": "Map",
       "diagram_labeling": "Diagram Labeling",
       "form_completion": "Form Completion",
       "note_completion": "Note Completion",

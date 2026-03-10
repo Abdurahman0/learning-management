@@ -235,7 +235,7 @@ const VARIANT_SEEDS: VariantSeed[] = [
     status: "published",
     groups: [
       {type: "multiple_choice", count: 5},
-      {type: "matching_information", count: 4},
+      {type: "matching_features", count: 4},
       {type: "sentence_completion", count: 5}
     ],
     usedInTestIds: ["cam-16-r-4"],
@@ -247,8 +247,8 @@ const VARIANT_SEEDS: VariantSeed[] = [
     name: "Variant Set A",
     status: "used",
     groups: [
-      {type: "matching_information", count: 6},
-      {type: "tfng", count: 8}
+      {type: "matching_features", count: 6},
+      {type: "yes_no_not_given", count: 8}
     ],
     usedInTestIds: ["cam-18-r-1", "cam-19-r-3"],
     createdAt: "2025-12-28"
@@ -273,7 +273,7 @@ const VARIANT_SEEDS: VariantSeed[] = [
     status: "draft",
     groups: [
       {type: "table_completion", count: 6},
-      {type: "tfng", count: 4},
+      {type: "yes_no_not_given", count: 4},
       {type: "short_answer", count: 3}
     ],
     usedInTestIds: [],
@@ -295,7 +295,7 @@ const VARIANT_SEEDS: VariantSeed[] = [
     status: "used",
     groups: [
       {type: "summary_completion", count: 5},
-      {type: "multiple_choice", count: 5}
+      {type: "selecting_from_a_list", count: 5}
     ],
     usedInTestIds: ["guide-l-4"],
     createdAt: "2025-12-19"
@@ -306,8 +306,8 @@ const VARIANT_SEEDS: VariantSeed[] = [
     name: "Variant Set B",
     status: "published",
     groups: [
-      {type: "diagram_labeling", count: 5},
-      {type: "note_completion", count: 5}
+      {type: "map", count: 5},
+      {type: "flow_chart", count: 5}
     ],
     usedInTestIds: [],
     createdAt: "2026-01-25"
@@ -345,12 +345,17 @@ function unique(values: string[]) {
 function toQuestionTypeLabel(type: QuestionType) {
   const labels: Record<QuestionType, string> = {
     tfng: "TFNG",
+    yes_no_not_given: "Yes / No / Not Given",
     multiple_choice: "Multiple Choice",
+    selecting_from_a_list: "Selecting from a List",
     matching_headings: "Matching Headings",
     matching_information: "Matching Information",
+    matching_features: "Matching Features",
     sentence_completion: "Sentence Completion",
     summary_completion: "Summary Completion",
     table_completion: "Table Completion",
+    flow_chart: "Flow Chart",
+    map: "Map",
     diagram_labeling: "Diagram Labeling",
     form_completion: "Form Completion",
     note_completion: "Note Completion",

@@ -8,6 +8,7 @@ import type {
   MultipleChoiceAnswer,
   QuestionType as AdminQuestionType,
   TFNGAnswer,
+  YesNoNotGivenAnswer,
   TextAnswerBuilderQuestion,
   TestModule
 } from "@/types/admin";
@@ -45,37 +46,45 @@ export type AdminBuilderTest = {
 
 export const QUESTION_TYPE_OPTIONS: {value: QuestionType; labelKey: string}[] = [
   {value: "tfng", labelKey: "questionTypes.tfng"},
+  {value: "yes_no_not_given", labelKey: "questionTypes.yes_no_not_given"},
   {value: "multiple_choice", labelKey: "questionTypes.multiple_choice"},
+  {value: "selecting_from_a_list", labelKey: "questionTypes.selecting_from_a_list"},
   {value: "matching_headings", labelKey: "questionTypes.matching_headings"},
+  {value: "matching_information", labelKey: "questionTypes.matching_information"},
+  {value: "matching_features", labelKey: "questionTypes.matching_features"},
   {value: "sentence_completion", labelKey: "questionTypes.sentence_completion"},
   {value: "summary_completion", labelKey: "questionTypes.summary_completion"},
   {value: "table_completion", labelKey: "questionTypes.table_completion"},
-  {value: "diagram_labeling", labelKey: "questionTypes.diagram_labeling"},
+  {value: "flow_chart", labelKey: "questionTypes.flow_chart"},
+  {value: "map", labelKey: "questionTypes.map"},
   {value: "form_completion", labelKey: "questionTypes.form_completion"},
   {value: "note_completion", labelKey: "questionTypes.note_completion"},
-  {value: "matching_information", labelKey: "questionTypes.matching_information"},
   {value: "short_answer", labelKey: "questionTypes.short_answer"}
 ];
 
 export const QUESTION_TYPE_OPTIONS_BY_MODULE: Record<TestModule, {value: QuestionType; labelKey: string}[]> = {
   reading: [
     {value: "tfng", labelKey: "questionTypes.tfng"},
+    {value: "yes_no_not_given", labelKey: "questionTypes.yes_no_not_given"},
     {value: "multiple_choice", labelKey: "questionTypes.multiple_choice"},
     {value: "matching_headings", labelKey: "questionTypes.matching_headings"},
     {value: "matching_information", labelKey: "questionTypes.matching_information"},
+    {value: "matching_features", labelKey: "questionTypes.matching_features"},
     {value: "sentence_completion", labelKey: "questionTypes.sentence_completion"},
     {value: "summary_completion", labelKey: "questionTypes.summary_completion"},
     {value: "table_completion", labelKey: "questionTypes.table_completion"},
-    {value: "diagram_labeling", labelKey: "questionTypes.diagram_labeling"},
+    {value: "note_completion", labelKey: "questionTypes.note_completion"},
     {value: "short_answer", labelKey: "questionTypes.short_answer"}
   ],
   listening: [
     {value: "multiple_choice", labelKey: "questionTypes.multiple_choice"},
+    {value: "selecting_from_a_list", labelKey: "questionTypes.selecting_from_a_list"},
     {value: "form_completion", labelKey: "questionTypes.form_completion"},
     {value: "note_completion", labelKey: "questionTypes.note_completion"},
     {value: "table_completion", labelKey: "questionTypes.table_completion"},
     {value: "summary_completion", labelKey: "questionTypes.summary_completion"},
-    {value: "diagram_labeling", labelKey: "questionTypes.diagram_labeling"},
+    {value: "flow_chart", labelKey: "questionTypes.flow_chart"},
+    {value: "map", labelKey: "questionTypes.map"},
     {value: "sentence_completion", labelKey: "questionTypes.sentence_completion"},
     {value: "short_answer", labelKey: "questionTypes.short_answer"},
     {value: "matching_information", labelKey: "questionTypes.matching_information"}
@@ -143,6 +152,10 @@ export function createDefaultQuestion(type: QuestionType, number: number): Build
     return {...base, type, correctAnswer: "" satisfies TFNGAnswer};
   }
 
+  if (type === "yes_no_not_given") {
+    return {...base, type, correctAnswer: "" satisfies YesNoNotGivenAnswer};
+  }
+
   if (type === "multiple_choice") {
     return {
       ...base,
@@ -156,7 +169,12 @@ export function createDefaultQuestion(type: QuestionType, number: number): Build
     return {...base, type, headings: [], correctAnswer: ""};
   }
 
-  if (type === "matching_information") {
+  if (
+    type === "matching_information" ||
+    type === "matching_features" ||
+    type === "selecting_from_a_list" ||
+    type === "map"
+  ) {
     return {
       ...base,
       type,
@@ -332,13 +350,19 @@ export function getStructureRange(item: BuilderStructureItem) {
 
 function hasQuestionAnswerContent(question: BuilderQuestion) {
   if (question.type === "tfng") return question.correctAnswer !== "";
+  if (question.type === "yes_no_not_given") return question.correctAnswer !== "";
   if (question.type === "multiple_choice") {
     return question.correctAnswer !== "" || question.options.some((option) => option.trim().length > 0);
   }
   if (question.type === "matching_headings") {
     return question.correctAnswer.trim().length > 0 || question.headings.some((heading) => heading.trim().length > 0);
   }
-  if (question.type === "matching_information") {
+  if (
+    question.type === "matching_information" ||
+    question.type === "matching_features" ||
+    question.type === "selecting_from_a_list" ||
+    question.type === "map"
+  ) {
     return (
       question.items.some((item) => item.trim().length > 0) ||
       question.choices.some((choice) => choice.trim().length > 0) ||

@@ -40,12 +40,96 @@ type SelectedQuestionRef = {
   questionId: string;
 };
 
+type SlotRange = {
+  from: number;
+  to: number;
+};
+
 function makeCopyId(value: string) {
   return `${value}-copy-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function buildGroupTitle(from: number, to: number) {
   return `Questions ${from}-${to}`;
+}
+
+function uniqueSortedNumbers(values: number[]) {
+  return [...new Set(values)].sort((left, right) => left - right);
+}
+
+function getOccupiedNumbers(groups: QuestionGroup[], excludeGroupId?: string) {
+  const occupied = new Set<number>();
+  for (const group of groups) {
+    if (excludeGroupId && group.id === excludeGroupId) continue;
+    for (const question of group.questions) {
+      occupied.add(question.number);
+    }
+  }
+  return occupied;
+}
+
+function isRangeWithin(range: SlotRange, from: number, to: number) {
+  return from >= range.from && to <= range.to && from <= to;
+}
+
+function isRangeFree(occupied: Set<number>, from: number, to: number) {
+  for (let number = from; number <= to; number += 1) {
+    if (occupied.has(number)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function normalizeGroup(group: QuestionGroup): QuestionGroup {
+  const uniqueNumbers = uniqueSortedNumbers(group.questions.map((question) => question.number));
+  if (!uniqueNumbers.length) {
+    return group;
+  }
+
+  const questions = [...group.questions].sort((left, right) => left.number - right.number);
+  const from = uniqueNumbers[0];
+  const to = uniqueNumbers[uniqueNumbers.length - 1];
+  return {
+    ...group,
+    from,
+    to,
+    title: buildGroupTitle(from, to),
+    questions
+  };
+}
+
+function findContiguousFreeRange(range: SlotRange, occupied: Set<number>, length: number) {
+  if (length <= 0) return null;
+
+  for (let start = range.from; start + length - 1 <= range.to; start += 1) {
+    let hasCollision = false;
+    for (let number = start; number < start + length; number += 1) {
+      if (occupied.has(number)) {
+        hasCollision = true;
+        break;
+      }
+    }
+    if (!hasCollision) {
+      return {from: start, to: start + length - 1};
+    }
+  }
+
+  return null;
+}
+
+function getBoundaryInsertNumber(group: QuestionGroup, range: SlotRange, occupiedByOthers: Set<number>) {
+  const appendNumber = group.to + 1;
+  if (appendNumber <= range.to && !occupiedByOthers.has(appendNumber)) {
+    return appendNumber;
+  }
+
+  const prependNumber = group.from - 1;
+  if (prependNumber >= range.from && !occupiedByOthers.has(prependNumber)) {
+    return prependNumber;
+  }
+
+  return null;
 }
 
 export function TestBuilderClient({testId, initialStructureId, initialMode}: TestBuilderClientProps) {
@@ -126,6 +210,67 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     return getAllowedQuestionCount(test.module, activeStructure.index);
   }, [activeStructure, test.module]);
 
+  const structureQuestionProgress = useMemo(() => {
+    return test.structures.map((structure) => {
+      const range = getStructureRange(structure);
+      const required = range.to - range.from + 1;
+      const groups = test.questionGroupsByStructure[structure.id] ?? [];
+      const assignedSet = new Set<number>();
+      let inRangeEntries = 0;
+      let outOfRangeEntries = 0;
+
+      for (const group of groups) {
+        for (const question of group.questions) {
+          if (question.number >= range.from && question.number <= range.to) {
+            inRangeEntries += 1;
+            assignedSet.add(question.number);
+          } else {
+            outOfRangeEntries += 1;
+          }
+        }
+      }
+
+      const assigned = assignedSet.size;
+      const hasOverlap = inRangeEntries !== assigned;
+      return {
+        structureId: structure.id,
+        structureIndex: structure.index,
+        structureKind: structure.kind,
+        assigned,
+        required,
+        entryCount: inRangeEntries,
+        hasOverlap,
+        outOfRangeEntries,
+        complete: assigned === required && !hasOverlap && outOfRangeEntries === 0
+      };
+    });
+  }, [test.questionGroupsByStructure, test.structures]);
+
+  const questionProgressByStructureId = useMemo(() => {
+    return structureQuestionProgress.reduce<Record<string, {assigned: number; required: number; complete: boolean}>>((accumulator, item) => {
+      accumulator[item.structureId] = {
+        assigned: item.assigned,
+        required: item.required,
+        complete: item.complete
+      };
+      return accumulator;
+    }, {});
+  }, [structureQuestionProgress]);
+
+  const totalAssignedQuestions = useMemo(
+    () => structureQuestionProgress.reduce((sum, item) => sum + item.assigned, 0),
+    [structureQuestionProgress]
+  );
+
+  const totalRequiredQuestions = useMemo(
+    () => structureQuestionProgress.reduce((sum, item) => sum + item.required, 0),
+    [structureQuestionProgress]
+  );
+
+  const canPublishByQuestionCount = useMemo(() => {
+    return totalAssignedQuestions === totalRequiredQuestions && structureQuestionProgress.every((item) => item.complete);
+  }, [structureQuestionProgress, totalAssignedQuestions, totalRequiredQuestions]);
+
   const selectedQuestionLabel = selectedQuestionData ? t("questions.questionNumber", {number: selectedQuestionData.question.number}) : null;
 
   const updateGroupsForActiveStructure = (updater: (groups: QuestionGroup[]) => QuestionGroup[]) => {
@@ -170,14 +315,43 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   };
 
   const handleCreateGroup = (type: QuestionType, from: number, to: number) => {
+    if (!activeStructure) {
+      return;
+    }
+
+    const range = getStructureRange(activeStructure);
+    if (!isRangeWithin(range, from, to)) {
+      return;
+    }
+
     const group = createQuestionGroup(type, from, to);
-    updateGroupsForActiveStructure((groups) => [...groups, group]);
+    updateGroupsForActiveStructure((groups) => {
+      const occupied = getOccupiedNumbers(groups);
+      if (!isRangeFree(occupied, from, to)) {
+        return groups;
+      }
+      return [...groups, normalizeGroup(group)];
+    });
     setCollapsedGroups((current) => ({...current, [group.id]: false}));
   };
 
   const handleEditGroup = (groupId: string, type: QuestionType, from: number, to: number) => {
-    updateGroupsForActiveStructure((groups) =>
-      groups.map((group) => {
+    if (!activeStructure) {
+      return;
+    }
+
+    const range = getStructureRange(activeStructure);
+    if (!isRangeWithin(range, from, to)) {
+      return;
+    }
+
+    updateGroupsForActiveStructure((groups) => {
+      const occupiedByOthers = getOccupiedNumbers(groups, groupId);
+      if (!isRangeFree(occupiedByOthers, from, to)) {
+        return groups;
+      }
+
+      return groups.map((group) => {
         if (group.id !== groupId) {
           return group;
         }
@@ -188,35 +362,54 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           questions.push(existing ? {...existing, number} : createDefaultQuestion(type, number));
         }
 
-        return {
+        return normalizeGroup({
           ...group,
           type,
           from,
           to,
           title: buildGroupTitle(from, to),
           questions
-        };
-      })
-    );
+        });
+      });
+    });
   };
 
   const handleDuplicateGroup = (groupId: string) => {
+    if (!activeStructure) {
+      return;
+    }
+    const range = getStructureRange(activeStructure);
+
     updateGroupsForActiveStructure((groups) => {
       const index = groups.findIndex((group) => group.id === groupId);
       if (index < 0) {
         return groups;
       }
 
-      const source = groups[index];
+      const source = normalizeGroup(groups[index]);
+      const targetRange = findContiguousFreeRange(range, getOccupiedNumbers(groups), source.questions.length);
+      if (!targetRange) {
+        return groups;
+      }
+
       const duplicate: QuestionGroup = {
         ...source,
         id: makeCopyId(source.id),
-        title: `${source.title} ${t("groups.copySuffix")}`,
-        questions: source.questions.map((question) => ({...question, id: makeCopyId(question.id)}))
+        title: `${buildGroupTitle(targetRange.from, targetRange.to)} ${t("groups.copySuffix")}`,
+        from: targetRange.from,
+        to: targetRange.to,
+        questions: source.questions
+          .sort((left, right) => left.number - right.number)
+          .map((question, questionIndex) => ({
+            ...question,
+            id: makeCopyId(question.id),
+            number: targetRange.from + questionIndex
+          })),
+        variantSetId: undefined
       };
 
       const next = [...groups];
-      next.splice(index + 1, 0, duplicate);
+      next.splice(index + 1, 0, normalizeGroup(duplicate));
       return next;
     });
   };
@@ -235,16 +428,20 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
     updateGroupsForActiveStructure((groups) =>
       groups.map((group) => {
-        if (group.id !== groupId || group.to >= range.to) {
+        if (group.id !== groupId) {
           return group;
         }
-        const nextNumber = group.to + 1;
-        return {
-          ...group,
-          to: nextNumber,
-          title: buildGroupTitle(group.from, nextNumber),
-          questions: [...group.questions, createDefaultQuestion(group.type, nextNumber)]
-        };
+
+        const normalized = normalizeGroup(group);
+        const occupiedByOthers = getOccupiedNumbers(groups, groupId);
+        const insertNumber = getBoundaryInsertNumber(normalized, range, occupiedByOthers);
+        if (insertNumber === null) {
+          return group;
+        }
+
+        const question = createDefaultQuestion(group.type, insertNumber);
+        const questions = insertNumber < normalized.from ? [question, ...normalized.questions] : [...normalized.questions, question];
+        return normalizeGroup({...normalized, questions});
       })
     );
   };
@@ -282,28 +479,30 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
     updateGroupsForActiveStructure((groups) =>
       groups.map((group) => {
-        if (group.id !== groupId || group.to >= range.to) {
+        if (group.id !== groupId) {
           return group;
         }
 
-        const source = group.questions.find((question) => question.id === questionId);
+        const normalized = normalizeGroup(group);
+        const occupiedByOthers = getOccupiedNumbers(groups, groupId);
+        const nextNumber = getBoundaryInsertNumber(normalized, range, occupiedByOthers);
+        if (nextNumber === null) {
+          return group;
+        }
+
+        const source = normalized.questions.find((question) => question.id === questionId);
         if (!source) {
           return group;
         }
 
-        const nextNumber = group.to + 1;
         const duplicate = {
           ...source,
           id: makeCopyId(source.id),
           number: nextNumber
         } as BuilderQuestion;
 
-        return {
-          ...group,
-          to: nextNumber,
-          title: buildGroupTitle(group.from, nextNumber),
-          questions: [...group.questions, duplicate]
-        };
+        const questions = nextNumber < normalized.from ? [duplicate, ...normalized.questions] : [...normalized.questions, duplicate];
+        return normalizeGroup({...normalized, questions});
       })
     );
   };
@@ -316,17 +515,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         }
 
         const questions = group.questions.filter((question) => question.id !== questionId);
-        const numbers = questions.map((question) => question.number);
-        const from = Math.min(...numbers);
-        const to = Math.max(...numbers);
-
-        return {
-          ...group,
-          from,
-          to,
-          title: buildGroupTitle(from, to),
-          questions
-        };
+        return normalizeGroup({...group, questions});
       })
     );
 
@@ -465,6 +654,26 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   };
 
   const handlePublish = () => {
+    if (!canPublishByQuestionCount) {
+      const pending = structureQuestionProgress
+        .filter((item) => !item.complete)
+        .map((item) => {
+          const flags: string[] = [];
+          if (item.hasOverlap) flags.push(t("validation.overlapIssue"));
+          if (item.outOfRangeEntries > 0) flags.push(t("validation.outOfRangeIssue"));
+          const issueLabel = flags.length ? ` (${flags.join(", ")})` : "";
+          return `${t(`structure.labels.${item.structureKind}`, {index: item.structureIndex})}: ${item.assigned}/${item.required}${issueLabel}`;
+        });
+      const details = pending.length ? `\n\n${pending.join("\n")}` : "";
+      window.alert(
+        t("validation.publishQuestionCount", {
+          current: totalAssignedQuestions,
+          required: totalRequiredQuestions
+        }) + details
+      );
+      return;
+    }
+
     setTest((current) => ({...current, status: "published"}));
     console.info("[builder] published", test.id);
   };
@@ -489,6 +698,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             module={test.module}
             mode={mode}
             status={test.status}
+            questionProgressLabel={`${totalAssignedQuestions}/${totalRequiredQuestions}`}
+            publishDisabled={!canPublishByQuestionCount}
             mobileNav={<AdminSidebarMobileNav />}
             onModeChange={setMode}
             onSaveDraft={handleSaveDraft}
@@ -501,6 +712,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
                 module={test.module}
                 structures={test.structures}
                 activeStructureId={activeStructure.id}
+                questionProgressByStructureId={questionProgressByStructureId}
                 onSelect={(nextId) => {
                   setActiveStructureId(nextId);
                   setSelectedQuestion(null);

@@ -13,13 +13,26 @@ type BuilderTopbarProps = {
   module: TestModule;
   mode: BuilderMode;
   status: BuilderStatus;
+  questionProgressLabel?: string;
+  publishDisabled?: boolean;
   mobileNav?: ReactNode;
   onModeChange: (mode: BuilderMode) => void;
   onSaveDraft: () => void;
   onPublish: () => void;
 };
 
-export function BuilderTopbar({bookName, module, mode, status, mobileNav, onModeChange, onSaveDraft, onPublish}: BuilderTopbarProps) {
+export function BuilderTopbar({
+  bookName,
+  module,
+  mode,
+  status,
+  questionProgressLabel,
+  publishDisabled = false,
+  mobileNav,
+  onModeChange,
+  onSaveDraft,
+  onPublish
+}: BuilderTopbarProps) {
   const t = useTranslations("adminTestBuilder");
 
   return (
@@ -40,6 +53,11 @@ export function BuilderTopbar({bookName, module, mode, status, mobileNav, onMode
             <Badge className="rounded-md border border-border/70 bg-muted/35 px-2 py-0.5 text-[10px] tracking-wide uppercase">
               {t(`status.${status}`)}
             </Badge>
+            {questionProgressLabel ? (
+              <Badge className="rounded-md border border-primary/35 bg-primary/12 px-2 py-0.5 text-[10px] tracking-wide text-primary uppercase">
+                {questionProgressLabel}
+              </Badge>
+            ) : null}
           </div>
         </div>
 
@@ -68,7 +86,7 @@ export function BuilderTopbar({bookName, module, mode, status, mobileNav, onMode
           <Button type="button" variant="outline" className="h-9 rounded-xl border-border/70 bg-card/50" onClick={onSaveDraft}>
             {t("topbar.actions.saveDraft")}
           </Button>
-          <Button type="button" className="h-9 rounded-xl" onClick={onPublish}>
+          <Button type="button" className="h-9 rounded-xl" onClick={onPublish} disabled={publishDisabled}>
             {t("topbar.actions.publish")}
           </Button>
         </div>

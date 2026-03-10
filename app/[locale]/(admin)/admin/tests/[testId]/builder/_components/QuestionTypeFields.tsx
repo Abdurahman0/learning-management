@@ -30,11 +30,21 @@ function isTextInputQuestion(question: BuilderQuestion): question is TextInputQu
     "sentence_completion",
     "summary_completion",
     "table_completion",
+    "flow_chart",
     "diagram_labeling",
     "form_completion",
     "note_completion",
     "short_answer"
   ].includes(question.type);
+}
+
+function isMatchingStyleQuestion(question: BuilderQuestion): question is Extract<BuilderQuestion, {type: "matching_information" | "matching_features" | "selecting_from_a_list" | "map"}> {
+  return (
+    question.type === "matching_information" ||
+    question.type === "matching_features" ||
+    question.type === "selecting_from_a_list" ||
+    question.type === "map"
+  );
 }
 
 export function QuestionTypeFields({question, onChange}: QuestionTypeFieldsProps) {
@@ -62,6 +72,28 @@ export function QuestionTypeFields({question, onChange}: QuestionTypeFieldsProps
           <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctAnswer")}</Label>
           <div className="grid grid-cols-3 gap-2">
             {(["TRUE", "FALSE", "NOT GIVEN"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                className={`h-9 rounded-lg border text-xs font-semibold tracking-wide ${
+                  question.correctAnswer === option
+                    ? "border-primary/60 bg-primary/20 text-primary"
+                    : "border-border/70 bg-background/45 text-muted-foreground"
+                }`}
+                onClick={() => onChange({...question, correctAnswer: option})}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {question.type === "yes_no_not_given" ? (
+        <div className="space-y-1.5">
+          <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctAnswer")}</Label>
+          <div className="grid grid-cols-3 gap-2">
+            {(["YES", "NO", "NOT GIVEN"] as const).map((option) => (
               <button
                 key={option}
                 type="button"
@@ -141,7 +173,7 @@ export function QuestionTypeFields({question, onChange}: QuestionTypeFieldsProps
         </div>
       ) : null}
 
-      {question.type === "matching_information" ? (
+      {isMatchingStyleQuestion(question) ? (
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.items")}</Label>

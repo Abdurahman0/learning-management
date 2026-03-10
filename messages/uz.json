@@ -828,6 +828,7 @@
     "groups": {
       "title": "Savol guruhlari",
       "totalCount": "{count} ta jami",
+      "totalCountWithLimit": "{assigned}/{required} ta jami",
       "questionCount": "{count} ta savol",
       "addGroup": "Savol guruhi qo'shish",
       "createTitle": "Savol guruhi yaratish",
@@ -839,6 +840,7 @@
         "to": "Gacha"
       },
       "validationRange": "Faol passage/section ichida to'g'ri diapazon tanlang.",
+      "validationOverlap": "Bu diapazon mavjud savol raqamlari bilan kesishmoqda. Faqat bo'sh raqamlarni tanlang.",
       "createAction": "Guruh yaratish",
       "saveAction": "Saqlash",
       "copySuffix": "(Nusxa)",
@@ -879,17 +881,27 @@
         "evidencePlaceholder": "Passage/transkriptdan ajratilgan matnni kiriting"
       }
     },
+    "validation": {
+      "publishQuestionCount": "Hozircha nashr qilib bo'lmaydi. Jami savollar {required} bo'lishi va har bir passage/section aniq to'ldirilgan bo'lishi kerak. Hozirgi jami: {current}.",
+      "overlapIssue": "kesishuv bor",
+      "outOfRangeIssue": "diapazondan tashqarida"
+    },
     "questionTypes": {
       "tfng": "True / False / Not Given",
+      "yes_no_not_given": "Yes / No / Not Given",
       "multiple_choice": "Multiple Choice",
+      "selecting_from_a_list": "Selecting from a List",
       "matching_headings": "Matching Headings",
+      "matching_information": "Matching Information",
+      "matching_features": "Matching Features",
       "sentence_completion": "Sentence Completion",
       "summary_completion": "Summary Completion",
       "table_completion": "Table Completion",
+      "flow_chart": "Flow Chart",
+      "map": "Map",
       "diagram_labeling": "Diagram Labeling",
       "form_completion": "Form Completion",
       "note_completion": "Note Completion",
-      "matching_information": "Matching Information",
       "short_answer": "Short Answer"
     },
     "common": {
@@ -1582,12 +1594,17 @@
     },
     "questionTypes": {
       "tfng": "TFNG",
+      "yes_no_not_given": "Yes / No / Not Given",
       "multiple_choice": "Multiple Choice",
+      "selecting_from_a_list": "Selecting from a List",
       "matching_headings": "Matching Headings",
       "matching_information": "Matching Information",
+      "matching_features": "Matching Features",
       "sentence_completion": "Sentence Completion",
       "summary_completion": "Summary Completion",
       "table_completion": "Table Completion",
+      "flow_chart": "Flow Chart",
+      "map": "Map",
       "diagram_labeling": "Diagram Labeling",
       "form_completion": "Form Completion",
       "note_completion": "Note Completion",

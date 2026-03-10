@@ -887,6 +887,10 @@ function createGeneratedBuilderQuestion(type: QuestionType, number: number): Bui
     return {...base, type, correctAnswer: ""};
   }
 
+  if (type === "yes_no_not_given") {
+    return {...base, type, correctAnswer: ""};
+  }
+
   if (type === "multiple_choice") {
     return {
       ...base,
@@ -905,7 +909,12 @@ function createGeneratedBuilderQuestion(type: QuestionType, number: number): Bui
     };
   }
 
-  if (type === "matching_information") {
+  if (
+    type === "matching_information" ||
+    type === "matching_features" ||
+    type === "selecting_from_a_list" ||
+    type === "map"
+  ) {
     return {
       ...base,
       type,

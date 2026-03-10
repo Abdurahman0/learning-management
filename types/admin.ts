@@ -13,11 +13,16 @@ export type PassageSource = "cambridge" | "practice" | "custom";
 
 export type QuestionType =
   | "tfng"
+  | "yes_no_not_given"
   | "multiple_choice"
+  | "selecting_from_a_list"
   | "matching_headings"
+  | "matching_features"
   | "sentence_completion"
   | "summary_completion"
   | "table_completion"
+  | "flow_chart"
+  | "map"
   | "diagram_labeling"
   | "form_completion"
   | "note_completion"
@@ -74,11 +79,17 @@ export type BuilderQuestionBase = {
 };
 
 export type TFNGAnswer = "TRUE" | "FALSE" | "NOT GIVEN" | "";
+export type YesNoNotGivenAnswer = "YES" | "NO" | "NOT GIVEN" | "";
 export type MultipleChoiceAnswer = "A" | "B" | "C" | "D" | "";
 
 export type TFNGBuilderQuestion = BuilderQuestionBase & {
   type: "tfng";
   correctAnswer: TFNGAnswer;
+};
+
+export type YesNoNotGivenBuilderQuestion = BuilderQuestionBase & {
+  type: "yes_no_not_given";
+  correctAnswer: YesNoNotGivenAnswer;
 };
 
 export type MultipleChoiceBuilderQuestion = BuilderQuestionBase & {
@@ -94,7 +105,7 @@ export type MatchingHeadingsBuilderQuestion = BuilderQuestionBase & {
 };
 
 export type MatchingInformationBuilderQuestion = BuilderQuestionBase & {
-  type: "matching_information";
+  type: "matching_information" | "matching_features" | "selecting_from_a_list" | "map";
   items: string[];
   choices: string[];
   correctAnswer: Record<string, string>;
@@ -105,6 +116,7 @@ export type TextAnswerBuilderQuestion = BuilderQuestionBase & {
     | "sentence_completion"
     | "summary_completion"
     | "table_completion"
+    | "flow_chart"
     | "diagram_labeling"
     | "form_completion"
     | "note_completion"
@@ -115,6 +127,7 @@ export type TextAnswerBuilderQuestion = BuilderQuestionBase & {
 
 export type BuilderQuestion =
   | TFNGBuilderQuestion
+  | YesNoNotGivenBuilderQuestion
   | MultipleChoiceBuilderQuestion
   | MatchingHeadingsBuilderQuestion
   | MatchingInformationBuilderQuestion

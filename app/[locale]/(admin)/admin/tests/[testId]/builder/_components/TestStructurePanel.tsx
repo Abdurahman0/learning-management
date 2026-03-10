@@ -15,11 +15,19 @@ type TestStructurePanelProps = {
   module: TestModule;
   structures: BuilderStructureItem[];
   activeStructureId: string;
+  questionProgressByStructureId: Record<string, {assigned: number; required: number; complete: boolean}>;
   onSelect: (structureId: string) => void;
   onRename: (structureId: string, title: string) => void;
 };
 
-export function TestStructurePanel({module, structures, activeStructureId, onSelect, onRename}: TestStructurePanelProps) {
+export function TestStructurePanel({
+  module,
+  structures,
+  activeStructureId,
+  questionProgressByStructureId,
+  onSelect,
+  onRename
+}: TestStructurePanelProps) {
   const t = useTranslations("adminTestBuilder");
   const constraint = MODULE_RULES[module];
 
@@ -31,6 +39,7 @@ export function TestStructurePanel({module, structures, activeStructureId, onSel
       <CardContent className="space-y-3 pt-4 pb-5">
         {structures.map((item) => {
           const active = item.id === activeStructureId;
+          const progress = questionProgressByStructureId[item.id];
           return (
             <button
               key={item.id}
@@ -45,9 +54,23 @@ export function TestStructurePanel({module, structures, activeStructureId, onSel
                 <p className="text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                   {t(`structure.labels.${item.kind}`, {index: item.index})}
                 </p>
-                <Badge className="rounded-md border border-border/70 bg-muted/35 px-1.5 py-0 text-[10px] text-muted-foreground">
-                  {item.questionRangeLabel}
-                </Badge>
+                <div className="flex items-center gap-1.5">
+                  <Badge className="rounded-md border border-border/70 bg-muted/35 px-1.5 py-0 text-[10px] text-muted-foreground">
+                    {item.questionRangeLabel}
+                  </Badge>
+                  {progress ? (
+                    <Badge
+                      className={cn(
+                        "rounded-md px-1.5 py-0 text-[10px]",
+                        progress.complete
+                          ? "border-emerald-500/45 bg-emerald-500/15 text-emerald-200"
+                          : "border-amber-500/45 bg-amber-500/15 text-amber-200"
+                      )}
+                    >
+                      {progress.assigned}/{progress.required}
+                    </Badge>
+                  ) : null}
+                </div>
               </div>
 
               <Input

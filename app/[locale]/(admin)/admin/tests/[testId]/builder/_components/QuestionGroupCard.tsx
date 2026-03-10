@@ -21,7 +21,9 @@ type QuestionGroupCardProps = {
   mode: BuilderMode;
   collapsed: boolean;
   selectedQuestionId: string | null;
-  maxQuestionNumber: number;
+  canDuplicateGroup: boolean;
+  canAddQuestion: boolean;
+  canDuplicateQuestion: boolean;
   onToggleCollapse: () => void;
   onEditGroup: () => void;
   onDuplicateGroup: () => void;
@@ -39,7 +41,9 @@ export function QuestionGroupCard({
   mode,
   collapsed,
   selectedQuestionId,
-  maxQuestionNumber,
+  canDuplicateGroup,
+  canAddQuestion,
+  canDuplicateQuestion,
   onToggleCollapse,
   onEditGroup,
   onDuplicateGroup,
@@ -85,7 +89,7 @@ export function QuestionGroupCard({
                   <Pencil className="size-4" />
                   {t("groups.actions.editGroup")}
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={onDuplicateGroup}>
+                <DropdownMenuItem onSelect={onDuplicateGroup} disabled={!canDuplicateGroup}>
                   <Copy className="size-4" />
                   {t("groups.actions.duplicateGroup")}
                 </DropdownMenuItem>
@@ -163,7 +167,7 @@ export function QuestionGroupCard({
                           event.stopPropagation();
                           onDuplicateQuestion(question.id);
                         }}
-                        disabled={group.to >= maxQuestionNumber}
+                        disabled={!canDuplicateQuestion}
                         aria-label={t("questions.actions.duplicate")}
                       >
                         <Copy className="size-3.5" />
@@ -219,7 +223,7 @@ export function QuestionGroupCard({
                 variant="outline"
                 className="h-9 w-full rounded-lg border-dashed border-border/70 bg-background/40"
                 onClick={onAddQuestion}
-                disabled={group.to >= maxQuestionNumber}
+                disabled={!canAddQuestion}
               >
                 <Plus className="size-4" />
                 {t("questions.actions.addQuestion")}
