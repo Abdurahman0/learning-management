@@ -127,6 +127,11 @@
     color: inherit;
   }
 
+  .note-mark {
+    background: rgba(59, 130, 246, 0.24);
+    border-radius: 2px;
+  }
+
   .hl-yellow {
     background: rgba(250, 204, 21, 0.35);
   }
@@ -157,6 +162,10 @@
 
   .dark .hl-pink {
     background: rgba(236, 72, 153, 0.3);
+  }
+
+  .dark .note-mark {
+    background: rgba(96, 165, 250, 0.34);
   }
 }
 

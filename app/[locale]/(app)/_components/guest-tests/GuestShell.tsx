@@ -36,6 +36,10 @@ export function GuestShell({children}: GuestShellProps) {
   const dashboardHref = role === "admin" ? `/${locale}/admin` : `/${locale}/dashboard`;
   const topLevelRoutes = isGuest ? "(reading|listening|settings)" : "(dashboard|reading|listening|settings)";
   const isMobileHeaderVisible = new RegExp(`^${baseRoute}/${topLevelRoutes}/?$`).test(pathname);
+  const pathWithoutLocale = pathname.replace(/^\/(uz|en)(?=\/|$)/, "") || "/";
+  const hideSidebar = /^\/(reading|listening)\/[^/]+(?:\/result)?\/?$/.test(pathWithoutLocale)
+    || /^\/(reading|listening)\/test\/[^/]+\/?$/.test(pathWithoutLocale)
+    || /^\/result\/[^/]+\/?$/.test(pathWithoutLocale);
 
   const mobileNavItems = [
     ...(!isGuest ? [{key: "dashboard", label: t("sidebar.dashboard"), href: dashboardHref, icon: Home, disabled: false}] : []),
@@ -50,15 +54,14 @@ export function GuestShell({children}: GuestShellProps) {
       return;
     }
 
-    const withoutLocale = pathname.replace(/^\/(uz|en)(?=\/|$)/, "") || "/";
-    const localizedPath = `/${nextLocale}${withoutLocale === "/" ? "" : withoutLocale}`;
+    const localizedPath = `/${nextLocale}${pathWithoutLocale === "/" ? "" : pathWithoutLocale}`;
     router.replace(localizedPath);
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex">
-        <GuestSidebar usedTests={usedTests} totalTests={totalTests} role={role} />
+        {hideSidebar ? null : <GuestSidebar usedTests={usedTests} totalTests={totalTests} role={role} />}
         <main className="min-h-screen min-w-0 flex-1 px-4 py-4 sm:px-5 lg:px-10 lg:py-8">
           {isMobileHeaderVisible ? (
             <header className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border/80 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:-mx-5 sm:px-5 lg:hidden">

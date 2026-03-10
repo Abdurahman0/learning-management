@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { type CSSProperties, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { BookOpen, Bookmark, BookmarkCheck, CheckCircle2, Clock3, Grid2x2, HelpCircle, MoveLeft, MoveRight, Play, RotateCcw, Square, User, XCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -19,7 +19,14 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
-import { createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress } from "@/lib/test-attempt-storage";
+import {
+  createAttemptId,
+  loadAttemptProgress,
+  loadLatestAttemptId,
+  saveAttemptProgress,
+  saveAttemptResult,
+  type AttemptMode,
+} from "@/lib/test-attempt-storage";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { HighlightableText } from "@/components/test/HighlightableText";
 import {
@@ -105,6 +112,9 @@ export default function ReadingTestPage() {
 
   const testId = typeof params?.id === "string" ? params.id : "";
   const restartRequested = searchParams.get("restart") === "1";
+  const modeParam = searchParams.get("mode");
+  const requestedMode: AttemptMode | null =
+    modeParam === "real" || modeParam === "practice" ? modeParam : null;
   const test = getReadingTestById(testId);
 
   if (!test) {
@@ -121,16 +131,26 @@ export default function ReadingTestPage() {
     );
   }
 
-  return <ReadingTestClient key={test.id} test={test} restartRequested={restartRequested} />;
+  return (
+    <ReadingTestClient
+      key={test.id}
+      test={test}
+      restartRequested={restartRequested}
+      requestedMode={requestedMode}
+    />
+  );
 }
 
 type ReadingTestClientProps = {
   test: NonNullable<ReturnType<typeof getReadingTestById>>;
   restartRequested?: boolean;
+  requestedMode?: AttemptMode | null;
 };
 
-function ReadingTestClient({ test, restartRequested = false }: ReadingTestClientProps) {
+function ReadingTestClient({ test, restartRequested = false, requestedMode = null }: ReadingTestClientProps) {
   const t = useTranslations("readingTest");
+  const router = useRouter();
+  const locale = useLocale();
   const [attemptId, setAttemptId] = useState<string>("");
   const [startedAt, setStartedAt] = useState<number>(0);
   const [finishOpen, setFinishOpen] = useState(false);
@@ -145,6 +165,7 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
   const [mobilePanel, setMobilePanel] = useState<"passage" | "questions">("passage");
   const [remainingSeconds, setRemainingSeconds] = useState(test.durationMinutes * 60);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [attemptMode, setAttemptMode] = useState<AttemptMode | null>(null);
   const [splitPct, setSplitPct] = useState(DEFAULT_SPLIT);
   const [mounted, setMounted] = useState(false);
   const [highlights, setHighlights] = useState<ReadingHighlight[]>([]);
@@ -155,20 +176,23 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
   const questionRefs = useRef<Map<number, HTMLElement>>(new Map());
   const pendingParagraphRef = useRef<string | null>(null);
   const shouldAutoScrollQuestionRef = useRef(false);
+  const realModeAutoFinishedRef = useRef(false);
+  const initDoneRef = useRef(false);
   const splitStorageKey = "readingSplitPct";
   const leaveWarningMessage = t.has("leaveWarning")
     ? t("leaveWarning")
-    : "You are taking a test. Leaving this page will interrupt your attempt. Continue?";
+    : "Are you sure you want to quit this test? Your results will not be saved.";
 
   useTestLeaveWarning({
     enabled: Boolean(attemptId) && !reviewMode,
     message: leaveWarningMessage,
   });
 
-  const resetAttemptState = () => {
+  const resetAttemptState = (nextMode: AttemptMode | null = null) => {
     const freshAttemptId = createAttemptId();
     setAttemptId(freshAttemptId);
     setStartedAt(Date.now());
+    setAttemptMode(nextMode);
     setFinishOpen(false);
     setReviewMode(false);
     setExpandedExplanations(new Set());
@@ -179,18 +203,25 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
     setPaletteOpen(false);
     setMobilePanel("passage");
     setRemainingSeconds(test.durationMinutes * 60);
-    setTimerRunning(false);
+    setTimerRunning(nextMode === "real");
     setHighlights([]);
+    realModeAutoFinishedRef.current = false;
     shouldAutoScrollQuestionRef.current = false;
     pendingParagraphRef.current = null;
   };
 
   useEffect(() => {
-    if (restartRequested) {
-      resetAttemptState();
+    if (initDoneRef.current) {
+      return;
+    }
+    initDoneRef.current = true;
+
+    if (restartRequested || requestedMode) {
+      resetAttemptState(requestedMode ?? null);
       if (typeof window !== "undefined") {
         const url = new URL(window.location.href);
         url.searchParams.delete("restart");
+        url.searchParams.delete("mode");
         window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
       }
       return;
@@ -200,18 +231,25 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
     const saved = latestId ? loadAttemptProgress("reading", test.id, latestId) : null;
 
     if (saved) {
+      const restoredMode = saved.mode ?? "practice";
       setAttemptId(saved.attemptId);
       setAnswers(saved.answers as Record<string, AnswerValue>);
       setMarked(new Set(saved.markedQuestionIds));
       setStartedAt(saved.startedAt);
       setRemainingSeconds(saved.timeRemainingSec);
+      setAttemptMode(restoredMode);
+      setTimerRunning(restoredMode === "real" && saved.timeRemainingSec > 0);
+      realModeAutoFinishedRef.current = false;
       return;
     }
 
     const newAttemptId = createAttemptId();
     setAttemptId(newAttemptId);
     setStartedAt(Date.now());
-  }, [restartRequested, test.id]);
+    setAttemptMode(null);
+    setTimerRunning(false);
+    realModeAutoFinishedRef.current = false;
+  }, [requestedMode, restartRequested, test.id]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
@@ -367,24 +405,52 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
   }, [activePassageId, reviewMode]);
 
   useEffect(() => {
-    if (!attemptId) return;
+    if (!attemptId || !attemptMode) return;
     saveAttemptProgress({
       attemptId,
       module: "reading",
       testId: test.id,
+      mode: attemptMode,
       answers,
       markedQuestionIds: [...marked],
       startedAt,
       timeRemainingSec: remainingSeconds,
       timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
     });
-  }, [answers, attemptId, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
+  }, [answers, attemptId, attemptMode, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
 
   const currentQuestion = questionsByNumber.get(activeQuestionNumber);
   const answeredCount = answeredNumbers.size;
   const unansweredCount = test.totalQuestions - answeredCount;
   const timeSpent = test.durationMinutes * 60 - remainingSeconds;
+  const isRealMode = attemptMode === "real";
+  const showModePicker = attemptMode === null && !reviewMode;
   const gridPct = mounted ? splitPct : DEFAULT_SPLIT;
+  const passagePaletteSections = useMemo(() => {
+    return test.passages.map((passage, index) => {
+      const numbers = test.questions
+        .filter((question) => question.passageId === passage.id)
+        .map((question) => question.number)
+        .sort((a, b) => a - b);
+
+      const answered = numbers.reduce((count, number) => {
+        const question = questionsByNumber.get(number);
+        if (!question) return count;
+        return count + (isAnswered(answers[question.id]) ? 1 : 0);
+      }, 0);
+
+      return {
+        passageId: passage.id,
+        index: index + 1,
+        numbers,
+        answered,
+      };
+    });
+  }, [answers, questionsByNumber, test.passages, test.questions]);
+  const activePassagePalette = useMemo(
+    () => passagePaletteSections.find((item) => item.passageId === activePassageId),
+    [activePassageId, passagePaletteSections]
+  );
 
   const activePassage = useMemo(
     () => test.passages.find((passage) => passage.id === activePassageId),
@@ -558,11 +624,61 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  const finishTest = () => {
-    setReviewMode(true);
+  const finishTest = useCallback(() => {
+    if (!attemptId) return;
+
+    const finishedAt = Date.now();
+    saveAttemptResult({
+      attemptId,
+      module: "reading",
+      testId: test.id,
+      mode: attemptMode ?? "practice",
+      answers,
+      markedQuestionIds: [...marked],
+      startedAt,
+      finishedAt,
+      timeRemainingSec: remainingSeconds,
+      timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
+    });
+
+    setReviewMode(false);
     setFinishOpen(false);
     setTimerRunning(false);
+    router.push(`/${locale}/reading/${test.id}/result?attempt=${attemptId}`);
+  }, [
+    answers,
+    attemptId,
+    attemptMode,
+    locale,
+    marked,
+    remainingSeconds,
+    router,
+    startedAt,
+    test.durationMinutes,
+    test.id,
+    timerRunning,
+  ]);
+
+  const chooseAttemptMode = (mode: AttemptMode) => {
+    realModeAutoFinishedRef.current = false;
+    setAttemptMode(mode);
+
+    if (mode === "real") {
+      setTimerRunning(true);
+      return;
+    }
+
+    setTimerRunning(false);
   };
+
+  useEffect(() => {
+    if (!isRealMode || reviewMode || remainingSeconds > 0 || realModeAutoFinishedRef.current) {
+      return;
+    }
+
+    realModeAutoFinishedRef.current = true;
+    finishTest();
+  }, [finishTest, isRealMode, remainingSeconds, reviewMode]);
 
   const handleRestartTest = () => {
     const confirmMessage = t.has("restartConfirm")
@@ -622,9 +738,19 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
               </Badge>
               <Button
                 type="button"
-                aria-label={timerRunning ? t("stopTimer") : t("startTimer")}
-                variant={timerRunning ? "outline" : "default"}
+                aria-label={
+                  isRealMode
+                    ? "Timer is locked in real mode"
+                    : timerRunning
+                      ? t("stopTimer")
+                      : t("startTimer")
+                }
+                variant={isRealMode || timerRunning ? "outline" : "default"}
+                disabled={isRealMode}
                 onClick={() => {
+                  if (isRealMode) {
+                    return;
+                  }
                   if (!timerRunning && remainingSeconds <= 0) {
                     setRemainingSeconds(test.durationMinutes * 60);
                   }
@@ -632,8 +758,8 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
                 }}
                 className="h-9 rounded-xl px-4 sm:h-10"
               >
-                {timerRunning ? <Square className="size-4" /> : <Play className="size-4" />}
-                {timerRunning ? t("stop") : t("start")}
+                {isRealMode ? <Clock3 className="size-4" /> : timerRunning ? <Square className="size-4" /> : <Play className="size-4" />}
+                {isRealMode ? "Real mode" : timerRunning ? t("stop") : t("start")}
               </Button>
             </div>
           ) : null}
@@ -665,6 +791,7 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
               <Button
                 aria-label={t("finishTest")}
                 onClick={() => setFinishOpen(true)}
+                disabled={!attemptMode}
                 className="h-9 rounded-xl bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90 disabled:opacity-70 sm:h-10 sm:px-6"
               >
                 {t("finishTest")}
@@ -731,6 +858,8 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
                   <HighlightableText
                     text={activePassage?.title ?? ""}
                     userHighlights={getPassageTitleLocalHighlights(activePassageId, (activePassage?.title ?? "").length)}
+                    notesStorageKey={`reading:${test.id}:notes`}
+                    noteScopeKey={`passage-title:${activePassageId}`}
                     interactive={!reviewMode}
                     markLabel={t.has("markText") ? t("markText") : "Mark"}
                     unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
@@ -762,6 +891,8 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
                       <HighlightableText
                         text={paragraph}
                         userHighlights={getPassageLocalHighlights(paragraphStart, paragraph.length)}
+                        notesStorageKey={`reading:${test.id}:notes`}
+                        noteScopeKey={`passage:${activePassageId}:paragraph:${index}`}
                         answerHighlights={reviewMode ? answerLocalHighlights : []}
                         interactive={!reviewMode}
                         showAnswerBadges={reviewMode}
@@ -783,6 +914,7 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
                 })}
               </div>
             </div>
+
           </Card>
         </div>
 
@@ -857,6 +989,8 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
                                         ? getQuestionLocalHighlights(headingsHighlightKey, optionBase, heading.length)
                                         : []
                                     }
+                                    notesStorageKey={`reading:${test.id}:notes`}
+                                    noteScopeKey={`${headingsHighlightKey ?? "matching-headings"}:option:${headingIndex}`}
                                     markLabel={t.has("markText") ? t("markText") : "Mark"}
                                     unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
                                     onToggle={
@@ -936,6 +1070,8 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
                                   <HighlightableText
                                     text={question.prompt}
                                     userHighlights={getQuestionLocalHighlights(question.id, promptStart, question.prompt.length)}
+                                    notesStorageKey={`reading:${test.id}:notes`}
+                                    noteScopeKey={`question:${question.id}:prompt`}
                                     markLabel={t.has("markText") ? t("markText") : "Mark"}
                                     unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
                                     onToggle={({ start, end, color, action }) =>
@@ -990,6 +1126,8 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
                                           tfngOptionStarts[optionIndex] ?? 0,
                                           option.length
                                         )}
+                                        notesStorageKey={`reading:${test.id}:notes`}
+                                        noteScopeKey={`question:${question.id}:tfng-option:${optionIndex}`}
                                         markLabel={t.has("markText") ? t("markText") : "Mark"}
                                         unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
                                         onToggle={({ start, end, color, action }) =>
@@ -1029,6 +1167,8 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
                                             mcqOptionStarts[optionIndex] ?? 0,
                                             option.length
                                           )}
+                                          notesStorageKey={`reading:${test.id}:notes`}
+                                          noteScopeKey={`question:${question.id}:mcq-option:${optionIndex}`}
                                           markLabel={t.has("markText") ? t("markText") : "Mark"}
                                           unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
                                           onToggle={({ start, end, color, action }) =>
@@ -1121,20 +1261,33 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
             </div>
 
             <div className="sticky bottom-0 z-20 border-t border-border/80 bg-card/95 px-3 py-3 backdrop-blur sm:px-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap sm:gap-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  aria-label={t("previous")}
-                  disabled={activeQuestionNumber <= 1}
-                  onClick={() => goToQuestion(Math.max(1, activeQuestionNumber - 1))}
-                  className="px-2 sm:px-3"
-                >
-                  <MoveLeft className="size-4" />
-                  {t("previous")}
-                </Button>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-label={t("previous")}
+                    disabled={activeQuestionNumber <= 1}
+                    onClick={() => goToQuestion(Math.max(1, activeQuestionNumber - 1))}
+                    className="px-2 sm:px-3"
+                  >
+                    <MoveLeft className="size-4" />
+                    {t("previous")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-label={t("next")}
+                    disabled={activeQuestionNumber >= test.totalQuestions}
+                    onClick={() => goToQuestion(Math.min(test.totalQuestions, activeQuestionNumber + 1))}
+                    className="px-2 text-blue-600 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-400 sm:px-3"
+                  >
+                    {t("next")}
+                    <MoveRight className="size-4" />
+                  </Button>
+                </div>
 
-                <div className="order-3 flex w-full items-center justify-center gap-2 sm:order-2 sm:w-auto">
+                <div className="ml-auto flex items-center gap-2">
                   <Toggle
                     aria-label={t("markForReview")}
                     variant="outline"
@@ -1158,23 +1311,69 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
                       : t("markForReview")}
                   </Toggle>
 
-                  <Button type="button" variant="secondary" aria-label={t("questionPalette")} onClick={() => setPaletteOpen(true)} className="bg-muted/70">
+                  <Button type="button" variant="secondary" aria-label={t("questionPalette")} onClick={() => setPaletteOpen(true)} className="bg-muted/70 lg:hidden">
                     <Grid2x2 className="size-4" />
                     {t("questionPalette")}
                   </Button>
                 </div>
+              </div>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  aria-label={t("next")}
-                  disabled={activeQuestionNumber >= test.totalQuestions}
-                  onClick={() => goToQuestion(Math.min(test.totalQuestions, activeQuestionNumber + 1))}
-                  className="px-2 text-blue-600 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-400 sm:px-3"
-                >
-                  {t("next")}
-                  <MoveRight className="size-4" />
-                </Button>
+              <div className="mt-2 hidden border-t border-border/70 pt-2.5 lg:block">
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className="flex shrink-0 items-center gap-2">
+                    {passagePaletteSections.map((section) => {
+                      const isActivePassage = section.passageId === activePassageId;
+                      return (
+                        <button
+                          key={section.passageId}
+                          type="button"
+                          className={cn(
+                            "inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-semibold transition-colors",
+                            isActivePassage
+                              ? "border-blue-400/60 bg-blue-500/10 text-foreground"
+                              : "border-border/70 bg-background/70 text-muted-foreground hover:text-foreground"
+                          )}
+                          onClick={() => handlePassageChange(section.passageId)}
+                        >
+                          <span>{t("passageLabel", { index: section.index })}</span>
+                          <span className="text-[11px] opacity-85">
+                            {section.answered}/{section.numbers.length}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
+                    <div className="inline-flex min-w-full items-center gap-1.5 pr-1">
+                      {(activePassagePalette?.numbers ?? []).map((number) => {
+                        const question = questionsByNumber.get(number);
+                        const answered = question ? isAnswered(answers[question.id]) : false;
+                        const isMarked = question ? marked.has(question.id) : false;
+                        const isCurrent = number === activeQuestionNumber;
+                        return (
+                          <Button
+                            key={`${activePassageId}-${number}`}
+                            type="button"
+                            variant="outline"
+                            aria-label={t("goToQuestion", { number })}
+                            className={cn(
+                              "relative h-7 min-w-7 rounded-md border px-1 text-xs font-semibold shadow-none",
+                              isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                              !isCurrent && answered && "border-blue-300 bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
+                              !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                              isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                            )}
+                            onClick={() => goToQuestion(number)}
+                          >
+                            {number}
+                            {isMarked ? <span className="absolute right-1 top-1 size-1 rounded-full bg-amber-500" aria-hidden="true" /> : null}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </Card>
@@ -1236,6 +1435,27 @@ function ReadingTestClient({ test, restartRequested = false }: ReadingTestClient
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      {showModePicker ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-lg p-5">
+            <h3 className="text-lg font-semibold">Choose test mode</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Real mode starts immediately and cannot be paused. Practice mode lets you pause and continue the timer.
+            </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <Button type="button" onClick={() => chooseAttemptMode("real")}>Real mode</Button>
+              <Button type="button" variant="outline" onClick={() => chooseAttemptMode("practice")}>
+                Practice mode
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">Real: timer auto-starts, cannot be stopped, and test ends when time reaches zero.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Practice: you can start, pause, and resume the timer anytime.
+            </p>
+          </Card>
+        </div>
+      ) : null}
 
       {finishOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">

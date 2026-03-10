@@ -47,7 +47,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
-import { createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress, saveAttemptResult } from "@/lib/test-attempt-storage";
+import { createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress, saveAttemptResult, type AttemptMode } from "@/lib/test-attempt-storage";
 import { Highlightable } from "@/components/test/Highlightable";
 import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
 
@@ -112,10 +112,14 @@ function QuestionChip({
 
 export default function ListeningTestPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const locale = useLocale();
   const t = useTranslations("listeningTest");
 
   const testId = typeof params?.id === "string" ? params.id : "";
+  const modeParam = searchParams.get("mode");
+  const requestedMode: AttemptMode | null =
+    modeParam === "real" || modeParam === "practice" ? modeParam : null;
   const test = getListeningTestById(testId);
 
   if (!test) {
@@ -132,10 +136,10 @@ export default function ListeningTestPage() {
     );
   }
 
-  return <ListeningTestClient key={test.id} testId={test.id} />;
+  return <ListeningTestClient key={test.id} testId={test.id} requestedMode={requestedMode} />;
 }
 
-function ListeningTestClient({ testId }: { testId: string }) {
+function ListeningTestClient({ testId, requestedMode = null }: { testId: string; requestedMode?: AttemptMode | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations("listeningTest");
@@ -163,9 +167,6 @@ function ListeningTestClient({ testId }: { testId: string }) {
     : t.has("legendMarked")
       ? t("legendMarked")
       : "Marked for review";
-  const allSectionsLabel = t.has("allSections")
-    ? t("allSections")
-    : "All sections";
   const getJumpToQuestionLabel = (number: number) => {
     if (t.has("jumpToQuestion")) return t("jumpToQuestion", { number });
     if (t.has("goToQuestion")) return t("goToQuestion", { number });
@@ -186,6 +187,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
     test.durationMinutes * 60,
   );
   const [timerRunning, setTimerRunning] = useState(false);
+  const [attemptMode, setAttemptMode] = useState<AttemptMode | null>(null);
 
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(37);
@@ -197,38 +199,48 @@ function ListeningTestClient({ testId }: { testId: string }) {
   const questionsScrollRef = useRef<HTMLDivElement | null>(null);
   const questionRefs = useRef<Map<number, HTMLElement>>(new Map());
   const pendingJumpRef = useRef<number | null>(null);
+  const realModeAutoFinishedRef = useRef(false);
+  const initDoneRef = useRef(false);
   const leaveWarningMessage = t.has("leaveWarning")
     ? t("leaveWarning")
-    : "You are taking a test. Leaving this page will interrupt your attempt. Continue?";
+    : "Are you sure you want to quit this test? Your results will not be saved.";
 
   useTestLeaveWarning({
     enabled: Boolean(attemptId),
     message: leaveWarningMessage,
   });
 
-  const resetAttemptState = () => {
+  const resetAttemptState = (nextMode: AttemptMode | null = null) => {
     const freshAttemptId = createAttemptId();
     setAttemptId(freshAttemptId);
     setStartedAt(Date.now());
+    setAttemptMode(nextMode);
     setFinishOpen(false);
     setActiveSectionId("s1");
     setActiveQuestionNumber(1);
     setAnswers({});
     setMarked(new Set());
     setRemainingSeconds(test.durationMinutes * 60);
-    setTimerRunning(false);
-    setAudioPlaying(false);
+    setTimerRunning(nextMode === "real");
+    setAudioPlaying(nextMode === "real");
     setAudioProgress(37);
     setPaletteOpen(false);
+    realModeAutoFinishedRef.current = false;
     pendingJumpRef.current = null;
   };
 
   useEffect(() => {
-    if (restartRequested) {
-      resetAttemptState();
+    if (initDoneRef.current) {
+      return;
+    }
+    initDoneRef.current = true;
+
+    if (restartRequested || requestedMode) {
+      resetAttemptState(requestedMode ?? null);
       if (typeof window !== "undefined") {
         const url = new URL(window.location.href);
         url.searchParams.delete("restart");
+        url.searchParams.delete("mode");
         window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
       }
       return;
@@ -238,6 +250,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
     const saved = latestId ? loadAttemptProgress("listening", test.id, latestId) : null;
 
     if (saved) {
+      const restoredMode = saved.mode ?? "practice";
       const restoredAnswers: AnswersMap = {};
       Object.entries(saved.answers).forEach(([key, value]) => {
         const num = Number(key.replace(`${test.id}-q`, ""));
@@ -251,12 +264,19 @@ function ListeningTestClient({ testId }: { testId: string }) {
       setAnswers(restoredAnswers);
       setMarked(new Set(saved.markedQuestionIds.map((id) => Number(id.replace(`${test.id}-q`, ""))).filter((v) => Number.isFinite(v))));
       setRemainingSeconds(saved.timeRemainingSec);
+      setAttemptMode(restoredMode);
+      setTimerRunning(restoredMode === "real" && saved.timeRemainingSec > 0);
+      setAudioPlaying(restoredMode === "real");
+      realModeAutoFinishedRef.current = false;
       return;
     }
 
     setAttemptId(createAttemptId());
     setStartedAt(Date.now());
-  }, [restartRequested, test.id]);
+    setAttemptMode(null);
+    setTimerRunning(false);
+    realModeAutoFinishedRef.current = false;
+  }, [requestedMode, restartRequested, test.id]);
 
   const sectionByQuestion = useMemo(() => {
     const map = new Map<number, ListeningSectionFull["id"]>();
@@ -285,6 +305,26 @@ function ListeningTestClient({ testId }: { testId: string }) {
     return map;
   }, [test.sections]);
 
+  const sectionPaletteSections = useMemo(() => {
+    return test.sections.map((section, index) => {
+      const numbers = sectionQuestionNumbers.get(section.id) ?? [];
+      const answered = numbers.reduce((count, number) => {
+        return count + (isAnswered(answers[number]) ? 1 : 0);
+      }, 0);
+      return {
+        sectionId: section.id,
+        index: index + 1,
+        numbers,
+        answered,
+      };
+    });
+  }, [answers, sectionQuestionNumbers, test.sections]);
+
+  const activeSectionPalette = useMemo(
+    () => sectionPaletteSections.find((section) => section.sectionId === activeSectionId),
+    [activeSectionId, sectionPaletteSections]
+  );
+
   const activeSection = useMemo(
     () =>
       test.sections.find((section) => section.id === activeSectionId) ??
@@ -299,9 +339,11 @@ function ListeningTestClient({ testId }: { testId: string }) {
   const notAnsweredCount = test.totalQuestions - answeredCount;
   const unansweredCount = test.totalQuestions - answeredCount;
   const timeSpent = test.durationMinutes * 60 - remainingSeconds;
+  const isRealMode = attemptMode === "real";
+  const showModePicker = attemptMode === null;
 
   useEffect(() => {
-    if (!attemptId) return;
+    if (!attemptId || !attemptMode) return;
     const persistedAnswers = Object.fromEntries(
       Object.entries(answers).map(([number, value]) => [`${test.id}-q${number}`, value])
     );
@@ -309,13 +351,14 @@ function ListeningTestClient({ testId }: { testId: string }) {
       attemptId,
       module: "listening",
       testId: test.id,
+      mode: attemptMode,
       answers: persistedAnswers,
       markedQuestionIds: [...marked].map((number) => `${test.id}-q${number}`),
       startedAt,
       timeRemainingSec: remainingSeconds,
       timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
     });
-  }, [answers, attemptId, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
+  }, [answers, attemptId, attemptMode, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
 
   useEffect(() => {
     const compactMedia = window.matchMedia("(max-width: 1024px)");
@@ -457,6 +500,20 @@ function ListeningTestClient({ testId }: { testId: string }) {
     setAnswers((prev) => ({ ...prev, [number]: value }));
   };
 
+  const chooseAttemptMode = (mode: AttemptMode) => {
+    realModeAutoFinishedRef.current = false;
+    setAttemptMode(mode);
+
+    if (mode === "real") {
+      setTimerRunning(true);
+      setAudioPlaying(true);
+      return;
+    }
+
+    setTimerRunning(false);
+    setAudioPlaying(false);
+  };
+
   const finishTest = () => {
     if (!attemptId) return;
     const finishedAt = Date.now();
@@ -468,6 +525,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
       attemptId,
       module: "listening",
       testId: test.id,
+      mode: attemptMode ?? "practice",
       answers: persistedAnswers,
       markedQuestionIds: [...marked].map((number) => `${test.id}-q${number}`),
       startedAt,
@@ -478,6 +536,17 @@ function ListeningTestClient({ testId }: { testId: string }) {
 
     router.push(`/${locale}/listening/${test.id}/result?attempt=${attemptId}`);
   };
+
+  useEffect(() => {
+    if (!isRealMode || remainingSeconds > 0 || !attemptId || realModeAutoFinishedRef.current) {
+      return;
+    }
+
+    realModeAutoFinishedRef.current = true;
+    setTimerRunning(false);
+    setFinishOpen(false);
+    finishTest();
+  }, [attemptId, finishTest, isRealMode, remainingSeconds]);
 
   const isQuestionMarked = (questionNumber: number) => marked.has(questionNumber);
   const markedQuestionClass = (questionNumber: number) =>
@@ -951,26 +1020,32 @@ function ListeningTestClient({ testId }: { testId: string }) {
             </Badge>
             <Button
               type="button"
-              aria-label={timerRunning ? t("stopTimer") : t("startTimer")}
-              variant={timerRunning ? "outline" : "default"}
+              aria-label={isRealMode ? "Timer is locked in real mode" : timerRunning ? t("stopTimer") : t("startTimer")}
+              variant={isRealMode || timerRunning ? "outline" : "default"}
+              disabled={isRealMode}
               className={cn(
                 "h-9 shrink-0 rounded-xl px-2 sm:px-4",
                 isSmallLandscape && "h-8 px-2",
               )}
               onClick={() => {
+                if (isRealMode) {
+                  return;
+                }
                 if (!timerRunning && remainingSeconds <= 0) {
                   setRemainingSeconds(test.durationMinutes * 60);
                 }
                 setTimerRunning((prev) => !prev);
               }}
             >
-              {timerRunning ? (
+              {isRealMode ? (
+                <Clock3 className="size-4" />
+              ) : timerRunning ? (
                 <Pause className="size-4" />
               ) : (
                 <Play className="size-4" />
               )}
               <span className="hidden sm:inline">
-                {timerRunning ? t("stop") : t("start")}
+                {isRealMode ? "Real mode" : timerRunning ? t("stop") : t("start")}
               </span>
             </Button>
           </div>
@@ -988,6 +1063,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
                 isSmallLandscape && "h-8 px-2 text-xs",
               )}
               aria-label={t("finishTest")}
+              disabled={!attemptMode}
               onClick={() => setFinishOpen(true)}
             >
               {t("finishTest")}
@@ -1012,12 +1088,17 @@ function ListeningTestClient({ testId }: { testId: string }) {
             type="button"
             variant="secondary"
             size="icon"
+            disabled={isRealMode}
             className={cn(
               "h-9 w-9 rounded-full shrink-0",
               isSmallLandscape && "h-8 w-8",
+              isRealMode && "cursor-not-allowed opacity-60",
             )}
-            onClick={() => setAudioPlaying((prev) => !prev)}
-            aria-label={audioPlaying ? t("pauseAudio") : t("playAudio")}
+            onClick={() => {
+              if (isRealMode) return;
+              setAudioPlaying((prev) => !prev);
+            }}
+            aria-label={isRealMode ? "Audio controls are locked in real mode" : audioPlaying ? t("pauseAudio") : t("playAudio")}
           >
             {audioPlaying ? (
               <Pause className="size-4" />
@@ -1047,9 +1128,13 @@ function ListeningTestClient({ testId }: { testId: string }) {
                 min={0}
                 max={100}
                 value={audioProgress}
-                onChange={(e) => setAudioProgress(Number(e.target.value))}
-                aria-label={t("audioProgress")}
-                className="h-1.5 w-full min-w-0"
+                disabled={isRealMode}
+                onChange={(e) => {
+                  if (isRealMode) return;
+                  setAudioProgress(Number(e.target.value));
+                }}
+                aria-label={isRealMode ? "Audio progress is locked in real mode" : t("audioProgress")}
+                className={cn("h-1.5 w-full min-w-0", isRealMode && "cursor-not-allowed opacity-60")}
               />
               <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden">
                 <Volume2 className="size-3.5 shrink-0 text-muted-foreground" />
@@ -1068,7 +1153,7 @@ function ListeningTestClient({ testId }: { testId: string }) {
         </div>
       </div>
 
-      <main className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-3 px-2 py-2 sm:px-3 sm:py-3 lg:grid-cols-[minmax(0,1fr)_292px] lg:gap-4 lg:px-5 lg:py-4">
+      <main className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-3 px-2 py-2 sm:px-3 sm:py-3 lg:gap-4 lg:px-5 lg:py-4">
         <section className="min-h-0 min-w-0">
           <Card className="h-full min-h-0 gap-0 overflow-hidden py-0">
             <div className="border-b border-border px-3 py-2">
@@ -1126,6 +1211,8 @@ function ListeningTestClient({ testId }: { testId: string }) {
               <Highlightable
                 key={`listening-section-${activeSection.id}`}
                 storageKey={`listening:${test.id}:section:${activeSection.id}`}
+                notesStorageKey={`listening:${test.id}:notes`}
+                noteScopeKey={`section:${activeSection.id}`}
                 contentVersion={`${activeSection.id}:${isSmallLandscape ? "compact" : "full"}`}
                 className={cn(
                   "space-y-4 pb-28 lg:pb-10",
@@ -1226,96 +1313,72 @@ function ListeningTestClient({ testId }: { testId: string }) {
                   <MoveRight className="size-4" />
                 </Button>
               </div>
+
+              <div className="mt-2 hidden border-t border-border/70 pt-2.5 lg:block">
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className="flex shrink-0 items-center gap-2">
+                    {sectionPaletteSections.map((section) => {
+                      const isActiveSection = section.sectionId === activeSectionId;
+                      return (
+                        <button
+                          key={section.sectionId}
+                          type="button"
+                          className={cn(
+                            "inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-semibold transition-colors",
+                            isActiveSection
+                              ? "border-blue-400/60 bg-blue-500/10 text-foreground"
+                              : "border-border/70 bg-background/70 text-muted-foreground hover:text-foreground"
+                          )}
+                          onClick={() => handleSectionChange(section.sectionId)}
+                        >
+                          <span>{t("sectionTab", { index: section.index })}</span>
+                          <span className="text-[11px] opacity-85">
+                            {section.answered}/{section.numbers.length}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
+                    <div className="inline-flex min-w-full items-center gap-1.5 pr-1">
+                      {(activeSectionPalette?.numbers ?? []).map((number) => {
+                        const answered = isAnswered(answers[number]);
+                        const isMarked = marked.has(number);
+                        const isCurrent = activeQuestionNumber === number;
+
+                        return (
+                          <Button
+                            key={number}
+                            type="button"
+                            variant="outline"
+                            aria-label={getJumpToQuestionLabel(number)}
+                            onClick={() => jumpToQuestion(number)}
+                            className={cn(
+                              "relative h-7 min-w-7 rounded-md border px-1 text-xs font-semibold shadow-none",
+                              isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                              !isCurrent && answered && "border-blue-300 bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
+                              !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                              isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                            )}
+                          >
+                            {number}
+                            {isMarked ? (
+                              <span
+                                className="absolute right-1 top-1 size-1 rounded-full bg-amber-500"
+                                aria-hidden="true"
+                              />
+                            ) : null}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </Card>
         </section>
-
-        <aside className="hidden min-w-0 lg:block">
-          <Card className="sticky top-[8.1rem] gap-0 rounded-2xl p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{paletteTitle}</h3>
-              <Badge
-                variant="outline"
-                className="h-6 rounded-full px-2 text-[11px]"
-              >
-                {allSectionsLabel}
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-5 gap-2">
-              {Array.from({ length: 40 }, (_, i) => i + 1).map((number) => {
-                const sectionId = sectionByQuestion.get(number);
-                const answered = isAnswered(answers[number]);
-                const isMarked = marked.has(number);
-                const isCurrentSection = sectionId === activeSectionId;
-
-                return (
-                  <Button
-                    key={number}
-                    type="button"
-                    variant="outline"
-                    aria-label={getJumpToQuestionLabel(number)}
-                    onClick={() => jumpToQuestion(number)}
-                    className={cn(
-                      "relative h-9 rounded-xl px-0 text-xs font-semibold shadow-none",
-                      activeQuestionNumber === number &&
-                        "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
-                      activeQuestionNumber !== number &&
-                        answered &&
-                        "border-blue-300 bg-blue-50 text-blue-700",
-                      activeQuestionNumber !== number &&
-                        !answered &&
-                        "border-slate-200 bg-slate-50 text-slate-700",
-                      isMarked &&
-                        "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100",
-                      isCurrentSection && "shadow-sm",
-                    )}
-                  >
-                    {number}
-                    {isMarked ? (
-                      <span
-                        className="absolute right-1 top-1 size-1.5 rounded-full bg-amber-500"
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                  </Button>
-                );
-              })}
-            </div>
-
-            <Separator className="my-4" />
-
-            <div className="space-y-2 text-xs text-muted-foreground">
-              <p className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2">
-                  <span className="inline-block size-2 rounded-full bg-blue-600" />{" "}
-                  {answeredLabel}
-                </span>
-                <span className="font-medium text-foreground">
-                  {answeredCount}
-                </span>
-              </p>
-              <p className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2">
-                  <span className="inline-block size-2 rounded-full border border-border" />{" "}
-                  {notAnsweredLabel}
-                </span>
-                <span className="font-medium text-foreground">
-                  {notAnsweredCount}
-                </span>
-              </p>
-              <p className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2">
-                  <span className="inline-block size-2 rounded-full bg-amber-500" />{" "}
-                  {markedLabel}
-                </span>
-                <span className="font-medium text-foreground">
-                  {markedCount}
-                </span>
-              </p>
-            </div>
-          </Card>
-        </aside>
       </main>
 
       <Sheet open={paletteOpen} onOpenChange={setPaletteOpen}>
@@ -1411,6 +1474,27 @@ function ListeningTestClient({ testId }: { testId: string }) {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      {showModePicker ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-lg p-5">
+            <h3 className="text-lg font-semibold">Choose test mode</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Real mode starts immediately and cannot be paused. Practice mode lets you pause and continue the timer.
+            </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <Button type="button" onClick={() => chooseAttemptMode("real")}>Real mode</Button>
+              <Button type="button" variant="outline" onClick={() => chooseAttemptMode("practice")}>
+                Practice mode
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">Real: timer auto-starts, cannot be stopped, and test ends when time reaches zero.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Practice: you can start, pause, and resume the timer anytime.
+            </p>
+          </Card>
+        </div>
+      ) : null}
 
       {finishOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">

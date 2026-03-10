@@ -103,11 +103,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
     sections: [
       {
         id: "s1",
-        title: "Section 1: Accommodation Enquiry",
+        title: "Part 1: Accommodation Enquiry",
         instructions: "Complete the form below. Write NO MORE THAN TWO WORDS AND/OR A NUMBER for each answer.",
         questionRangeLabel: "Questions 1-10",
         audioMeta: {
-          nowPlayingLabel: "Section 1 of 4",
+          nowPlayingLabel: "Part 1 of 4",
           durationSec: 420,
           currentTrackTitle: "Conversation at Riverside Student Residence"
         },
@@ -154,11 +154,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
       },
       {
         id: "s2",
-        title: "Section 2: Community Center Tour",
+        title: "Part 2: Community Center Tour",
         instructions: "Label the map below. Choose the correct letter, A-G, and write it next to Questions 11-16. Then complete the notes for Questions 17-20.",
         questionRangeLabel: "Questions 11-20",
         audioMeta: {
-          nowPlayingLabel: "Section 2 of 4",
+          nowPlayingLabel: "Part 2 of 4",
           durationSec: 450,
           currentTrackTitle: "Guide talk at Brookfield Community Center"
         },
@@ -200,11 +200,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
       },
       {
         id: "s3",
-        title: "Section 3: Seminar Planning Discussion",
+        title: "Part 3: Seminar Planning Discussion",
         instructions: "Questions 21-26: Match each student task with the correct person (A-C). Questions 27-30: Complete the table.",
         questionRangeLabel: "Questions 21-30",
         audioMeta: {
-          nowPlayingLabel: "Section 3 of 4",
+          nowPlayingLabel: "Part 3 of 4",
           durationSec: 510,
           currentTrackTitle: "Students preparing a sustainability seminar"
         },
@@ -241,11 +241,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
       },
       {
         id: "s4",
-        title: "Section 4: Lecture on Coastal Research",
+        title: "Part 4: Lecture on Coastal Research",
         instructions: "Complete the notes below. Write ONE WORD ONLY for each answer.",
         questionRangeLabel: "Questions 31-40",
         audioMeta: {
-          nowPlayingLabel: "Section 4 of 4",
+          nowPlayingLabel: "Part 4 of 4",
           durationSec: 520,
           currentTrackTitle: "University lecture: monitoring coastal ecosystems"
         },
@@ -279,11 +279,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
     sections: [
       {
         id: "s1",
-        title: "Section 1: Gym Membership Registration",
+        title: "Part 1: Gym Membership Registration",
         instructions: "Complete the registration form. Write NO MORE THAN TWO WORDS AND/OR A NUMBER for each answer.",
         questionRangeLabel: "Questions 1-10",
         audioMeta: {
-          nowPlayingLabel: "Section 1 of 4",
+          nowPlayingLabel: "Part 1 of 4",
           durationSec: 430,
           currentTrackTitle: "Phone call to CityFit Gym"
         },
@@ -330,11 +330,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
       },
       {
         id: "s2",
-        title: "Section 2: Museum Orientation",
+        title: "Part 2: Museum Orientation",
         instructions: "Questions 11-16: Label the floor plan. Questions 17-20: Complete the notes.",
         questionRangeLabel: "Questions 11-20",
         audioMeta: {
-          nowPlayingLabel: "Section 2 of 4",
+          nowPlayingLabel: "Part 2 of 4",
           durationSec: 455,
           currentTrackTitle: "Welcome talk at Eastgate Museum"
         },
@@ -358,7 +358,7 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
               { questionNumber: 13, label: "Room near the west corridor" },
               { questionNumber: 14, label: "Hall beside the courtyard" },
               { questionNumber: 15, label: "Unit behind the information desk" },
-              { questionNumber: 16, label: "Section close to the exit" }
+              { questionNumber: 16, label: "Area close to the exit" }
             ]
           },
           {
@@ -376,11 +376,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
       },
       {
         id: "s3",
-        title: "Section 3: Project Team Meeting",
+        title: "Part 3: Project Team Meeting",
         instructions: "Questions 21-25: Choose the correct person (A-D). Questions 26-30: Choose the correct option in the table.",
         questionRangeLabel: "Questions 21-30",
         audioMeta: {
-          nowPlayingLabel: "Section 3 of 4",
+          nowPlayingLabel: "Part 3 of 4",
           durationSec: 505,
           currentTrackTitle: "University group discussing final-year project"
         },
@@ -413,11 +413,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
       },
       {
         id: "s4",
-        title: "Section 4: Lecture on Renewable Energy Storage",
+        title: "Part 4: Lecture on Renewable Energy Storage",
         instructions: "Complete the notes. Write ONE WORD ONLY for each answer.",
         questionRangeLabel: "Questions 31-40",
         audioMeta: {
-          nowPlayingLabel: "Section 4 of 4",
+          nowPlayingLabel: "Part 4 of 4",
           durationSec: 530,
           currentTrackTitle: "Public lecture: battery and grid storage"
         },
@@ -451,11 +451,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
     sections: [
       {
         id: "s1",
-        title: "Section 1: Airport Shuttle Booking",
+        title: "Part 1: Airport Shuttle Booking",
         instructions: "Complete the booking note. Write NO MORE THAN TWO WORDS AND/OR A NUMBER for each answer.",
         questionRangeLabel: "Questions 1-10",
         audioMeta: {
-          nowPlayingLabel: "Section 1 of 4",
+          nowPlayingLabel: "Part 1 of 4",
           durationSec: 410,
           currentTrackTitle: "Customer call: airport shuttle reservation"
         },
@@ -502,11 +502,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
       },
       {
         id: "s2",
-        title: "Section 2: City Festival Guide",
+        title: "Part 2: City Festival Guide",
         instructions: "Questions 11-15: Label the site plan with letters A-G. Questions 16-20: Complete the notes.",
         questionRangeLabel: "Questions 11-20",
         audioMeta: {
-          nowPlayingLabel: "Section 2 of 4",
+          nowPlayingLabel: "Part 2 of 4",
           durationSec: 460,
           currentTrackTitle: "Festival orientation announcement"
         },
@@ -548,11 +548,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
       },
       {
         id: "s3",
-        title: "Section 3: Tutor and Students Discussion",
+        title: "Part 3: Tutor and Students Discussion",
         instructions: "Questions 21-26: Match topics with speakers A-C. Questions 27-30: Complete the planning table.",
         questionRangeLabel: "Questions 21-30",
         audioMeta: {
-          nowPlayingLabel: "Section 3 of 4",
+          nowPlayingLabel: "Part 3 of 4",
           durationSec: 500,
           currentTrackTitle: "Academic tutorial: fieldwork preparation"
         },
@@ -585,11 +585,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
       },
       {
         id: "s4",
-        title: "Section 4: Lecture on Urban Wildlife",
+        title: "Part 4: Lecture on Urban Wildlife",
         instructions: "Complete the notes. Write ONE WORD ONLY for each answer.",
         questionRangeLabel: "Questions 31-40",
         audioMeta: {
-          nowPlayingLabel: "Section 4 of 4",
+          nowPlayingLabel: "Part 4 of 4",
           durationSec: 545,
           currentTrackTitle: "Lecture: adaptation of wildlife in modern cities"
         },
@@ -620,3 +620,4 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
 export function getListeningTestById(id: string) {
   return LISTENING_TESTS_FULL.find((test) => test.id === id);
 }
+

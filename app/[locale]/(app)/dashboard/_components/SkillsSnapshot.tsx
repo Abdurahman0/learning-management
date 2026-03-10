@@ -11,13 +11,14 @@ type SkillsSnapshotProps = {
   skills: SkillItem[];
   summary: DashboardUserSummary;
   overallJourneyPct: number;
+  id?: string;
 };
 
-export function SkillsSnapshot({skills, summary, overallJourneyPct}: SkillsSnapshotProps) {
+export function SkillsSnapshot({skills, summary, overallJourneyPct, id}: SkillsSnapshotProps) {
   const t = useTranslations("dashboard");
 
   return (
-    <div className="min-w-0 space-y-4">
+    <div id={id} className="min-w-0 space-y-4">
       <Card className="rounded-2xl border-border/70 bg-card/70">
         <CardHeader>
           <CardTitle>{t("skillsSnapshot.title")}</CardTitle>

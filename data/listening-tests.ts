@@ -1,4 +1,4 @@
-﻿export type ListeningDifficulty = "easy" | "medium" | "hard";
+export type ListeningDifficulty = "easy" | "medium" | "hard";
 
 export type ListeningSection = {
   label: string;
@@ -24,10 +24,10 @@ export const LISTENING_TESTS: ListeningTestItem[] = [
     durationMins: 30,
     totalQuestions: 40,
     sections: [
-      {label: "SEC 1", questions: 10},
-      {label: "SEC 2", questions: 10},
-      {label: "SEC 3", questions: 10},
-      {label: "SEC 4", questions: 10}
+      {label: "Part 1", questions: 10},
+      {label: "Part 2", questions: 10},
+      {label: "Part 3", questions: 10},
+      {label: "Part 4", questions: 10}
     ]
   },
   {
@@ -38,10 +38,10 @@ export const LISTENING_TESTS: ListeningTestItem[] = [
     durationMins: 30,
     totalQuestions: 40,
     sections: [
-      {label: "SEC 1", questions: 10},
-      {label: "SEC 2", questions: 10},
-      {label: "SEC 3", questions: 10},
-      {label: "SEC 4", questions: 10}
+      {label: "Part 1", questions: 10},
+      {label: "Part 2", questions: 10},
+      {label: "Part 3", questions: 10},
+      {label: "Part 4", questions: 10}
     ]
   },
   {
@@ -52,10 +52,10 @@ export const LISTENING_TESTS: ListeningTestItem[] = [
     durationMins: 30,
     totalQuestions: 40,
     sections: [
-      {label: "SEC 1", questions: 10},
-      {label: "SEC 2", questions: 10},
-      {label: "SEC 3", questions: 10},
-      {label: "SEC 4", questions: 10}
+      {label: "Part 1", questions: 10},
+      {label: "Part 2", questions: 10},
+      {label: "Part 3", questions: 10},
+      {label: "Part 4", questions: 10}
     ]
   },
   {
@@ -66,10 +66,10 @@ export const LISTENING_TESTS: ListeningTestItem[] = [
     durationMins: 30,
     totalQuestions: 40,
     sections: [
-      {label: "SEC 1", questions: 10},
-      {label: "SEC 2", questions: 10},
-      {label: "SEC 3", questions: 10},
-      {label: "SEC 4", questions: 10}
+      {label: "Part 1", questions: 10},
+      {label: "Part 2", questions: 10},
+      {label: "Part 3", questions: 10},
+      {label: "Part 4", questions: 10}
     ]
   },
   {
@@ -80,10 +80,10 @@ export const LISTENING_TESTS: ListeningTestItem[] = [
     durationMins: 30,
     totalQuestions: 40,
     sections: [
-      {label: "SEC 1", questions: 10},
-      {label: "SEC 2", questions: 10},
-      {label: "SEC 3", questions: 10},
-      {label: "SEC 4", questions: 10}
+      {label: "Part 1", questions: 10},
+      {label: "Part 2", questions: 10},
+      {label: "Part 3", questions: 10},
+      {label: "Part 4", questions: 10}
     ]
   },
   {
@@ -94,10 +94,10 @@ export const LISTENING_TESTS: ListeningTestItem[] = [
     durationMins: 30,
     totalQuestions: 40,
     sections: [
-      {label: "SEC 1", questions: 10},
-      {label: "SEC 2", questions: 10},
-      {label: "SEC 3", questions: 10},
-      {label: "SEC 4", questions: 10}
+      {label: "Part 1", questions: 10},
+      {label: "Part 2", questions: 10},
+      {label: "Part 3", questions: 10},
+      {label: "Part 4", questions: 10}
     ]
   },
   {
@@ -108,10 +108,10 @@ export const LISTENING_TESTS: ListeningTestItem[] = [
     durationMins: 30,
     totalQuestions: 40,
     sections: [
-      {label: "SEC 1", questions: 10},
-      {label: "SEC 2", questions: 10},
-      {label: "SEC 3", questions: 10},
-      {label: "SEC 4", questions: 10}
+      {label: "Part 1", questions: 10},
+      {label: "Part 2", questions: 10},
+      {label: "Part 3", questions: 10},
+      {label: "Part 4", questions: 10}
     ]
   },
   {
@@ -122,10 +122,12 @@ export const LISTENING_TESTS: ListeningTestItem[] = [
     durationMins: 30,
     totalQuestions: 40,
     sections: [
-      {label: "SEC 1", questions: 10},
-      {label: "SEC 2", questions: 10},
-      {label: "SEC 3", questions: 10},
-      {label: "SEC 4", questions: 10}
+      {label: "Part 1", questions: 10},
+      {label: "Part 2", questions: 10},
+      {label: "Part 3", questions: 10},
+      {label: "Part 4", questions: 10}
     ]
   }
 ];
+
+

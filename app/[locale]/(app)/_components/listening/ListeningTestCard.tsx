@@ -93,14 +93,24 @@ export function ListeningTestCard({test}: ListeningTestCardProps) {
                   {t("card.locked")}
                 </Button>
               ) : (
-                <Button
-                  type="button"
-                  onClick={() => router.push(`/${locale}/listening/${test.id}`)}
-                  className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90"
-                >
-                  {t("card.startListening")}
-                  <Play className="ml-2 size-4 fill-current" aria-hidden="true" />
-                </Button>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push(`/${locale}/listening/${test.id}?mode=practice`)}
+                    className="h-10 w-full rounded-xl text-sm font-semibold"
+                  >
+                    Practice
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => router.push(`/${locale}/listening/${test.id}?mode=real`)}
+                    className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90"
+                  >
+                    Real
+                    <Play className="ml-2 size-4 fill-current" aria-hidden="true" />
+                  </Button>
+                </div>
               )}
             </div>
           </div>

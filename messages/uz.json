@@ -201,7 +201,7 @@
       "startListening": "Listening testini boshlash",
       "startTest": "Testni boshlash",
       "passage": "Matn",
-      "section": "Bo'lim"
+      "section": "Qism"
     },
     "upgrade": {
       "title": "Yana 100+ testga kirishni xohlaysizmi?",
@@ -222,7 +222,7 @@
     "meta": {
       "minutes": "Daqiqa",
       "questions": "Savol",
-      "sections": "Bo'lim"
+      "sections": "Qismlar"
     },
     "reading": {
       "title": "Reading testlarini mashq qiling",
@@ -271,7 +271,7 @@
     "timeSpent": "Sarflangan vaqt: {seconds} soniya",
     "restartTest": "Testni qayta boshlash",
     "restartConfirm": "Testni qayta boshlaysizmi? Joriy javoblaringiz tozalanadi.",
-    "leaveWarning": "Test hali yakunlanmagan. Ushbu sahifani tark etmoqchimisiz?",
+    "leaveWarning": "Testdan chiqmoqchimisiz? Natijalar saqlanmaydi.",
     "cancel": "Bekor qilish",
     "confirmFinish": "Yakunlash va baholash"
   },
@@ -289,20 +289,20 @@
     "pauseAudio": "Audioni pauza qilish",
     "audioProgress": "Audio progress",
     "audioVolume": "Audio ovozi",
-    "sectionTab": "Section {index}",
+    "sectionTab": "Qism {index}",
     "questionPalette": "Savollar paneli",
-    "questionPaletteHint": "Raqamni bosib savolga o‘ting. Keyinroq ko‘rish uchun belgilab qo‘ying.",
+    "questionPaletteHint": "Raqamni bosib savolga oвЂting. Keyinroq koвЂrish uchun belgilab qoвЂying.",
     "answered": "Javob berilgan",
     "notAnswered": "Javob berilmagan",
-    "markedForReview": "Ko‘rib chiqish uchun belgilangan",
-    "jumpToQuestion": "{number}-savolga o‘tish",
-    "allSections": "Barcha bo‘limlar",
+    "markedForReview": "KoвЂrib chiqish uchun belgilangan",
+    "jumpToQuestion": "{number}-savolga oвЂtish",
+    "allSections": "Barcha qismlar",
     "legendAnswered": "Javob berilgan",
     "legendNotAnswered": "Javob berilmagan",
     "legendMarked": "Ko'rib chiqish uchun belgilangan",
     "markForReview": "Ko'rib chiqish uchun belgilash",
-    "previousSection": "Oldingi section",
-    "nextSection": "Keyingi section",
+    "previousSection": "Oldingi qism",
+    "nextSection": "Keyingi qism",
     "goToQuestion": "{number}-savolga o'tish",
     "options": "Variantlar",
     "selectOption": "Variantni tanlang",
@@ -311,7 +311,7 @@
     "backToListening": "Listening testlariga qaytish",
     "finishSummary": "Siz {total} ta savoldan {answered} tasiga javob berdingiz. {unanswered} ta javobsiz qoldi.",
     "timeSpent": "Sarflangan vaqt: {seconds} soniya",
-    "leaveWarning": "Test hali yakunlanmagan. Ushbu sahifani tark etmoqchimisiz?",
+    "leaveWarning": "Testdan chiqmoqchimisiz? Natijalar saqlanmaydi.",
     "cancel": "Bekor qilish",
     "confirmFinish": "Yakunlash va baholash"
   },
@@ -341,8 +341,8 @@
     "placeholders": {
       "fullName": "John Doe",
       "email": "name@example.com",
-      "password": "••••••••",
-      "confirmPassword": "••••••••"
+      "password": "вЂўвЂўвЂўвЂўвЂўвЂўвЂўвЂў",
+      "confirmPassword": "вЂўвЂўвЂўвЂўвЂўвЂўвЂўвЂў"
     },
     "signup": {
       "title": "Akkauntingizni yarating",
@@ -440,7 +440,7 @@
     "terms": "Foydalanish shartlari",
     "contact": "Bog'lanish",
     "help": "Yordam markazi",
-    "copyright": "© 2026 IELTS Master Practice. Barcha huquqlar himoyalangan."
+    "copyright": "В© 2026 IELTS Master Practice. Barcha huquqlar himoyalangan."
   },
   "common": {
     "explain": "Izoh",
@@ -473,6 +473,53 @@
     "notAvailable": "Mavjud emas",
     "missingAttemptTitle": "Natija topilmadi",
     "missingAttemptDescription": "Ushbu test uchun yakunlangan urinish topilmadi."
+  },
+  "readingReview": {
+    "title": "Reading tahlili",
+    "scoreSummary": "{total} tadan {correct} ta to'g'ri ({percent}%)",
+    "reviewAnswers": "Javoblarni ko'rish",
+    "retakeTest": "Testni qayta ishlash",
+    "passageLabel": "Passage {index}",
+    "passageReview": "Passage tahlili",
+    "questionReview": "Savollar tahlili",
+    "correct": "To'g'ri",
+    "incorrect": "Noto'g'ri",
+    "skipped": "Javobsiz",
+    "yourAnswer": "Sizning javobingiz",
+    "correctAnswer": "To'g'ri javob",
+    "showExplanation": "Izoh",
+    "hideExplanation": "Izohni yopish",
+    "jumpToEvidence": "Dalilga o'tish",
+    "notAvailable": "Mavjud emas",
+    "videoLesson": "Video dars",
+    "watchLesson": "Darsni ko'rish",
+    "saveForLater": "Keyinga saqlash",
+    "lessonTimestamps": "Dars bo'limlari",
+    "duration": "Davomiyligi",
+    "instructor": "Instruktor",
+    "aiLearningCoach": "AI Learning Coach",
+    "score": "Natija",
+    "accuracy": "Aniqlik",
+    "timeUsed": "Sarflangan vaqt",
+    "mistakeBreakdown": "Xatolar tahlili",
+    "aiInsights": "AI xulosalari",
+    "personalizedImprovementPlan": "Shaxsiy yaxshilash rejasi",
+    "startPracticeSession": "Mashq sessiyasini boshlash",
+    "generateSimilarTest": "O'xshash test yaratish",
+    "practiceWeakAreas": "Kuchsiz joylarni mashq qilish",
+    "mistakeHeatmap": "Xatolar heatmap",
+    "excellent": "A'lo",
+    "average": "O'rtacha",
+    "critical": "Tanqidiy",
+    "nextLearningActions": "Keyingi o'quv amallari",
+    "takeSimilarTest": "O'xshash test ishlash",
+    "returnToDashboard": "Dashboardga qaytish",
+    "downloadReviewPdf": "Review PDF yuklab olish",
+    "saveToStudyBank": "Study bankka saqlash",
+    "timerUsed": "Taymer ishlatilgan",
+    "timerNotUsed": "Taymer ishlatilmagan",
+    "accuracyByType": "Savol turi bo'yicha aniqlik",
+    "actionPlaceholder": "Demo amal: {action}"
   },
   "dashboard": {
     "nav": {
@@ -703,9 +750,9 @@
       "expandRow": "Qatorni ochish",
       "collapseRow": "Qatorni yopish",
       "noPassages": "Ushbu test uchun passage mavjud emas.",
-      "noSections": "Ushbu listening test uchun bo'limlar mavjud emas.",
+      "noSections": "Ushbu listening test uchun qismlar mavjud emas.",
       "passageLabel": "{index}-passage",
-      "sectionLabel": "{index}-bo'lim",
+      "sectionLabel": "{index}-qism",
       "questionsShort": "Savol",
       "editPassage": "Passageni tahrirlash",
       "actions": {
@@ -797,10 +844,10 @@
       "title": "Test tuzilmasi",
       "labels": {
         "passage": "Passage {index}",
-        "section": "Section {index}"
+        "section": "Qism {index}"
       },
-      "readingRule": "Reading bo'limida aynan 3 ta passage bo'lishi kerak va jami 40 ta savol bo'ladi (Q1–13, Q14–26, Q27–40).",
-      "listeningRule": "Listening bo'limida aynan 4 ta section bo'lishi kerak va jami 40 ta savol bo'ladi (Q1–10, Q11–20, Q21–30, Q31–40).",
+      "readingRule": "Reading bo'limida aynan 3 ta passage bo'lishi kerak va jami 40 ta savol bo'ladi (Q1вЂ“13, Q14вЂ“26, Q27вЂ“40).",
+      "listeningRule": "Listening qismida aynan 4 ta qism bolishi kerak va jami 40 ta savol boladi (Q1-10, Q11-20, Q21-30, Q31-40).",
       "actions": {
         "add": "Qo'shish",
         "remove": "O'chirish"
@@ -819,7 +866,7 @@
       "evidenceHint": "Avval savolni tanlang, so'ng matnni belgilang va Dalil qo'shish tugmasini bosing.",
       "evidenceTarget": "Dalil biriktiriladigan savol: {question}",
       "audioLabel": "Audio yorlig'i",
-      "audioPlaceholder": "section-1-audio.mp3",
+      "audioPlaceholder": "part-1-audio.mp3",
       "lastEvidence": "Oxirgi biriktirilgan dalil"
     },
     "preview": {
@@ -839,7 +886,7 @@
         "from": "Dan",
         "to": "Gacha"
       },
-      "validationRange": "Faol passage/section ichida to'g'ri diapazon tanlang.",
+      "validationRange": "Faol passage/qism ichida togri diapazon tanlang.",
       "validationOverlap": "Bu diapazon mavjud savol raqamlari bilan kesishmoqda. Faqat bo'sh raqamlarni tanlang.",
       "createAction": "Guruh yaratish",
       "saveAction": "Saqlash",
@@ -882,7 +929,7 @@
       }
     },
     "validation": {
-      "publishQuestionCount": "Hozircha nashr qilib bo'lmaydi. Jami savollar {required} bo'lishi va har bir passage/section aniq to'ldirilgan bo'lishi kerak. Hozirgi jami: {current}.",
+      "publishQuestionCount": "Hozircha nashr qilib bolmaydi. Jami savollar {required} bolishi va har bir passage/qism aniq toldirilgan bolishi kerak. Hozirgi jami: {current}.",
       "overlapIssue": "kesishuv bor",
       "outOfRangeIssue": "diapazondan tashqarida"
     },
@@ -1518,7 +1565,7 @@
       "unknownPassage": "Noma'lum passage",
       "none": "Yo'q",
       "passageSlot": "Passage {index}",
-      "sectionSlot": "Section {index}"
+      "sectionSlot": "Qism {index}"
     },
     "compatibleWith": "Mos keladi: {slots}",
     "notCompatibleWith": "Mos kelmaydi: {slots}",
@@ -1647,3 +1694,5 @@
     }
   }
 }
+
+

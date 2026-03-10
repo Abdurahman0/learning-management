@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Eraser, Highlighter } from "lucide-react";
+import { Eraser, Highlighter, NotebookPen, Trash2, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import {
@@ -11,9 +11,17 @@ import {
   type HighlightColor,
   type StoredHighlight,
 } from "@/lib/highlight-storage";
+import {
+  loadTextNotes,
+  saveTextNotes,
+  subscribeTextNotes,
+  type StoredTextNote,
+} from "@/lib/text-notes-storage";
 
 type HighlightableProps = {
   storageKey: string;
+  notesStorageKey?: string;
+  noteScopeKey?: string;
   className?: string;
   contentVersion?: string | number;
   children: ReactNode;
@@ -22,6 +30,7 @@ type HighlightableProps = {
 type SelectionState = {
   start: number;
   end: number;
+  text: string;
   x: number;
   y: number;
   isFullyMarked: boolean;
@@ -111,8 +120,8 @@ function subtractRangeFromMerged(
   return normalizeRanges(output);
 }
 
-function unwrapAllHighlights(root: HTMLElement) {
-  const marks = root.querySelectorAll("mark[data-hl-id]");
+function unwrapAllDecorations(root: HTMLElement) {
+  const marks = root.querySelectorAll("mark[data-hl-id], span[data-note-id]");
   marks.forEach((mark) => {
     const parent = mark.parentNode;
     if (!parent) return;
@@ -183,12 +192,48 @@ function safeId() {
   return `hl-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
 }
 
-export function Highlightable({ storageKey, className, contentVersion, children }: HighlightableProps) {
+function sameNotes(a: StoredTextNote[], b: StoredTextNote[]) {
+  if (a.length !== b.length) return false;
+  for (let index = 0; index < a.length; index += 1) {
+    const left = a[index];
+    const right = b[index];
+    if (!left || !right) return false;
+    if (
+      left.id !== right.id ||
+      left.quote !== right.quote ||
+      left.note !== right.note ||
+      left.start !== right.start ||
+      left.end !== right.end ||
+      left.scopeKey !== right.scopeKey ||
+      left.createdAt !== right.createdAt ||
+      left.updatedAt !== right.updatedAt
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export function Highlightable({
+  storageKey,
+  notesStorageKey,
+  noteScopeKey,
+  className,
+  contentVersion,
+  children,
+}: HighlightableProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const notesPanelRef = useRef<HTMLDivElement | null>(null);
+  const selectionTimeoutRef = useRef<number | null>(null);
+  const selectionFrameRef = useRef<number | null>(null);
   const [highlights, setHighlights] = useState<StoredHighlight[]>(() => loadHighlights(storageKey));
   const [color, setColor] = useState<HighlightColor>("yellow");
   const [selection, setSelection] = useState<SelectionState | null>(null);
+  const notesKey = useMemo(() => notesStorageKey ?? `${storageKey}:notes`, [notesStorageKey, storageKey]);
+  const [notes, setNotes] = useState<StoredTextNote[]>(() => loadTextNotes(notesKey));
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
 
   const contentToken = useMemo(() => String(contentVersion ?? "default"), [contentVersion]);
 
@@ -197,10 +242,20 @@ export function Highlightable({ storageKey, className, contentVersion, children 
   }, [highlights, storageKey]);
 
   useEffect(() => {
+    saveTextNotes(notesKey, notes);
+  }, [notes, notesKey]);
+
+  useEffect(() => {
+    return subscribeTextNotes(notesKey, (nextNotes) => {
+      setNotes((prev) => (sameNotes(prev, nextNotes) ? prev : nextNotes));
+    });
+  }, [notesKey]);
+
+  useEffect(() => {
     if (!rootRef.current) return;
     const root = rootRef.current;
 
-    unwrapAllHighlights(root);
+    unwrapAllDecorations(root);
 
     for (const item of highlights) {
       if (item.end <= item.start) continue;
@@ -214,7 +269,25 @@ export function Highlightable({ storageKey, className, contentVersion, children 
       mark.appendChild(fragment);
       range.insertNode(mark);
     }
-  }, [contentToken, highlights]);
+
+    const scopedNotes = notes.filter((item) =>
+      noteScopeKey ? item.scopeKey === noteScopeKey : !item.scopeKey
+    );
+    const noteRanges = normalizeRanges(
+      scopedNotes.map((item) => ({ start: item.start, end: item.end }))
+    );
+    for (const [index, noteRange] of noteRanges.entries()) {
+      const range = createRangeFromOffsets(root, noteRange.start, noteRange.end);
+      if (!range) continue;
+
+      const marker = document.createElement("span");
+      marker.setAttribute("data-note-id", `note-${index}`);
+      marker.className = "note-mark";
+      const fragment = range.extractContents();
+      marker.appendChild(fragment);
+      range.insertNode(marker);
+    }
+  }, [contentToken, highlights, noteScopeKey, notes]);
 
   useEffect(() => {
     if (!selection) return;
@@ -223,6 +296,7 @@ export function Highlightable({ storageKey, className, contentVersion, children 
       const target = event.target as HTMLElement | null;
       if (!target) return;
       if (toolbarRef.current?.contains(target)) return;
+      if (notesPanelRef.current?.contains(target)) return;
       if (rootRef.current?.contains(target)) return;
       setSelection(null);
     };
@@ -234,6 +308,35 @@ export function Highlightable({ storageKey, className, contentVersion, children 
       document.removeEventListener("touchstart", onPointerDown);
     };
   }, [selection]);
+
+  useEffect(() => {
+    return () => {
+      if (selectionTimeoutRef.current !== null) {
+        window.clearTimeout(selectionTimeoutRef.current);
+      }
+      if (selectionFrameRef.current !== null) {
+        window.cancelAnimationFrame(selectionFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!notesOpen) return;
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (notesPanelRef.current?.contains(target)) return;
+      setNotesOpen(false);
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [notesOpen]);
 
   const readSelection = () => {
     const root = rootRef.current;
@@ -259,7 +362,8 @@ export function Highlightable({ storageKey, className, contentVersion, children 
 
     const range = sel.getRangeAt(0).cloneRange();
     const rawText = range.toString();
-    if (!rawText.trim()) {
+    const normalizedText = rawText.replace(/\s+/g, " ").trim();
+    if (!normalizedText) {
       setSelection(null);
       return;
     }
@@ -292,6 +396,7 @@ export function Highlightable({ storageKey, className, contentVersion, children 
     setSelection({
       start: normalizedStart,
       end: normalizedEnd,
+      text: normalizedText,
       isFullyMarked,
       x: rect.left + rect.width / 2,
       y: rect.top - 8,
@@ -299,7 +404,21 @@ export function Highlightable({ storageKey, className, contentVersion, children 
   };
 
   const queueSelectionRead = () => {
-    window.setTimeout(readSelection, 0);
+    if (selectionTimeoutRef.current !== null) {
+      window.clearTimeout(selectionTimeoutRef.current);
+    }
+    if (selectionFrameRef.current !== null) {
+      window.cancelAnimationFrame(selectionFrameRef.current);
+    }
+
+    selectionTimeoutRef.current = window.setTimeout(() => {
+      selectionTimeoutRef.current = null;
+      readSelection();
+    }, 0);
+    selectionFrameRef.current = window.requestAnimationFrame(() => {
+      selectionFrameRef.current = null;
+      readSelection();
+    });
   };
 
   const toggleSelection = () => {
@@ -327,11 +446,80 @@ export function Highlightable({ storageKey, className, contentVersion, children 
     setSelection(null);
   };
 
+  const openNoteComposer = () => {
+    if (!selection) return;
+
+    const latest = loadTextNotes(notesKey);
+    const base = latest.length ? latest : notes;
+    const existing = base.find(
+      (item) =>
+        (noteScopeKey ? item.scopeKey === noteScopeKey : !item.scopeKey) &&
+        item.start === selection.start &&
+        item.end === selection.end &&
+        item.quote === selection.text
+    );
+
+    if (existing) {
+      setNotes(base);
+      setActiveNoteId(existing.id);
+    } else {
+      const now = Date.now();
+      const next: StoredTextNote = {
+        id: safeId(),
+        quote: selection.text,
+        note: "",
+        start: selection.start,
+        end: selection.end,
+        scopeKey: noteScopeKey,
+        createdAt: now,
+        updatedAt: now,
+      };
+      setNotes([next, ...base]);
+      setActiveNoteId(next.id);
+    }
+
+    setNotesOpen(true);
+    window.getSelection()?.removeAllRanges();
+    setSelection(null);
+  };
+
+  const orderedNotes = useMemo(
+    () => [...notes].sort((a, b) => b.createdAt - a.createdAt || b.updatedAt - a.updatedAt),
+    [notes]
+  );
+  const resolvedActiveNoteId =
+    activeNoteId && notes.some((item) => item.id === activeNoteId)
+      ? activeNoteId
+      : orderedNotes[0]?.id ?? null;
+
+  const updateNoteText = (id: string, value: string) => {
+    setNotes((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              note: value,
+              updatedAt: Date.now(),
+            }
+          : item
+      )
+    );
+  };
+
+  const deleteNote = (id: string) => {
+    setNotes((prev) => prev.filter((item) => item.id !== id));
+    if (resolvedActiveNoteId === id) {
+      const fallback = orderedNotes.find((item) => item.id !== id);
+      setActiveNoteId(fallback?.id ?? null);
+    }
+  };
+
   return (
     <>
       <div
         ref={rootRef}
         className={className}
+        onPointerUp={queueSelectionRead}
         onMouseUp={queueSelectionRead}
         onKeyUp={queueSelectionRead}
         onTouchEnd={queueSelectionRead}
@@ -364,6 +552,14 @@ export function Highlightable({ storageKey, className, contentVersion, children 
                 {selection.isFullyMarked ? <Eraser className="size-3.5" /> : <Highlighter className="size-3.5" />}
                 {selection.isFullyMarked ? "Unmark" : "Mark"}
               </button>
+              <button
+                type="button"
+                className="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-2.5 text-xs font-semibold text-foreground hover:bg-accent"
+                onClick={openNoteComposer}
+              >
+                <NotebookPen className="size-3.5" />
+                Note
+              </button>
               {selection.isFullyMarked ? null : (
                 <div className="flex items-center gap-1">
                   {COLORS.map((item) => (
@@ -385,6 +581,74 @@ export function Highlightable({ storageKey, className, contentVersion, children 
                 </div>
               )}
             </div>,
+            document.body
+          )
+        : null}
+      {typeof document !== "undefined" && notesOpen
+        ? createPortal(
+            <aside
+              ref={notesPanelRef}
+              className="fixed inset-y-0 right-0 z-[71] w-[330px] max-w-[92vw] border-l border-border bg-background/95 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/90"
+            >
+              <div className="flex items-center justify-between border-b border-border px-3 py-3">
+                <p className="inline-flex items-center gap-2 text-sm font-semibold">
+                  <NotebookPen className="size-4 text-blue-600" />
+                  Notes
+                </p>
+                <button
+                  type="button"
+                  aria-label="Close notes"
+                  className="inline-flex size-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+                  onClick={() => setNotesOpen(false)}
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+              <div className="h-[calc(100%-57px)] space-y-3 overflow-y-auto p-3">
+                {orderedNotes.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/35 px-3 py-5 text-sm text-muted-foreground">
+                    Select text and click Note to create one.
+                  </div>
+                ) : null}
+                {orderedNotes.map((item) => {
+                  const isActive = item.id === resolvedActiveNoteId;
+                  return (
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "rounded-lg border bg-card/80 p-3 shadow-sm",
+                        isActive && "border-blue-400 bg-blue-50/35 dark:bg-blue-500/10"
+                      )}
+                    >
+                      <button
+                        type="button"
+                        className="w-full cursor-text text-left text-sm font-semibold text-foreground italic"
+                        onClick={() => setActiveNoteId(item.id)}
+                      >
+                        {item.quote}
+                      </button>
+                      <textarea
+                        value={item.note}
+                        onChange={(event) => updateNoteText(item.id, event.target.value)}
+                        onFocus={() => setActiveNoteId(item.id)}
+                        placeholder="Type your note..."
+                        className="mt-2 min-h-24 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-blue-500/60"
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-destructive"
+                          onClick={() => deleteNote(item.id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </aside>,
             document.body
           )
         : null}

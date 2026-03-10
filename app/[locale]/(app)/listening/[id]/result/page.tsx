@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CheckCircle2, HelpCircle, RotateCcw, XCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { flattenListeningQuestions } from "@/lib/listening-questions";
-import { loadAttemptResult } from "@/lib/test-attempt-storage";
+import { loadAttemptResult, type PersistedAttempt } from "@/lib/test-attempt-storage";
 import { cn } from "@/lib/utils";
 
 export default function ListeningResultPage() {
@@ -27,15 +27,19 @@ export default function ListeningResultPage() {
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [activeEvidenceQuestionId, setActiveEvidenceQuestionId] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState<PersistedAttempt | null>(null);
 
   const flatQuestions = useMemo(() => {
     if (!test) return [];
     return flattenListeningQuestions(test.id, test.sections);
   }, [test]);
 
-  const attempt = useMemo(() => {
-    if (!test || !attemptId) return null;
-    return loadAttemptResult("listening", test.id, attemptId);
+  useEffect(() => {
+    if (!test || !attemptId) {
+      setAttempt(null);
+      return;
+    }
+    setAttempt(loadAttemptResult("listening", test.id, attemptId));
   }, [attemptId, test]);
 
   const gradeable = useMemo<GradeableQuestion[]>(() => {

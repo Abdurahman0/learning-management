@@ -201,7 +201,7 @@
       "startListening": "Start Listening Test",
       "startTest": "Start test",
       "passage": "Passage",
-      "section": "Section"
+      "section": "Part"
     },
     "upgrade": {
       "title": "Want access to 100+ more tests?",
@@ -222,7 +222,7 @@
     "meta": {
       "minutes": "Minutes",
       "questions": "Questions",
-      "sections": "Sections"
+      "sections": "Parts"
     },
     "reading": {
       "title": "Practice Reading Tests",
@@ -271,7 +271,7 @@
     "timeSpent": "Time spent: {seconds} seconds",
     "restartTest": "Restart Test",
     "restartConfirm": "Restart this test? Your current answers will be cleared.",
-    "leaveWarning": "You have an active test in progress. Are you sure you want to leave this page?",
+    "leaveWarning": "Are you sure you want to quit this test? Your results will not be saved.",
     "cancel": "Cancel",
     "confirmFinish": "Finish and grade"
   },
@@ -289,20 +289,20 @@
     "pauseAudio": "Pause audio",
     "audioProgress": "Audio progress",
     "audioVolume": "Audio volume",
-    "sectionTab": "Section {index}",
+    "sectionTab": "Part {index}",
     "questionPalette": "Question palette",
     "questionPaletteHint": "Tap a number to jump to that question. Mark questions to review later.",
     "answered": "Answered",
     "notAnswered": "Not answered",
     "markedForReview": "Marked for review",
     "jumpToQuestion": "Jump to question {number}",
-    "allSections": "All sections",
+    "allSections": "All parts",
     "legendAnswered": "Answered",
     "legendNotAnswered": "Not answered",
     "legendMarked": "Marked for review",
     "markForReview": "Mark for Review",
-    "previousSection": "Previous Section",
-    "nextSection": "Next Section",
+    "previousSection": "Previous Part",
+    "nextSection": "Next Part",
     "goToQuestion": "Go to question {number}",
     "options": "Options",
     "selectOption": "Select option",
@@ -311,7 +311,7 @@
     "backToListening": "Back to listening tests",
     "finishSummary": "You answered {answered} of {total}. {unanswered} unanswered.",
     "timeSpent": "Time spent: {seconds} seconds",
-    "leaveWarning": "You have an active test in progress. Are you sure you want to leave this page?",
+    "leaveWarning": "Are you sure you want to quit this test? Your results will not be saved.",
     "cancel": "Cancel",
     "confirmFinish": "Finish and grade"
   },
@@ -341,8 +341,8 @@
     "placeholders": {
       "fullName": "John Doe",
       "email": "name@example.com",
-      "password": "••••••••",
-      "confirmPassword": "••••••••"
+      "password": "вЂўвЂўвЂўвЂўвЂўвЂўвЂўвЂў",
+      "confirmPassword": "вЂўвЂўвЂўвЂўвЂўвЂўвЂўвЂў"
     },
     "signup": {
       "title": "Create your account",
@@ -440,7 +440,7 @@
     "terms": "Terms of Service",
     "contact": "Contact Us",
     "help": "Help Center",
-    "copyright": "© 2026 IELTS Master Practice. All rights reserved."
+    "copyright": "В© 2026 IELTS Master Practice. All rights reserved."
   },
   "common": {
     "explain": "Explain",
@@ -473,6 +473,53 @@
     "notAvailable": "Not available",
     "missingAttemptTitle": "Result not found",
     "missingAttemptDescription": "We could not find a completed attempt for this test."
+  },
+  "readingReview": {
+    "title": "Reading Review",
+    "scoreSummary": "{correct}/{total} correct ({percent}%)",
+    "reviewAnswers": "Review Answers",
+    "retakeTest": "Retake Test",
+    "passageLabel": "Passage {index}",
+    "passageReview": "Passage Review",
+    "questionReview": "Question Review",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "skipped": "Skipped",
+    "yourAnswer": "Your answer",
+    "correctAnswer": "Correct answer",
+    "showExplanation": "Explain",
+    "hideExplanation": "Hide Explanation",
+    "jumpToEvidence": "Jump to evidence",
+    "notAvailable": "Not available",
+    "videoLesson": "Video Lesson",
+    "watchLesson": "Watch Lesson",
+    "saveForLater": "Save for Later",
+    "lessonTimestamps": "Lesson timestamps",
+    "duration": "Duration",
+    "instructor": "Instructor",
+    "aiLearningCoach": "AI Learning Coach",
+    "score": "Score",
+    "accuracy": "Accuracy",
+    "timeUsed": "Time Used",
+    "mistakeBreakdown": "Mistake Breakdown",
+    "aiInsights": "AI Insights",
+    "personalizedImprovementPlan": "Personalized Improvement Plan",
+    "startPracticeSession": "Start Practice Session",
+    "generateSimilarTest": "Generate Similar Test",
+    "practiceWeakAreas": "Practice Weak Areas",
+    "mistakeHeatmap": "Mistake Heatmap",
+    "excellent": "Excellent",
+    "average": "Average",
+    "critical": "Critical",
+    "nextLearningActions": "Next Learning Actions",
+    "takeSimilarTest": "Take Similar Test",
+    "returnToDashboard": "Return to Dashboard",
+    "downloadReviewPdf": "Download Review PDF",
+    "saveToStudyBank": "Save To Study Bank",
+    "timerUsed": "Timer used",
+    "timerNotUsed": "Timer not used",
+    "accuracyByType": "Accuracy by Type",
+    "actionPlaceholder": "Demo action: {action}"
   },
   "dashboard": {
     "nav": {
@@ -703,9 +750,9 @@
       "expandRow": "Expand row",
       "collapseRow": "Collapse row",
       "noPassages": "No passages found for this test.",
-      "noSections": "No sections found for this listening test.",
+      "noSections": "No parts found for this listening test.",
       "passageLabel": "Passage {index}",
-      "sectionLabel": "Section {index}",
+      "sectionLabel": "Part {index}",
       "questionsShort": "Qs",
       "editPassage": "Edit Passage",
       "actions": {
@@ -797,10 +844,10 @@
       "title": "Test Structure",
       "labels": {
         "passage": "Passage {index}",
-        "section": "Section {index}"
+        "section": "Part {index}"
       },
-      "readingRule": "Reading must contain exactly 3 passages and total 40 questions (Q1–13, Q14–26, Q27–40).",
-      "listeningRule": "Listening must contain exactly 4 sections and total 40 questions (Q1–10, Q11–20, Q21–30, Q31–40).",
+      "readingRule": "Reading must contain exactly 3 passages and total 40 questions (Q1вЂ“13, Q14вЂ“26, Q27вЂ“40).",
+      "listeningRule": "Listening must contain exactly 4 parts and total 40 questions (Q1–10, Q11–20, Q21–30, Q31–40).",
       "actions": {
         "add": "Add",
         "remove": "Remove"
@@ -819,7 +866,7 @@
       "evidenceHint": "Select a question first, then highlight text and click Add Evidence.",
       "evidenceTarget": "Evidence target: {question}",
       "audioLabel": "Audio Label",
-      "audioPlaceholder": "section-1-audio.mp3",
+      "audioPlaceholder": "part-1-audio.mp3",
       "lastEvidence": "Last Attached Evidence"
     },
     "preview": {
@@ -839,7 +886,7 @@
         "from": "From",
         "to": "To"
       },
-      "validationRange": "Please choose a valid range inside the active passage/section.",
+      "validationRange": "Please choose a valid range inside the active passage/part.",
       "validationOverlap": "This range overlaps existing question numbers. Choose unused numbers only.",
       "createAction": "Create Group",
       "saveAction": "Save Group",
@@ -882,7 +929,7 @@
       }
     },
     "validation": {
-      "publishQuestionCount": "Cannot publish yet. Total questions must be {required} and each passage/section must be filled exactly. Current total: {current}.",
+      "publishQuestionCount": "Cannot publish yet. Total questions must be {required} and each passage/part must be filled exactly. Current total: {current}.",
       "overlapIssue": "overlap",
       "outOfRangeIssue": "out of range"
     },
@@ -1518,7 +1565,7 @@
       "unknownPassage": "Unknown Passage",
       "none": "None",
       "passageSlot": "Passage {index}",
-      "sectionSlot": "Section {index}"
+      "sectionSlot": "Part {index}"
     },
     "compatibleWith": "Compatible with: {slots}",
     "notCompatibleWith": "Not compatible with: {slots}",
@@ -1647,3 +1694,5 @@
     }
   }
 }
+
+

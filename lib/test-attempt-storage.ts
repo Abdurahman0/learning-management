@@ -1,9 +1,11 @@
 export type TestModule = "reading" | "listening";
+export type AttemptMode = "real" | "practice";
 
 export type PersistedAttempt = {
   attemptId: string;
   module: TestModule;
   testId: string;
+  mode?: AttemptMode;
   answers: Record<string, string | string[] | null>;
   markedQuestionIds: string[];
   startedAt: number;
@@ -66,4 +68,35 @@ export function loadAttemptResult(module: TestModule, testId: string, attemptId:
 export function loadLatestAttemptId(module: TestModule, testId: string) {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem(`${LATEST_PREFIX}:${module}:${testId}`);
+}
+
+export function loadLatestAttemptResult(module: TestModule, testId: string) {
+  if (typeof window === "undefined") return null;
+
+  const prefix = `${RESULT_PREFIX}:${module}:${testId}:`;
+  let latest: PersistedAttempt | null = null;
+
+  for (let index = 0; index < window.localStorage.length; index += 1) {
+    const key = window.localStorage.key(index);
+    if (!key || !key.startsWith(prefix)) continue;
+    const raw = window.localStorage.getItem(key);
+    if (!raw) continue;
+
+    try {
+      const parsed = JSON.parse(raw) as PersistedAttempt;
+      if (!latest) {
+        latest = parsed;
+        continue;
+      }
+      const parsedTime = parsed.finishedAt ?? parsed.startedAt;
+      const latestTime = latest.finishedAt ?? latest.startedAt;
+      if (parsedTime > latestTime) {
+        latest = parsed;
+      }
+    } catch {
+      // Ignore invalid records.
+    }
+  }
+
+  return latest;
 }

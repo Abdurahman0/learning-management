@@ -41,7 +41,10 @@ export function DashboardClient() {
       </section>
 
       <div className="mt-5">
-        <DashboardKpis summary={DASHBOARD_DATA.userSummary} />
+        <DashboardKpis
+          summary={DASHBOARD_DATA.userSummary}
+          onCurrentBandClick={() => document.getElementById("skills-snapshot")?.scrollIntoView({behavior: "smooth", block: "start"})}
+        />
       </div>
 
       <section className="mt-4">
@@ -51,6 +54,7 @@ export function DashboardClient() {
       <section className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <ScoreProgressChart points={DASHBOARD_DATA.scoreProgress} />
         <SkillsSnapshot
+          id="skills-snapshot"
           skills={DASHBOARD_DATA.skillsSnapshot}
           summary={DASHBOARD_DATA.userSummary}
           overallJourneyPct={DASHBOARD_DATA.overallJourneyPct}
