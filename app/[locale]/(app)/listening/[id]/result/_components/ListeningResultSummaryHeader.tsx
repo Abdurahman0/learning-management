@@ -6,9 +6,9 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ResultStatCard } from "./ResultStatCard";
+import { ListeningResultStatCard } from "./ListeningResultStatCard";
 
-type ReviewHeaderProps = {
+type ListeningResultSummaryHeaderProps = {
   testId: string;
   testTitle: string;
   correct: number;
@@ -16,12 +16,13 @@ type ReviewHeaderProps = {
   unanswered: number;
   total: number;
   scorePercent: number;
+  estimatedBand: string;
+  timerUsed: boolean;
   minutes: string;
   seconds: string;
-  timerUsed: boolean;
 };
 
-export function ReviewHeader({
+export function ListeningResultSummaryHeader({
   testId,
   testTitle,
   correct,
@@ -29,12 +30,13 @@ export function ReviewHeader({
   unanswered,
   total,
   scorePercent,
+  estimatedBand,
+  timerUsed,
   minutes,
   seconds,
-  timerUsed,
-}: ReviewHeaderProps) {
+}: ListeningResultSummaryHeaderProps) {
   const locale = useLocale();
-  const t = useTranslations("readingResult");
+  const t = useTranslations("listeningResult");
 
   return (
     <Card className="gap-5 rounded-3xl border-border/75 bg-[linear-gradient(120deg,rgba(11,23,43,0.95),rgba(10,25,49,0.82)_52%,rgba(22,48,92,0.32))] p-4 shadow-none sm:p-6">
@@ -51,6 +53,9 @@ export function ReviewHeader({
               </p>
               <p className="pb-1 text-sm text-muted-foreground">{t("accuracyPercent", { percent: scorePercent })}</p>
             </div>
+            <p className="text-sm text-blue-200">
+              <span className="text-muted-foreground">{t("estimatedBand")}:</span> {estimatedBand}
+            </p>
           </div>
 
           <div className="flex flex-wrap gap-2.5">
@@ -58,7 +63,7 @@ export function ReviewHeader({
               <Link href="#review-main">{t("reviewAnswers")}</Link>
             </Button>
             <Button variant="outline" asChild className="h-9 rounded-xl border-border/70 bg-background/35 px-4">
-              <Link href={`/${locale}/reading/${testId}?restart=1`}>
+              <Link href={`/${locale}/listening/${testId}?restart=1`}>
                 <RotateCcw className="size-4" />
                 {t("retakeTest")}
               </Link>
@@ -73,10 +78,10 @@ export function ReviewHeader({
         </div>
 
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-          <ResultStatCard label={t("correct")} value={correct} tone="success" />
-          <ResultStatCard label={t("incorrect")} value={incorrect} tone="danger" />
-          <ResultStatCard label={t("unanswered")} value={unanswered} tone="neutral" />
-          <ResultStatCard
+          <ListeningResultStatCard label={t("correct")} value={correct} tone="success" />
+          <ListeningResultStatCard label={t("incorrect")} value={incorrect} tone="danger" />
+          <ListeningResultStatCard label={t("unanswered")} value={unanswered} tone="neutral" />
+          <ListeningResultStatCard
             label={t("timeUsed")}
             value={timerUsed ? `${minutes}:${seconds}` : t("practiceTest")}
             hint={timerUsed ? t("timerUsed") : t("practiceMode")}

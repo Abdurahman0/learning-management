@@ -16,17 +16,23 @@ import {
 } from "./content-bank";
 import {MISTAKES_BY_RANGE, DEFAULT_RECOMMENDATION_SETTINGS_ENTITY} from "./mistakes";
 import {ADMIN_NAV_ITEMS, ADMIN_PROFILE, type AdminNavItem} from "./profile";
+import {REPORT_ENTITIES, REPORT_HISTORY_ENTITIES} from "./reports";
 import {GLOBAL_PLAN_SETTINGS_ENTITY, PLAN_ENTITIES, SUBSCRIPTION_ACTION_ENTITIES} from "./subscriptions";
 import {TEST_ENTITIES, getTestById} from "./tests";
 import {USER_ENTITIES, getUserById} from "./users";
 import type {
   AdminLocale,
+  AdminReportEntity,
   AdminStatus,
   AnalyticsRangeKey,
   BuilderQuestion,
   BuilderQuestionGroup,
   ContentModule,
   PlanId,
+  ReportHistoryActionType,
+  ReportModule,
+  ReportSeverity,
+  ReportType,
   QuestionType,
   QuestionVariantSetEntity,
   TestDifficulty,
@@ -270,6 +276,62 @@ export type ContentBankData = {
   variants: ContentBankVariantSet[];
   tests: AdminTestSummary[];
   meta: ContentBankMeta;
+};
+
+export type ReportsPageReport = {
+  id: string;
+  code: string;
+  module: ReportModule;
+  reportType: ReportType;
+  status: AdminReportEntity["status"];
+  severity: ReportSeverity;
+  questionPreview: string;
+  questionNumberLabel: string;
+  userMessage: string;
+  createdAt: string;
+  selectedAnswer?: string;
+  correctAnswer?: string;
+  questionContentTitle?: string;
+  questionOptions?: AdminReportEntity["questionOptions"];
+  passageHighlight?: string;
+  passageTitle?: string;
+  reporter: {
+    id: string;
+    name: string;
+    avatarFallback: string;
+  };
+  test: {
+    id: string;
+    name: string;
+  };
+  assignedTo?: {
+    id: string;
+    name: string;
+  };
+};
+
+export type MostReportedQuestionItem = {
+  id: string;
+  label: string;
+  module: ReportModule;
+  reportType: ReportType;
+  reportCount: number;
+};
+
+export type ReportHistoryFeedItem = {
+  id: string;
+  reportId?: string;
+  reportCode?: string;
+  actionType: ReportHistoryActionType;
+  actor: string;
+  description: string;
+  createdAt: string;
+};
+
+export type ReportsPageData = {
+  reports: ReportsPageReport[];
+  mostReportedQuestions: MostReportedQuestionItem[];
+  resolutionHistory: ReportHistoryFeedItem[];
 };
 
 function toPlanTitle(planId: PlanId | "cancelled") {
@@ -761,6 +823,105 @@ export function getMistakesAnalysisData(range: AnalyticsRangeKey): MistakesDatas
     })),
     commonTopics: source.commonTopics,
     aiInsights: source.insights
+  };
+}
+
+export function getReportsPageData(): ReportsPageData {
+  const testsById = new Map(TEST_ENTITIES.map((test) => [test.id, test]));
+  const usersById = new Map(USER_ENTITIES.map((user) => [user.id, user]));
+  const passagesById = new Map(PASSAGE_ASSET_ENTITIES.map((passage) => [passage.id, passage]));
+  const reportsById = new Map(REPORT_ENTITIES.map((report) => [report.id, report]));
+
+  const reports: ReportsPageReport[] = [...REPORT_ENTITIES]
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .map((report) => {
+      const test = testsById.get(report.testId);
+      const reporter = usersById.get(report.userId);
+      const assignedTo = report.assignedToUserId ? usersById.get(report.assignedToUserId) : undefined;
+      const passage = report.passageId ? passagesById.get(report.passageId) : undefined;
+
+      return {
+        id: report.id,
+        code: report.code,
+        module: report.module,
+        reportType: report.reportType,
+        status: report.status,
+        severity: report.severity,
+        questionPreview: report.questionPreview,
+        questionNumberLabel: report.questionNumberLabel,
+        userMessage: report.userMessage,
+        createdAt: report.createdAt,
+        selectedAnswer: report.selectedAnswer,
+        correctAnswer: report.correctAnswer,
+        questionContentTitle: report.questionContentTitle,
+        questionOptions: report.questionOptions?.map((option) => ({...option})),
+        passageHighlight: report.passageHighlight,
+        passageTitle: passage?.title,
+        reporter: {
+          id: report.userId,
+          name: reporter?.name ?? "Unknown User",
+          avatarFallback: reporter?.avatarFallback ?? "UU"
+        },
+        test: {
+          id: report.testId,
+          name: test?.name ?? "Unknown Test"
+        },
+        assignedTo: assignedTo
+          ? {
+              id: assignedTo.id,
+              name: assignedTo.name
+            }
+          : undefined
+      };
+    });
+
+  const reportFrequency = new Map<string, MostReportedQuestionItem>();
+  for (const report of reports) {
+    const frequencyKey = `${report.test.id}::${report.questionNumberLabel}`;
+    const existing = reportFrequency.get(frequencyKey);
+    const label = `${report.test.name} ${report.questionNumberLabel}`;
+
+    if (!existing) {
+      reportFrequency.set(frequencyKey, {
+        id: frequencyKey,
+        label,
+        module: report.module,
+        reportType: report.reportType,
+        reportCount: 1
+      });
+      continue;
+    }
+
+    existing.reportCount += 1;
+  }
+
+  const mostReportedQuestions = [...reportFrequency.values()]
+    .sort((left, right) => right.reportCount - left.reportCount || left.label.localeCompare(right.label))
+    .slice(0, 5);
+
+  const resolutionHistory: ReportHistoryFeedItem[] = [...REPORT_HISTORY_ENTITIES]
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .map((historyItem) => {
+      const actor =
+        (historyItem.actorUserId ? usersById.get(historyItem.actorUserId)?.name : undefined) ??
+        historyItem.actorLabel ??
+        "System";
+
+      return {
+        id: historyItem.id,
+        reportId: historyItem.reportId,
+        reportCode: historyItem.reportId ? reportsById.get(historyItem.reportId)?.code : undefined,
+        actionType: historyItem.actionType,
+        actor,
+        description: historyItem.description,
+        createdAt: historyItem.createdAt
+      };
+    });
+
+  return {
+    reports,
+    mostReportedQuestions,
+    resolutionHistory
   };
 }
 

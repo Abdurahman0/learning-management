@@ -521,6 +521,85 @@
     "accuracyByType": "Savol turi bo'yicha aniqlik",
     "actionPlaceholder": "Demo amal: {action}"
   },
+  "readingResult": {
+    "eyebrow": "Reading natijasi",
+    "scoreSummary": "{correct} / {total} ta to'g'ri",
+    "accuracyPercent": "{percent}% aniqlik",
+    "reviewAnswers": "Javoblarni ko'rish",
+    "retakeTest": "Testni qayta ishlash",
+    "goToDashboard": "Dashboard",
+    "correct": "To'g'ri",
+    "incorrect": "Noto'g'ri",
+    "unanswered": "Javobsiz",
+    "timeUsed": "Sarflangan vaqt",
+    "timerUsed": "Taymer yoqilgan",
+    "timerNotUsed": "Taymer o'chirilgan",
+    "practiceMode": "Mashq rejimi",
+    "practiceTest": "Mashq testi",
+    "performanceEyebrow": "Savol turi bo'yicha",
+    "performanceByType": "Savol turi bo'yicha natija",
+    "passageLabel": "Passage {index}",
+    "passageAnalysis": "Passage tahlili",
+    "questionAnalysis": "Savollar tahlili",
+    "questionNavigator": "Savol navigatori",
+    "yourAnswer": "Sizning javobingiz",
+    "correctAnswer": "To'g'ri javob",
+    "explain": "Izoh",
+    "hideExplanation": "Izohni yopish",
+    "jumpToEvidence": "Dalilga o'tish",
+    "skipped": "Javobsiz",
+    "correctStatus": "To'g'ri",
+    "incorrectStatus": "Noto'g'ri",
+    "skippedStatus": "Javobsiz",
+    "noAnswer": "Javob berilmagan",
+    "notAvailable": "Mavjud emas",
+    "questionTypes": {
+      "tfng": "TFNG",
+      "matchingHeadings": "Matching Headings",
+      "mcq": "MCQ",
+      "sentenceCompletion": "Gapni to'ldirish",
+      "matchingInfo": "Matching Information"
+    }
+  },
+  "listeningResult": {
+    "eyebrow": "Listening natijasi",
+    "accuracyPercent": "{percent}% aniqlik",
+    "estimatedBand": "Taxminiy band",
+    "reviewAnswers": "Javoblarni ko'rish",
+    "retakeTest": "Testni qayta ishlash",
+    "goToDashboard": "Dashboard",
+    "correct": "To'g'ri",
+    "incorrect": "Noto'g'ri",
+    "unanswered": "Javobsiz",
+    "timeUsed": "Sarflangan vaqt",
+    "timerUsed": "Taymer yoqilgan",
+    "practiceMode": "Mashq rejimi",
+    "practiceTest": "Mashq testi",
+    "sectionPerformanceEyebrow": "Bo'lim natijalari",
+    "sectionPerformance": "Part bo'yicha natija",
+    "partLabel": "Part {index}",
+    "listeningReview": "Listening tahlili",
+    "selectedEvidence": "Tanlangan dalil",
+    "questionAnalysis": "Savollar tahlili",
+    "questionNavigator": "Savol navigatori",
+    "scoreSummary": "{correct} / {total} ta to'g'ri",
+    "yourAnswer": "Sizning javobingiz",
+    "correctAnswer": "To'g'ri javob",
+    "explain": "Izoh",
+    "hideExplanation": "Izohni yopish",
+    "jumpToEvidence": "Dalilga o'tish",
+    "goToQuestion": "Savolga o'tish",
+    "correctStatus": "To'g'ri",
+    "incorrectStatus": "Noto'g'ri",
+    "skippedStatus": "Javobsiz",
+    "noAnswer": "Javob berilmagan",
+    "notAvailable": "Mavjud emas",
+    "questionTypes": {
+      "mcq": "Ko'p variantli savol",
+      "text": "Matn to'ldirish",
+      "matching": "Moslashtirish"
+    }
+  },
   "dashboard": {
     "nav": {
       "dashboard": "Dashboard",
@@ -1202,6 +1281,136 @@
       "sendMessage": "{name} uchun xabar yuborish amali ishga tushdi.",
       "resetPassword": "{name} uchun parolni tiklash amali ishga tushdi.",
       "resetCancelled": "{name} uchun parolni tiklash bekor qilindi."
+    }
+  },
+  "adminReports": {
+    "title": "Hisobotlar va kontent muammolari",
+    "searchPlaceholder": "Hisobotlarni qidiring...",
+    "notificationsLabel": "Bildirishnomalar",
+    "reportDetails": "Hisobot tafsilotlari",
+    "userReportMessage": "Foydalanuvchi xabari",
+    "questionContent": "Savol kontenti",
+    "passageHighlight": "Passage highlight",
+    "markAsResolved": "Hal qilingan deb belgilash",
+    "reassign": "Qayta biriktirish",
+    "rejectReport": "Hisobotni rad etish",
+    "yourAnswer": "Sizning javobingiz",
+    "correctAnswer": "To'g'ri javob",
+    "submittedBy": "Yuborgan: {name}",
+    "assignedTo": "Biriktirilgan: {name}",
+    "reply": "Javob yozish",
+    "notAvailable": "Mavjud emas",
+    "noPassageHighlight": "Bu hisobot uchun bog'langan passage highlight mavjud emas.",
+    "noReportSelected": "Tafsilotlarni ko'rish uchun ro'yxatdan hisobot tanlang.",
+    "showingReports": "{total} tadan {shown} ta hisobot ko'rsatilmoqda",
+    "mostReportedQuestions": "Eng ko'p shikoyat qilingan savollar",
+    "resolutionHistory": "Yechim tarixi",
+    "currentWindow": "Joriy hafta",
+    "reportCount": "{count} ta hisobot",
+    "systemActor": "Sarah Jenkins",
+    "summary": {
+      "openReports": "Ochiq hisobotlar",
+      "resolvedToday": "Bugun hal qilingan",
+      "mostReported": "Eng ko'p shikoyat",
+      "urgentReports": "Shoshilinch hisobotlar",
+      "openReportsHint": "Ko'rib chiqish navbatida",
+      "resolvedTodayHint": "So'nggi kunda yopilganlar",
+      "mostReportedHint": "Eng ko'p takrorlangan savol",
+      "urgentReportsHint": "Yuqori ustuvorlikdagi navbat",
+      "noData": "Hisobot ma'lumoti yo'q"
+    },
+    "filters": {
+      "statusLabel": "Holat",
+      "typeLabel": "Turi",
+      "moduleLabel": "Modul",
+      "severityLabel": "Daraja",
+      "sortLabel": "Saralash",
+      "reset": "Filtrlarni tozalash",
+      "status": {
+        "all": "Barcha holatlar",
+        "open": "Ochiq",
+        "inReview": "Ko'rib chiqilmoqda",
+        "resolved": "Hal qilingan",
+        "rejected": "Rad etilgan"
+      },
+      "type": {
+        "all": "Barcha turlar",
+        "contentError": "Kontent xatosi",
+        "answerKey": "Javob kaliti",
+        "audioIssue": "Audio muammosi",
+        "imageMissing": "Rasm yo'q",
+        "uiIssue": "UI muammosi"
+      },
+      "module": {
+        "all": "Barcha modullar",
+        "reading": "Reading",
+        "listening": "Listening",
+        "writing": "Writing",
+        "speaking": "Speaking"
+      },
+      "severity": {
+        "all": "Barcha darajalar",
+        "low": "Past",
+        "medium": "O'rta",
+        "urgent": "Shoshilinch"
+      },
+      "sort": {
+        "newest": "Avval yangilari",
+        "oldest": "Avval eskilari",
+        "severity": "Daraja bo'yicha"
+      }
+    },
+    "table": {
+      "columns": {
+        "id": "ID",
+        "questionPreview": "Savol preview",
+        "testName": "Test nomi",
+        "module": "Modul",
+        "status": "Holat",
+        "updatedAt": "Yangilangan vaqti"
+      },
+      "empty": "Joriy filtrlar bo'yicha hisobot topilmadi."
+    },
+    "status": {
+      "open": "Ochiq",
+      "in_review": "Ko'rib chiqilmoqda",
+      "resolved": "Hal qilingan",
+      "rejected": "Rad etilgan"
+    },
+    "severity": {
+      "low": "Past",
+      "medium": "O'rta",
+      "urgent": "Shoshilinch"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "types": {
+      "content_error": "Kontent xatosi",
+      "answer_key": "Javob kaliti",
+      "audio_issue": "Audio muammosi",
+      "image_missing": "Rasm yo'q",
+      "ui_issue": "UI muammosi"
+    },
+    "historyAction": {
+      "created": "Yaratildi",
+      "resolved": "Hal qilindi",
+      "reassigned": "Qayta biriktirildi",
+      "rejected": "Rad etildi",
+      "commented": "Izoh qoldirildi"
+    },
+    "historyDescription": {
+      "resolved": "{code} hal qilingan deb belgilandi.",
+      "rejected": "{code} hisoboti rad etildi.",
+      "reassigned": "{code} hisobot {name} ga qayta biriktirildi."
+    },
+    "actionFeedback": {
+      "resolved": "{code} hal qilindi.",
+      "rejected": "{code} rad etildi.",
+      "reassigned": "{name} ga qayta biriktirildi."
     }
   },
   "adminSubscriptions": {

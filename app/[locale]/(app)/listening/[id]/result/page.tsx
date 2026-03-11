@@ -1,46 +1,85 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { CheckCircle2, HelpCircle, RotateCcw, XCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { getListeningTestById } from "@/data/listening-tests-full";
 import { getListeningAnswerMeta } from "@/data/listening-answer-keys";
+import { getListeningTestById, type ListeningSectionId } from "@/data/listening-tests-full";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { flattenListeningQuestions } from "@/lib/listening-questions";
-import { loadAttemptResult, type PersistedAttempt } from "@/lib/test-attempt-storage";
-import { cn } from "@/lib/utils";
+import { loadAttemptResult, loadLatestAttemptResult, type PersistedAttempt } from "@/lib/test-attempt-storage";
+import { ListeningQuestionAnalysisPanel } from "./_components/ListeningQuestionAnalysisPanel";
+import { ListeningResultSummaryHeader } from "./_components/ListeningResultSummaryHeader";
+import {
+  ListeningSectionPerformance,
+  type ListeningSectionPerformanceItem,
+} from "./_components/ListeningSectionPerformance";
+import {
+  ListeningTranscriptReviewPanel,
+  type ListeningReviewSection,
+} from "./_components/ListeningTranscriptReviewPanel";
+
+type QuestionStatus = "correct" | "incorrect" | "skipped";
+
+function getQuestionStatus(grading: ReturnType<typeof gradeTest>, questionId: string): QuestionStatus {
+  const result = grading.byQuestion[questionId];
+  if (!result?.normalizedUser) return "skipped";
+  return result.isCorrect ? "correct" : "incorrect";
+}
+
+function estimateListeningBand(correct: number) {
+  if (correct >= 39) return "9.0";
+  if (correct >= 37) return "8.5";
+  if (correct >= 35) return "8.0";
+  if (correct >= 32) return "7.5";
+  if (correct >= 30) return "7.0";
+  if (correct >= 26) return "6.5";
+  if (correct >= 23) return "6.0";
+  if (correct >= 18) return "5.5";
+  if (correct >= 16) return "5.0";
+  if (correct >= 13) return "4.5";
+  if (correct >= 10) return "4.0";
+  if (correct >= 8) return "3.5";
+  if (correct >= 6) return "3.0";
+  if (correct >= 4) return "2.5";
+  if (correct >= 2) return "2.0";
+  return "1.0";
+}
 
 export default function ListeningResultPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const locale = useLocale();
-  const t = useTranslations("testResults");
+  const tResults = useTranslations("testResults");
+  const t = useTranslations("listeningResult");
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const testId = typeof params?.id === "string" ? params.id : "";
   const attemptId = searchParams.get("attempt") ?? "";
   const test = getListeningTestById(testId);
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [activeEvidenceQuestionId, setActiveEvidenceQuestionId] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState<PersistedAttempt | null>(null);
+  const [activeSectionId, setActiveSectionId] = useState<ListeningSectionId>("s1");
+  const [highlightedEvidenceQuestionId, setHighlightedEvidenceQuestionId] = useState<string | null>(null);
 
   const flatQuestions = useMemo(() => {
     if (!test) return [];
     return flattenListeningQuestions(test.id, test.sections);
   }, [test]);
 
-  useEffect(() => {
-    if (!test || !attemptId) {
-      setAttempt(null);
-      return;
-    }
-    setAttempt(loadAttemptResult("listening", test.id, attemptId));
-  }, [attemptId, test]);
+  const attempt = useMemo<PersistedAttempt | null>(() => {
+    if (!isClient || !test) return null;
+    if (!attemptId) return loadLatestAttemptResult("listening", test.id);
+    return loadAttemptResult("listening", test.id, attemptId);
+  }, [attemptId, isClient, test]);
 
   const gradeable = useMemo<GradeableQuestion[]>(() => {
     return flatQuestions.map((question) => {
@@ -60,136 +99,161 @@ export default function ListeningResultPage() {
     return gradeTest(gradeable, attempt.answers);
   }, [attempt, gradeable]);
 
-  if (!test || !attempt || !grading) {
+  useEffect(() => {
+    if (!highlightedEvidenceQuestionId) return;
+    const timer = window.setTimeout(() => setHighlightedEvidenceQuestionId(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [highlightedEvidenceQuestionId]);
+
+  const sectionPerformance = useMemo(() => {
+    if (!test || !grading) return [] as ListeningSectionPerformanceItem[];
+
+    return test.sections.map((section, index) => {
+      const sectionQuestions = flatQuestions.filter((question) => question.sectionId === section.id);
+      const total = sectionQuestions.length;
+      const correct = sectionQuestions.reduce((sum, question) => sum + (grading.byQuestion[question.id]?.isCorrect ? 1 : 0), 0);
+      return {
+        sectionId: section.id,
+        label: t("partLabel", { index: index + 1 }),
+        correct,
+        total,
+        percent: total ? Math.round((correct / total) * 100) : 0,
+      };
+    });
+  }, [flatQuestions, grading, t, test]);
+
+  const reviewSections = useMemo(() => {
+    if (!test || !grading) return [] as ListeningReviewSection[];
+
+    return test.sections.map((section, index) => ({
+      sectionId: section.id,
+      label: t("partLabel", { index: index + 1 }),
+      title: section.title,
+      instructions: section.instructions,
+      nowPlayingLabel: section.audioMeta.nowPlayingLabel,
+      audioTitle: section.audioMeta.currentTrackTitle,
+      evidenceItems: flatQuestions
+        .filter((question) => question.sectionId === section.id)
+        .map((question) => {
+          const meta = getListeningAnswerMeta(question.id);
+          return {
+            questionId: question.id,
+            questionNumber: question.number,
+            prompt: question.prompt,
+            quote: meta?.evidence.transcriptQuote ?? question.prompt,
+            timeRange: meta?.evidence.timeRange,
+            status: getQuestionStatus(grading, question.id),
+          };
+        }),
+    }));
+  }, [flatQuestions, grading, t, test]);
+
+  const handleJumpEvidence = useCallback((questionId: string) => {
+    const meta = getListeningAnswerMeta(questionId);
+    if (meta?.evidence.sectionId) {
+      setActiveSectionId(meta.evidence.sectionId);
+    }
+    setHighlightedEvidenceQuestionId(questionId);
+
+    window.setTimeout(() => {
+      const node = document.getElementById(`listening-evidence-${questionId}`);
+      node?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+  }, []);
+
+  if (!test) {
     return (
       <div className="mx-auto mt-8 max-w-3xl px-4">
         <Card className="p-6">
-          <h1 className="text-xl font-semibold">{t("missingAttemptTitle")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{t("missingAttemptDescription")}</p>
+          <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{tResults("missingAttemptDescription")}</p>
           <Button className="mt-4" asChild>
-            <Link href={`/${locale}/listening/${testId}?restart=1`}>{t("retakeTest")}</Link>
+            <Link href={`/${locale}/listening/${testId}?restart=1`}>{tResults("retakeTest")}</Link>
           </Button>
         </Card>
       </div>
     );
   }
 
-  const timeTakenSec = Math.max(0, attempt.finishedAt ? Math.floor((attempt.finishedAt - attempt.startedAt) / 1000) : 0);
-  const minutes = Math.floor(timeTakenSec / 60).toString().padStart(2, "0");
-  const seconds = (timeTakenSec % 60).toString().padStart(2, "0");
+  if (!isClient) {
+    return (
+      <section className="mx-auto w-full max-w-[1780px] space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
+        <Card className="rounded-2xl border-border/70 bg-card/70 p-6">
+          <p className="text-sm text-muted-foreground">{tResults("title")}</p>
+        </Card>
+      </section>
+    );
+  }
+
+  if (!attempt || !grading) {
+    return (
+      <div className="mx-auto mt-8 max-w-3xl px-4">
+        <Card className="p-6">
+          <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{tResults("missingAttemptDescription")}</p>
+          <Button className="mt-4" asChild>
+            <Link href={`/${locale}/listening/${testId}?restart=1`}>{tResults("retakeTest")}</Link>
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  const timerSpentSec = Math.max(0, test.durationMinutes * 60 - attempt.timeRemainingSec);
+  const fallbackSpentSec = Math.max(0, attempt.finishedAt ? Math.floor((attempt.finishedAt - attempt.startedAt) / 1000) : 0);
+  const effectiveSpentSec = attempt.timerUsed ? timerSpentSec : fallbackSpentSec;
+  const minutes = Math.floor(effectiveSpentSec / 60).toString().padStart(2, "0");
+  const seconds = (effectiveSpentSec % 60).toString().padStart(2, "0");
+  const estimatedBand = estimateListeningBand(grading.correctCount);
+  const resolvedActiveSectionId = test.sections.some((section) => section.id === activeSectionId)
+    ? activeSectionId
+    : (test.sections[0]?.id ?? "s1");
 
   return (
-    <section className="mx-auto w-full max-w-[1280px] space-y-4 px-3 pb-8 pt-4 sm:px-5 lg:px-8">
-      <Card className="grid gap-4 p-5 md:grid-cols-[1.2fr_1fr]">
-        <div>
-          <p className="text-sm text-muted-foreground">{test.title}</p>
-          <h1 className="text-2xl font-semibold">{t("title")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{t("scoreSummary", { correct: grading.correctCount, total: grading.total, percent: grading.scorePercent })}</p>
-          <p className="mt-1 text-sm text-blue-600">{t("estimatedBand")}</p>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-3 md:grid-cols-1">
-          <Card className="p-3"><p className="text-xs text-muted-foreground">{t("correct")}</p><p className="text-lg font-semibold text-emerald-600">{grading.correctCount}</p></Card>
-          <Card className="p-3"><p className="text-xs text-muted-foreground">{t("incorrect")}</p><p className="text-lg font-semibold text-rose-600">{grading.incorrectCount}</p></Card>
-          <Card className="p-3"><p className="text-xs text-muted-foreground">{t("unanswered")}</p><p className="text-lg font-semibold text-muted-foreground">{grading.unansweredCount}</p></Card>
-        </div>
-      </Card>
+    <section className="mx-auto w-full max-w-[1780px] space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
+      <ListeningResultSummaryHeader
+        testId={test.id}
+        testTitle={test.title}
+        correct={grading.correctCount}
+        incorrect={grading.incorrectCount}
+        unanswered={grading.unansweredCount}
+        total={grading.total}
+        scorePercent={grading.scorePercent}
+        estimatedBand={estimatedBand}
+        timerUsed={attempt.timerUsed}
+        minutes={minutes}
+        seconds={seconds}
+      />
 
-      <Card className="flex flex-wrap gap-2 p-4">
-        <Button asChild><Link href="#question-review">{t("reviewAnswers")}</Link></Button>
-        <Button variant="outline" asChild><Link href={`/${locale}/listening/${test.id}?restart=1`}><RotateCcw className="size-4" />{t("retakeTest")}</Link></Button>
-        <p className="ml-auto text-sm text-muted-foreground">{t("timeTaken")}: {minutes}:{seconds}</p>
-      </Card>
+      <ListeningSectionPerformance items={sectionPerformance} />
 
-      <Card id="question-review" className="p-4">
-        <p className="mb-3 text-sm font-semibold">{t("questionReview")}</p>
-        {activeEvidenceQuestionId ? (
-          <Card className="mb-3 border-amber-300 bg-amber-50/60 p-3 dark:bg-amber-500/10">
-            <p className="text-sm font-medium">{t("evidenceViewer")}</p>
-            <p className="mt-1 text-sm text-foreground/90">
-              {getListeningAnswerMeta(activeEvidenceQuestionId)?.evidence.transcriptQuote ?? t("notAvailable")}
-            </p>
-          </Card>
-        ) : null}
-        <div className="grid grid-cols-8 gap-1 sm:grid-cols-10">
-          {flatQuestions.map((question) => {
-            const result = grading.byQuestion[question.id];
-            const marked = attempt.markedQuestionIds.includes(question.id);
-            return (
-              <a
-                key={question.id}
-                href={`#review-${question.id}`}
-                className={cn(
-                  "inline-flex h-8 items-center justify-center rounded-md border text-xs font-medium",
-                  result?.isCorrect && "border-emerald-200 bg-emerald-50 text-emerald-700",
-                  !result?.isCorrect && result?.normalizedUser && "border-rose-200 bg-rose-50 text-rose-700",
-                  !result?.normalizedUser && "border-border bg-muted/20 text-muted-foreground",
-                  marked && "ring-2 ring-amber-400/70"
-                )}
-              >
-                {question.number}
-              </a>
-            );
-          })}
-        </div>
+      <section id="review-main" className="grid min-h-0 items-start gap-4 xl:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)]">
+        <ListeningTranscriptReviewPanel
+          sections={reviewSections}
+          activeSectionId={resolvedActiveSectionId}
+          highlightedQuestionId={highlightedEvidenceQuestionId}
+          onSectionChange={(sectionId) => setActiveSectionId(sectionId as ListeningSectionId)}
+        />
 
-        <div className="mt-4 space-y-3">
-          {flatQuestions.map((question) => {
-            const result = grading.byQuestion[question.id];
-            const meta = getListeningAnswerMeta(question.id);
-            const yourAnswer = attempt.answers[question.id];
-            const open = expanded.has(question.id);
-
-            return (
-              <Card
-                key={question.id}
-                id={`review-${question.id}`}
-                className={cn(
-                  "p-3",
-                  result?.isCorrect && "border-emerald-300",
-                  !result?.isCorrect && result?.normalizedUser && "border-rose-300",
-                  !result?.normalizedUser && "border-border"
-                )}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold">{question.number}. {question.prompt}</p>
-                    <p className="text-xs text-muted-foreground">{question.sectionTitle} - {question.type}</p>
-                  </div>
-                  {result?.isCorrect ? <CheckCircle2 className="size-4 text-emerald-600" /> : <XCircle className="size-4 text-rose-600" />}
-                </div>
-                <p className="mt-2 text-sm"><span className="font-medium">{t("yourAnswer")}:</span> {typeof yourAnswer === "string" ? yourAnswer || "-" : "-"}</p>
-                <p className="text-sm"><span className="font-medium">{t("correctAnswer")}:</span> {Array.isArray(meta?.correctAnswer) ? meta?.correctAnswer.join(", ") : (meta?.correctAnswer ?? t("notAvailable"))}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setExpanded((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(question.id)) next.delete(question.id);
-                        else next.add(question.id);
-                        return next;
-                      });
-                    }}
-                  >
-                    <HelpCircle className="size-4" />
-                    {t("explain")}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setActiveEvidenceQuestionId(question.id)}>
-                    {t("showEvidence")}
-                  </Button>
-                </div>
-                {open ? (
-                  <div className="mt-3 rounded-md border bg-muted/20 p-3 text-sm">
-                    <p>{meta?.explanation ?? t("notAvailable")}</p>
-                    {meta?.evidence.transcriptQuote ? <p className="mt-1 text-xs text-muted-foreground">{meta.evidence.transcriptQuote}</p> : null}
-                  </div>
-                ) : null}
-              </Card>
-            );
-          })}
-        </div>
-      </Card>
+        <ListeningQuestionAnalysisPanel
+          questions={flatQuestions}
+          answers={attempt.answers}
+          grading={grading}
+          expanded={expanded}
+          onToggleExplanation={(questionId) => {
+            setExpanded((previous) => {
+              const next = new Set(previous);
+              if (next.has(questionId)) {
+                next.delete(questionId);
+              } else {
+                next.add(questionId);
+              }
+              return next;
+            });
+          }}
+          onJumpEvidence={handleJumpEvidence}
+        />
+      </section>
     </section>
   );
 }

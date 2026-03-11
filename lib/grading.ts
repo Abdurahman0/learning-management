@@ -57,9 +57,16 @@ function normalizeTfng(value: string) {
   return normalized.toUpperCase();
 }
 
+function normalizeMatchingHeading(value: string) {
+  const normalized = normalizeTextAnswer(value);
+  const roman = normalized.match(/^([ivxlcdm]+)\b/i)?.[1];
+  return roman ? roman.toLowerCase() : normalized;
+}
+
 function toComparable(questionType: QuestionTypeForGrading, value: string) {
   if (questionType === "mcq") return normalizeChoice(value);
   if (questionType === "tfng") return normalizeTfng(value);
+  if (questionType === "matchingHeadings") return normalizeMatchingHeading(value);
   if (questionType === "matching") return normalizeChoice(value);
   return normalizeTextAnswer(value);
 }
@@ -142,7 +149,6 @@ if (process.env.NODE_ENV === "development") {
     "not given"
   );
   if (!sample.isCorrect) {
-    // eslint-disable-next-line no-console
     console.warn("[grading] TFNG self-check failed");
   }
 }

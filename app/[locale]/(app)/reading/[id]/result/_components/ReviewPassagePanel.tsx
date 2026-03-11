@@ -24,7 +24,7 @@ export function ReviewPassagePanel({
   passageScrollRef,
   onPassageChange,
 }: ReviewPassagePanelProps) {
-  const t = useTranslations("readingReview");
+  const t = useTranslations("readingResult");
   const activePassage = passages.find((passage) => passage.id === activePassageId) ?? passages[0];
 
   const renderParagraphText = (text: string, highlights?: Array<{ questionNumber: number; text: string }>) => {
@@ -70,10 +70,10 @@ export function ReviewPassagePanel({
       chunks.push(
         <span
           key={`highlight-${range.start}-${range.end}-${index}`}
-          className="rounded-sm bg-blue-500/20 px-0.5 text-blue-100 shadow-[inset_0_-1px_0_rgba(96,165,250,0.45)]"
+          className="rounded-md bg-blue-400/20 px-1 py-0.5 text-blue-50 shadow-[inset_0_-1px_0_rgba(96,165,250,0.35)]"
         >
           {marked}
-          <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full border border-blue-300/60 bg-blue-500/35 px-1 text-[10px] font-semibold leading-none text-blue-50 align-text-top">
+          <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full border border-blue-300/50 bg-blue-500/35 px-1 text-[10px] font-semibold leading-none text-blue-50 align-text-top">
             {range.questionNumber}
           </span>
         </span>
@@ -91,29 +91,42 @@ export function ReviewPassagePanel({
   if (!activePassage) return null;
 
   return (
-    <Card className="min-h-0 overflow-hidden border-border/80 bg-card/70 py-0">
-      <div className="sticky top-0 z-20 border-b border-border/70 bg-card/95 px-3 py-2 backdrop-blur">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap gap-2">
-            {passages.map((passage, index) => (
-              <Button
-                key={passage.id}
-                size="sm"
-                variant={passage.id === activePassageId ? "default" : "outline"}
-                className={cn("rounded-md", passage.id !== activePassageId && "bg-background/50")}
-                onClick={() => onPassageChange((`p${index + 1}` as "p1" | "p2" | "p3"))}
-              >
-                {t("passageLabel", { index: index + 1 })}
-              </Button>
-            ))}
+    <Card className="flex h-[64vh] min-h-0 flex-col overflow-hidden rounded-3xl border-border/75 bg-card/75 py-0 shadow-none xl:h-[calc(100vh-14.5rem)]">
+      <div className="sticky top-0 z-20 border-b border-border/70 bg-card/95 px-3 py-3 backdrop-blur sm:px-4">
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">{t("passageAnalysis")}</p>
+            <p className="text-xs text-muted-foreground">{activePassage.label}</p>
           </div>
-          <p className="text-[11px] tracking-[0.14em] text-muted-foreground uppercase">{t("passageReview")}</p>
+          <div className="overflow-x-auto pb-1 [scrollbar-width:thin]">
+            <div className="inline-flex gap-2 pr-2">
+              {passages.map((passage, index) => (
+                <Button
+                  key={passage.id}
+                  size="sm"
+                  variant={passage.id === activePassageId ? "default" : "outline"}
+                  className={cn(
+                    "h-8 shrink-0 rounded-xl px-3.5",
+                    passage.id === activePassageId
+                      ? "bg-blue-500 text-blue-50 hover:bg-blue-500/90"
+                      : "border-border/70 bg-background/40 hover:bg-background/60"
+                  )}
+                  onClick={() => onPassageChange((`p${index + 1}` as "p1" | "p2" | "p3"))}
+                >
+                  {t("passageLabel", { index: index + 1 })}
+                </Button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div ref={passageScrollRef} className="h-[68vh] overflow-y-auto px-4 py-4 sm:px-6">
-        <h2 className="mb-4 text-2xl font-semibold tracking-tight">{activePassage.title}</h2>
-        <div className="space-y-5">
+      <div
+        ref={passageScrollRef}
+        className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4 [scrollbar-width:thin] sm:px-6"
+      >
+        <h2 className="mb-5 text-2xl font-semibold tracking-tight sm:text-[2rem]">{activePassage.title}</h2>
+        <div className="space-y-4">
           {activePassage.paragraphs.map((paragraph) => {
             const evidenceQs = (paragraph.highlights ?? []).map((item) => item.questionNumber);
             return (
@@ -121,21 +134,21 @@ export function ReviewPassagePanel({
                 id={paragraph.id}
                 key={paragraph.id}
                 className={cn(
-                  "rounded-xl border border-transparent px-2 py-2 transition-all duration-300",
-                  evidenceQs.length > 0 && "bg-blue-500/5",
+                  "rounded-2xl border border-border/55 bg-background/35 px-3.5 py-3.5 transition-all duration-300 sm:px-4 sm:py-4",
+                  evidenceQs.length > 0 && "border-blue-500/25 bg-blue-500/[0.07]",
                   highlightedParagraphId === paragraph.id &&
-                    "border-blue-400/70 bg-blue-500/12 ring-2 ring-blue-400/30"
+                    "border-blue-400/60 bg-blue-500/[0.15] ring-1 ring-blue-400/45"
                 )}
               >
-                <div className="mb-1.5 flex items-start gap-2">
-                  <p className="min-w-6 pt-0.5 text-lg font-semibold text-blue-400">{paragraph.label}</p>
+                <div className="mb-2.5 flex flex-wrap items-center gap-2">
+                  <p className="min-w-6 text-lg leading-none font-semibold text-blue-300">{paragraph.label}</p>
                   {evidenceQs.length ? (
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1.5">
                       {evidenceQs.map((questionNumber) => (
                         <Badge
                           key={`${paragraph.id}-${questionNumber}`}
-                          variant="secondary"
-                          className="h-5 rounded-full border border-blue-400/50 bg-blue-500/15 px-2 text-[11px] text-blue-100"
+                          variant="outline"
+                          className="h-5 rounded-full border-blue-400/45 bg-blue-500/15 px-2 text-[11px] text-blue-100"
                         >
                           Q{questionNumber}
                         </Badge>
@@ -143,7 +156,7 @@ export function ReviewPassagePanel({
                     </div>
                   ) : null}
                 </div>
-                <p className="whitespace-pre-wrap text-base leading-relaxed text-foreground/90">
+                <p className="whitespace-pre-wrap text-[15px] leading-7 text-foreground/95">
                   {renderParagraphText(paragraph.text, paragraph.highlights)}
                 </p>
               </article>

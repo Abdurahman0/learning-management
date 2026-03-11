@@ -6,13 +6,13 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import type { ReadingQuestion } from "@/data/reading-tests";
+import { getListeningAnswerMeta } from "@/data/listening-answer-keys";
+import type { FlattenedListeningQuestion } from "@/lib/listening-questions";
 import type { GradeTestResult } from "@/lib/grading";
-import { getReadingAnswerMeta } from "@/data/reading-answer-keys";
+import { cn } from "@/lib/utils";
 
-type ReviewQuestionsPanelProps = {
-  questions: ReadingQuestion[];
+type ListeningQuestionAnalysisPanelProps = {
+  questions: FlattenedListeningQuestion[];
   answers: Record<string, string | string[] | null>;
   grading: GradeTestResult;
   expanded: Set<string>;
@@ -41,7 +41,6 @@ function getStatusStyles(status: QuestionStatus) {
       dot: "border-emerald-400/50 bg-emerald-500/25 text-emerald-200",
       nav: "border-emerald-500/55 bg-emerald-500/20 text-emerald-100",
       answer: "text-emerald-200",
-      badge: "border-emerald-400/40 bg-emerald-500/15 text-emerald-200",
     };
   }
 
@@ -51,7 +50,6 @@ function getStatusStyles(status: QuestionStatus) {
       dot: "border-rose-400/55 bg-rose-500/25 text-rose-200",
       nav: "border-rose-500/55 bg-rose-500/20 text-rose-100",
       answer: "text-rose-200",
-      badge: "border-rose-400/45 bg-rose-500/15 text-rose-200",
     };
   }
 
@@ -60,19 +58,18 @@ function getStatusStyles(status: QuestionStatus) {
     dot: "border-border/80 bg-background/65 text-muted-foreground",
     nav: "border-border/70 bg-background/55 text-muted-foreground",
     answer: "text-muted-foreground",
-    badge: "border-border/70 bg-background/55 text-muted-foreground",
   };
 }
 
-export function ReviewQuestionsPanel({
+export function ListeningQuestionAnalysisPanel({
   questions,
   answers,
   grading,
   expanded,
   onToggleExplanation,
   onJumpEvidence,
-}: ReviewQuestionsPanelProps) {
-  const t = useTranslations("readingResult");
+}: ListeningQuestionAnalysisPanelProps) {
+  const t = useTranslations("listeningResult");
 
   return (
     <Card className="flex h-[64vh] min-h-0 flex-col overflow-hidden rounded-3xl border-border/75 bg-card/75 py-0 shadow-none xl:h-[calc(100vh-14.5rem)]">
@@ -115,11 +112,11 @@ export function ReviewQuestionsPanel({
         {questions.map((question) => {
           const status = getQuestionStatus(grading, question.id);
           const statusStyles = getStatusStyles(status);
-          const answerMeta = getReadingAnswerMeta(question.id);
+          const answerMeta = getListeningAnswerMeta(question.id);
           const isOpen = expanded.has(question.id);
           const userAnswer = normalizeAnswerValue(answers[question.id]);
           const correctAnswer = Array.isArray(answerMeta?.correctAnswer)
-            ? answerMeta?.correctAnswer.join(", ")
+            ? answerMeta.correctAnswer.join(", ")
             : answerMeta?.correctAnswer ?? "";
 
           return (
@@ -133,12 +130,22 @@ export function ReviewQuestionsPanel({
                   <p className="text-base font-semibold leading-snug">
                     {question.number}. {question.prompt}
                   </p>
-                  <Badge variant="outline" className={cn("rounded-full text-[11px]", statusStyles.badge)}>
-                    {t(`questionTypes.${question.type}`)}
-                  </Badge>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Badge variant="outline" className="rounded-full text-[11px] text-foreground/85">
+                      {question.sectionTitle}
+                    </Badge>
+                    <Badge variant="outline" className="rounded-full text-[11px] text-foreground/85">
+                      {t(`questionTypes.${question.type}`)}
+                    </Badge>
+                  </div>
                 </div>
 
-                <div className={cn("mt-0.5 flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold", statusStyles.dot)}>
+                <div
+                  className={cn(
+                    "mt-0.5 flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold",
+                    statusStyles.dot
+                  )}
+                >
                   {status === "correct" ? (
                     <>
                       <CheckCircle2 className="size-3.5" />
@@ -192,8 +199,8 @@ export function ReviewQuestionsPanel({
               {isOpen ? (
                 <div className="mt-3 rounded-xl border border-border/70 bg-background/50 p-3 text-sm">
                   <p>{answerMeta?.explanation ?? t("notAvailable")}</p>
-                  {answerMeta?.evidence.startQuote ? (
-                    <p className="mt-2 text-xs text-muted-foreground">{answerMeta.evidence.startQuote}</p>
+                  {answerMeta?.evidence.transcriptQuote ? (
+                    <p className="mt-2 text-xs text-muted-foreground">{answerMeta.evidence.transcriptQuote}</p>
                   ) : null}
                 </div>
               ) : null}

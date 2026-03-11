@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -19,23 +19,7 @@ import { ReviewNextActions } from "./ReviewNextActions";
 import { ReviewPassagePanel } from "./ReviewPassagePanel";
 import { ReviewQuestionsPanel } from "./ReviewQuestionsPanel";
 import { ReviewVideoLessonCard } from "./ReviewVideoLessonCard";
-
-function toQuestionTypeLabel(type: ReadingQuestion["type"]) {
-  switch (type) {
-    case "tfng":
-      return "TFNG";
-    case "mcq":
-      return "MCQ";
-    case "matchingHeadings":
-      return "Matching Headings";
-    case "matchingInfo":
-      return "Matching Info";
-    case "sentenceCompletion":
-      return "Sentence Completion";
-    default:
-      return type;
-  }
-}
+import { QuestionTypePerformance, type QuestionTypePerformanceItem } from "./QuestionTypePerformance";
 
 export function ReviewPageClient() {
   const params = useParams<{ id: string }>();
@@ -43,37 +27,29 @@ export function ReviewPageClient() {
   const locale = useLocale();
   const tResults = useTranslations("testResults");
   const t = useTranslations("readingReview");
+  const tReadingResult = useTranslations("readingResult");
 
   const testId = typeof params?.id === "string" ? params.id : "";
   const attemptId = searchParams.get("attempt") ?? "";
   const test = getReadingTestById(testId);
 
-  const [attempt, setAttempt] = useState<PersistedAttempt | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [activePassageId, setActivePassageId] = useState<"p1" | "p2" | "p3">("p1");
   const [highlightedParagraphId, setHighlightedParagraphId] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const passageScrollRef = useRef<HTMLDivElement | null>(null);
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
-  useEffect(() => {
-    if (!test) {
-      setAttempt(null);
-      return;
-    }
-
-    if (!attemptId) {
-      setAttempt(loadLatestAttemptResult("reading", test.id));
-      return;
-    }
-
-    const resolved = loadAttemptResult("reading", test.id, attemptId);
-    if (!resolved) {
-      setAttempt(null);
-      return;
-    }
-
-    setAttempt(resolved);
-  }, [attemptId, test]);
+  const attempt = useMemo<PersistedAttempt | null>(() => {
+    if (!isClient) return null;
+    if (!test) return null;
+    if (!attemptId) return loadLatestAttemptResult("reading", test.id);
+    return loadAttemptResult("reading", test.id, attemptId);
+  }, [attemptId, isClient, test]);
 
   const gradeableQuestions = useMemo<GradeableQuestion[]>(() => {
     if (!test) return [];
@@ -102,12 +78,12 @@ export function ReviewPageClient() {
   const reviewData = useMemo(() => getReadingReviewData(testId), [testId]);
 
   const accuracyByType = useMemo(() => {
-    if (!test || !grading) return [] as Array<{ label: string; value: string }>;
-    const buckets = new Map<string, { correct: number; total: number }>();
+    if (!test || !grading) return [] as QuestionTypePerformanceItem[];
+    const buckets = new Map<ReadingQuestion["type"], { correct: number; total: number }>();
 
     for (const question of test.questions) {
       const result = grading.byQuestion[question.id];
-      const key = toQuestionTypeLabel(question.type);
+      const key = question.type;
       const previous = buckets.get(key) ?? { correct: 0, total: 0 };
       previous.total += 1;
       if (result?.isCorrect) {
@@ -116,9 +92,11 @@ export function ReviewPageClient() {
       buckets.set(key, previous);
     }
 
-    return [...buckets.entries()].map(([label, stats]) => ({
-      label,
-      value: `${stats.correct}/${stats.total}`,
+    return [...buckets.entries()].map(([type, stats]) => ({
+      type,
+      correct: stats.correct,
+      total: stats.total,
+      percent: stats.total ? Math.round((stats.correct / stats.total) * 100) : 0,
     }));
   }, [grading, test]);
 
@@ -175,7 +153,7 @@ export function ReviewPageClient() {
     [t]
   );
 
-  if (!test || !attempt || !grading) {
+  if (!test) {
     return (
       <div className="mx-auto mt-8 max-w-3xl px-4">
         <Card className="p-6">
@@ -189,12 +167,65 @@ export function ReviewPageClient() {
     );
   }
 
-  const timeTakenSec = Math.max(0, attempt.finishedAt ? Math.floor((attempt.finishedAt - attempt.startedAt) / 1000) : 0);
-  const minutes = Math.floor(timeTakenSec / 60).toString().padStart(2, "0");
-  const seconds = (timeTakenSec % 60).toString().padStart(2, "0");
+  if (!isClient) {
+    return (
+      <section className="mx-auto w-full max-w-[1780px] space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
+        <Card className="rounded-2xl border-border/70 bg-card/70 p-6">
+          <p className="text-sm text-muted-foreground">{tResults("title")}</p>
+        </Card>
+      </section>
+    );
+  }
+
+  if (!attempt || !grading) {
+    return (
+      <div className="mx-auto mt-8 max-w-3xl px-4">
+        <Card className="p-6">
+          <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{tResults("missingAttemptDescription")}</p>
+          <Button className="mt-4" asChild>
+            <Link href={`/${locale}/reading/${testId}?restart=1`}>{tResults("retakeTest")}</Link>
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  const timerSpentSec = Math.max(0, test.durationMinutes * 60 - attempt.timeRemainingSec);
+  const fallbackSpentSec = Math.max(0, attempt.finishedAt ? Math.floor((attempt.finishedAt - attempt.startedAt) / 1000) : 0);
+  const effectiveSpentSec = attempt.timerUsed ? timerSpentSec : fallbackSpentSec;
+  const minutes = Math.floor(effectiveSpentSec / 60).toString().padStart(2, "0");
+  const seconds = (effectiveSpentSec % 60).toString().padStart(2, "0");
+  const dynamicMistakeBreakdown = accuracyByType.length
+    ? [...accuracyByType]
+        .sort((a, b) => a.percent - b.percent)
+        .map((item) => ({
+          id: item.type,
+          label: tReadingResult(`questionTypes.${item.type}`),
+          successRate: item.percent,
+        }))
+    : reviewData.mistakeBreakdown;
+
+  const weakestQuestionType = dynamicMistakeBreakdown[0]?.label ?? reviewData.aiCoach.weakestQuestionType;
+  const weakestPassageNumber = [...dynamicHeatmap]
+    .sort((a, b) => {
+      const ratioA = a.total > 0 ? a.answeredCorrectly / a.total : 0;
+      const ratioB = b.total > 0 ? b.answeredCorrectly / b.total : 0;
+      return ratioA - ratioB;
+    })[0]?.label.replace(/\D/g, "");
+  const dynamicCoach = {
+    ...reviewData.aiCoach,
+    score: `${grading.correctCount}/${grading.total}`,
+    accuracy: `${grading.scorePercent}%`,
+    timeUsed: attempt.timerUsed ? `${minutes}:${seconds}` : tReadingResult("practiceTest"),
+    weakestQuestionType,
+    weakestPassage: weakestPassageNumber
+      ? tReadingResult("passageLabel", { index: Number(weakestPassageNumber) })
+      : reviewData.aiCoach.weakestPassage,
+  };
 
   return (
-    <section className="mx-auto w-full max-w-[1320px] space-y-5 px-3 pb-10 pt-4 sm:px-5 lg:px-8">
+    <section className="mx-auto w-full max-w-[1780px] space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
       <ReviewHeader
         testId={test.id}
         testTitle={test.title}
@@ -206,10 +237,11 @@ export function ReviewPageClient() {
         minutes={minutes}
         seconds={seconds}
         timerUsed={attempt.timerUsed}
-        accuracyByType={accuracyByType}
       />
 
-      <section id="review-main" className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+      <QuestionTypePerformance items={accuracyByType} />
+
+      <section id="review-main" className="grid min-h-0 items-start gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
         <ReviewPassagePanel
           passages={reviewPassages}
           activePassageId={activePassageId}
@@ -247,7 +279,7 @@ export function ReviewPageClient() {
         <ReviewVideoLessonCard lesson={reviewData.videoLesson} onAction={handleAction} />
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-          <ReviewAiCoachCard coach={reviewData.aiCoach} mistakeBreakdown={reviewData.mistakeBreakdown} onAction={handleAction} />
+          <ReviewAiCoachCard coach={dynamicCoach} mistakeBreakdown={dynamicMistakeBreakdown} onAction={handleAction} />
           <ReviewMistakeHeatmap items={dynamicHeatmap} />
         </div>
 

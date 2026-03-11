@@ -377,6 +377,51 @@ export type MistakesSnapshotEntity = {
   insights: AiInsightEntity[];
 };
 
+export type ReportModule = "reading" | "listening" | "writing" | "speaking";
+export type ReportStatus = "open" | "in_review" | "resolved" | "rejected";
+export type ReportSeverity = "low" | "medium" | "urgent";
+export type ReportType = "content_error" | "answer_key" | "audio_issue" | "image_missing" | "ui_issue";
+
+export type ReportQuestionOptionEntity = {
+  id: string;
+  label: string;
+  text: string;
+};
+
+export type AdminReportEntity = {
+  id: string;
+  code: string;
+  userId: string;
+  testId: string;
+  module: ReportModule;
+  reportType: ReportType;
+  status: ReportStatus;
+  severity: ReportSeverity;
+  questionPreview: string;
+  questionNumberLabel: string;
+  userMessage: string;
+  createdAt: string;
+  selectedAnswer?: string;
+  correctAnswer?: string;
+  assignedToUserId?: string;
+  questionContentTitle?: string;
+  questionOptions?: ReportQuestionOptionEntity[];
+  passageId?: string;
+  passageHighlight?: string;
+};
+
+export type ReportHistoryActionType = "created" | "resolved" | "reassigned" | "rejected" | "commented";
+
+export type ReportHistoryEntity = {
+  id: string;
+  reportId?: string;
+  actionType: ReportHistoryActionType;
+  actorUserId?: string;
+  actorLabel?: string;
+  description: string;
+  createdAt: string;
+};
+
 export type AnalyticsSnapshotEntity = {
   scoreTrend: TrendPointEntity[];
   completedPerDay: DailyCompletionEntity[];

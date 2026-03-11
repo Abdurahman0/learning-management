@@ -521,6 +521,85 @@
     "accuracyByType": "Accuracy by Type",
     "actionPlaceholder": "Demo action: {action}"
   },
+  "readingResult": {
+    "eyebrow": "Reading Result",
+    "scoreSummary": "{correct} / {total} correct",
+    "accuracyPercent": "{percent}% accuracy",
+    "reviewAnswers": "Review Answers",
+    "retakeTest": "Retake Test",
+    "goToDashboard": "Dashboard",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "unanswered": "Unanswered",
+    "timeUsed": "Time Used",
+    "timerUsed": "Timer enabled",
+    "timerNotUsed": "Timer disabled",
+    "practiceMode": "Practice mode",
+    "practiceTest": "Practice test",
+    "performanceEyebrow": "Question Type Performance",
+    "performanceByType": "Performance by Question Type",
+    "passageLabel": "Passage {index}",
+    "passageAnalysis": "Passage Analysis",
+    "questionAnalysis": "Question Analysis",
+    "questionNavigator": "Question navigator",
+    "yourAnswer": "Your answer",
+    "correctAnswer": "Correct answer",
+    "explain": "Explain",
+    "hideExplanation": "Hide explanation",
+    "jumpToEvidence": "Jump to evidence",
+    "skipped": "Skipped",
+    "correctStatus": "Correct",
+    "incorrectStatus": "Incorrect",
+    "skippedStatus": "Skipped",
+    "noAnswer": "No answer",
+    "notAvailable": "Not available",
+    "questionTypes": {
+      "tfng": "TFNG",
+      "matchingHeadings": "Matching Headings",
+      "mcq": "MCQ",
+      "sentenceCompletion": "Sentence Completion",
+      "matchingInfo": "Matching Information"
+    }
+  },
+  "listeningResult": {
+    "eyebrow": "Listening Result",
+    "accuracyPercent": "{percent}% accuracy",
+    "estimatedBand": "Estimated band",
+    "reviewAnswers": "Review Answers",
+    "retakeTest": "Retake Test",
+    "goToDashboard": "Dashboard",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "unanswered": "Unanswered",
+    "timeUsed": "Time Used",
+    "timerUsed": "Timer enabled",
+    "practiceMode": "Practice mode",
+    "practiceTest": "Practice test",
+    "sectionPerformanceEyebrow": "Section Performance",
+    "sectionPerformance": "Performance by Part",
+    "partLabel": "Part {index}",
+    "listeningReview": "Listening Review",
+    "selectedEvidence": "Selected Evidence",
+    "questionAnalysis": "Question Analysis",
+    "questionNavigator": "Question navigator",
+    "scoreSummary": "{correct} / {total} correct",
+    "yourAnswer": "Your answer",
+    "correctAnswer": "Correct answer",
+    "explain": "Explain",
+    "hideExplanation": "Hide explanation",
+    "jumpToEvidence": "Jump to evidence",
+    "goToQuestion": "Go to question",
+    "correctStatus": "Correct",
+    "incorrectStatus": "Incorrect",
+    "skippedStatus": "Skipped",
+    "noAnswer": "No answer",
+    "notAvailable": "Not available",
+    "questionTypes": {
+      "mcq": "Multiple Choice",
+      "text": "Text Completion",
+      "matching": "Matching"
+    }
+  },
   "dashboard": {
     "nav": {
       "dashboard": "Dashboard",
@@ -1202,6 +1281,136 @@
       "sendMessage": "Message action triggered for {name}.",
       "resetPassword": "Password reset action triggered for {name}.",
       "resetCancelled": "Password reset cancelled for {name}."
+    }
+  },
+  "adminReports": {
+    "title": "Reports & Content Issues",
+    "searchPlaceholder": "Search reports...",
+    "notificationsLabel": "Notifications",
+    "reportDetails": "Report Details",
+    "userReportMessage": "User Report Message",
+    "questionContent": "Question Content",
+    "passageHighlight": "Passage Highlight",
+    "markAsResolved": "Mark as Resolved",
+    "reassign": "Reassign",
+    "rejectReport": "Reject Report",
+    "yourAnswer": "Your answer",
+    "correctAnswer": "Correct answer",
+    "submittedBy": "Sent by {name}",
+    "assignedTo": "Assigned to {name}",
+    "reply": "Reply",
+    "notAvailable": "N/A",
+    "noPassageHighlight": "No linked passage highlight is available for this report.",
+    "noReportSelected": "Select a report from the list to inspect details.",
+    "showingReports": "Showing {shown} of {total} reports",
+    "mostReportedQuestions": "Most Reported Questions",
+    "resolutionHistory": "Resolution History",
+    "currentWindow": "Current week",
+    "reportCount": "{count} reports",
+    "systemActor": "Sarah Jenkins",
+    "summary": {
+      "openReports": "Open Reports",
+      "resolvedToday": "Resolved Today",
+      "mostReported": "Most Reported",
+      "urgentReports": "Urgent Reports",
+      "openReportsHint": "Need triage or review",
+      "resolvedTodayHint": "Closed during latest day",
+      "mostReportedHint": "Top recurring question",
+      "urgentReportsHint": "High priority queue",
+      "noData": "No report data"
+    },
+    "filters": {
+      "statusLabel": "Status",
+      "typeLabel": "Type",
+      "moduleLabel": "Module",
+      "severityLabel": "Severity",
+      "sortLabel": "Sort",
+      "reset": "Reset filters",
+      "status": {
+        "all": "All Status",
+        "open": "Open",
+        "inReview": "In Review",
+        "resolved": "Resolved",
+        "rejected": "Rejected"
+      },
+      "type": {
+        "all": "All Types",
+        "contentError": "Content Error",
+        "answerKey": "Answer Key",
+        "audioIssue": "Audio Issue",
+        "imageMissing": "Image Missing",
+        "uiIssue": "UI Issue"
+      },
+      "module": {
+        "all": "All Modules",
+        "reading": "Reading",
+        "listening": "Listening",
+        "writing": "Writing",
+        "speaking": "Speaking"
+      },
+      "severity": {
+        "all": "All Severity",
+        "low": "Low",
+        "medium": "Medium",
+        "urgent": "Urgent"
+      },
+      "sort": {
+        "newest": "Newest First",
+        "oldest": "Oldest First",
+        "severity": "Severity Priority"
+      }
+    },
+    "table": {
+      "columns": {
+        "id": "ID",
+        "questionPreview": "Question Preview",
+        "testName": "Test Name",
+        "module": "Module",
+        "status": "Status",
+        "updatedAt": "Updated At"
+      },
+      "empty": "No reports match the current filters."
+    },
+    "status": {
+      "open": "Open",
+      "in_review": "In Review",
+      "resolved": "Resolved",
+      "rejected": "Rejected"
+    },
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "urgent": "Urgent"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "types": {
+      "content_error": "Content Error",
+      "answer_key": "Answer Key",
+      "audio_issue": "Audio Issue",
+      "image_missing": "Image Missing",
+      "ui_issue": "UI Issue"
+    },
+    "historyAction": {
+      "created": "Created",
+      "resolved": "Resolved",
+      "reassigned": "Reassigned",
+      "rejected": "Rejected",
+      "commented": "Commented"
+    },
+    "historyDescription": {
+      "resolved": "Marked {code} as resolved.",
+      "rejected": "Rejected report {code}.",
+      "reassigned": "Reassigned {code} to {name}."
+    },
+    "actionFeedback": {
+      "resolved": "{code} marked as resolved.",
+      "rejected": "{code} rejected.",
+      "reassigned": "Reassigned to {name}."
     }
   },
   "adminSubscriptions": {

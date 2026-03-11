@@ -4,6 +4,7 @@ export * from "./content-bank";
 export * from "./content";
 export * from "./mistakes";
 export * from "./profile";
+export * from "./reports";
 export * from "./selectors";
 export * from "./subscriptions";
 export * from "./test-builder";

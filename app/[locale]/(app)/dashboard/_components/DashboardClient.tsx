@@ -21,7 +21,7 @@ export function DashboardClient() {
   const locale = useLocale();
 
   return (
-    <main className="mx-auto min-w-0 w-full max-w-[1200px] overflow-x-hidden px-4 py-5 sm:px-6 sm:py-6">
+    <main className="mx-auto min-w-0 w-full max-w-[1780px] overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
       <section className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("title")}</h1>
