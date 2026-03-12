@@ -5,6 +5,8 @@ export type TeacherNavKey =
   | "reviews"
   | "messages"
   | "analytics"
+  | "weakAreas"
+  | "announcements"
   | "profile"
   | "settings";
 
@@ -21,6 +23,19 @@ export type TeacherProfile = {
   title: string;
   email: string;
   avatarFallback: string;
+  instructorId: string;
+  experienceYears: number;
+  studentsCount: number;
+  averageImprovementBand: number;
+  rating: number;
+  phone: string;
+  country: string;
+  timezone: string;
+  specialization: string;
+  bio: string;
+  preferredModules: TeacherModuleKey[];
+  profileCompletion: number;
+  verified: boolean;
 };
 
 export type TeacherStudentStatus = "active" | "inactive" | "at_risk";
@@ -89,6 +104,62 @@ export type TeacherMessageThread = {
   studentId: string;
   unreadCount: number;
   lastMessageAt: string;
+};
+
+export type TeacherMessageSenderRole = "teacher" | "student";
+
+export type TeacherChatMessage = {
+  id: string;
+  conversationId: string;
+  studentId: string;
+  senderRole: TeacherMessageSenderRole;
+  text: string;
+  createdAt: string;
+};
+
+export type TeacherAnnouncementAudience = "all" | "weak_students" | "reading_students" | "writing_students";
+export type TeacherAnnouncementStatus = "draft" | "published" | "scheduled";
+export type TeacherAnnouncementAttachmentType = "pdf" | "docx" | "jpg";
+
+export type TeacherAnnouncementAttachment = {
+  fileName: string;
+  fileType: TeacherAnnouncementAttachmentType;
+  fileSizeBytes: number;
+};
+
+export type TeacherAnnouncement = {
+  id: string;
+  title: string;
+  content: string;
+  audience: TeacherAnnouncementAudience;
+  status: TeacherAnnouncementStatus;
+  createdAt: string;
+  scheduledAt?: string;
+  attachment?: TeacherAnnouncementAttachment;
+  views: number;
+  resourceClicks: number;
+  unreadRate: number;
+};
+
+export type TeacherAnnouncementFormInput = {
+  title: string;
+  content: string;
+  audience: TeacherAnnouncementAudience;
+  scheduledDate?: string;
+  attachment?: TeacherAnnouncementAttachment;
+};
+
+export type TeacherAnnouncementStats = {
+  totalAnnouncements: number;
+  publishedThisWeek: number;
+  scheduled: number;
+  studentsReached: number;
+};
+
+export type TeacherAnnouncementEngagement = {
+  totalViewsPercent: number;
+  resourceClicksPercent: number;
+  unreadPercent: number;
 };
 
 export type TeacherActivityEventType = "completed_reading_test" | "submitted_writing_task_1" | "sent_message";

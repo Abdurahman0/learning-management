@@ -59,11 +59,11 @@ type TooltipProps = {
 function ChartTooltip({style, label, value}: TooltipProps) {
   return (
     <div
-      className="pointer-events-none absolute z-20 w-[152px] rounded-xl border border-[rgba(148,163,184,0.18)] bg-background/95 px-3.5 py-2.5 shadow-lg backdrop-blur-md"
+      className="pointer-events-none absolute z-20 w-[152px] rounded-xl border border-[rgba(148,163,184,0.18)] bg-background/95 px-3.5 py-2.5 shadow-lg backdrop-blur-md -translate-x-1/2 -translate-y-[112%] max-md:w-[104px] max-md:rounded-lg max-md:px-2 max-md:py-1 max-md:-translate-x-full max-md:-translate-y-[108%] max-md:-ml-2"
       style={style}
     >
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-semibold">{value.toFixed(1)}</p>
+      <p className="text-xs text-muted-foreground max-md:text-[9px]">{label}</p>
+      <p className="mt-1 text-sm font-semibold max-md:mt-0.5 max-md:text-[11px]">{value.toFixed(1)}</p>
     </div>
   );
 }
@@ -190,8 +190,7 @@ export function TeacherStudentProgressChart() {
               value={activeData.value}
               style={{
                 left: `${clamp((activePoint.x / chart.width) * 100, 15, 80)}%`,
-                top: `${clamp((activePoint.y / chart.height) * 100, 12, 74)}%`,
-                transform: "translate(-50%, -112%)"
+                top: `${clamp((activePoint.y / chart.height) * 100, 12, 74)}%`
               }}
             />
           ) : null}

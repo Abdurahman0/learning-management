@@ -103,16 +103,16 @@ function AdminChartCardHeader({title, subtitle, rightSlot}: AdminChartCardHeader
 function AdminChartTooltip({month, label, value, dotColor, style}: AdminChartTooltipProps) {
   return (
     <div
-      className="pointer-events-none absolute z-20 w-[188px] rounded-xl border border-[rgba(148,163,184,0.18)] bg-white px-4 py-3 dark:border-[rgba(148,163,184,0.16)] dark:bg-[#0F172A]"
+      className="pointer-events-none absolute z-20 w-[188px] rounded-xl border border-[rgba(148,163,184,0.18)] bg-white px-4 py-3 dark:border-[rgba(148,163,184,0.16)] dark:bg-[#0F172A] max-sm:w-[146px] max-sm:rounded-lg max-sm:px-2.5 max-sm:py-1.5"
       style={style}
     >
-      <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{month}</p>
-      <div className="mt-1.5 flex items-center justify-between gap-2.5">
-        <span className="inline-flex items-center gap-1.5 text-xs text-[#64748B] dark:text-[rgba(203,213,225,0.7)]">
+      <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F8FAFC] max-sm:text-xs">{month}</p>
+      <div className="mt-1.5 flex items-center justify-between gap-2.5 max-sm:mt-1 max-sm:gap-2">
+        <span className="inline-flex items-center gap-1.5 text-xs text-[#64748B] dark:text-[rgba(203,213,225,0.7)] max-sm:gap-1 max-sm:text-[10px]">
           <span className="size-2 rounded-full" style={{backgroundColor: dotColor}} />
           {label}
         </span>
-        <span className="text-sm font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{value}</span>
+        <span className="text-sm font-semibold text-[#0F172A] dark:text-[#F8FAFC] max-sm:text-xs">{value}</span>
       </div>
     </div>
   );

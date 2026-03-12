@@ -1,7 +1,15 @@
 import type {
+  TeacherAnnouncement,
+  TeacherAnnouncementAttachment,
+  TeacherAnnouncementAudience,
+  TeacherAnnouncementEngagement,
+  TeacherAnnouncementFormInput,
+  TeacherAnnouncementStats,
   TeacherAssignmentModuleKey,
   TeacherAssignmentTaskStatus,
+  TeacherChatMessage,
   TeacherModuleKey,
+  TeacherProfile,
   TeacherStudentActivityType,
   TeacherStudent,
   TeacherStudentAttempt,
@@ -51,6 +59,26 @@ import {
   type TeacherReviewSubmissionStatus as TeacherReviewSubmissionStatusModel,
   type TeacherReviewSubmissionType as TeacherReviewSubmissionTypeModel
 } from "./review-workspace";
+import {
+  createTeacherChatMessage,
+  getTeacherChatMessages,
+  getTeacherChatMessagesByConversation
+} from "./messages";
+import {
+  createTeacherWorkspaceAnnouncement,
+  getTeacherAnnouncementsWithWorkspace,
+  resolveTeacherAnnouncementAudienceStudentIds
+} from "./announcements";
+import {
+  appendTeacherWorkspaceProfileActivity,
+  getTeacherWorkspacePassword,
+  getTeacherWorkspaceProfile,
+  getTeacherWorkspaceProfileActivities,
+  updateTeacherWorkspacePassword,
+  updateTeacherWorkspaceProfile,
+  type TeacherProfileActivityEntry,
+  type TeacherProfileActivityKind
+} from "./profile-workspace";
 
 export type TeacherDashboardStatKey = "studentsAssigned" | "pendingReviews" | "assignmentsActive" | "studentsAtRisk";
 export type TeacherStatIndicatorKey = "upThisMonth" | "urgent" | "currentlyActive" | "needsAttention";
@@ -350,6 +378,155 @@ export type TeacherAnalyticsPageData = {
   dailyActivity: TeacherDailyActivityMetric[];
 };
 
+export type TeacherWeakAreasSummary = {
+  mostDifficultModule: TeacherModuleKey;
+  hardestQuestionType: TeacherWeakSkillKey;
+  lowestAverageScore: number;
+  studentsNeedingHelpCount: number;
+};
+
+export type TeacherQuestionTypeAccuracy = {
+  id: string;
+  label: TeacherWeakSkillKey;
+  percentage: number;
+  tone: TeacherStudentWeakAreaMetric["tone"];
+};
+
+export type TeacherModuleDifficultyValue = {
+  module: TeacherModuleKey;
+  value: number;
+};
+
+export type TeacherWeakAreasStudentRow = {
+  id: string;
+  name: string;
+  avatarFallback: string;
+  weakestModule: TeacherModuleKey;
+  weakestType: TeacherWeakSkillKey;
+  currentBand: number;
+  lastActivity: TeacherStudentsLastActivity;
+};
+
+export type TeacherCommonMistakeInsight = {
+  id: "falseVsNotGiven" | "timeManagementSection3" | "task2Cohesion";
+  severity: "high" | "moderate" | "watch";
+  metricPrimary: number;
+  metricSecondary?: number;
+};
+
+export type TeacherPracticeRecommendation = {
+  id: string;
+  targetSkill: TeacherWeakSkillKey;
+  assignMode: "class" | "weak_students";
+  delivery: "question_set" | "video_quiz" | "timed_drill";
+  questionCount: number;
+  targetStudents: number;
+};
+
+export type TeacherWeakAreasPageData = {
+  summary: TeacherWeakAreasSummary;
+  questionTypeAccuracy: TeacherQuestionTypeAccuracy[];
+  moduleDifficulty: TeacherModuleDifficultyValue[];
+  studentsNeedingImprovement: TeacherWeakAreasStudentRow[];
+  totalStudentsNeedingHelp: number;
+  commonMistakes: TeacherCommonMistakeInsight[];
+  recommendations: TeacherPracticeRecommendation[];
+};
+
+export type TeacherConversationListItem = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentAvatarFallback: string;
+  isOnline: boolean;
+  unreadCount: number;
+  lastMessagePreview: string;
+  lastMessageAt: string;
+  lastMessageTime: TeacherStudentsLastActivity;
+};
+
+export type TeacherConversationMessage = {
+  id: string;
+  conversationId: string;
+  studentId: string;
+  senderRole: TeacherChatMessage["senderRole"];
+  text: string;
+  createdAt: string;
+  time: TeacherStudentsLastActivity;
+};
+
+export type TeacherMessagesStudentQuickInfo = {
+  studentId: string;
+  studentName: string;
+  studentAvatarFallback: string;
+  subtitleKey: "academicIeltsStudent";
+  bandEstimate: number;
+  targetBand: number;
+  lastActivity: TeacherStudentsLastActivity;
+  testsCompleted: number;
+};
+
+export type TeacherMessagesRecentActivityItem = {
+  id: string;
+  activityKey: TeacherStudentProfileActivityKey;
+  occurredAt: string;
+  relative: TeacherStudentsLastActivity;
+};
+
+export type TeacherMessagesConversationData = {
+  conversation: TeacherConversationListItem;
+  messages: TeacherConversationMessage[];
+  studentInfo: TeacherMessagesStudentQuickInfo;
+  recentActivity: TeacherMessagesRecentActivityItem[];
+};
+
+export type TeacherMessagesPageData = {
+  conversations: TeacherConversationListItem[];
+  selectedConversationId: string | null;
+};
+
+export type TeacherAnnouncementAudienceOption = {
+  id: TeacherAnnouncementAudience;
+  studentCount: number;
+};
+
+export type TeacherAnnouncementsPageData = {
+  stats: TeacherAnnouncementStats;
+  engagement: TeacherAnnouncementEngagement;
+  audienceOptions: TeacherAnnouncementAudienceOption[];
+};
+
+export type TeacherProfileStatKey = "students" | "tasks" | "reviews" | "messages";
+
+export type TeacherProfileStatItem = {
+  id: TeacherProfileStatKey;
+  value: number;
+};
+
+export type TeacherProfileActivityKey =
+  | "accountLogin"
+  | "reviewCompleted"
+  | "newAssignmentCreated"
+  | "passwordChanged"
+  | "profileUpdated"
+  | "teachingProfileUpdated"
+  | "avatarChangeRequested";
+
+export type TeacherProfileActivityItem = {
+  id: string;
+  activityKey: TeacherProfileActivityKey;
+  detail: string;
+  location?: string;
+  relative: TeacherStudentsLastActivity;
+  occurredAt: string;
+};
+
+export type TeacherProfilePageData = {
+  profile: TeacherProfile;
+  stats: TeacherProfileStatItem[];
+  recentActivity: TeacherProfileActivityItem[];
+};
+
 const pendingTaskStatuses = new Set(["todo", "pending_review"]);
 const dashboardHelpStudentOrder = ["student-james-sterling", "student-maria-valdez", "student-arjun-kapoor"] as const;
 
@@ -363,6 +540,11 @@ function roundBand(value: number) {
 
 function roundHalf(value: number) {
   return Math.round(value * 2) / 2;
+}
+
+function relativeFromIso(iso: string): TeacherStudentsLastActivity {
+  const minutes = Math.max(1, Math.round((Date.now() - new Date(iso).getTime()) / (1000 * 60)));
+  return relativeActivity(minutes);
 }
 
 function initialsFromName(name: string) {
@@ -870,7 +1052,7 @@ function matchTargetFilter(student: TeacherStudent, targetFilter: TeacherStudent
 }
 
 export function getTeacherProfile() {
-  return TEACHER_PROFILE;
+  return getTeacherWorkspaceProfile();
 }
 
 export function getTeacherNavItems() {
@@ -879,6 +1061,488 @@ export function getTeacherNavItems() {
 
 export function getTeacherQuickActions() {
   return TEACHER_QUICK_ACTIONS;
+}
+
+function buildTeacherConversationList(group?: string | null) {
+  const studentsById = new Map(TEACHER_STUDENTS.map((student) => [student.id, toListItem(student)]));
+  const conversations = TEACHER_MESSAGE_THREADS.map((thread) => {
+    const student = studentsById.get(thread.studentId);
+    if (!student) {
+      return null;
+    }
+
+    const messages = getTeacherChatMessagesByConversation(thread.id);
+    const lastMessage = messages.at(-1);
+    const lastMessageAt = lastMessage?.createdAt ?? thread.lastMessageAt;
+
+    return {
+      id: thread.id,
+      studentId: student.id,
+      studentName: student.name,
+      studentAvatarFallback: student.avatarFallback,
+      isOnline: student.lastActiveMinutesAgo <= 15,
+      unreadCount: thread.unreadCount,
+      lastMessagePreview: (lastMessage?.text ?? "").trim(),
+      lastMessageAt,
+      lastMessageTime: relativeFromIso(lastMessageAt),
+      status: student.status
+    };
+  })
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .sort((left, right) => {
+      const activeBoostLeft = group === "active" && left.status === "active" ? 1 : 0;
+      const activeBoostRight = group === "active" && right.status === "active" ? 1 : 0;
+      if (activeBoostLeft !== activeBoostRight) {
+        return activeBoostRight - activeBoostLeft;
+      }
+
+      if (left.unreadCount !== right.unreadCount) {
+        return right.unreadCount - left.unreadCount;
+      }
+
+      return new Date(right.lastMessageAt).getTime() - new Date(left.lastMessageAt).getTime();
+    })
+    .map((item) => ({
+      id: item.id,
+      studentId: item.studentId,
+      studentName: item.studentName,
+      studentAvatarFallback: item.studentAvatarFallback,
+      isOnline: item.isOnline,
+      unreadCount: item.unreadCount,
+      lastMessagePreview: item.lastMessagePreview,
+      lastMessageAt: item.lastMessageAt,
+      lastMessageTime: item.lastMessageTime
+    }) satisfies TeacherConversationListItem);
+
+  return conversations;
+}
+
+export function resolveTeacherConversationIdByStudentId(studentId: string) {
+  const match = TEACHER_MESSAGE_THREADS.find((thread) => thread.studentId === studentId);
+  return match?.id ?? null;
+}
+
+export function getTeacherMessagesPageData(context: {studentId?: string | null; source?: string | null; group?: string | null} = {}): TeacherMessagesPageData {
+  const conversations = buildTeacherConversationList(context.group);
+  const selectedFromStudent = context.studentId ? resolveTeacherConversationIdByStudentId(context.studentId) : null;
+  const selectedConversationId = selectedFromStudent ?? conversations[0]?.id ?? null;
+
+  return {
+    conversations,
+    selectedConversationId
+  };
+}
+
+export function getTeacherMessagesConversationData(conversationId: string): TeacherMessagesConversationData | null {
+  const conversation = buildTeacherConversationList().find((item) => item.id === conversationId);
+  if (!conversation) {
+    return null;
+  }
+
+  const student = findTeacherStudentById(conversation.studentId);
+  if (!student) {
+    return null;
+  }
+
+  const profileMeta = getStudentProfileMeta(student.id);
+  const testsCompleted = Math.max(profileMeta.testsDone, getTeacherStudentRecentAttempts(student.id, 60).length);
+  const messages = getTeacherChatMessagesByConversation(conversationId).map((item) => ({
+    id: item.id,
+    conversationId: item.conversationId,
+    studentId: item.studentId,
+    senderRole: item.senderRole,
+    text: item.text,
+    createdAt: item.createdAt,
+    time: relativeFromIso(item.createdAt)
+  }) satisfies TeacherConversationMessage);
+
+  const recentActivity = getTeacherStudentRecentActivity(student.id, 3).map((item) => ({
+    id: item.id,
+    activityKey: item.activityKey,
+    occurredAt: item.occurredAt,
+    relative: relativeFromIso(item.occurredAt)
+  }) satisfies TeacherMessagesRecentActivityItem);
+
+  return {
+    conversation,
+    messages,
+    studentInfo: {
+      studentId: student.id,
+      studentName: student.name,
+      studentAvatarFallback: student.avatarFallback,
+      subtitleKey: "academicIeltsStudent",
+      bandEstimate: student.estimatedBand,
+      targetBand: student.targetBand,
+      lastActivity: student.lastActivity,
+      testsCompleted
+    },
+    recentActivity
+  };
+}
+
+export function sendTeacherMessage(input: {conversationId: string; studentId: string; text: string}): TeacherConversationMessage | null {
+  const content = input.text.trim();
+  if (!content) {
+    return null;
+  }
+
+  const created = createTeacherChatMessage({
+    conversationId: input.conversationId,
+    studentId: input.studentId,
+    text: content
+  });
+
+  return {
+    id: created.id,
+    conversationId: created.conversationId,
+    studentId: created.studentId,
+    senderRole: created.senderRole,
+    text: created.text,
+    createdAt: created.createdAt,
+    time: relativeFromIso(created.createdAt)
+  };
+}
+
+const announcementAudienceOptions: TeacherAnnouncementAudience[] = [
+  "all",
+  "weak_students",
+  "reading_students",
+  "writing_students"
+];
+
+export type TeacherAnnouncementCreateMode = "draft" | "publish";
+
+export type TeacherAnnouncementCreateInput = TeacherAnnouncementFormInput & {
+  mode: TeacherAnnouncementCreateMode;
+};
+
+function audienceIdsForAnnouncement(audience: TeacherAnnouncementAudience) {
+  return resolveTeacherAnnouncementAudienceStudentIds(audience);
+}
+
+function normalizeAnnouncementDate(date?: string) {
+  if (!date) {
+    return undefined;
+  }
+
+  const normalized = date.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    return `${normalized}T12:00:00.000Z`;
+  }
+
+  const slashPattern = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashPattern) {
+    const [, month, day, year] = slashPattern;
+    const mm = month.padStart(2, "0");
+    const dd = day.padStart(2, "0");
+    return `${year}-${mm}-${dd}T12:00:00.000Z`;
+  }
+
+  return undefined;
+}
+
+function buildTeacherAnnouncementStats(announcements: TeacherAnnouncement[]): TeacherAnnouncementStats {
+  const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const publishedThisWeek = announcements.filter(
+    (item) => item.status === "published" && new Date(item.createdAt).getTime() >= oneWeekAgo
+  ).length;
+  const scheduled = announcements.filter((item) => item.status === "scheduled").length;
+
+  const reachedStudents = new Set<string>();
+  announcements
+    .filter((item) => item.status === "published")
+    .forEach((item) => {
+      audienceIdsForAnnouncement(item.audience).forEach((studentId) => reachedStudents.add(studentId));
+    });
+
+  return {
+    totalAnnouncements: announcements.length,
+    publishedThisWeek,
+    scheduled,
+    studentsReached: reachedStudents.size
+  };
+}
+
+function buildTeacherAnnouncementEngagement(announcements: TeacherAnnouncement[]): TeacherAnnouncementEngagement {
+  const published = announcements.filter((item) => item.status === "published");
+
+  if (published.length === 0) {
+    return {
+      totalViewsPercent: 0,
+      resourceClicksPercent: 0,
+      unreadPercent: 0
+    };
+  }
+
+  const audienceTotal = published.reduce((sum, item) => sum + audienceIdsForAnnouncement(item.audience).length, 0);
+  const viewsTotal = published.reduce((sum, item) => sum + item.views, 0);
+  const resourceClicksTotal = published.reduce((sum, item) => sum + item.resourceClicks, 0);
+  const unreadTotal = published.reduce((sum, item) => {
+    const audienceCount = audienceIdsForAnnouncement(item.audience).length;
+    return sum + audienceCount * (item.unreadRate / 100);
+  }, 0);
+
+  return {
+    totalViewsPercent: Math.round(clamp((viewsTotal / Math.max(1, audienceTotal)) * 100, 0, 100)),
+    resourceClicksPercent: Math.round(clamp((resourceClicksTotal / Math.max(1, viewsTotal)) * 100, 0, 100)),
+    unreadPercent: Math.round(clamp((unreadTotal / Math.max(1, audienceTotal)) * 100, 0, 100))
+  };
+}
+
+export function getTeacherAnnouncementAudienceOptions(): TeacherAnnouncementAudienceOption[] {
+  return announcementAudienceOptions.map((id) => ({
+    id,
+    studentCount: audienceIdsForAnnouncement(id).length
+  }));
+}
+
+export function getTeacherAnnouncementsPageData(): TeacherAnnouncementsPageData {
+  const announcements = getTeacherAnnouncementsWithWorkspace();
+
+  return {
+    stats: buildTeacherAnnouncementStats(announcements),
+    engagement: buildTeacherAnnouncementEngagement(announcements),
+    audienceOptions: getTeacherAnnouncementAudienceOptions()
+  };
+}
+
+export function createTeacherAnnouncement(input: TeacherAnnouncementCreateInput): TeacherAnnouncement | null {
+  const title = input.title.trim();
+  const content = input.content.trim();
+
+  if (title.length < 3 || content.length < 8) {
+    return null;
+  }
+
+  const audienceCount = audienceIdsForAnnouncement(input.audience).length;
+  const scheduledAt = normalizeAnnouncementDate(input.scheduledDate);
+  const scheduleInFuture = scheduledAt ? new Date(scheduledAt).getTime() > Date.now() : false;
+  const status =
+    input.mode === "draft"
+      ? "draft"
+      : scheduleInFuture
+        ? "scheduled"
+        : "published";
+
+  const views = status === "published"
+    ? Math.round(clamp(audienceCount * (input.audience === "all" ? 0.28 : 0.33), 0, audienceCount))
+    : 0;
+  const resourceClicks = status === "published"
+    ? Math.round(views * (input.attachment ? 0.42 : 0.2))
+    : 0;
+  const unreadRate = status === "published"
+    ? Math.round(clamp(100 - (views / Math.max(1, audienceCount)) * 100 + 8, 8, 88))
+    : 100;
+
+  return createTeacherWorkspaceAnnouncement({
+    title,
+    content,
+    audience: input.audience,
+    status,
+    scheduledAt,
+    attachment: input.attachment as TeacherAnnouncementAttachment | undefined,
+    views,
+    resourceClicks,
+    unreadRate
+  });
+}
+
+export type TeacherProfilePersonalInfoInput = {
+  fullName: string;
+  email: string;
+  phone: string;
+  country: string;
+  timezone: string;
+};
+
+export type TeacherTeachingProfileInput = {
+  specialization: string;
+  experienceYears: number;
+  bio: string;
+  preferredModules: TeacherModuleKey[];
+};
+
+export type TeacherPasswordUpdateInput = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
+export type TeacherPasswordUpdateError =
+  | "currentPasswordIncorrect"
+  | "passwordMismatch"
+  | "passwordTooShort"
+  | "passwordUnchanged";
+
+export type TeacherPasswordUpdateResult = {
+  success: boolean;
+  error?: TeacherPasswordUpdateError;
+};
+
+function mapProfileActivityKind(kind: TeacherProfileActivityKind): TeacherProfileActivityKey {
+  if (kind === "account_login") {
+    return "accountLogin";
+  }
+
+  if (kind === "review_completed") {
+    return "reviewCompleted";
+  }
+
+  if (kind === "assignment_created") {
+    return "newAssignmentCreated";
+  }
+
+  if (kind === "password_changed") {
+    return "passwordChanged";
+  }
+
+  if (kind === "teaching_profile_updated") {
+    return "teachingProfileUpdated";
+  }
+
+  if (kind === "avatar_change_requested") {
+    return "avatarChangeRequested";
+  }
+
+  return "profileUpdated";
+}
+
+function buildTeacherProfileStats(): TeacherProfileStatItem[] {
+  const students = TEACHER_STUDENTS.length;
+
+  const workspaceTaskCount = getTeacherWorkspaceAssignments().reduce((sum, item) => {
+    return sum + resolveAssignedStudentIds(item.assignedToMode, item.assignedStudentIds).length;
+  }, 0);
+  const tasks = TEACHER_ASSIGNMENT_TASKS.length + workspaceTaskCount;
+
+  const reviewedBase = TEACHER_REVIEWS.filter((item) => item.status === "completed").length;
+  const reviewedTaskCount = TEACHER_ASSIGNMENT_TASKS.filter((task) => task.status === "reviewed").length;
+  const reviewedWorkspace = getTeacherReviewWorkspaceActivities().length;
+  const reviews = reviewedBase + reviewedTaskCount + reviewedWorkspace;
+
+  const messages = getTeacherChatMessages().length;
+
+  return [
+    {id: "students", value: students},
+    {id: "tasks", value: tasks},
+    {id: "reviews", value: reviews},
+    {id: "messages", value: messages}
+  ];
+}
+
+function toTeacherProfileActivityItem(entry: TeacherProfileActivityEntry): TeacherProfileActivityItem {
+  return {
+    id: entry.id,
+    activityKey: mapProfileActivityKind(entry.kind),
+    detail: entry.detail,
+    location: entry.location,
+    relative: relativeFromIso(entry.occurredAt),
+    occurredAt: entry.occurredAt
+  };
+}
+
+function calculateProfileCompletion(profile: TeacherProfile) {
+  const base = 62;
+  const completeness =
+    (profile.phone.trim().length > 0 ? 6 : 0)
+    + (profile.country.trim().length > 0 ? 6 : 0)
+    + (profile.timezone.trim().length > 0 ? 6 : 0)
+    + (profile.specialization.trim().length > 0 ? 6 : 0)
+    + (profile.bio.trim().length > 30 ? 8 : 0)
+    + Math.min(8, profile.preferredModules.length * 2)
+    + (profile.verified ? 6 : 0);
+
+  return clamp(base + completeness, 48, 100);
+}
+
+export function getTeacherProfilePageData(): TeacherProfilePageData {
+  const profile = getTeacherProfile();
+
+  return {
+    profile,
+    stats: buildTeacherProfileStats(),
+    recentActivity: getTeacherWorkspaceProfileActivities().slice(0, 7).map(toTeacherProfileActivityItem)
+  };
+}
+
+export function updateTeacherProfilePersonalInfo(input: TeacherProfilePersonalInfoInput) {
+  const current = getTeacherProfile();
+  const nextName = input.fullName.trim();
+
+  const updated = updateTeacherWorkspaceProfile({
+    name: nextName,
+    email: input.email.trim(),
+    phone: input.phone.trim(),
+    country: input.country.trim(),
+    timezone: input.timezone.trim(),
+    avatarFallback: initialsFromName(nextName || current.name)
+  });
+
+  updateTeacherWorkspaceProfile({
+    profileCompletion: calculateProfileCompletion(updated)
+  });
+
+  appendTeacherWorkspaceProfileActivity({
+    kind: "profile_updated",
+    detail: "Personal information updated"
+  });
+
+  return getTeacherProfile();
+}
+
+export function updateTeacherTeachingProfile(input: TeacherTeachingProfileInput) {
+  const updated = updateTeacherWorkspaceProfile({
+    specialization: input.specialization.trim(),
+    experienceYears: roundBand(input.experienceYears),
+    bio: input.bio.trim(),
+    preferredModules: input.preferredModules
+  });
+
+  updateTeacherWorkspaceProfile({
+    profileCompletion: calculateProfileCompletion(updated)
+  });
+
+  appendTeacherWorkspaceProfileActivity({
+    kind: "teaching_profile_updated",
+    detail: "Teaching profile updated"
+  });
+
+  return getTeacherProfile();
+}
+
+export function requestTeacherAvatarChange() {
+  appendTeacherWorkspaceProfileActivity({
+    kind: "avatar_change_requested",
+    detail: "Avatar change requested"
+  });
+}
+
+export function updateTeacherPassword(input: TeacherPasswordUpdateInput): TeacherPasswordUpdateResult {
+  if (input.currentPassword !== getTeacherWorkspacePassword()) {
+    return {success: false, error: "currentPasswordIncorrect"};
+  }
+
+  if (input.newPassword.length < 8) {
+    return {success: false, error: "passwordTooShort"};
+  }
+
+  if (input.newPassword !== input.confirmPassword) {
+    return {success: false, error: "passwordMismatch"};
+  }
+
+  if (input.currentPassword === input.newPassword) {
+    return {success: false, error: "passwordUnchanged"};
+  }
+
+  updateTeacherWorkspacePassword(input.newPassword);
+
+  appendTeacherWorkspaceProfileActivity({
+    kind: "password_changed",
+    detail: "Security update"
+  });
+
+  return {success: true};
 }
 
 export function getTeacherStudentsSummary(): TeacherStudentsSummary {
@@ -1133,15 +1797,25 @@ export type TeacherAssignmentPrefillContext = {
   recommendationSkill?: TeacherWeakSkillKey;
   prefilledTitle?: string;
   prefilledInstructions?: string;
+  assignedToMode?: TeacherAssignmentAssignModeKey;
 };
 
 export function getTeacherAssignmentPrefillContext(input: {
   studentId?: string | null;
   recommendationSkill?: string | null;
+  assignedToMode?: string | null;
   title?: string | null;
   instructions?: string | null;
 }) {
   const recommendationSkill = input.recommendationSkill as TeacherWeakSkillKey | undefined;
+  const normalizedAssignMode =
+    input.assignedToMode === "all"
+    || input.assignedToMode === "selected"
+    || input.assignedToMode === "one"
+    || input.assignedToMode === "at_risk"
+    || input.assignedToMode === "improving"
+      ? input.assignedToMode
+      : undefined;
   const student = input.studentId ? findTeacherStudentById(input.studentId) : null;
   const recentDraft = input.studentId ? getTeacherRecommendationAssignmentDrafts(input.studentId).at(0) : undefined;
   const fallbackSkill = recommendationSkill ?? recentDraft?.targetSkill;
@@ -1157,7 +1831,8 @@ export function getTeacherAssignmentPrefillContext(input: {
     studentId: student?.id,
     recommendationSkill: fallbackSkill,
     prefilledTitle,
-    prefilledInstructions
+    prefilledInstructions,
+    assignedToMode: student?.id ? "one" : normalizedAssignMode
   } satisfies TeacherAssignmentPrefillContext;
 }
 
@@ -1710,6 +2385,191 @@ export function getTeacherAnalyticsPageData(): TeacherAnalyticsPageData {
     modulePerformance: buildModulePerformance(primaryStudents),
     weakAreas: buildWeakAreaAggregates(primaryStudents),
     dailyActivity: buildDailyActivity(primaryStudents)
+  };
+}
+
+const weakAreasQuestionTypes: TeacherWeakSkillKey[] = [
+  "matchingHeadings",
+  "trueFalseNotGiven",
+  "sentenceCompletion",
+  "multipleChoice"
+];
+
+function weakSkillToWeakAreasModule(skill: TeacherWeakSkillKey): TeacherModuleKey {
+  const moduleKey = weakSkillToModule(skill);
+  return moduleKey === "general" ? "reading" : moduleKey;
+}
+
+function deriveFallbackWeakAreaScore(skill: TeacherWeakSkillKey, student: TeacherStudentListItem) {
+  const moduleKey = weakSkillToWeakAreasModule(skill);
+  const moduleBand = student.moduleBands[moduleKey];
+  const base = clamp(Math.round(moduleBand * 13), 35, 88);
+
+  if (student.weakestSkill === skill) {
+    return clamp(base - 14, 33, 86);
+  }
+
+  if (weakSkillToWeakAreasModule(student.weakestSkill) === moduleKey) {
+    return clamp(base - 8, 35, 88);
+  }
+
+  return clamp(base + 5, 36, 90);
+}
+
+function buildWeakAreasInterventionCohort(limit: number) {
+  const ranked = TEACHER_STUDENTS.map(toListItem)
+    .map((student) => {
+      const bandGap = Math.max(0, student.targetBand - student.estimatedBand);
+      const atRiskBoost = student.status === "at_risk" ? 3.2 : student.status === "inactive" ? 1.2 : 0;
+      const progressBoost = student.progressState === "needs_help" ? 2.8 : student.progressState === "stable" ? 1 : 0;
+      const lowBandBoost = Math.max(0, 6.6 - student.estimatedBand) * 1.45;
+      const pendingBoost = clamp(student.pendingCount / 6, 0, 2.2);
+
+      return {
+        student,
+        riskScore: bandGap * 1.25 + atRiskBoost + progressBoost + lowBandBoost + pendingBoost
+      };
+    })
+    .sort((left, right) => {
+      if (right.riskScore !== left.riskScore) {
+        return right.riskScore - left.riskScore;
+      }
+
+      if (left.student.estimatedBand !== right.student.estimatedBand) {
+        return left.student.estimatedBand - right.student.estimatedBand;
+      }
+
+      return left.student.lastActiveMinutesAgo - right.student.lastActiveMinutesAgo;
+    });
+
+  return ranked.slice(0, Math.max(1, Math.min(limit, ranked.length))).map((item) => item.student);
+}
+
+function buildWeakAreasQuestionTypeAccuracy(students: TeacherStudentListItem[]): TeacherQuestionTypeAccuracy[] {
+  return weakAreasQuestionTypes.map((label) => {
+    const values = students.map((student) => {
+      const metric = getStudentProfileMeta(student.id).weakAreas.find((item) => item.label === label);
+      return metric?.score ?? deriveFallbackWeakAreaScore(label, student);
+    });
+
+    const percentage = Math.round(values.reduce((sum, value) => sum + value, 0) / Math.max(1, values.length));
+
+    return {
+      id: `teacher-weak-accuracy-${label}`,
+      label,
+      percentage,
+      tone: toneFromPercentage(percentage)
+    } satisfies TeacherQuestionTypeAccuracy;
+  });
+}
+
+function buildWeakAreasModuleDifficulty(students: TeacherStudentListItem[]): TeacherModuleDifficultyValue[] {
+  const modules: TeacherModuleKey[] = ["reading", "listening", "writing", "speaking"];
+
+  return modules.map((module) => {
+    const avgCurrent = students.reduce((sum, student) => sum + student.moduleBands[module], 0) / Math.max(1, students.length);
+    const avgTarget = students.reduce((sum, student) => sum + student.targetModuleBands[module], 0) / Math.max(1, students.length);
+    const targetGap = Math.max(0, avgTarget - avgCurrent);
+    const weakModuleShare =
+      students.filter((student) => weakSkillToWeakAreasModule(student.weakestSkill) === module).length
+      / Math.max(1, students.length);
+    const value = Math.round(clamp(18 + targetGap * 14 + weakModuleShare * 32 + (6.8 - avgCurrent) * 4, 18, 92));
+
+    return {module, value} satisfies TeacherModuleDifficultyValue;
+  });
+}
+
+function buildWeakAreasStudentRows(students: TeacherStudentListItem[]): TeacherWeakAreasStudentRow[] {
+  return students.map((student) => ({
+    id: student.id,
+    name: student.name,
+    avatarFallback: student.avatarFallback,
+    weakestModule: weakSkillToWeakAreasModule(student.weakestSkill),
+    weakestType: student.weakestSkill,
+    currentBand: student.estimatedBand,
+    lastActivity: student.lastActivity
+  }));
+}
+
+function buildCommonMistakeInsights(
+  students: TeacherStudentListItem[],
+  questionTypeAccuracy: TeacherQuestionTypeAccuracy[]
+): TeacherCommonMistakeInsight[] {
+  const cohortSize = Math.max(1, students.length);
+  const tfngAccuracy = questionTypeAccuracy.find((item) => item.label === "trueFalseNotGiven")?.percentage ?? 55;
+  const timeManagementCount = students.filter((student) => student.weakestSkill === "timeManagement").length;
+  const writingRiskCount = students.filter((student) => student.weakestSkill === "writingTask2").length;
+
+  const falseVsNotGivenShare = Math.round(clamp(100 - tfngAccuracy + 33, 54, 88));
+  const section12Minutes = Math.round(clamp(24 + (timeManagementCount / cohortSize) * 14, 24, 32));
+  const section3Minutes = Math.max(8, 40 - section12Minutes);
+  const cohesionShare = Math.round(clamp(48 + (writingRiskCount / cohortSize) * 42, 40, 84));
+
+  return [
+    {id: "falseVsNotGiven", severity: "high", metricPrimary: falseVsNotGivenShare},
+    {id: "timeManagementSection3", severity: "moderate", metricPrimary: section12Minutes, metricSecondary: section3Minutes},
+    {id: "task2Cohesion", severity: "watch", metricPrimary: cohesionShare}
+  ];
+}
+
+function buildPracticeRecommendations(
+  students: TeacherStudentListItem[],
+  questionTypeAccuracy: TeacherQuestionTypeAccuracy[]
+): TeacherPracticeRecommendation[] {
+  const sorted = [...questionTypeAccuracy].sort((left, right) => left.percentage - right.percentage).slice(0, 3);
+  const cohortSize = Math.max(1, students.length);
+
+  return sorted.map((item, index) => {
+    const relatedStudents = students.filter((student) => {
+      if (student.weakestSkill === item.label) {
+        return true;
+      }
+
+      return weakSkillToWeakAreasModule(student.weakestSkill) === weakSkillToWeakAreasModule(item.label);
+    }).length;
+
+    return {
+      id: `teacher-weak-recommendation-${item.label}`,
+      targetSkill: item.label,
+      assignMode: index === 1 ? "weak_students" : "class",
+      delivery: index === 0 ? "question_set" : index === 1 ? "video_quiz" : "timed_drill",
+      questionCount: Math.round(clamp(8 + (100 - item.percentage) / 3, 8, 22)),
+      targetStudents: Math.max(3, Math.min(cohortSize, relatedStudents))
+    } satisfies TeacherPracticeRecommendation;
+  });
+}
+
+export function getTeacherWeakAreasPageData(limit = 12): TeacherWeakAreasPageData {
+  const cohort = buildWeakAreasInterventionCohort(limit);
+  const questionTypeAccuracy = buildWeakAreasQuestionTypeAccuracy(cohort);
+  const moduleDifficulty = buildWeakAreasModuleDifficulty(cohort);
+  const studentsNeedingImprovement = buildWeakAreasStudentRows(cohort);
+  const commonMistakes = buildCommonMistakeInsights(cohort, questionTypeAccuracy);
+  const recommendations = buildPracticeRecommendations(cohort, questionTypeAccuracy);
+  const lowestAverageScore = roundBand(
+    Math.min(
+      ...(["reading", "listening", "writing", "speaking"] as const).map(
+        (module) => cohort.reduce((sum, student) => sum + student.moduleBands[module], 0) / Math.max(1, cohort.length)
+      )
+    )
+  );
+
+  const mostDifficultModule = [...moduleDifficulty].sort((left, right) => right.value - left.value)[0]?.module ?? "reading";
+  const hardestQuestionType = [...questionTypeAccuracy].sort((left, right) => left.percentage - right.percentage)[0]?.label ?? "matchingHeadings";
+
+  return {
+    summary: {
+      mostDifficultModule,
+      hardestQuestionType,
+      lowestAverageScore,
+      studentsNeedingHelpCount: cohort.length
+    },
+    questionTypeAccuracy,
+    moduleDifficulty,
+    studentsNeedingImprovement,
+    totalStudentsNeedingHelp: cohort.length,
+    commonMistakes,
+    recommendations
   };
 }
 

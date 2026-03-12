@@ -22,16 +22,24 @@ import {cn} from "@/lib/utils";
 
 type TeacherProfileMenuProps = {
   compact?: boolean;
+  visibility?: "desktop" | "mobile" | "all";
   className?: string;
 };
 
-export function TeacherProfileMenu({compact = false, className}: TeacherProfileMenuProps) {
+export function TeacherProfileMenu({compact = false, visibility = "desktop", className}: TeacherProfileMenuProps) {
   const t = useTranslations("teacherDashboard");
   const locale = useLocale();
   const router = useRouter();
   const profile = getTeacherProfile();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const visibilityClassName =
+    visibility === "mobile"
+      ? "flex md:hidden"
+      : visibility === "all"
+        ? "flex"
+        : "hidden md:flex";
 
   const handleCopyEmail = async () => {
     try {
@@ -66,7 +74,8 @@ export function TeacherProfileMenu({compact = false, className}: TeacherProfileM
           type="button"
           variant="ghost"
           className={cn(
-            "hidden h-auto items-center rounded-xl p-1 hover:bg-muted/60 md:flex",
+            "h-auto items-center rounded-xl p-1 hover:bg-muted/60",
+            visibilityClassName,
             compact ? "gap-0.5" : "gap-2.5 pl-2 pr-1",
             className
           )}

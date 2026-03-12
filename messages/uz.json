@@ -1929,6 +1929,8 @@
         "reviews": "Reviews",
         "messages": "Messages",
         "analytics": "Analytics",
+        "weakAreas": "Weak Areas",
+        "announcements": "Announcements",
         "profile": "Profile",
         "settings": "Settings"
       }
@@ -2271,6 +2273,8 @@
     "assignmentType": "Topshiriq turi",
     "assignTo": "Kimga biriktirish",
     "dueDate": "Muddat",
+    "dueDatePlaceholder": "MM/DD/YYYY",
+    "openCalendar": "Kalendarni ochish",
     "selectStudent": "O'quvchini tanlang",
     "selectStudentPlaceholder": "O'quvchini tanlang",
     "selectedStudentsCount": "{count} ta tanlandi",
@@ -2455,6 +2459,269 @@
       "apr": "Apr",
       "may": "May",
       "jun": "Iyn"
+    }
+  },
+  "teacherWeakAreas": {
+    "title": "Student Weak Areas",
+    "subtitle": "Studentlaringiz orasida eng ko'p uchraydigan xatolar va zaif savol turlarini aniqlang.",
+    "mostDifficultModule": "Eng qiyin modul",
+    "hardestQuestionType": "Eng qiyin savol turi",
+    "lowestAverageScore": "Eng past o'rtacha ball",
+    "studentsNeedingHelp": "Yordam kerak studentlar",
+    "summaryIndicators": {
+      "mostDifficultModule": "Eng yuqori risk",
+      "hardestQuestionType": "Eng past aniqlik",
+      "lowestAverageScore": "Maqsaddan past",
+      "studentsNeedingHelp": "Intervensiya guruhi"
+    },
+    "questionTypeAccuracy": "Savol turlari aniqligi",
+    "moduleDifficultyAnalysis": "Modul qiyinlik tahlili",
+    "studentsNeedingImprovement": "Yaxshilanish kerak studentlar",
+    "studentName": "Student",
+    "weakestModule": "Eng zaif modul",
+    "weakestType": "Eng zaif tur",
+    "currentBand": "Joriy band",
+    "lastActivityLabel": "So'nggi faollik",
+    "action": "Amal",
+    "viewProfile": "Profilni ko'rish",
+    "viewAllStudents": "Barcha {count} studentni ko'rish",
+    "mostCommonMistakes": "Eng ko'p uchraydigan xatolar",
+    "recommendedPractice": "Tavsiya etilgan mashq",
+    "assignToClass": "Sinfga biriktirish",
+    "assignToWeakStudents": "Zaif studentlarga biriktirish",
+    "suggestionLabel": "Tavsiya:",
+    "insightsFootnote": "Insightlar shared class performance va weak-area trendlari asosida hisoblangan.",
+    "insightSeverity": {
+      "high": "Yuqori chastota",
+      "moderate": "O'rtacha",
+      "watch": "Kuzatuv"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "questionTypeLabels": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "TFNG",
+      "sentenceCompletion": "Summary Completion",
+      "multipleChoice": "Multiple Choice",
+      "listeningPart4": "Listening Part 4",
+      "writingTask2": "Task 2 Cohesion",
+      "speakingFluency": "Speaking Fluency",
+      "timeManagement": "Vaqt boshqaruvi"
+    },
+    "chart": {
+      "exactValue": "Aniq qiymat: {value}"
+    },
+    "insights": {
+      "falseVsNotGiven": {
+        "title": "False va Not Givenni adashtirish",
+        "description": "Intervensiya guruhidagi studentlarning {value}% qismi qarama-qarshi va yo'q ma'lumotni ajratishda qiynaladi.",
+        "suggestion": "Specific vs general da'volar bo'yicha evidence-matching drill qiling."
+      },
+      "timeManagementSection3": {
+        "title": "Section 3 da vaqtni noto'g'ri taqsimlash",
+        "description": "Studentlar Section 1-2 ga taxminan {section12} daqiqa sarflab, eng qiyin passage uchun atigi {section3} daqiqa qoldiradi.",
+        "suggestion": "Detal savollaridan oldin 3 daqiqalik timed skimming bloklarini qo'llang."
+      },
+      "task2Cohesion": {
+        "title": "Writing Task 2 cohesion zaifligi",
+        "description": "Past band studentlarning {value}% qismi g'oyalarni bog'lash va paragraf oqimida ball yo'qotmoqda.",
+        "suggestion": "Paragraf mantiqi shablonlari va connector rewrite mashqlarini bering."
+      }
+    },
+    "deliveryLabels": {
+      "question_set": "Savollar to'plami",
+      "video_quiz": "Video + Quiz",
+      "timed_drill": "Timed drill"
+    },
+    "recommendationTitles": {
+      "matchingHeadings": "Heading Match Mastery",
+      "trueFalseNotGiven": "TFNG Logical Training",
+      "sentenceCompletion": "Summary Completion Booster",
+      "multipleChoice": "Evidence Choice Sprint",
+      "listeningPart4": "Part 4 Detail Catcher",
+      "writingTask2": "Task 2 Cohesion Clinic",
+      "speakingFluency": "Fluency Response Builder",
+      "timeManagement": "Reading Pace Builder"
+    },
+    "recommendationDescriptions": {
+      "question_set": "{students} student uchun {skill} bo'yicha intensiv {count} ta savolli to'plam.",
+      "video_quiz": "{students} ta zaif student uchun evidence-based video tutorial va quiz.",
+      "timed_drill": "{skill} bo'yicha tezlik va aniqlikni oshirish uchun timed drill ({count} ta topshiriq)."
+    },
+    "recommendationAssignmentInstruction": "{skill} bo'yicha fokus qiling va shu hafta {count} ta topshiriqdan iborat target mashq ketma-ketligini yakunlang.",
+    "lastActivity": {
+      "justNow": "Hozirgina",
+      "minutesAgo": "{value}m oldin",
+      "hoursAgo": "{value}h oldin",
+      "yesterday": "Kecha",
+      "daysAgo": "{value} kun oldin"
+    }
+  },
+  "teacherAnnouncements": {
+    "title": "Announcements",
+    "subtitle": "Studentlarga muhim yangiliklar, eslatmalar va o'quv yo'riqnomalarini ulashing.",
+    "totalAnnouncements": "Jami announcements",
+    "publishedThisWeek": "Bu haftada chop etilgan",
+    "scheduled": "Rejalashtirilgan",
+    "studentsReached": "Yetib borgan studentlar",
+    "summaryIndicators": {
+      "totalAnnouncements": "Barcha yozuvlar",
+      "publishedThisWeek": "So'nggi 7 kun",
+      "scheduled": "Yaqinlashmoqda",
+      "studentsReached": "Unique reach"
+    },
+    "createAnnouncement": "Announcement yaratish",
+    "announcementTitle": "Announcement sarlavhasi",
+    "announcementTitlePlaceholder": "masalan, Muhim: Mock imtihon jadvali yangilandi",
+    "messageContent": "Xabar matni",
+    "messageContentPlaceholder": "Xabaringizni shu yerga yozing...",
+    "targetAudience": "Maqsad auditoriya",
+    "scheduleDate": "Reja sanasi",
+    "scheduleDatePlaceholder": "MM/DD/YYYY",
+    "openCalendar": "Kalendarni ochish",
+    "attachResource": "Resurs biriktirish",
+    "saveDraft": "Draft saqlash",
+    "publishNow": "Hozir chop etish",
+    "engagementOverview": "Engagement overview",
+    "viewDetailedReport": "Batafsil hisobotni ko'rish",
+    "quickTip": "Quick Tip",
+    "quickTipContent": "PDF biriktirilgan announcementlar 40% ko'proq engagement oladi. Dars konspektlarini biriktirib ko'ring!",
+    "audienceOptions": {
+      "all": "Barcha studentlar",
+      "weak_students": "Yordam kerak studentlar",
+      "reading_students": "Reading studentlari",
+      "writing_students": "Writing studentlari"
+    },
+    "engagement": {
+      "totalViewsPercent": "Jami ko'rishlar",
+      "resourceClicksPercent": "Resurs bosilishlari",
+      "unreadPercent": "O'qilmagan"
+    },
+    "uploader": {
+      "dropOrClick": "Yuklash uchun bosing yoki shu joyga tashlang",
+      "supported": "PDF, DOCX, JPG (Maks 10MB)",
+      "unsupportedType": "Fayl formati qo'llab-quvvatlanmaydi. PDF, DOCX yoki JPG dan foydalaning.",
+      "fileTooLarge": "Fayl juda katta. Maksimal hajm 10MB.",
+      "removeFile": "Faylni olib tashlash"
+    },
+    "feedback": {
+      "savedDraft": "Announcement draft sifatida saqlandi.",
+      "published": "Announcement muvaffaqiyatli chop etildi.",
+      "scheduled": "Announcement muvaffaqiyatli rejalashtirildi."
+    }
+  },
+  "teacherProfile": {
+    "title": "Profile",
+    "subtitle": "Shaxsiy ma'lumotlar, teaching tafsilotlari va account sozlamalarini boshqaring.",
+    "editProfile": "Profilni tahrirlash",
+    "changeAvatar": "Avatarni o'zgartirish",
+    "personalInformation": "Shaxsiy ma'lumotlar",
+    "fullName": "To'liq ism",
+    "emailAddress": "Email manzil",
+    "phoneNumber": "Telefon raqam",
+    "country": "Mamlakat",
+    "timezone": "Vaqt mintaqasi",
+    "cancel": "Bekor qilish",
+    "saveChanges": "O'zgarishlarni saqlash",
+    "teachingProfile": "Teaching Profile",
+    "specialization": "Ixtisoslik",
+    "totalExperience": "Umumiy tajriba",
+    "bio": "Bio / Professional ma'lumot",
+    "preferredModules": "Afzal modullar",
+    "accountSecurity": "Account xavfsizligi",
+    "currentPassword": "Joriy parol",
+    "newPassword": "Yangi parol",
+    "confirmPassword": "Parolni tasdiqlash",
+    "updatePassword": "Parolni yangilash",
+    "recentActivity": "So'nggi faoliyat",
+    "viewFullActivityLog": "To'liq faoliyat logini ko'rish",
+    "teacherStatus": "Teacher holati",
+    "verified": "Tasdiqlangan",
+    "notVerified": "Tasdiqlanmagan",
+    "profileCompletion": "Profil to'ldirilishi",
+    "students": "Studentlar",
+    "tasks": "Vazifalar",
+    "reviews": "Reviewlar",
+    "messages": "Xabarlar",
+    "experience": "Tajriba",
+    "avgImprovement": "O'rtacha o'sish",
+    "rating": "Reyting",
+    "instructorId": "Instructor ID",
+    "years": "Yil",
+    "bandUnit": "Band",
+    "statusMessage": "Siz 6 oy davomida 85%+ qoniqish reytingini ushlab turdingiz. Shu tempda davom eting!",
+    "moduleLabels": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "activityLabels": {
+      "accountLogin": "Accountga kirish",
+      "reviewCompleted": "Review yakunlandi",
+      "newAssignmentCreated": "Yangi topshiriq yaratildi",
+      "passwordChanged": "Parol o'zgartirildi",
+      "profileUpdated": "Profil yangilandi",
+      "teachingProfileUpdated": "Teaching profile yangilandi",
+      "avatarChangeRequested": "Avatar o'zgartirish so'rovi"
+    },
+    "relative": {
+      "justNow": "Hozirgina",
+      "minutesAgo": "{value} daqiqa oldin",
+      "hoursAgo": "{value} soat oldin",
+      "yesterday": "Kecha",
+      "daysAgo": "{value} kun oldin"
+    },
+    "feedback": {
+      "avatarRequested": "Avatar o'zgartirish amali tayyor (placeholder).",
+      "personalSaved": "Shaxsiy ma'lumotlar saqlandi.",
+      "teachingSaved": "Teaching profile saqlandi.",
+      "passwordUpdated": "Parol muvaffaqiyatli yangilandi."
+    },
+    "passwordErrors": {
+      "currentPasswordIncorrect": "Joriy parol noto'g'ri.",
+      "passwordMismatch": "Yangi parol va tasdiq paroli mos emas.",
+      "passwordTooShort": "Yangi parol kamida 8 ta belgidan iborat bo'lishi kerak.",
+      "passwordUnchanged": "Yangi parol joriy paroldan farq qilishi kerak."
+    }
+  },
+  "teacherMessages": {
+    "title": "Messages",
+    "subtitle": "Studentlar bilan muloqot qiling, yo'l-yo'riq bering va savollariga javob qaytaring.",
+    "conversations": "Suhbatlar",
+    "searchPlaceholder": "Studentlarni qidiring...",
+    "emptyConversations": "Suhbatlar topilmadi.",
+    "selectConversation": "Xabar yozish uchun student suhbatini tanlang.",
+    "online": "Online",
+    "offline": "Offline",
+    "writeMessage": "Xabar yozing...",
+    "academicIeltsStudent": "Academic IELTS Student",
+    "bandEstimate": "Band Estimate",
+    "targetBand": "Target Band",
+    "activity": "Activity",
+    "testsCompleted": "Tests",
+    "testsCompletedValue": "{count} completed",
+    "viewStudentProfile": "Student profilini ko'rish",
+    "assignTask": "Topshiriq berish",
+    "recentActivity": "So'nggi faoliyat",
+    "noRecentActivity": "Hozircha so'nggi faoliyat yo'q.",
+    "activityLabels": {
+      "completedReadingTest": "Reading test yakunlandi",
+      "submittedWritingAssignment": "Writing task topshirildi",
+      "startedListeningDrill": "Listening drill boshlandi",
+      "sentMessage": "Xabar yuborildi",
+      "loggedIntoDashboard": "Dashboardga kirildi"
+    },
+    "relative": {
+      "justNow": "Hozirgina",
+      "minutesAgo": "{value}m oldin",
+      "hoursAgo": "{value}h oldin",
+      "yesterday": "Kecha",
+      "daysAgo": "{value} kun oldin"
     }
   }
 }

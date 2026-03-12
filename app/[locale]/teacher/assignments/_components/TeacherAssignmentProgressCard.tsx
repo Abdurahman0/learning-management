@@ -61,7 +61,7 @@ export function TeacherAssignmentProgressCard({items}: TeacherAssignmentProgress
 
               <span
                 role="tooltip"
-                className={`pointer-events-none absolute -top-8 right-0 hidden rounded-md border px-2 py-0.5 text-[11px] font-semibold shadow-md backdrop-blur-md group-hover:block ${tooltipToneClass(item.tone)}`}
+                className={`pointer-events-none absolute -top-8 right-0 hidden rounded-md border px-2 py-0.5 text-[11px] font-semibold shadow-md backdrop-blur-md group-hover:block max-sm:-top-7 max-sm:px-1.5 max-sm:py-0.5 max-sm:text-[10px] ${tooltipToneClass(item.tone)}`}
               >
                 {item.value}% {t("completedLabel")}
               </span>

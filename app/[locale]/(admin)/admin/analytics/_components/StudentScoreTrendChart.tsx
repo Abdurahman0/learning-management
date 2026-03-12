@@ -156,28 +156,28 @@ export function StudentScoreTrendChart({points}: StudentScoreTrendChartProps) {
 
           {activePoint && activeX !== null && activeY !== null ? (
             <div
-              className="pointer-events-none absolute z-20 min-w-[190px] rounded-xl border border-[rgba(148,163,184,0.18)] bg-white px-4 py-3 shadow-sm dark:border-[rgba(148,163,184,0.16)] dark:bg-[#0F172A]"
+              className="pointer-events-none absolute z-20 min-w-[190px] rounded-xl border border-[rgba(148,163,184,0.18)] bg-white px-4 py-3 shadow-sm dark:border-[rgba(148,163,184,0.16)] dark:bg-[#0F172A] max-sm:min-w-[146px] max-sm:rounded-lg max-sm:px-2.5 max-sm:py-1.5"
               style={{
                 left: `${clamp((activeX / chart.width) * 100, 17, 83)}%`,
                 top: `${clamp((activeY / chart.height) * 100, 10, 68)}%`,
                 transform: "translate(-50%, -110%)"
               }}
             >
-              <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{activePoint.label}</p>
-              <div className="mt-1.5 space-y-1.5 text-xs">
-                <p className="flex items-center justify-between gap-3 text-[#64748B] dark:text-[rgba(203,213,225,0.7)]">
-                  <span className="inline-flex items-center gap-1.5">
+              <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F8FAFC] max-sm:text-xs">{activePoint.label}</p>
+              <div className="mt-1.5 space-y-1.5 text-xs max-sm:mt-1 max-sm:space-y-1 max-sm:text-[10px]">
+                <p className="flex items-center justify-between gap-3 text-[#64748B] dark:text-[rgba(203,213,225,0.7)] max-sm:gap-2">
+                  <span className="inline-flex items-center gap-1.5 max-sm:gap-1">
                     <span className="size-2 rounded-full bg-[var(--trend-reading)]" />
                     {t("legend.reading")}
                   </span>
-                  <span className="font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{activePoint.reading.toFixed(1)}</span>
+                  <span className="font-semibold text-[#0F172A] dark:text-[#F8FAFC] max-sm:text-[10px]">{activePoint.reading.toFixed(1)}</span>
                 </p>
-                <p className="flex items-center justify-between gap-3 text-[#64748B] dark:text-[rgba(203,213,225,0.7)]">
-                  <span className="inline-flex items-center gap-1.5">
+                <p className="flex items-center justify-between gap-3 text-[#64748B] dark:text-[rgba(203,213,225,0.7)] max-sm:gap-2">
+                  <span className="inline-flex items-center gap-1.5 max-sm:gap-1">
                     <span className="size-2 rounded-full bg-[var(--trend-listening)]" />
                     {t("legend.listening")}
                   </span>
-                  <span className="font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{activePoint.listening.toFixed(1)}</span>
+                  <span className="font-semibold text-[#0F172A] dark:text-[#F8FAFC] max-sm:text-[10px]">{activePoint.listening.toFixed(1)}</span>
                 </p>
               </div>
             </div>

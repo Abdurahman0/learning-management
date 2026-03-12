@@ -40,7 +40,7 @@ export function TeacherStudentActivityTodayCard({metrics}: TeacherStudentActivit
             <p className={`text-4xl leading-none font-semibold ${valueTone(metric.id)}`}>{metric.value}</p>
             <p className="mt-2 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">{t(metric.id)}</p>
 
-            <span className="pointer-events-none absolute -top-7 left-1/2 hidden -translate-x-1/2 rounded-md border border-border/70 bg-card px-2 py-0.5 text-[11px] font-semibold shadow-md group-hover:block">
+            <span className="pointer-events-none absolute -top-7 left-1/2 hidden -translate-x-1/2 rounded-md border border-border/70 bg-card px-2 py-0.5 text-[11px] font-semibold shadow-md group-hover:block max-sm:px-1.5 max-sm:py-0.5 max-sm:text-[10px]">
               {t("exactValue", {value: metric.value})}
             </span>
           </div>

@@ -22,11 +22,12 @@ export default async function TeacherAssignmentsPage({searchParams}: TeacherAssi
   const prefill = getTeacherAssignmentPrefillContext({
     studentId: getParamValue(query.studentId),
     recommendationSkill: getParamValue(query.recommendationSkill),
+    assignedToMode: getParamValue(query.assignedToMode),
     title: getParamValue(query.title),
     instructions: getParamValue(query.instructions)
   });
 
   const data = getTeacherAssignmentsPageData();
 
-  return <TeacherAssignmentsPageClient initialData={data} prefill={prefill} />;
+  return <TeacherAssignmentsPageClient initialData={data} prefill={prefill} initialQuery={getParamValue(query.query) ?? ""} />;
 }

@@ -101,7 +101,7 @@ export function TeacherActiveAssignmentsTable({rows, onAction}: TeacherActiveAss
                         <div className="h-2 rounded-full bg-muted/70">
                           <div className={`h-2 rounded-full ${progressTone(row.progressPercent)}`} style={{width: `${row.progressPercent}%`}} />
                         </div>
-                        <span className="pointer-events-none absolute -top-7 right-0 hidden rounded-md border border-border/70 bg-card px-2 py-0.5 text-[11px] font-semibold shadow-md group-hover:block">
+                        <span className="pointer-events-none absolute -top-7 right-0 hidden rounded-md border border-border/70 bg-card px-2 py-0.5 text-[11px] font-semibold shadow-md group-hover:block max-sm:px-1.5 max-sm:py-0.5 max-sm:text-[10px]">
                           {row.progressPercent}%
                         </span>
                       </div>

@@ -1929,6 +1929,8 @@
         "reviews": "Reviews",
         "messages": "Messages",
         "analytics": "Analytics",
+        "weakAreas": "Weak Areas",
+        "announcements": "Announcements",
         "profile": "Profile",
         "settings": "Settings"
       }
@@ -2105,6 +2107,7 @@
     "sendMessage": "Send Message",
     "addTeacherNote": "Add Teacher Note",
     "lastActivity": "Last Activity",
+    "lastActivityLabel": "Last Activity",
     "testsDone": "Tests Done",
     "streak": "Streak",
     "targetBand": "Target",
@@ -2271,6 +2274,8 @@
     "assignmentType": "Assignment Type",
     "assignTo": "Assign To",
     "dueDate": "Due Date",
+    "dueDatePlaceholder": "MM/DD/YYYY",
+    "openCalendar": "Open calendar",
     "selectStudent": "Select Student",
     "selectStudentPlaceholder": "Choose a student",
     "selectedStudentsCount": "{count} selected",
@@ -2455,6 +2460,270 @@
       "apr": "Apr",
       "may": "May",
       "jun": "Jun"
+    }
+  },
+  "teacherWeakAreas": {
+    "title": "Student Weak Areas",
+    "subtitle": "Identify the most common mistakes and weak question types among your students.",
+    "mostDifficultModule": "Most Difficult Module",
+    "hardestQuestionType": "Hardest Question Type",
+    "lowestAverageScore": "Lowest Avg Score",
+    "studentsNeedingHelp": "Students Needing Help",
+    "summaryIndicators": {
+      "mostDifficultModule": "Highest risk",
+      "hardestQuestionType": "Lowest accuracy",
+      "lowestAverageScore": "Below target",
+      "studentsNeedingHelp": "Intervention cohort"
+    },
+    "questionTypeAccuracy": "Question Type Accuracy",
+    "moduleDifficultyAnalysis": "Module Difficulty Analysis",
+    "studentsNeedingImprovement": "Students Needing Improvement",
+    "studentName": "Student Name",
+    "weakestModule": "Weakest Module",
+    "weakestType": "Weakest Type",
+    "currentBand": "Current Band",
+    "lastActivityLabel": "Last Activity",
+    "lastActivity": "Last Activity",
+    "action": "Action",
+    "viewProfile": "View Profile",
+    "viewAllStudents": "View All {count} Students",
+    "mostCommonMistakes": "Most Common Mistakes",
+    "recommendedPractice": "Recommended Practice",
+    "assignToClass": "Assign to Class",
+    "assignToWeakStudents": "Assign to Weak Students",
+    "suggestionLabel": "Suggestion:",
+    "insightsFootnote": "Insights are generated from shared class performance and weak-area trends.",
+    "insightSeverity": {
+      "high": "High Frequency",
+      "moderate": "Moderate",
+      "watch": "Watchlist"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "questionTypeLabels": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "TFNG",
+      "sentenceCompletion": "Summary Completion",
+      "multipleChoice": "Multiple Choice",
+      "listeningPart4": "Listening Part 4",
+      "writingTask2": "Task 2 Cohesion",
+      "speakingFluency": "Speaking Fluency",
+      "timeManagement": "Time Management"
+    },
+    "chart": {
+      "exactValue": "Exact value: {value}"
+    },
+    "insights": {
+      "falseVsNotGiven": {
+        "title": "Confusion Between False and Not Given",
+        "description": "{value}% of students in the intervention cohort struggle to separate missing information from contradiction.",
+        "suggestion": "Run evidence-matching drills around specific vs general claims."
+      },
+      "timeManagementSection3": {
+        "title": "Poor Time Management in Section 3",
+        "description": "Students spend around {section12} minutes on Sections 1-2, leaving only {section3} minutes for the hardest passage.",
+        "suggestion": "Use 3-minute timed skimming blocks before detail questions."
+      },
+      "task2Cohesion": {
+        "title": "Weak Cohesion in Writing Task 2",
+        "description": "{value}% of lower-band students lose marks on idea linking and paragraph flow.",
+        "suggestion": "Assign paragraph-logic templates and connective-device rewrites."
+      }
+    },
+    "deliveryLabels": {
+      "question_set": "Question Set",
+      "video_quiz": "Video + Quiz",
+      "timed_drill": "Timed Drill"
+    },
+    "recommendationTitles": {
+      "matchingHeadings": "Heading Match Mastery",
+      "trueFalseNotGiven": "TFNG Logical Training",
+      "sentenceCompletion": "Summary Completion Booster",
+      "multipleChoice": "Evidence Choice Sprint",
+      "listeningPart4": "Part 4 Detail Catcher",
+      "writingTask2": "Task 2 Cohesion Clinic",
+      "speakingFluency": "Fluency Response Builder",
+      "timeManagement": "Reading Pace Builder"
+    },
+    "recommendationDescriptions": {
+      "question_set": "Intensive {count}-question set focused on {skill} for {students} students.",
+      "video_quiz": "Video tutorial with evidence-based quiz practice for {students} weak students.",
+      "timed_drill": "Timed drill series ({count} items) to improve speed and decision accuracy in {skill}."
+    },
+    "recommendationAssignmentInstruction": "Focus on {skill} and complete the {count}-item targeted practice sequence this week.",
+    "lastActivity": {
+      "justNow": "Just now",
+      "minutesAgo": "{value}m ago",
+      "hoursAgo": "{value}h ago",
+      "yesterday": "Yesterday",
+      "daysAgo": "{value} days ago"
+    }
+  },
+  "teacherAnnouncements": {
+    "title": "Announcements",
+    "subtitle": "Share important updates, reminders, and learning guidance with your students.",
+    "totalAnnouncements": "Total Announcements",
+    "publishedThisWeek": "Published This Week",
+    "scheduled": "Scheduled",
+    "studentsReached": "Students Reached",
+    "summaryIndicators": {
+      "totalAnnouncements": "All records",
+      "publishedThisWeek": "Last 7 days",
+      "scheduled": "Upcoming",
+      "studentsReached": "Unique reach"
+    },
+    "createAnnouncement": "Create Announcement",
+    "announcementTitle": "Announcement Title",
+    "announcementTitlePlaceholder": "e.g. Important: Mock Exam Schedule Update",
+    "messageContent": "Message Content",
+    "messageContentPlaceholder": "Write your message here...",
+    "targetAudience": "Target Audience",
+    "scheduleDate": "Schedule Date",
+    "scheduleDatePlaceholder": "MM/DD/YYYY",
+    "openCalendar": "Open calendar",
+    "attachResource": "Attach Resource",
+    "saveDraft": "Save Draft",
+    "publishNow": "Publish Now",
+    "engagementOverview": "Engagement Overview",
+    "viewDetailedReport": "View Detailed Report",
+    "quickTip": "Quick Tip",
+    "quickTipContent": "Announcements with attached PDFs get 40% more engagement. Try attaching your lecture notes!",
+    "audienceOptions": {
+      "all": "All Students",
+      "weak_students": "Students Needing Help",
+      "reading_students": "Reading Students",
+      "writing_students": "Writing Students"
+    },
+    "engagement": {
+      "totalViewsPercent": "Total Views",
+      "resourceClicksPercent": "Resource Clicks",
+      "unreadPercent": "Unread"
+    },
+    "uploader": {
+      "dropOrClick": "Click to upload or drag and drop",
+      "supported": "PDF, DOCX, JPG (Max 10MB)",
+      "unsupportedType": "Unsupported file format. Use PDF, DOCX, or JPG.",
+      "fileTooLarge": "File is too large. Maximum allowed size is 10MB.",
+      "removeFile": "Remove file"
+    },
+    "feedback": {
+      "savedDraft": "Announcement saved as draft.",
+      "published": "Announcement published successfully.",
+      "scheduled": "Announcement scheduled successfully."
+    }
+  },
+  "teacherProfile": {
+    "title": "Profile",
+    "subtitle": "Manage your personal information, teaching details, and account preferences.",
+    "editProfile": "Edit Profile",
+    "changeAvatar": "Change Avatar",
+    "personalInformation": "Personal Information",
+    "fullName": "Full Name",
+    "emailAddress": "Email Address",
+    "phoneNumber": "Phone Number",
+    "country": "Country",
+    "timezone": "Timezone",
+    "cancel": "Cancel",
+    "saveChanges": "Save Changes",
+    "teachingProfile": "Teaching Profile",
+    "specialization": "Specialization",
+    "totalExperience": "Total Experience",
+    "bio": "Bio / Professional Summary",
+    "preferredModules": "Preferred Modules",
+    "accountSecurity": "Account Security",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "updatePassword": "Update Password",
+    "recentActivity": "Recent Activity",
+    "viewFullActivityLog": "View Full Activity Log",
+    "teacherStatus": "Teacher Status",
+    "verified": "Verified",
+    "notVerified": "Not Verified",
+    "profileCompletion": "Profile completion",
+    "students": "Students",
+    "tasks": "Tasks",
+    "reviews": "Reviews",
+    "messages": "Messages",
+    "experience": "Experience",
+    "avgImprovement": "Avg. Improvement",
+    "rating": "Rating",
+    "instructorId": "Instructor ID",
+    "years": "Years",
+    "bandUnit": "Band",
+    "statusMessage": "You have maintained an 85%+ satisfaction rating for 6 consecutive months. Keep up the great work!",
+    "moduleLabels": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "activityLabels": {
+      "accountLogin": "Account Login",
+      "reviewCompleted": "Review Completed",
+      "newAssignmentCreated": "New Assignment Created",
+      "passwordChanged": "Password Changed",
+      "profileUpdated": "Profile Updated",
+      "teachingProfileUpdated": "Teaching Profile Updated",
+      "avatarChangeRequested": "Avatar Change Requested"
+    },
+    "relative": {
+      "justNow": "Just now",
+      "minutesAgo": "{value} minutes ago",
+      "hoursAgo": "{value} hours ago",
+      "yesterday": "Yesterday",
+      "daysAgo": "{value} days ago"
+    },
+    "feedback": {
+      "avatarRequested": "Avatar change flow is ready (placeholder).",
+      "personalSaved": "Personal information saved.",
+      "teachingSaved": "Teaching profile saved.",
+      "passwordUpdated": "Password updated successfully."
+    },
+    "passwordErrors": {
+      "currentPasswordIncorrect": "Current password is incorrect.",
+      "passwordMismatch": "New password and confirmation do not match.",
+      "passwordTooShort": "New password must be at least 8 characters.",
+      "passwordUnchanged": "New password must be different from current password."
+    }
+  },
+  "teacherMessages": {
+    "title": "Messages",
+    "subtitle": "Communicate with your students, provide guidance, and respond to their questions.",
+    "conversations": "Conversations",
+    "searchPlaceholder": "Search students...",
+    "emptyConversations": "No conversations found.",
+    "selectConversation": "Select a student conversation to start messaging.",
+    "online": "Online",
+    "offline": "Offline",
+    "writeMessage": "Write a message...",
+    "academicIeltsStudent": "Academic IELTS Student",
+    "bandEstimate": "Band Estimate",
+    "targetBand": "Target Band",
+    "activity": "Activity",
+    "testsCompleted": "Tests",
+    "testsCompletedValue": "{count} completed",
+    "viewStudentProfile": "View Student Profile",
+    "assignTask": "Assign Task",
+    "recentActivity": "Recent Activity",
+    "noRecentActivity": "No recent activity yet.",
+    "activityLabels": {
+      "completedReadingTest": "Completed Reading Test",
+      "submittedWritingAssignment": "Submitted Writing Task",
+      "startedListeningDrill": "Started Listening Drill",
+      "sentMessage": "Sent a message",
+      "loggedIntoDashboard": "Logged into Dashboard"
+    },
+    "relative": {
+      "justNow": "Just now",
+      "minutesAgo": "{value}m ago",
+      "hoursAgo": "{value}h ago",
+      "yesterday": "Yesterday",
+      "daysAgo": "{value} days ago"
     }
   }
 }

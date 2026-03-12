@@ -154,7 +154,7 @@ export function TeacherReviewDetailsPanel({
                     aria-hidden="true"
                   />
                 </div>
-                <span className="pointer-events-none absolute -top-7 right-0 hidden rounded-md border border-border/70 bg-card px-2 py-0.5 text-[11px] font-semibold shadow-md group-hover:block">
+                <span className="pointer-events-none absolute -top-7 right-0 hidden rounded-md border border-border/70 bg-card px-2 py-0.5 text-[11px] font-semibold shadow-md group-hover:block max-sm:px-1.5 max-sm:py-0.5 max-sm:text-[10px]">
                   {criteria[field.key]}%
                 </span>
               </div>

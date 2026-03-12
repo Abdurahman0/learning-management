@@ -24,9 +24,13 @@ import {UsersTable} from "./UsersTable";
 
 const PAGE_SIZE = 6;
 
-export function UsersPageClient() {
+type UsersPageClientProps = {
+  initialQuery?: string;
+};
+
+export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
   const t = useTranslations("adminUsers");
-  const [searchValue, setSearchValue] = useState("");
+  const [searchValue, setSearchValue] = useState(initialQuery);
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("all");
   const [roleFilter, setRoleFilter] = useState<RoleFilterValue>("all");
   const [planFilter, setPlanFilter] = useState<PlanFilterValue>("all");

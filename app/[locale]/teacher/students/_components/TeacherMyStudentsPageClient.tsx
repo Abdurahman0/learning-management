@@ -20,14 +20,24 @@ import {TeacherStudentsFilters} from "./TeacherStudentsFilters";
 import {TeacherStudentsSummaryCards} from "./TeacherStudentsSummaryCards";
 import {TeacherStudentsTable} from "./TeacherStudentsTable";
 
-export function TeacherMyStudentsPageClient() {
+type TeacherMyStudentsPageClientProps = {
+  initialFilters?: {
+    query?: string;
+    progress?: TeacherStudentsProgressFilter;
+    target?: TeacherStudentsTargetFilter;
+    status?: TeacherStudentsStatusFilter;
+    sort?: TeacherStudentsSortBy;
+  };
+};
+
+export function TeacherMyStudentsPageClient({initialFilters}: TeacherMyStudentsPageClientProps) {
   const t = useTranslations("teacherStudents");
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [progressFilter, setProgressFilter] = useState<TeacherStudentsProgressFilter>("all");
-  const [targetFilter, setTargetFilter] = useState<TeacherStudentsTargetFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<TeacherStudentsStatusFilter>("all");
-  const [sortBy, setSortBy] = useState<TeacherStudentsSortBy>("recent_activity");
+  const [searchQuery, setSearchQuery] = useState(initialFilters?.query ?? "");
+  const [progressFilter, setProgressFilter] = useState<TeacherStudentsProgressFilter>(initialFilters?.progress ?? "all");
+  const [targetFilter, setTargetFilter] = useState<TeacherStudentsTargetFilter>(initialFilters?.target ?? "all");
+  const [statusFilter, setStatusFilter] = useState<TeacherStudentsStatusFilter>(initialFilters?.status ?? "all");
+  const [sortBy, setSortBy] = useState<TeacherStudentsSortBy>(initialFilters?.sort ?? "recent_activity");
 
   const summary = useMemo(() => getTeacherStudentsSummary(), []);
 
@@ -51,7 +61,14 @@ export function TeacherMyStudentsPageClient() {
         <TeacherSidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <TeacherTopbar title={t("title")} />
+          <TeacherTopbar
+            title={t("title")}
+            search={{
+              value: searchQuery,
+              onValueChange: setSearchQuery,
+              placeholder: t("searchPlaceholder")
+            }}
+          />
 
           <main className="mx-auto min-w-0 w-full max-w-[1480px] space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
             <section>

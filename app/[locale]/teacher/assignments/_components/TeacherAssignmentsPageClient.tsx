@@ -28,6 +28,7 @@ import {TeacherCreateAssignmentCard} from "./TeacherCreateAssignmentCard";
 type TeacherAssignmentsPageClientProps = {
   initialData: TeacherAssignmentsPageData;
   prefill: TeacherAssignmentPrefillContext;
+  initialQuery?: string;
 };
 
 type CreateCardInitial = {
@@ -42,10 +43,38 @@ type CreateCardInitial = {
 };
 
 function toDateInputValue(isoDate: string) {
-  return isoDate.slice(0, 10);
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  return `${month}/${day}/${year}`;
 }
 
-export function TeacherAssignmentsPageClient({initialData, prefill}: TeacherAssignmentsPageClientProps) {
+function assignmentSearchTarget(row: TeacherAssignmentRow) {
+  const assignedNames = row.assignedStudentIds
+    .map((studentId) => findTeacherStudentById(studentId)?.name ?? "")
+    .join(" ");
+
+  return [
+    row.title,
+    row.type,
+    row.assignedToMode,
+    row.instructions,
+    assignedNames
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+export function TeacherAssignmentsPageClient({
+  initialData,
+  prefill,
+  initialQuery = ""
+}: TeacherAssignmentsPageClientProps) {
   const t = useTranslations("teacherAssignments");
   const router = useRouter();
   const locale = useLocale();
@@ -57,16 +86,28 @@ export function TeacherAssignmentsPageClient({initialData, prefill}: TeacherAssi
   const [pageData, setPageData] = useState(initialData);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [createCardSeed, setCreateCardSeed] = useState(0);
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const initialAssignedToMode =
+    prefilledStudent ? "one" : prefill.assignedToMode ?? "all";
   const [createCardInitial, setCreateCardInitial] = useState<CreateCardInitial>({
     title: prefill.prefilledTitle ?? "",
     type: "reading",
-    assignedToMode: prefilledStudent ? "one" : "all",
+    assignedToMode: initialAssignedToMode,
     selectedStudentId: prefilledStudent?.id ?? "",
     selectedStudentIds: prefilledStudent?.id ? [prefilledStudent.id] : [],
     dueDate: "",
     instructions: prefill.prefilledInstructions ?? "",
     recommendationSkill: prefill.recommendationSkill
   });
+
+  const visibleAssignments = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+    if (!normalized) {
+      return pageData.activeAssignments;
+    }
+
+    return pageData.activeAssignments.filter((row) => assignmentSearchTarget(row).includes(normalized));
+  }, [pageData.activeAssignments, searchQuery]);
 
   useEffect(() => {
     if (!actionMessage) {
@@ -158,7 +199,13 @@ export function TeacherAssignmentsPageClient({initialData, prefill}: TeacherAssi
         <TeacherSidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <TeacherTopbar title={t("title")} />
+          <TeacherTopbar
+            title={t("title")}
+            search={{
+              value: searchQuery,
+              onValueChange: setSearchQuery
+            }}
+          />
 
           <main className="mx-auto min-w-0 w-full max-w-[1480px] space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
             <section className="flex flex-wrap items-start justify-between gap-3">
@@ -196,7 +243,7 @@ export function TeacherAssignmentsPageClient({initialData, prefill}: TeacherAssi
               </div>
             </section>
 
-            <TeacherActiveAssignmentsTable rows={pageData.activeAssignments} onAction={handleRowAction} />
+            <TeacherActiveAssignmentsTable rows={visibleAssignments} onAction={handleRowAction} />
           </main>
         </div>
       </div>

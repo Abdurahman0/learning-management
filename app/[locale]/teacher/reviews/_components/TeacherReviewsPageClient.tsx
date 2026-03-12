@@ -27,6 +27,7 @@ import {TeacherReviewsSummaryCards} from "./TeacherReviewsSummaryCards";
 
 type TeacherReviewsPageClientProps = {
   initialData: TeacherReviewsPageData;
+  initialSearch?: string;
 };
 
 const emptyCriteria: TeacherReviewCriteriaScores = {
@@ -57,7 +58,7 @@ function submissionSearchTarget(submission: TeacherReviewSubmission) {
     .toLowerCase();
 }
 
-export function TeacherReviewsPageClient({initialData}: TeacherReviewsPageClientProps) {
+export function TeacherReviewsPageClient({initialData, initialSearch = ""}: TeacherReviewsPageClientProps) {
   const t = useTranslations("teacherReviews");
   const locale = useLocale();
   const router = useRouter();
@@ -65,7 +66,7 @@ export function TeacherReviewsPageClient({initialData}: TeacherReviewsPageClient
   const [pageData, setPageData] = useState(initialData);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(initialData.selectedSubmissionId);
 
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const [typeFilter, setTypeFilter] = useState<TeacherReviewsTypeFilter>("all");
   const [statusFilter, setStatusFilter] = useState<TeacherReviewsStatusFilter>("all");
   const [descending, setDescending] = useState(true);
@@ -205,7 +206,14 @@ export function TeacherReviewsPageClient({initialData}: TeacherReviewsPageClient
         <TeacherSidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <TeacherTopbar title={t("title")} />
+          <TeacherTopbar
+            title={t("title")}
+            search={{
+              value: search,
+              onValueChange: setSearch,
+              placeholder: t("searchPlaceholder")
+            }}
+          />
 
           <main className="mx-auto min-w-0 w-full max-w-[1480px] space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
             <section>

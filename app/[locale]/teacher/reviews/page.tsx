@@ -16,11 +16,15 @@ function firstParam(value: string | string[] | undefined) {
 
 export default async function TeacherReviewsPage({searchParams}: TeacherReviewsPageProps) {
   const query = await searchParams;
+  const assignmentId = firstParam(query.assignmentId);
+  const studentId = firstParam(query.studentId);
+  const submissionId = firstParam(query.submissionId);
+  const initialSearch = firstParam(query.query) ?? "";
   const data = getTeacherReviewsPageData({
-    assignmentId: firstParam(query.assignmentId),
-    studentId: firstParam(query.studentId),
-    submissionId: firstParam(query.submissionId)
+    assignmentId,
+    studentId,
+    submissionId
   });
 
-  return <TeacherReviewsPageClient initialData={data} />;
+  return <TeacherReviewsPageClient key={`${initialSearch}:${assignmentId ?? ""}:${studentId ?? ""}:${submissionId ?? ""}`} initialData={data} initialSearch={initialSearch} />;
 }

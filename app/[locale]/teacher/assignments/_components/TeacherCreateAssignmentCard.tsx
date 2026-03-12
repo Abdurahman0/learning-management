@@ -14,6 +14,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import type {TeacherAssignmentCreateInput} from "@/data/teacher/selectors";
+import {TeacherAssignmentDueDateInput} from "./TeacherAssignmentDueDateInput";
 
 type StudentOption = {
   id: string;
@@ -53,8 +54,57 @@ const assignModeOptions: TeacherAssignmentCreateInput["assignedToMode"][] = [
   "improving"
 ];
 
+function parseDueDate(value: string): Date | null {
+  const normalized = value.trim();
+  const slashMatch = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+
+  if (slashMatch) {
+    const [, mm, dd, yyyy] = slashMatch;
+    const month = Number(mm);
+    const day = Number(dd);
+    const year = Number(yyyy);
+    const parsed = new Date(year, month - 1, day);
+
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+
+    if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+      return null;
+    }
+
+    return parsed;
+  }
+
+  const isoMatch = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    const [, yyyy, mm, dd] = isoMatch;
+    const year = Number(yyyy);
+    const month = Number(mm);
+    const day = Number(dd);
+    const parsed = new Date(year, month - 1, day);
+
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+
+    if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+      return null;
+    }
+
+    return parsed;
+  }
+
+  return null;
+}
+
 function toIsoDate(dateValue: string) {
-  return `${dateValue}T12:00:00.000Z`;
+  const parsed = parseDueDate(dateValue);
+  if (!parsed) {
+    return null;
+  }
+
+  return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate(), 12, 0, 0)).toISOString();
 }
 
 export function TeacherCreateAssignmentCard({
@@ -79,7 +129,7 @@ export function TeacherCreateAssignmentCard({
   const [dueDate, setDueDate] = useState(initialForm.dueDate);
   const [instructions, setInstructions] = useState(initialForm.instructions);
 
-  const canSubmit = title.trim().length > 2 && dueDate && instructions.trim().length > 8;
+  const canSubmit = title.trim().length > 2 && Boolean(parseDueDate(dueDate)) && instructions.trim().length > 8;
   const requiresSingleStudent = assignedToMode === "one";
   const requiresSelectedStudents = assignedToMode === "selected";
 
@@ -115,6 +165,11 @@ export function TeacherCreateAssignmentCard({
       return;
     }
 
+    const dueAt = toIsoDate(dueDate);
+    if (!dueAt) {
+      return;
+    }
+
     const assignedStudentIds =
       assignedToMode === "one"
         ? selectedStudentId
@@ -129,7 +184,7 @@ export function TeacherCreateAssignmentCard({
       type,
       assignedToMode,
       assignedStudentIds,
-      dueAt: toIsoDate(dueDate),
+      dueAt,
       instructions: instructions.trim(),
       status,
       contextRecommendationSkill: initialForm.recommendationSkill
@@ -208,12 +263,7 @@ export function TeacherCreateAssignmentCard({
 
           <label className="space-y-2">
             <span className="text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">{t("dueDate")}</span>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(event) => setDueDate(event.target.value)}
-              className="h-11 w-full rounded-xl border border-border/70 bg-background/45 px-3 text-sm outline-none transition-colors focus:border-primary/55"
-            />
+            <TeacherAssignmentDueDateInput value={dueDate} onChange={setDueDate} />
           </label>
         </div>
 

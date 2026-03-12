@@ -117,20 +117,20 @@ export function TestsCompletedChart({points}: TestsCompletedChartProps) {
 
           {activeData && activeX !== null ? (
             <div
-              className="pointer-events-none absolute z-20 min-w-[170px] rounded-xl border border-[rgba(148,163,184,0.18)] bg-white px-4 py-3 shadow-sm dark:border-[rgba(148,163,184,0.16)] dark:bg-[#0F172A]"
+              className="pointer-events-none absolute z-20 min-w-[170px] rounded-xl border border-[rgba(148,163,184,0.18)] bg-white px-4 py-3 shadow-sm dark:border-[rgba(148,163,184,0.16)] dark:bg-[#0F172A] max-sm:min-w-[140px] max-sm:rounded-lg max-sm:px-2.5 max-sm:py-1.5"
               style={{
                 left: `${clamp((activeX / chart.width) * 100, 16, 84)}%`,
                 top: "10%",
                 transform: "translateX(-50%)"
               }}
             >
-              <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{activeData.day}</p>
-              <p className="mt-1.5 flex items-center justify-between gap-2 text-xs text-[#64748B] dark:text-[rgba(203,213,225,0.7)]">
-                <span className="inline-flex items-center gap-1.5">
+              <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F8FAFC] max-sm:text-xs">{activeData.day}</p>
+              <p className="mt-1.5 flex items-center justify-between gap-2 text-xs text-[#64748B] dark:text-[rgba(203,213,225,0.7)] max-sm:mt-1 max-sm:gap-1.5 max-sm:text-[10px]">
+                <span className="inline-flex items-center gap-1.5 max-sm:gap-1">
                   <span className="size-2 rounded-full bg-[var(--comp-bar)]" />
                   {t("legend.academic")}
                 </span>
-                <span className="font-semibold text-[#0F172A] dark:text-[#F8FAFC]">{activeData.value.toLocaleString()}</span>
+                <span className="font-semibold text-[#0F172A] dark:text-[#F8FAFC] max-sm:text-[10px]">{activeData.value.toLocaleString()}</span>
               </p>
             </div>
           ) : null}
