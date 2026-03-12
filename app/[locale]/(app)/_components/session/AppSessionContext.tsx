@@ -3,7 +3,7 @@
 import type {ReactNode} from "react";
 import {createContext, useContext} from "react";
 
-export type AppSessionRole = "guest" | "user" | "admin";
+export type AppSessionRole = "guest" | "user" | "teacher" | "admin";
 
 const AppSessionContext = createContext<AppSessionRole>("guest");
 

@@ -366,7 +366,8 @@
       "submit": "Kirish",
       "bottomText": "Akkauntingiz yo'qmi?",
       "bottomLink": "Yaratish",
-      "success": "Muvaffaqiyatli kirildi. Endi backend auth ulashingiz mumkin."
+      "success": "Muvaffaqiyatli kirildi. Endi backend auth ulashingiz mumkin.",
+      "demoCredentials": "Demo loginlar: string@gmail.com/string1234 (student), teacher@gmail.com/teacher1234 (teacher), admin@gmail.com/admin1234 (admin)"
     },
     "signupMarketing": {
       "title": "IELTS imtihonini ishonch bilan egallang",
@@ -1901,7 +1902,559 @@
     "common": {
       "cancel": "Bekor qilish"
     }
+  },
+  "teacherDashboard": {
+    "title": "Teacher Dashboard",
+    "subtitle": "Biriktirilgan o'quvchilarni kuzating, progressni tekshiring va o'z vaqtida yordam bering.",
+    "teacherRoleLabel": "Teacher",
+    "notificationsLabel": "Bildirishnomalar",
+    "topbar": {
+      "searchPlaceholder": "O'quvchi yoki topshiriq qidirish...",
+      "openProfileMenu": "Teacher profil menyusini ochish",
+      "goDashboard": "Dashboard",
+      "copyEmail": "Login emailni nusxalash",
+      "copied": "Nusxalandi",
+      "signingOut": "Chiqilmoqda...",
+      "signOut": "Chiqish"
+    },
+    "comingSoon": "Tez orada",
+    "sidebar": {
+      "brand": "IELTS MASTER",
+      "subtitle": "Teacher Portal",
+      "openMenu": "Teacher menyusini ochish",
+      "items": {
+        "dashboard": "Dashboard",
+        "myStudents": "My Students",
+        "assignments": "Assignments",
+        "reviews": "Reviews",
+        "messages": "Messages",
+        "analytics": "Analytics",
+        "profile": "Profile",
+        "settings": "Settings"
+      }
+    },
+    "studentsAssigned": "Biriktirilgan o'quvchilar",
+    "pendingReviews": "Kutilayotgan tekshiruvlar",
+    "assignmentsActive": "Faol topshiriqlar",
+    "studentsAtRisk": "Xavfdagi o'quvchilar",
+    "indicators": {
+      "upThisMonth": "+12% o'tgan oyga nisbatan",
+      "urgent": "Shoshilinch",
+      "currentlyActive": "Hozir faol",
+      "needsAttention": "E'tibor kerak"
+    },
+    "studentProgressOverview": "Student Progress Overview",
+    "averageBandImprovement": "O'rtacha band o'sishi trendlari",
+    "bandLabel": "Band {value}",
+    "months": {
+      "jan": "Yan",
+      "feb": "Fev",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Iyn"
+    },
+    "range": {
+      "sixMonths": "6 oy"
+    },
+    "quickActions": "Tezkor amallar",
+    "createAssignment": "Topshiriq yaratish",
+    "reviewSubmissions": "Topshirilganlarni tekshirish",
+    "messageStudents": "O'quvchilarga xabar yuborish",
+    "recentActivity": "So'nggi faollik",
+    "activityFeed": {
+      "events": {
+        "completedReadingTest3": "Reading Test 3 ni yakunladi",
+        "submittedWritingTask1": "Writing Task 1 ni topshirdi",
+        "sentMessage": "xabar yubordi"
+      },
+      "time": {
+        "twoMinutesAgo": "2 daqiqa oldin",
+        "fortyFiveMinutesAgo": "45 daqiqa oldin",
+        "twoHoursAgo": "2 soat oldin"
+      }
+    },
+    "studentsNeedingHelp": "Yordam kerak bo'lgan o'quvchilar",
+    "columns": {
+      "studentName": "O'quvchi",
+      "currentBand": "Joriy band",
+      "weakArea": "Zaif yo'nalish",
+      "lastActivity": "So'nggi faollik",
+      "action": "Amal"
+    },
+    "weakAreas": {
+      "matchingHeadings": "Matching Headings",
+      "listeningPart4": "Listening Part 4",
+      "speakingFluency": "Speaking Fluency"
+    },
+    "lastActivity": {
+      "yesterday430": "Kecha, 16:30",
+      "twoDaysAgo": "2 kun oldin",
+      "today1015": "Bugun, 10:15"
+    },
+    "viewStudent": "O'quvchini ko'rish"
+  },
+  "teacherStudents": {
+    "title": "My Students",
+    "subtitle": "Biriktirilgan o'quvchilarni boshqaring, monitoring qiling va progressni kuzating.",
+    "totalStudents": "Jami o'quvchilar",
+    "studentsImproving": "Yaxshilanayotganlar",
+    "needingHelp": "Yordam kerak",
+    "inactiveStudents": "Nofaol o'quvchilar",
+    "summaryIndicators": {
+      "growthPositive": "+12%",
+      "improvingShare": "Jami ichida 85%",
+      "needsAttention": "E'tibor kerak",
+      "inactiveShare": "Nofaol"
+    },
+    "searchPlaceholder": "O'quvchini ism yoki ID bo'yicha qidiring...",
+    "progressFilter": "Progress",
+    "targetFilter": "Target",
+    "statusFilter": "Status",
+    "sortBy": "Sort",
+    "filters": {
+      "progressOptions": {
+        "all": "Progress: Barchasi",
+        "improving": "Progress: Yaxshilanmoqda",
+        "stable": "Progress: Barqaror",
+        "needsHelp": "Progress: Yordam kerak"
+      },
+      "targetOptions": {
+        "all": "Target: Barchasi",
+        "6plus": "Target: 6.0+",
+        "6_5plus": "Target: 6.5+",
+        "7plus": "Target: 7.0+",
+        "7_5plus": "Target: 7.5+"
+      },
+      "statusOptions": {
+        "all": "Status: Barchasi",
+        "active": "Status: Faol",
+        "inactive": "Status: Nofaol",
+        "atRisk": "Status: Xavfda"
+      },
+      "sortOptions": {
+        "recentActivity": "Sort: So'nggi faollik",
+        "name": "Sort: Ism",
+        "highestBand": "Sort: Eng yuqori band",
+        "lowestBand": "Sort: Eng past band",
+        "mostPending": "Sort: Eng ko'p pending"
+      }
+    },
+    "studentName": "O'quvchi",
+    "target": "Target",
+    "estimatedBand": "Taxm. band",
+    "weakestSkill": "Zaif skill",
+    "lastActivityLabel": "So'nggi faollik",
+    "pending": "Pending",
+    "action": "Amal",
+    "viewProfile": "Profilni ko'rish",
+    "viewProgress": "Progressni ko'rish",
+    "showingStudents": "{total} tadan {visible} ta o'quvchi ko'rsatilmoqda",
+    "classProgressOverview": "Class Progress Overview",
+    "classProgressSubtitle": "Modullar bo'yicha o'rtacha band o'sishi",
+    "legend": {
+      "currentMonth": "Joriy oy",
+      "target": "Maqsad"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "skills": {
+      "matchingHeadings": "Matching Headings",
+      "listeningPart4": "Listening Part 4",
+      "speakingFluency": "Speaking Fluency",
+      "writingTask2": "Writing Task 2",
+      "timeManagement": "Vaqt boshqaruvi",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "sentenceCompletion": "Sentence Completion"
+    },
+    "lastActivity": {
+      "justNow": "Hozirgina",
+      "minutesAgo": "{value} daqiqa oldin",
+      "hoursAgo": "{value} soat oldin",
+      "yesterday": "Kecha",
+      "daysAgo": "{value} kun oldin"
+    },
+    "bandState": {
+      "achieved": "Bajarilgan",
+      "improving": "{delta}",
+      "stable": "Barqaror",
+      "needsHelp": "Yordam kerak"
+    },
+    "profile": {
+      "title": "Student Profile",
+      "studentId": "Student ID",
+      "backToStudents": "O'quvchilar ro'yxatiga qaytish",
+      "moduleBands": "Modullar bo'yicha band holati",
+      "module": "Modul",
+      "currentBand": "Joriy band",
+      "targetBand": "Maqsad band",
+      "pendingBreakdown": "Pending taqsimoti",
+      "pendingAssignments": "Topshiriqlar",
+      "pendingReviews": "Tekshiruvlar",
+      "unreadMessages": "O'qilmagan xabarlar"
+    }
+  },
+  "teacherStudentProfile": {
+    "students": "O'quvchilar",
+    "viewProgress": "Progressni ko'rish",
+    "assignTask": "Topshiriq berish",
+    "sendMessage": "Xabar yuborish",
+    "addTeacherNote": "Teacher note qo'shish",
+    "lastActivity": "So'nggi faollik",
+    "testsDone": "Bajarilgan testlar",
+    "streak": "Streak",
+    "targetBand": "Maqsad",
+    "currentBand": "Joriy",
+    "bandScoreProgress": "Band Score Progress",
+    "last6Months": "Oxirgi 6 oy",
+    "progressLabels": {
+      "month1": "1-oy",
+      "month2": "2-oy",
+      "month3": "3-oy",
+      "month4": "4-oy",
+      "month5": "5-oy",
+      "current": "Hozir"
+    },
+    "weakAreas": "Zaif yo'nalishlar",
+    "recommendationLabel": "Tavsiya:",
+    "weakAreaLabels": {
+      "matchingHeadings": "Matching Headings",
+      "listeningPart4": "Listening Part 4",
+      "speakingFluency": "Speaking Fluency",
+      "writingTask2": "Writing Task 2",
+      "timeManagement": "Vaqt boshqaruvi",
+      "multipleChoice": "Multiple Choice",
+      "trueFalseNotGiven": "TFNG",
+      "sentenceCompletion": "Sentence Completion"
+    },
+    "recentTestAttempts": "So'nggi test urinishlari",
+    "recentActivity": "So'nggi faoliyat",
+    "activeAssignments": "Faol topshiriqlar",
+    "createAssignment": "Topshiriq yaratish",
+    "teacherNotes": "Teacher notes",
+    "addNotePlaceholder": "Yangi private note yozing...",
+    "saveNote": "Noteni saqlash",
+    "view": "Ko'rish",
+    "review": "Review",
+    "edit": "Tahrirlash",
+    "viewReport": "Hisobotni ko'rish",
+    "columns": {
+      "testName": "Test nomi",
+      "module": "Modul",
+      "score": "Score",
+      "band": "Band",
+      "date": "Sana",
+      "action": "Amal",
+      "name": "Nomi",
+      "dueDate": "Muddat",
+      "status": "Holat"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking",
+      "general": "General"
+    },
+    "assignmentStatus": {
+      "pending": "Kutilmoqda",
+      "completed": "Yakunlangan",
+      "reviewed": "Ko'rib chiqilgan"
+    },
+    "activityLabels": {
+      "completedReadingTest": "Reading Test 4 yakunlandi",
+      "submittedWritingAssignment": "Writing topshirig'i yuborildi",
+      "startedListeningDrill": "Listening drill boshlandi",
+      "loggedIntoDashboard": "Dashboardga kirildi",
+      "sentMessage": "Xabar yuborildi"
+    },
+    "relative": {
+      "justNow": "Hozirgina",
+      "minutesAgo": "{value} daqiqa oldin",
+      "hoursAgo": "{value} soat oldin",
+      "yesterday": "Kecha",
+      "yesterdayAt": "Kecha, {time}",
+      "daysAgo": "{value} kun oldin"
+    },
+    "feedback": {
+      "assignTask": "Assign Task amali tayyor (placeholder).",
+      "sendMessage": "Send Message amali tayyor (placeholder).",
+      "readyToAddNote": "Note input fokusga olindi.",
+      "openAttempt": "{id} urinish ochildi (placeholder).",
+      "createAssignment": "Create Assignment amali tayyor (placeholder).",
+      "assignmentAction": "{id} topshiriq uchun {action} amali (placeholder).",
+      "noteSaved": "Teacher note saqlandi."
+    }
+  },
+  "teacherStudentProgress": {
+    "title": "Student Progress",
+    "subtitle": "O'quvchilaringizning o'sishi va natijalar yaxshilanishini kuzating.",
+    "students": "O'quvchilar",
+    "studentId": "Student ID",
+    "viewFullProfile": "To'liq profilni ko'rish",
+    "targetBand": "Maqsad band",
+    "currentBand": "Joriy band",
+    "totalTests": "Jami testlar",
+    "improvement": "O'sish",
+    "bandLabel": "Band",
+    "testsThisWeek": "Bu haftadagi testlar",
+    "averageStudyTime": "O'rtacha o'qish vaqti",
+    "dayStreak": "Kunlik streak",
+    "lastActive": "So'nggi faollik",
+    "bandScoreProgression": "Band Score Progression",
+    "last6Months": "Oxirgi 6 oy",
+    "tests": {
+      "test1": "Test 1",
+      "test2": "Test 2",
+      "test3": "Test 3",
+      "test4": "Test 4"
+    },
+    "modulePerformance": "Module Performance",
+    "updatedToday": "Bugun yangilandi",
+    "targetBandLabel": "Maqsad {value}",
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking",
+      "general": "General"
+    },
+    "weakAreasByQuestionType": "Savol turlari bo'yicha zaif joylar",
+    "accuracy": "Aniqlik",
+    "weakAreaLabels": {
+      "matchingHeadings": "Matching Headings",
+      "listeningPart4": "Listening Part 4",
+      "speakingFluency": "Speaking Fluency",
+      "writingTask2": "Writing Task 2",
+      "timeManagement": "Vaqt boshqaruvi",
+      "multipleChoice": "Multiple Choice",
+      "trueFalseNotGiven": "TFNG (True/False/Not Given)",
+      "sentenceCompletion": "Sentence Completion"
+    },
+    "recommendedFocusAreas": "Tavsiya etilgan fokus yo'nalishlar",
+    "recommendationTitle": "{skill} bo'yicha mashq qilish",
+    "recommendationDescription": "{priority} ustuvorlik - {count} ta yangi {module} modul",
+    "recommendationAssignmentInstruction": "{skill} bo'yicha mashqlarni bajaring va ushbu fokuslangan to'plamni yakunlang.",
+    "priority": {
+      "high": "Yuqori",
+      "medium": "O'rta",
+      "normal": "Oddiy"
+    },
+    "assign": "Biriktirish",
+    "viewAllRecommendations": "Barcha tavsiyalarni ko'rish",
+    "relative": {
+      "justNow": "Hozirgina",
+      "minutesAgo": "{value}m oldin",
+      "hoursAgo": "{value}h oldin",
+      "yesterday": "Kecha",
+      "daysAgo": "{value} kun oldin"
+    },
+    "feedback": {
+      "assignmentDraftCreated": "{skill} uchun fokus assignment draft yaratildi."
+    }
+  },
+  "teacherAssignments": {
+    "title": "Topshiriqlar",
+    "subtitle": "O'quvchilarga berilgan vazifalarni yarating, boshqaring va monitoring qiling.",
+    "createAssignment": "Topshiriq yaratish",
+    "activeAssignments": "Faol topshiriqlar",
+    "dueSoon": "Yaqin muddat",
+    "completed": "Yakunlangan",
+    "overdue": "Muddati o'tgan",
+    "createNewAssignment": "Yangi topshiriq yaratish",
+    "assignmentTitle": "Topshiriq nomi",
+    "assignmentTitlePlaceholder": "masalan, Academic Reading Section 1 Practice",
+    "assignmentType": "Topshiriq turi",
+    "assignTo": "Kimga biriktirish",
+    "dueDate": "Muddat",
+    "selectStudent": "O'quvchini tanlang",
+    "selectStudentPlaceholder": "O'quvchini tanlang",
+    "selectedStudentsCount": "{count} ta tanlandi",
+    "instructions": "Ko'rsatmalar",
+    "instructionsPlaceholder": "O'quvchilar uchun batafsil ko'rsatmalarni kiriting...",
+    "saveAsDraft": "Draft sifatida saqlash",
+    "assignNow": "Hozir biriktirish",
+    "prefilledFromRecommendation": "Tavsiyadan to'ldirildi: {skill}",
+    "prefilledForStudent": "{student} uchun oldindan to'ldirildi",
+    "typeOptions": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking",
+      "full_test": "To'liq test",
+      "general": "Lug'at / Umumiy mashq"
+    },
+    "assignToOptions": {
+      "all": "Barcha o'quvchilar",
+      "selected": "Tanlangan o'quvchilar",
+      "one": "Bitta o'quvchi",
+      "at_risk": "Xavfdagi o'quvchilar",
+      "improving": "Yaxshilanayotgan o'quvchilar"
+    },
+    "quickActions": "Tezkor amallar",
+    "createTask": "Vazifa yaratish",
+    "allSubmissions": "Barcha topshirilganlar",
+    "messageGroup": "Guruhga xabar",
+    "assignmentProgress": "Topshiriq progressi",
+    "completedLabel": "yakunlangan",
+    "activeAssignmentsTable": "Faol topshiriqlar",
+    "columns": {
+      "title": "Nomi",
+      "type": "Turi / Modul",
+      "assignedTo": "Biriktirilgan",
+      "dueDate": "Muddat",
+      "status": "Holat",
+      "progress": "Progress",
+      "action": "Amal"
+    },
+    "statusOptions": {
+      "draft": "Draft",
+      "active": "Faol",
+      "completed": "Yakunlangan",
+      "overdue": "Muddati o'tgan"
+    },
+    "assignedCount": "{count} o'quvchi",
+    "view": "Ko'rish",
+    "edit": "Tahrirlash",
+    "close": "Yopish",
+    "reviewSubmissionsAction": "Tekshirish",
+    "skills": {
+      "matchingHeadings": "Matching Headings",
+      "listeningPart4": "Listening Part 4",
+      "speakingFluency": "Speaking Fluency",
+      "writingTask2": "Writing Task 2",
+      "timeManagement": "Vaqt boshqaruvi",
+      "multipleChoice": "Multiple Choice",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "sentenceCompletion": "Sentence Completion"
+    },
+    "feedback": {
+      "savedDraft": "{title} draft sifatida saqlandi.",
+      "assignedNow": "{title} muvaffaqiyatli biriktirildi.",
+      "assignmentViewed": "{title} ochildi.",
+      "closeNotAvailable": "Hozircha faqat local yaratilgan topshiriqlarni yopish mumkin.",
+      "assignmentClosed": "{title} yakunlangan deb belgilandi."
+    }
+  },
+  "teacherReviews": {
+    "title": "Topshiriqlarni tekshirish",
+    "subtitle": "Writing, speaking va amaliy topshiriqlar bo'yicha student submissionlarni tekshiring va baholang.",
+    "pendingReviews": "Kutilayotgan tekshiruvlar",
+    "reviewedToday": "Bugun tekshirilgan",
+    "averageBandScore": "O'rtacha band baho",
+    "overdueSubmissions": "Muddati o'tgan submissionlar",
+    "searchPlaceholder": "Student yoki topshiriq qidiring...",
+    "typeOptions": {
+      "all": "Barcha turlar",
+      "writing": "Writing",
+      "speaking": "Speaking",
+      "reading_practice": "Reading Practice",
+      "listening_practice": "Listening Practice"
+    },
+    "statusOptions": {
+      "all": "Barcha holatlar",
+      "pending": "Pending",
+      "reviewed": "Tekshirilgan",
+      "overdue": "Muddati o'tgan"
+    },
+    "sort": {
+      "latest": "Yangi",
+      "oldest": "Eski"
+    },
+    "studentSubmissions": "Student submissionlar",
+    "showingSubmissions": "{count} ta element",
+    "tableFooter": "{count} ta submission ko'rsatilmoqda",
+    "student": "Student",
+    "assignment": "Topshiriq",
+    "module": "Modul",
+    "submitted": "Topshirilgan vaqti",
+    "status": "Holat",
+    "action": "Amal",
+    "review": "Tekshirish",
+    "viewDetails": "Batafsil ko'rish",
+    "activeAssignment": "Faol topshiriq",
+    "submissionContent": "Submission matni",
+    "estimatedBandScore": "Taxminiy band baho",
+    "criteriaBreakdown": "Mezonlar taqsimoti",
+    "taskResponse": "Task Response",
+    "coherenceCohesion": "Coherence & Cohesion",
+    "lexicalResource": "Lexical Resource",
+    "grammaticalAccuracy": "Grammatical Accuracy",
+    "teacherFeedback": "Teacher fikri",
+    "feedbackPlaceholder": "Student uchun aniq va amaliy feedback yozing...",
+    "submitReview": "Tekshiruvni yuborish",
+    "saveDraft": "Draft saqlash",
+    "recentlyReviewedActivity": "Yaqinda tekshirilganlar",
+    "noRecentReviews": "Hali so'nggi tekshiruvlar yo'q.",
+    "finalGradeLabel": "Yakuniy baho: Band {band}",
+    "viewAllAssignments": "Barcha topshiriqlar",
+    "goToStudents": "Studentlarga o'tish",
+    "messageStudent": "Studentga xabar",
+    "noSubmissionSelected": "Batafsil baholash uchun submission tanlang.",
+    "relative": {
+      "minutesAgo": "{value} daq oldin",
+      "hoursAgo": "{value} soat oldin",
+      "yesterday": "Kecha",
+      "daysAgo": "{value} kun oldin"
+    },
+    "feedback": {
+      "draftSaved": "Tekshiruv draft saqlandi.",
+      "reviewSubmitted": "{student} uchun tekshiruv yuborildi."
+    }
+  },
+  "teacherAnalytics": {
+    "title": "Class Analytics",
+    "subtitle": "Sinf natijalarini kuzating, zaif yo'nalishlarni aniqlang va student progressini monitoring qiling.",
+    "totalStudents": "Jami studentlar",
+    "averageBandScore": "O'rtacha band baho",
+    "testsCompleted": "Yakunlangan testlar",
+    "averageStudyTimeHours": "O'rtacha o'qish vaqti",
+    "averageBandScoreProgress": "O'rtacha band baho progressi",
+    "monthlyImprovementOverview": "Oylik yaxshilanish ko'rinishi",
+    "monthly": "Oylik",
+    "weekly": "Haftalik",
+    "performanceByModule": "IELTS modullari bo'yicha natija",
+    "weakAreasAcrossStudents": "Studentlar bo'yicha zaif yo'nalishlar",
+    "studentActivityToday": "Bugungi student faolligi",
+    "activeStudents": "Faol studentlar",
+    "inactive": "Nofaol",
+    "testsStarted": "Boshlangan testlar",
+    "submissions": "Submissionlar",
+    "exactValue": "Aniq qiymat: {value}",
+    "indicators": {
+      "studentsTrend": "+5%",
+      "bandTrend": "+0.2",
+      "testsTrend": "+12%",
+      "studyTimeTrend": "+0.5h"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "skills": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "multipleChoice": "Multiple Choice",
+      "sentenceCompletion": "Sentence Completion",
+      "listeningPart4": "Listening Part 4"
+    },
+    "labels": {
+      "week1": "1-hafta",
+      "week2": "2-hafta",
+      "week3": "3-hafta",
+      "week4": "4-hafta",
+      "jan": "Yan",
+      "feb": "Fev",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Iyn"
+    }
   }
 }
-
-

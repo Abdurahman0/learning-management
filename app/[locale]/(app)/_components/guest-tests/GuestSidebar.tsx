@@ -26,7 +26,7 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
   const isGuest = role === "guest";
   const profile = role === "guest" ? null : getStaticProfile(role);
 
-  const dashboardHref = role === "admin" ? `/${locale}/admin` : `/${locale}/dashboard`;
+  const dashboardHref = role === "admin" ? `/${locale}/admin` : role === "teacher" ? `/${locale}/teacher` : `/${locale}/dashboard`;
   const readingHref = `/${locale}/reading`;
   const listeningHref = `/${locale}/listening`;
 

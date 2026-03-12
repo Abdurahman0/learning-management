@@ -24,5 +24,9 @@ export default async function DashboardPage({params}: DashboardPageProps) {
     redirect(`/${locale}/admin`);
   }
 
+  if (role === "teacher") {
+    redirect(`/${locale}/teacher`);
+  }
+
   return <DashboardClient />;
 }

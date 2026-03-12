@@ -116,7 +116,7 @@ export function AuthCard({ mode }: AuthCardProps) {
         }),
       });
 
-      const payload = (await response.json().catch(() => null)) as {role?: "user" | "admin"; error?: string} | null;
+      const payload = (await response.json().catch(() => null)) as {role?: "user" | "teacher" | "admin"; error?: string} | null;
 
       if (!response.ok || !payload?.role) {
         setStatus(payload?.error ?? "Invalid credentials.");
@@ -129,6 +129,8 @@ export function AuthCard({ mode }: AuthCardProps) {
 
       if (payload.role === "admin") {
         router.replace(`/${locale}/admin`);
+      } else if (payload.role === "teacher") {
+        router.replace(`/${locale}/teacher`);
       } else {
         router.replace(`/${locale}/reading`);
       }
@@ -296,7 +298,7 @@ export function AuthCard({ mode }: AuthCardProps) {
         ) : null}
         {!isSignup ? (
           <p className="text-center text-xs text-muted-foreground">
-            Demo credentials: string@gmail.com/string1234 (user), admin@gmail.com/admin1234 (admin)
+            {t("signin.demoCredentials")}
           </p>
         ) : null}
       </form>

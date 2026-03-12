@@ -366,7 +366,8 @@
       "submit": "Sign In",
       "bottomText": "Don't have an account?",
       "bottomLink": "Create one",
-      "success": "Signed in. You can connect backend auth next."
+      "success": "Signed in. You can connect backend auth next.",
+      "demoCredentials": "Demo credentials: string@gmail.com/string1234 (student), teacher@gmail.com/teacher1234 (teacher), admin@gmail.com/admin1234 (admin)"
     },
     "signupMarketing": {
       "title": "Master the IELTS exam with confidence",
@@ -1901,7 +1902,559 @@
     "common": {
       "cancel": "Cancel"
     }
+  },
+  "teacherDashboard": {
+    "title": "Teacher Dashboard",
+    "subtitle": "Track assigned learners, review progress, and keep interventions on time.",
+    "teacherRoleLabel": "Teacher",
+    "notificationsLabel": "Notifications",
+    "topbar": {
+      "searchPlaceholder": "Search students or assignments...",
+      "openProfileMenu": "Open teacher profile menu",
+      "goDashboard": "Dashboard",
+      "copyEmail": "Copy Login Email",
+      "copied": "Copied",
+      "signingOut": "Signing out...",
+      "signOut": "Sign Out"
+    },
+    "comingSoon": "Soon",
+    "sidebar": {
+      "brand": "IELTS MASTER",
+      "subtitle": "Teacher Portal",
+      "openMenu": "Open teacher menu",
+      "items": {
+        "dashboard": "Dashboard",
+        "myStudents": "My Students",
+        "assignments": "Assignments",
+        "reviews": "Reviews",
+        "messages": "Messages",
+        "analytics": "Analytics",
+        "profile": "Profile",
+        "settings": "Settings"
+      }
+    },
+    "studentsAssigned": "Students Assigned",
+    "pendingReviews": "Pending Reviews",
+    "assignmentsActive": "Assignments Active",
+    "studentsAtRisk": "Students At Risk",
+    "indicators": {
+      "upThisMonth": "+12% vs last month",
+      "urgent": "Urgent",
+      "currentlyActive": "Currently active",
+      "needsAttention": "Needs attention"
+    },
+    "studentProgressOverview": "Student Progress Overview",
+    "averageBandImprovement": "Average Band Improvement Trends",
+    "bandLabel": "Band {value}",
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun"
+    },
+    "range": {
+      "sixMonths": "6 Months"
+    },
+    "quickActions": "Quick Actions",
+    "createAssignment": "Create Assignment",
+    "reviewSubmissions": "Review Submissions",
+    "messageStudents": "Message Students",
+    "recentActivity": "Recent Activity",
+    "activityFeed": {
+      "events": {
+        "completedReadingTest3": "completed Reading Test 3",
+        "submittedWritingTask1": "submitted Writing Task 1",
+        "sentMessage": "sent a message"
+      },
+      "time": {
+        "twoMinutesAgo": "2 minutes ago",
+        "fortyFiveMinutesAgo": "45 minutes ago",
+        "twoHoursAgo": "2 hours ago"
+      }
+    },
+    "studentsNeedingHelp": "Students Needing Help",
+    "columns": {
+      "studentName": "Student Name",
+      "currentBand": "Current Band",
+      "weakArea": "Weak Area",
+      "lastActivity": "Last Activity",
+      "action": "Action"
+    },
+    "weakAreas": {
+      "matchingHeadings": "Matching Headings",
+      "listeningPart4": "Listening Part 4",
+      "speakingFluency": "Speaking Fluency"
+    },
+    "lastActivity": {
+      "yesterday430": "Yesterday, 4:30 PM",
+      "twoDaysAgo": "2 days ago",
+      "today1015": "Today, 10:15 AM"
+    },
+    "viewStudent": "View Student"
+  },
+  "teacherStudents": {
+    "title": "My Students",
+    "subtitle": "Manage and monitor your assigned students and track their progress.",
+    "totalStudents": "Total Students",
+    "studentsImproving": "Students Improving",
+    "needingHelp": "Needing Help",
+    "inactiveStudents": "Inactive Students",
+    "summaryIndicators": {
+      "growthPositive": "+12%",
+      "improvingShare": "85% of total",
+      "needsAttention": "Needs attention",
+      "inactiveShare": "Inactive"
+    },
+    "searchPlaceholder": "Search students by name or ID...",
+    "progressFilter": "Progress",
+    "targetFilter": "Target",
+    "statusFilter": "Status",
+    "sortBy": "Sort",
+    "filters": {
+      "progressOptions": {
+        "all": "Progress: All",
+        "improving": "Progress: Improving",
+        "stable": "Progress: Stable",
+        "needsHelp": "Progress: Needs Help"
+      },
+      "targetOptions": {
+        "all": "Target: All",
+        "6plus": "Target: 6.0+",
+        "6_5plus": "Target: 6.5+",
+        "7plus": "Target: 7.0+",
+        "7_5plus": "Target: 7.5+"
+      },
+      "statusOptions": {
+        "all": "Status: All",
+        "active": "Status: Active",
+        "inactive": "Status: Inactive",
+        "atRisk": "Status: At Risk"
+      },
+      "sortOptions": {
+        "recentActivity": "Sort: Recent Activity",
+        "name": "Sort: Name",
+        "highestBand": "Sort: Highest Band",
+        "lowestBand": "Sort: Lowest Band",
+        "mostPending": "Sort: Most Pending"
+      }
+    },
+    "studentName": "Student Name",
+    "target": "Target",
+    "estimatedBand": "Est. Band",
+    "weakestSkill": "Weakest Skill",
+    "lastActivityLabel": "Last Activity",
+    "pending": "Pending",
+    "action": "Action",
+    "viewProfile": "View Profile",
+    "viewProgress": "View Progress",
+    "showingStudents": "Showing {visible} of {total} students",
+    "classProgressOverview": "Class Progress Overview",
+    "classProgressSubtitle": "Average band improvement across modules",
+    "legend": {
+      "currentMonth": "Current Month",
+      "target": "Target"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "skills": {
+      "matchingHeadings": "Matching Headings",
+      "listeningPart4": "Listening Part 4",
+      "speakingFluency": "Speaking Fluency",
+      "writingTask2": "Writing Task 2",
+      "timeManagement": "Time Management",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "sentenceCompletion": "Sentence Completion"
+    },
+    "lastActivity": {
+      "justNow": "Just now",
+      "minutesAgo": "{value}m ago",
+      "hoursAgo": "{value}h ago",
+      "yesterday": "Yesterday",
+      "daysAgo": "{value} days ago"
+    },
+    "bandState": {
+      "achieved": "Achieved",
+      "improving": "{delta}",
+      "stable": "Stable",
+      "needsHelp": "Needs help"
+    },
+    "profile": {
+      "title": "Student Profile",
+      "studentId": "Student ID",
+      "backToStudents": "Back to students",
+      "moduleBands": "Module Band Snapshot",
+      "module": "Module",
+      "currentBand": "Current Band",
+      "targetBand": "Target Band",
+      "pendingBreakdown": "Pending Breakdown",
+      "pendingAssignments": "Assignments",
+      "pendingReviews": "Reviews",
+      "unreadMessages": "Unread Messages"
+    }
+  },
+  "teacherStudentProfile": {
+    "students": "Students",
+    "viewProgress": "View Progress",
+    "assignTask": "Assign Task",
+    "sendMessage": "Send Message",
+    "addTeacherNote": "Add Teacher Note",
+    "lastActivity": "Last Activity",
+    "testsDone": "Tests Done",
+    "streak": "Streak",
+    "targetBand": "Target",
+    "currentBand": "Current",
+    "bandScoreProgress": "Band Score Progress",
+    "last6Months": "Last 6 Months",
+    "progressLabels": {
+      "month1": "Month 1",
+      "month2": "Month 2",
+      "month3": "Month 3",
+      "month4": "Month 4",
+      "month5": "Month 5",
+      "current": "Current"
+    },
+    "weakAreas": "Weak Areas",
+    "recommendationLabel": "Recommendation:",
+    "weakAreaLabels": {
+      "matchingHeadings": "Matching Headings",
+      "listeningPart4": "Listening Part 4",
+      "speakingFluency": "Speaking Fluency",
+      "writingTask2": "Writing Task 2",
+      "timeManagement": "Time Management",
+      "multipleChoice": "Multiple Choice",
+      "trueFalseNotGiven": "TFNG",
+      "sentenceCompletion": "Sentence Completion"
+    },
+    "recentTestAttempts": "Recent Test Attempts",
+    "recentActivity": "Recent Activity",
+    "activeAssignments": "Active Assignments",
+    "createAssignment": "Create Assignment",
+    "teacherNotes": "Teacher Notes",
+    "addNotePlaceholder": "Add a new private note...",
+    "saveNote": "Save Note",
+    "view": "View",
+    "review": "Review",
+    "edit": "Edit",
+    "viewReport": "View Report",
+    "columns": {
+      "testName": "Test Name",
+      "module": "Module",
+      "score": "Score",
+      "band": "Band",
+      "date": "Date",
+      "action": "Action",
+      "name": "Name",
+      "dueDate": "Due Date",
+      "status": "Status"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking",
+      "general": "General"
+    },
+    "assignmentStatus": {
+      "pending": "Pending",
+      "completed": "Completed",
+      "reviewed": "Reviewed"
+    },
+    "activityLabels": {
+      "completedReadingTest": "Completed Reading Test 4",
+      "submittedWritingAssignment": "Submitted Writing Assignment",
+      "startedListeningDrill": "Started Listening Drill",
+      "loggedIntoDashboard": "Logged into Dashboard",
+      "sentMessage": "Sent a message"
+    },
+    "relative": {
+      "justNow": "Just now",
+      "minutesAgo": "{value} minutes ago",
+      "hoursAgo": "{value} hours ago",
+      "yesterday": "Yesterday",
+      "yesterdayAt": "Yesterday, {time}",
+      "daysAgo": "{value} days ago"
+    },
+    "feedback": {
+      "assignTask": "Assign Task action is ready (placeholder).",
+      "sendMessage": "Send Message action is ready (placeholder).",
+      "readyToAddNote": "Note input focused.",
+      "openAttempt": "Opened attempt {id} (placeholder).",
+      "createAssignment": "Create Assignment action is ready (placeholder).",
+      "assignmentAction": "{action} for assignment {id} (placeholder).",
+      "noteSaved": "Teacher note saved."
+    }
+  },
+  "teacherStudentProgress": {
+    "title": "Student Progress",
+    "subtitle": "Track the learning progress and performance improvements of your students.",
+    "students": "Students",
+    "studentId": "Student ID",
+    "viewFullProfile": "View Full Profile",
+    "targetBand": "Target Band",
+    "currentBand": "Current Band",
+    "totalTests": "Total Tests",
+    "improvement": "Improvement",
+    "bandLabel": "Band",
+    "testsThisWeek": "Tests this week",
+    "averageStudyTime": "Avg study time",
+    "dayStreak": "Day streak",
+    "lastActive": "Last active",
+    "bandScoreProgression": "Band Score Progression",
+    "last6Months": "Last 6 months",
+    "tests": {
+      "test1": "Test 1",
+      "test2": "Test 2",
+      "test3": "Test 3",
+      "test4": "Test 4"
+    },
+    "modulePerformance": "Module Performance",
+    "updatedToday": "Updated today",
+    "targetBandLabel": "Target {value}",
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking",
+      "general": "General"
+    },
+    "weakAreasByQuestionType": "Weak Areas by Question Type",
+    "accuracy": "Accuracy",
+    "weakAreaLabels": {
+      "matchingHeadings": "Matching Headings",
+      "listeningPart4": "Listening Part 4",
+      "speakingFluency": "Speaking Fluency",
+      "writingTask2": "Writing Task 2",
+      "timeManagement": "Time Management",
+      "multipleChoice": "Multiple Choice",
+      "trueFalseNotGiven": "TFNG (True/False/Not Given)",
+      "sentenceCompletion": "Sentence Completion"
+    },
+    "recommendedFocusAreas": "Recommended Focus Areas",
+    "recommendationTitle": "Practice {skill}",
+    "recommendationDescription": "{priority} priority - {count} new {module} modules",
+    "recommendationAssignmentInstruction": "Focus on {skill} exercises and complete this focused practice set.",
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "normal": "Normal"
+    },
+    "assign": "Assign",
+    "viewAllRecommendations": "View all recommendations",
+    "relative": {
+      "justNow": "Just now",
+      "minutesAgo": "{value}m ago",
+      "hoursAgo": "{value}h ago",
+      "yesterday": "Yesterday",
+      "daysAgo": "{value} days ago"
+    },
+    "feedback": {
+      "assignmentDraftCreated": "Focused assignment draft created for {skill}."
+    }
+  },
+  "teacherAssignments": {
+    "title": "Assignments",
+    "subtitle": "Create, manage, and monitor learning tasks assigned to students.",
+    "createAssignment": "Create Assignment",
+    "activeAssignments": "Active Assignments",
+    "dueSoon": "Due Soon",
+    "completed": "Completed",
+    "overdue": "Overdue",
+    "createNewAssignment": "Create New Assignment",
+    "assignmentTitle": "Assignment Title",
+    "assignmentTitlePlaceholder": "e.g. Academic Reading Section 1 Practice",
+    "assignmentType": "Assignment Type",
+    "assignTo": "Assign To",
+    "dueDate": "Due Date",
+    "selectStudent": "Select Student",
+    "selectStudentPlaceholder": "Choose a student",
+    "selectedStudentsCount": "{count} selected",
+    "instructions": "Instructions",
+    "instructionsPlaceholder": "Enter detailed instructions for the students...",
+    "saveAsDraft": "Save as Draft",
+    "assignNow": "Assign Now",
+    "prefilledFromRecommendation": "Prefilled from recommendation: {skill}",
+    "prefilledForStudent": "Prefilled for {student}",
+    "typeOptions": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking",
+      "full_test": "Full Test",
+      "general": "Vocabulary / General Practice"
+    },
+    "assignToOptions": {
+      "all": "All Students",
+      "selected": "Selected Students",
+      "one": "One Student",
+      "at_risk": "At-Risk Students",
+      "improving": "Improving Students"
+    },
+    "quickActions": "Quick Actions",
+    "createTask": "Create Task",
+    "allSubmissions": "All Submissions",
+    "messageGroup": "Message Group",
+    "assignmentProgress": "Assignment Progress",
+    "completedLabel": "completed",
+    "activeAssignmentsTable": "Active Assignments",
+    "columns": {
+      "title": "Title",
+      "type": "Type / Module",
+      "assignedTo": "Assigned To",
+      "dueDate": "Due Date",
+      "status": "Status",
+      "progress": "Progress",
+      "action": "Action"
+    },
+    "statusOptions": {
+      "draft": "Draft",
+      "active": "Active",
+      "completed": "Completed",
+      "overdue": "Overdue"
+    },
+    "assignedCount": "{count} students",
+    "view": "View",
+    "edit": "Edit",
+    "close": "Close",
+    "reviewSubmissionsAction": "Review",
+    "skills": {
+      "matchingHeadings": "Matching Headings",
+      "listeningPart4": "Listening Part 4",
+      "speakingFluency": "Speaking Fluency",
+      "writingTask2": "Writing Task 2",
+      "timeManagement": "Time Management",
+      "multipleChoice": "Multiple Choice",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "sentenceCompletion": "Sentence Completion"
+    },
+    "feedback": {
+      "savedDraft": "{title} saved as draft.",
+      "assignedNow": "{title} assigned successfully.",
+      "assignmentViewed": "Opened {title}.",
+      "closeNotAvailable": "Only locally created assignments can be closed for now.",
+      "assignmentClosed": "{title} marked as completed."
+    }
+  },
+  "teacherReviews": {
+    "title": "Assignment Reviews",
+    "subtitle": "Review and grade student submissions for writing, speaking, and practice assignments with real-time feedback tools.",
+    "pendingReviews": "Pending Reviews",
+    "reviewedToday": "Reviewed Today",
+    "averageBandScore": "Average Band Score",
+    "overdueSubmissions": "Overdue Submissions",
+    "searchPlaceholder": "Search students or assignments...",
+    "typeOptions": {
+      "all": "All Types",
+      "writing": "Writing",
+      "speaking": "Speaking",
+      "reading_practice": "Reading Practice",
+      "listening_practice": "Listening Practice"
+    },
+    "statusOptions": {
+      "all": "All Status",
+      "pending": "Pending",
+      "reviewed": "Reviewed",
+      "overdue": "Overdue"
+    },
+    "sort": {
+      "latest": "Latest",
+      "oldest": "Oldest"
+    },
+    "studentSubmissions": "Student Submissions",
+    "showingSubmissions": "{count} items",
+    "tableFooter": "Showing {count} submissions",
+    "student": "Student",
+    "assignment": "Assignment",
+    "module": "Module",
+    "submitted": "Submitted",
+    "status": "Status",
+    "action": "Action",
+    "review": "Review",
+    "viewDetails": "View Details",
+    "activeAssignment": "Active Assignment",
+    "submissionContent": "Submission Content",
+    "estimatedBandScore": "Estimated Band Score",
+    "criteriaBreakdown": "Criteria Breakdown",
+    "taskResponse": "Task Response",
+    "coherenceCohesion": "Coherence & Cohesion",
+    "lexicalResource": "Lexical Resource",
+    "grammaticalAccuracy": "Grammatical Accuracy",
+    "teacherFeedback": "Teacher Feedback",
+    "feedbackPlaceholder": "Write clear, actionable feedback for the student...",
+    "submitReview": "Submit Review",
+    "saveDraft": "Save Draft",
+    "recentlyReviewedActivity": "Recently Reviewed Activity",
+    "noRecentReviews": "No recent reviews yet.",
+    "finalGradeLabel": "Final Grade: Band {band}",
+    "viewAllAssignments": "View All Assignments",
+    "goToStudents": "Go to Students",
+    "messageStudent": "Message Student",
+    "noSubmissionSelected": "Select a submission to open detailed grading tools.",
+    "relative": {
+      "minutesAgo": "{value}m ago",
+      "hoursAgo": "{value}h ago",
+      "yesterday": "Yesterday",
+      "daysAgo": "{value} days ago"
+    },
+    "feedback": {
+      "draftSaved": "Review draft saved.",
+      "reviewSubmitted": "Review submitted for {student}."
+    }
+  },
+  "teacherAnalytics": {
+    "title": "Class Analytics",
+    "subtitle": "Monitor class performance, identify weak areas, and track student progress.",
+    "totalStudents": "Total Students",
+    "averageBandScore": "Average Band Score",
+    "testsCompleted": "Tests Completed",
+    "averageStudyTimeHours": "Avg. Study Time",
+    "averageBandScoreProgress": "Average Band Score Progress",
+    "monthlyImprovementOverview": "Monthly improvement overview",
+    "monthly": "Monthly",
+    "weekly": "Weekly",
+    "performanceByModule": "Performance by IELTS Module",
+    "weakAreasAcrossStudents": "Weak Areas Across Students",
+    "studentActivityToday": "Student Activity Today",
+    "activeStudents": "Active Students",
+    "inactive": "Inactive",
+    "testsStarted": "Tests Started",
+    "submissions": "Submissions",
+    "exactValue": "Exact value: {value}",
+    "indicators": {
+      "studentsTrend": "+5%",
+      "bandTrend": "+0.2",
+      "testsTrend": "+12%",
+      "studyTimeTrend": "+0.5h"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "skills": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "multipleChoice": "Multiple Choice",
+      "sentenceCompletion": "Sentence Completion",
+      "listeningPart4": "Listening Part 4"
+    },
+    "labels": {
+      "week1": "Week 1",
+      "week2": "Week 2",
+      "week3": "Week 3",
+      "week4": "Week 4",
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun"
+    }
   }
 }
-
-

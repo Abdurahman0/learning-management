@@ -33,7 +33,7 @@ export function GuestShell({children}: GuestShellProps) {
   const usedTests = 0;
   const totalTests = 4;
   const baseRoute = `/${locale}`;
-  const dashboardHref = role === "admin" ? `/${locale}/admin` : `/${locale}/dashboard`;
+  const dashboardHref = role === "admin" ? `/${locale}/admin` : role === "teacher" ? `/${locale}/teacher` : `/${locale}/dashboard`;
   const topLevelRoutes = isGuest ? "(reading|listening|settings)" : "(dashboard|reading|listening|settings)";
   const isMobileHeaderVisible = new RegExp(`^${baseRoute}/${topLevelRoutes}/?$`).test(pathname);
   const pathWithoutLocale = pathname.replace(/^\/(uz|en)(?=\/|$)/, "") || "/";
