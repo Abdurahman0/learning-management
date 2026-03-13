@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
+import {useState} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
-import {BookOpen, Headphones, Home, Lock, Mic, PenLine} from "lucide-react";
+import {BarChart3, BookMarked, BookOpen, ChevronDown, ClipboardList, Headphones, Home, Lock, MessageSquare, Mic, PenLine, Sparkles, TriangleAlert} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
@@ -18,30 +19,93 @@ type GuestSidebarProps = {
   role: AppSessionRole;
 };
 
+type NavItem = {
+  key: string;
+  label: string;
+  href: string;
+  icon: typeof Home;
+};
+
+type TestNavItem = {
+  key: string;
+  label: string;
+  icon: typeof Home;
+  disabled: boolean;
+  href?: string;
+};
+
 export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
   const t = useTranslations("guest");
   const locale = useLocale();
   const pathname = usePathname();
   const router = useRouter();
   const isGuest = role === "guest";
+  const isStudent = role === "user";
   const profile = role === "guest" ? null : getStaticProfile(role);
 
   const dashboardHref = role === "admin" ? `/${locale}/admin` : role === "teacher" ? `/${locale}/teacher` : `/${locale}/dashboard`;
+  const aiCoachHref = `/${locale}/ai-coach`;
+  const assignmentsHref = `/${locale}/assignments`;
+  const messagesHref = `/${locale}/messages`;
+  const studyBankHref = `/${locale}/study-bank`;
+  const analyticsHref = `/${locale}/analytics`;
+  const mistakesHref = `/${locale}/mistake-analysis`;
   const readingHref = `/${locale}/reading`;
   const listeningHref = `/${locale}/listening`;
 
-  const navItems = [
-    ...(!isGuest
-      ? [
-          {
-            key: "dashboard",
-            label: t("sidebar.dashboard"),
-            href: dashboardHref,
-            icon: Home,
-            disabled: false
-          }
-        ]
-      : []),
+  const primaryNavItems: NavItem[] = !isGuest
+    ? [
+        {
+          key: "dashboard",
+          label: t("sidebar.dashboard"),
+          href: dashboardHref,
+          icon: Home
+        }
+      ]
+    : [];
+
+  const secondaryNavItems: NavItem[] = isStudent
+    ? [
+        {
+          key: "assignments",
+          label: t("sidebar.assignments"),
+          href: assignmentsHref,
+          icon: ClipboardList
+        },
+        {
+          key: "messages",
+          label: t("sidebar.messages"),
+          href: messagesHref,
+          icon: MessageSquare
+        },
+        {
+          key: "aiCoach",
+          label: t("sidebar.aiCoach"),
+          href: aiCoachHref,
+          icon: Sparkles
+        },
+        {
+          key: "studyBank",
+          label: t("sidebar.studyBank"),
+          href: studyBankHref,
+          icon: BookMarked
+        },
+        {
+          key: "analytics",
+          label: t("sidebar.analytics"),
+          href: analyticsHref,
+          icon: BarChart3
+        },
+        {
+          key: "mistakeAnalysis",
+          label: t("sidebar.mistakeAnalysis"),
+          href: mistakesHref,
+          icon: TriangleAlert
+        }
+      ]
+    : [];
+
+  const testNavItems: TestNavItem[] = [
     {
       key: "reading",
       label: t("sidebar.reading"),
@@ -68,7 +132,12 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
       icon: Mic,
       disabled: true
     }
-  ] as const;
+  ];
+
+  const testsActive = pathname.startsWith(readingHref) || pathname.startsWith(listeningHref);
+  const [testsOpen, setTestsOpen] = useState(testsActive);
+  const [testsHovered, setTestsHovered] = useState(false);
+  const testsExpanded = testsActive || testsOpen || testsHovered;
 
   const handleSignOut = async () => {
     await fetch("/api/auth/logout", {method: "POST"});
@@ -89,24 +158,89 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
       </div>
 
       <nav className="mt-7 space-y-1.5">
-        {navItems.map((item) => {
+        {primaryNavItems.map((item) => {
           const Icon = item.icon;
-          const active = !item.disabled && pathname.startsWith(item.href);
+          const active = pathname.startsWith(item.href);
 
-          if (item.disabled) {
-            return (
-              <div
-                key={item.key}
-                className="flex items-center justify-between rounded-xl px-3.5 py-2.5 text-muted-foreground/60"
-              >
-                <span className="flex items-center gap-2.5 text-base font-medium">
-                  <Icon className="size-4" aria-hidden="true" />
-                  {item.label}
-                </span>
-                <Lock className="size-4" aria-hidden="true" />
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-base font-medium transition-colors",
+                active
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+                  : "text-foreground hover:bg-muted"
+              )}
+            >
+              <Icon className="size-4" aria-hidden="true" />
+              {item.label}
+            </Link>
+          );
+        })}
+
+        <div className="space-y-1" onMouseEnter={() => setTestsHovered(true)} onMouseLeave={() => setTestsHovered(false)}>
+          <button
+            type="button"
+            className={cn(
+              "flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-base font-medium transition-colors",
+              testsActive
+                ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+                : "text-foreground hover:bg-muted"
+            )}
+            onClick={() => setTestsOpen((current) => !current)}
+            aria-expanded={testsExpanded}
+          >
+            <span className="flex items-center gap-2.5">
+              <BookOpen className="size-4" aria-hidden="true" />
+              {t("sidebar.tests")}
+            </span>
+            <ChevronDown className={cn("size-4 transition-transform", testsExpanded ? "rotate-180" : "rotate-0")} aria-hidden="true" />
+          </button>
+
+          <div className={cn("grid transition-all duration-200", testsExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
+            <div className="min-h-0 overflow-hidden pl-4">
+              <div className="space-y-1 border-l border-border/70 py-1 pl-3">
+                {testNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const active = !item.disabled && Boolean(item.href && pathname.startsWith(item.href));
+
+                  if (item.disabled) {
+                    return (
+                      <div key={item.key} className="flex items-center justify-between rounded-lg px-2.5 py-2 text-muted-foreground/60">
+                        <span className="flex items-center gap-2 text-sm font-medium">
+                          <Icon className="size-3.5" aria-hidden="true" />
+                          {item.label}
+                        </span>
+                        <Lock className="size-3.5" aria-hidden="true" />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={item.key}
+                      href={item.href!}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
+                        active
+                          ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+                          : "text-foreground/90 hover:bg-muted"
+                      )}
+                    >
+                      <Icon className="size-3.5" aria-hidden="true" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
               </div>
-            );
-          }
+            </div>
+          </div>
+        </div>
+
+        {secondaryNavItems.map((item) => {
+          const Icon = item.icon;
+          const active = pathname.startsWith(item.href);
 
           return (
             <Link

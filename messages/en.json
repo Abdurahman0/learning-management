@@ -211,6 +211,13 @@
     },
     "sidebar": {
       "dashboard": "Dashboard",
+      "assignments": "Assignments",
+      "messages": "Messages",
+      "aiCoach": "AI Coach",
+      "studyBank": "Study Bank",
+      "analytics": "Analytics",
+      "mistakeAnalysis": "Mistake Analysis",
+      "tests": "Tests",
       "reading": "Reading",
       "listening": "Listening",
       "writingSoon": "Writing",
@@ -2614,6 +2621,1167 @@
       "savedDraft": "Announcement saved as draft.",
       "published": "Announcement published successfully.",
       "scheduled": "Announcement scheduled successfully."
+    }
+  },
+  "studentMistakes": {
+    "title": "Mistake Analysis",
+    "subtitle": "Understand your mistakes, identify weak areas, and improve your IELTS performance.",
+    "filters": {
+      "last7Days": "Last 7 days",
+      "last30Days": "Last 30 days",
+      "last3Months": "Last 3 months"
+    },
+    "summary": {
+      "totalMistakesReviewed": {
+        "label": "Total Mistakes Reviewed",
+        "meta": "+{value} this period"
+      },
+      "mostDifficultType": {
+        "label": "Most Difficult Question Type",
+        "meta": "Highest error count in recent reviews"
+      },
+      "weakestModule": {
+        "label": "Weakest Module",
+        "meta": "Prioritize this module to improve faster"
+      },
+      "accuracyTrend": {
+        "label": "Accuracy Trend",
+        "meta": "Compared with the previous period"
+      }
+    },
+    "charts": {
+      "questionType": {
+        "title": "Mistakes by Question Type",
+        "subtitle": "Track where errors are repeated most often."
+      },
+      "module": {
+        "title": "Mistakes by Module",
+        "subtitle": "Distribution of reviewed mistakes across IELTS modules.",
+        "centerLabel": "{module}",
+        "legendItem": "{module} ({value}%)"
+      },
+      "tooltips": {
+        "mistakes": "Mistakes: {value}",
+        "share": "Share: {value}%"
+      }
+    },
+    "sections": {
+      "commonErrorPatterns": "Common Error Patterns",
+      "recommendedNextSteps": "Recommended Next Steps"
+    },
+    "questionTypes": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "multipleChoice": "Multiple Choice",
+      "sentenceCompletion": "Sentence Completion",
+      "labelling": "Labelling",
+      "summaryCompletion": "Summary Completion"
+    },
+    "questionTypesShort": {
+      "matchingHeadings": "Match Head.",
+      "trueFalseNotGiven": "TFNG",
+      "multipleChoice": "MCQ",
+      "sentenceCompletion": "Sent. Comp.",
+      "labelling": "Labelling",
+      "summaryCompletion": "Summary"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "errorPatterns": {
+      "learningTip": "Learning Tip",
+      "items": {
+        "keywordMatching": {
+          "title": "Keyword Matching",
+          "description": "You focus on exact word matches instead of paraphrases in Reading passages.",
+          "tip": "Build a paraphrasing bank for common academic verbs."
+        },
+        "timeManagement": {
+          "title": "Time Management",
+          "description": "You spend too long on difficult question types like Matching Headings.",
+          "tip": "Use a 1-minute rule: flag and move on if you are stuck."
+        },
+        "misreadingInstructions": {
+          "title": "Misreading Instructions",
+          "description": "You confuse answer formats such as True/False/Not Given and Yes/No/Not Given.",
+          "tip": "Highlight instruction keywords before answering."
+        }
+      }
+    },
+    "actions": {
+      "items": {
+        "practiceMatchingHeadings": {
+          "title": "Practice Matching Headings",
+          "description": "Run a focused drill to improve passage-level idea matching and eliminate distractors.",
+          "button": "Start Practice"
+        },
+        "reviewParaphrasingStrategy": {
+          "title": "Review Reading Paraphrasing Strategy",
+          "description": "Revisit how paraphrases map to passage ideas before solving difficult Reading sets.",
+          "button": "View Strategy"
+        },
+        "retakeReadingDrill": {
+          "title": "Retake a Reading Drill",
+          "description": "Open your weak areas and retry a short Reading drill to measure immediate improvement.",
+          "button": "Review Mistakes"
+        }
+      },
+      "feedback": {
+        "reviewParaphrasingStrategy": {
+          "title": "Strategy opened",
+          "description": "Paraphrasing strategy notes are ready for review."
+        }
+      }
+    }
+  },
+  "studentProgress": {
+    "title": "Progress Analytics",
+    "subtitle": "Track your learning progress, identify patterns, and visualize your journey toward your target IELTS band score.",
+    "actions": {
+      "downloadReport": "Download Report",
+      "viewAllHistory": "View All History",
+      "openActivity": "Open Activity"
+    },
+    "filters": {
+      "last6Tests": "Last 6 Tests",
+      "last12Tests": "Last 12 Tests"
+    },
+    "summary": {
+      "currentBand": {
+        "label": "Current Band Estimate"
+      },
+      "targetBand": {
+        "label": "Target Band",
+        "meta": "Goal"
+      },
+      "practiceSessions": {
+        "label": "Practice Sessions",
+        "meta": "Total"
+      },
+      "averageAccuracy": {
+        "label": "Average Accuracy"
+      }
+    },
+    "charts": {
+      "bandProgress": {
+        "title": "Band Score Progression",
+        "subtitle": "How your estimated band score has changed across recent tests.",
+        "tooltip": "Band: {value}",
+        "labels": {
+          "test1": "Test 1",
+          "test2": "Test 2",
+          "test3": "Test 3",
+          "test4": "Test 4",
+          "test5": "Test 5",
+          "test6": "Test 6",
+          "test7": "Test 7",
+          "test8": "Test 8",
+          "test9": "Test 9",
+          "test10": "Test 10",
+          "test11": "Test 11",
+          "recent": "Recent"
+        }
+      },
+      "accuracy": {
+        "title": "Accuracy Improvement",
+        "tooltip": "Accuracy: {value}%",
+        "start": "Start: {value}%",
+        "current": "Current: {value}%",
+        "labels": {
+          "w1": "W1",
+          "w2": "W2",
+          "w3": "W3",
+          "w4": "W4",
+          "w5": "W5",
+          "w6": "W6"
+        }
+      },
+      "weekly": {
+        "title": "Weekly Study Activity",
+        "tooltip": "Sessions: {value}",
+        "labels": {
+          "w1": "W1",
+          "w2": "W2",
+          "w3": "W3",
+          "w4": "W4"
+        }
+      }
+    },
+    "modulePerformance": {
+      "title": "Module Performance (%)",
+      "subtitle": "Current module accuracy based on recent practice."
+    },
+    "insights": {
+      "title": "Learning Insights",
+      "items": {
+        "readingImproved": "Reading accuracy improved by 8% this month.",
+        "listeningConsistent": "Listening is your most consistent module.",
+        "writingWeakest": "Writing remains the weakest module.",
+        "band7WritingNote": "Students targeting Band 7 usually practice Writing 2x more frequently than your current rate."
+      }
+    },
+    "table": {
+      "title": "Recent Practice Activity",
+      "columns": {
+        "date": "Date",
+        "module": "Module",
+        "questionType": "Question Type",
+        "accuracy": "Accuracy",
+        "duration": "Duration",
+        "action": "Action"
+      },
+      "dates": {
+        "today1045": "Today, 10:45 AM",
+        "yesterday": "Yesterday",
+        "oct22": "22 Oct 2023"
+      },
+      "duration": "{value} min"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "questionTypes": {
+      "matchingHeadings": "Matching Headings",
+      "multipleChoice": "Multiple Choice",
+      "task2Essay": "Task 2: Essay",
+      "noteCompletion": "Note Completion",
+      "trueFalseNotGiven": "True / False / Not Given"
+    },
+    "feedback": {
+      "download": {
+        "title": "Report prepared",
+        "description": "Progress report export is simulated. Backend download will be connected next."
+      },
+      "unavailable": {
+        "title": "Detailed review is not ready",
+        "description": "This module review page is in progress and will be available soon."
+      }
+    }
+  },
+  "studentStudyBank": {
+    "title": "Study Bank",
+    "subtitle": "Your saved IELTS questions for focused review and practice.",
+    "actions": {
+      "downloadBank": "Download Bank",
+      "practiceAgain": "Practice Again",
+      "remove": "Remove",
+      "removeFromBank": "Remove from Bank",
+      "goToPractice": "Go to Practice",
+      "resetFilters": "Reset Filters"
+    },
+    "summary": {
+      "savedQuestions": {
+        "label": "Saved Questions",
+        "support": "new"
+      },
+      "modulesCovered": {
+        "label": "Modules Covered",
+        "empty": "No modules",
+        "speakingPending": "Speaking pending review",
+        "allCovered": "All modules covered"
+      },
+      "weakAreaQuestions": {
+        "label": "Weak Area Questions",
+        "support": "Priority focus"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Search saved questions...",
+      "module": {
+        "all": "Module: All",
+        "reading": "Module: Reading",
+        "listening": "Module: Listening",
+        "writing": "Module: Writing",
+        "speaking": "Module: Speaking"
+      },
+      "questionType": {
+        "all": "Question Type: All Types",
+        "matchingHeadings": "Matching Headings",
+        "trueFalseNotGiven": "True / False / Not Given",
+        "multipleChoice": "Multiple Choice",
+        "sentenceCompletion": "Sentence Completion",
+        "noteCompletion": "Note Completion",
+        "task1Report": "Task 1",
+        "task2Essay": "Task 2"
+      },
+      "difficulty": {
+        "all": "Difficulty: All Levels",
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard"
+      },
+      "sort": {
+        "newest": "Sort: Newest",
+        "oldest": "Sort: Oldest",
+        "difficulty": "Sort: Difficulty",
+        "module": "Sort: Module"
+      }
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "questionTypes": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "multipleChoice": "Multiple Choice",
+      "sentenceCompletion": "Sentence Completion",
+      "noteCompletion": "Note Completion",
+      "task1Report": "Task 1",
+      "task2Essay": "Task 2: Essay"
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
+    "savedAgo": {
+      "days3": "Saved 3 days ago",
+      "week1": "Saved 1 week ago",
+      "weeks2": "Saved 2 weeks ago",
+      "days5": "Saved 5 days ago",
+      "days9": "Saved 9 days ago"
+    },
+    "preview": {
+      "title": "Question Preview",
+      "contextTitle": "Question Context",
+      "questionTitle": "The Question",
+      "correctAnswer": "Correct Answer",
+      "lastAttempt": "Your Last Attempt",
+      "explanationTitle": "Explanation",
+      "empty": "Select a saved question to preview details, answer comparison, and explanation."
+    },
+    "suggestedReview": {
+      "title": "Suggested Review",
+      "items": {
+        "weakType": "You often struggle with {type}. Consider reviewing the \"keyword scanning\" masterclass in the library.",
+        "band7": "Students aiming for Band 7 practice Sentence Completion and TFNG questions 3x more frequently."
+      }
+    },
+    "empty": {
+      "all": {
+        "title": "No saved questions yet",
+        "description": "Bookmark questions during practice to review them here later."
+      },
+      "filtered": {
+        "title": "No questions match your current filters",
+        "description": "Try adjusting your filters or reset to see all saved questions."
+      }
+    },
+    "feedback": {
+      "download": {
+        "title": "Study bank prepared",
+        "description": "Bank export is simulated for now. Backend download will be connected next."
+      },
+      "remove": {
+        "title": "Question removed",
+        "description": "The question was removed from your study bank."
+      }
+    }
+  },
+  "studentAssignments": {
+    "title": "Assignments",
+    "subtitle": "Tasks assigned by your teacher to improve your IELTS performance and keep your preparation on track.",
+    "actions": {
+      "myProgress": "My Progress",
+      "viewDetails": "View Details",
+      "submitWork": "Submit Work",
+      "submitLate": "Submit Late",
+      "viewFeedback": "View Feedback",
+      "practiceAgain": "Practice Again",
+      "updateSubmission": "Update Submission",
+      "viewFullCalendar": "View Full Calendar",
+      "resetFilters": "Reset Filters",
+      "goToPractice": "Go to Practice"
+    },
+    "summary": {
+      "total": {
+        "label": "Total",
+        "meta": "Assignments assigned"
+      },
+      "active": {
+        "label": "Active",
+        "meta": "Pending submission"
+      },
+      "done": {
+        "label": "Done",
+        "meta": "Successfully submitted"
+      },
+      "missed": {
+        "label": "Missed",
+        "meta": "Overdue tasks"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Search assignments...",
+      "toggleSort": "Toggle sort",
+      "module": {
+        "all": "Module: All",
+        "reading": "Module: Reading",
+        "listening": "Module: Listening",
+        "writing": "Module: Writing",
+        "speaking": "Module: Speaking"
+      },
+      "status": {
+        "all": "Status: All"
+      },
+      "sort": {
+        "urgent": "Urgent",
+        "deadlineAsc": "Deadline (Nearest)",
+        "deadlineDesc": "Deadline (Latest)"
+      }
+    },
+    "status": {
+      "pending": "Pending",
+      "submitted": "Submitted",
+      "reviewed": "Reviewed",
+      "overdue": "Overdue"
+    },
+    "urgency": {
+      "dueInDays": "Due in {days} days",
+      "lateByDays": "Late by {days} days",
+      "dueToday": "Due today",
+      "reviewed": "Reviewed by teacher"
+    },
+    "list": {
+      "assignedBy": "Assigned by {name}",
+      "estimatedTime": "{minutes} min estimated",
+      "assignedDate": "Assigned: {date}"
+    },
+    "meta": {
+      "audioRequired": "Audio required",
+      "essayDraft": "Essay draft required",
+      "timedPractice": "Timed practice",
+      "speakingRecording": "Voice recording required"
+    },
+    "deadlines": {
+      "title": "Upcoming Deadlines",
+      "empty": "No upcoming deadlines right now.",
+      "anytime": "Anytime"
+    },
+    "studyTip": {
+      "title": "Study Tip",
+      "content": "When writing Task 2, spend exactly 5 minutes planning. A clear structure saves time and improves coherence.",
+      "author": "Sarah J., Senior Tutor"
+    },
+    "empty": {
+      "all": {
+        "title": "No assignments yet",
+        "description": "Your teacher-assigned tasks will appear here."
+      },
+      "filtered": {
+        "title": "No assignments match your current filters",
+        "description": "Try adjusting your filters or reset them to see all assignments."
+      }
+    },
+    "feedback": {
+      "sortChanged": {
+        "title": "Sorting updated",
+        "description": "Assignments are now sorted by {sort}."
+      },
+      "lateSubmission": {
+        "title": "Late submission mode",
+        "description": "This assignment is overdue. Submission is still open."
+      },
+      "submissionOpened": {
+        "title": "Submission opened",
+        "description": "Your previous submission is ready for update."
+      }
+    }
+  },
+  "studentAssignmentSubmission": {
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "header": {
+      "assignedBy": "Assigned by {name}",
+      "anytime": "Anytime submission",
+      "remainingDays": "{days} days remaining",
+      "overdueDays": "Late by {days} days"
+    },
+    "status": {
+      "pending": "Pending",
+      "submitted": "Submitted",
+      "reviewed": "Reviewed",
+      "overdue": "Overdue"
+    },
+    "instructions": {
+      "title": "Assignment Instructions",
+      "teacherNote": "Teacher Note"
+    },
+    "content": {
+      "instructions": {
+        "writingDefault": "Write a focused IELTS response and keep your structure clear from introduction to conclusion.",
+        "speakingDefault": "Record your answer clearly, then add short self-reflection notes about fluency and coherence.",
+        "questionSetDefault": "Complete the assigned question set and show how you eliminated distractors in uncertain items.",
+        "writingTechEssay": "Some people believe that technology improves communication, while others think it reduces real human interaction. Discuss both views and give your opinion.",
+        "writingTask1Report": "Summarize the key trends in the chart. Select and report the main features and make relevant comparisons.",
+        "speakingMock": "Speaking Part 2: Describe a person who inspired you to improve your academic goals.",
+        "speakingJournal": "Record a short fluency journal entry about your learning progress this week and include one specific improvement.",
+        "readingMatchingHeadings": "Match each paragraph with the best heading and justify why the other options are less accurate.",
+        "readingTfng": "Answer True / False / Not Given items and explain which statements are directly supported, contradicted, or unsupported.",
+        "listeningSection4": "Complete Section 4 answers and submit brief notes explaining where the distractors appeared in the audio.",
+        "listeningNoteCompletion": "Fill the note-completion gaps using exact words from the recording and check spelling/plural forms.",
+        "vocabularyMixed": "Finish the vocabulary check, then write a brief reflection on the collocations you still confuse."
+      },
+      "teacherNotes": {
+        "writingDefault": "Focus on coherence and avoid repeating the same sentence pattern.",
+        "speakingDefault": "Prioritize natural delivery over speed. Keep your ideas connected.",
+        "questionSetDefault": "Accuracy first. Mark uncertain items and review instruction keywords before final submission.",
+        "writingTechEssay": "Focus on clear structure and strong supporting examples.",
+        "writingTask1Report": "Do not include personal opinion. Keep the overview concise and data-focused.",
+        "speakingMock": "Use one concrete story and extend each point with clear detail.",
+        "speakingJournal": "Track filler words and pauses. Aim for smoother transitions between ideas.",
+        "readingMatchingHeadings": "Identify the central idea first, then match the heading.",
+        "readingTfng": "Do not infer beyond the text. Mark Not Given only when evidence is absent.",
+        "listeningSection4": "Watch for signpost language that signals answer transitions.",
+        "listeningNoteCompletion": "Double-check spelling and plural endings before submission.",
+        "vocabularyMixed": "Prioritize academic collocations you often miss in reading passages."
+      }
+    },
+    "workspace": {
+      "typeTitles": {
+        "writing": "Your Response",
+        "speaking": "Speaking Submission",
+        "questionSet": "Question Set Answers",
+        "mixed": "Mixed Submission Workspace"
+      },
+      "writing": {
+        "wordCount": "Word count: {count}",
+        "goal": "Goal: {min}-{max} words",
+        "placeholderTask2": "Write your Task 2 response here...",
+        "placeholderTask1": "Write your Task 1 report here..."
+      },
+      "speaking": {
+        "prompt": "Speaking Prompt",
+        "start": "Start Recording",
+        "stop": "Stop Recording",
+        "replay": "Replay",
+        "uploadAudio": "Upload Audio",
+        "recordingTime": "Recorded: {time}",
+        "recordingLimit": "Limit: {time}",
+        "defaultPrompt": "Describe a recent learning challenge and explain how you solved it.",
+        "notesPlaceholder": "Add self-review notes for pronunciation, fluency, and grammar...",
+        "prompts": {
+          "mockPart2": "Describe a person who inspired your academic growth. Explain who this person is, what they did, and why it influenced you.",
+          "fluencyJournal": "Talk about one practice session this week where you felt your speaking became smoother. Mention what changed and what you will repeat."
+        },
+        "checklist": {
+          "intro": "Begin with a clear one-sentence introduction.",
+          "examples": "Add one specific example for each main idea.",
+          "closing": "Finish with a concise closing statement.",
+          "transition": "Use transition phrases between ideas.",
+          "selfReview": "Mention one weakness and one improvement target."
+        }
+      },
+      "questionSet": {
+        "progress": "Answered {answered} of {total}",
+        "defaults": {
+          "q1Prompt": "Write one key idea from the passage/audio in your own words.",
+          "q2Prompt": "Select the best answer for the main claim.",
+          "q3Prompt": "Complete the sentence with up to two words.",
+          "shortAnswerPlaceholder": "Type your answer...",
+          "sentencePlaceholder": "Complete the sentence...",
+          "options": {
+            "a": "Option A",
+            "b": "Option B",
+            "c": "Option C",
+            "d": "Option D"
+          }
+        },
+        "matchingHeadings": {
+          "q1Prompt": "Paragraph A best matches which heading?",
+          "q2Prompt": "Paragraph B best matches which heading?",
+          "q3Prompt": "Paragraph C best matches which heading?",
+          "q4Prompt": "Which heading did you eliminate last, and why?",
+          "headingPlaceholder": "Type heading number (e.g. iii)...",
+          "eliminationPlaceholder": "Write one elimination reason..."
+        },
+        "tfng": {
+          "q1Prompt": "The new policy was applied in all departments.",
+          "q2Prompt": "The researchers confirmed a long-term decline in results.",
+          "q3Prompt": "Participants received written guidance before the task.",
+          "options": {
+            "true": "True",
+            "false": "False",
+            "notGiven": "Not Given"
+          }
+        },
+        "listeningNotes": {
+          "q1Prompt": "Complete note 1 (max two words).",
+          "q2Prompt": "Complete note 2 (max two words).",
+          "q3Prompt": "Complete note 3 (max two words).",
+          "answerPlaceholder": "Enter exact word(s) from audio..."
+        }
+      },
+      "mixed": {
+        "reflectionPlaceholder": "Write a short reflection about the mistakes you made and what to improve next.",
+        "questions": {
+          "q1Prompt": "Which collocation best fits the context?",
+          "q2Prompt": "Write one sentence using your chosen collocation.",
+          "q3Prompt": "Complete the sentence with one academic linker.",
+          "shortPlaceholder": "Type your sentence...",
+          "sentencePlaceholder": "Add one suitable linker...",
+          "options": {
+            "a": "Take responsibility",
+            "b": "Do a progress",
+            "c": "Make a discussion"
+          }
+        }
+      }
+    },
+    "attachments": {
+      "title": "Attachments",
+      "dropzone": "Drag and drop files here or click to browse",
+      "helper": "Max {count} files, up to {size}MB each",
+      "uploadButton": "Upload File",
+      "empty": "No files uploaded yet.",
+      "fileSize": "{size} KB"
+    },
+    "quickTips": {
+      "title": "Quick Tips"
+    },
+    "tips": {
+      "writing": {
+        "1": "Address both sides of the task before presenting your final opinion.",
+        "2": "Use formal linking phrases to improve coherence.",
+        "3": "Keep each paragraph focused on one clear supporting idea."
+      },
+      "speaking": {
+        "1": "Start with a short introduction before your examples.",
+        "2": "Use transitions naturally instead of rushing.",
+        "3": "Prioritize fluency and clarity over perfect complexity."
+      },
+      "questionSet": {
+        "1": "Read instruction keywords and word limits before answering.",
+        "2": "Skip stuck questions and return after easier items.",
+        "3": "Review distractors to avoid repeating the same mistakes."
+      },
+      "mixed": {
+        "1": "Finish objective questions first, then write your reflection.",
+        "2": "Use one concrete example in your reflection response.",
+        "3": "Check spelling and collocation accuracy before submitting."
+      }
+    },
+    "support": {
+      "title": "Submission Checklist",
+      "item1": "Review instructions and teacher note one more time.",
+      "item2": "Confirm your strongest evidence/example is included.",
+      "item3": "Run a quick final check for clarity and format."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "saveDraft": "Save Draft",
+      "submit": "Submit Assignment",
+      "backToAssignments": "Back to Assignments"
+    },
+    "footer": {
+      "notSavedYet": "Draft not saved yet",
+      "lastSaved": "Last saved: {date}"
+    },
+    "validation": {
+      "missingSubmission": "This assignment does not have a submission template yet.",
+      "writing": "Please write at least {min} words before submitting.",
+      "speaking": "Please record or upload audio before submitting.",
+      "questionSet": "Please answer at least {min} questions before submitting.",
+      "mixedWriting": "Please write at least {min} words in the reflection section.",
+      "mixedQuestions": "Please complete at least {min} question responses."
+    },
+    "confirm": {
+      "cancelWithChanges": "You have unsaved changes. Leave this page anyway?"
+    },
+    "empty": {
+      "notFound": {
+        "title": "Assignment not found",
+        "description": "This assignment may have been removed or is not available in your current view."
+      }
+    },
+    "feedback": {
+      "recordingLimit": {
+        "title": "Recording stopped",
+        "description": "The maximum recording time was reached."
+      },
+      "maxFiles": {
+        "title": "Upload limit reached",
+        "description": "You can upload up to {count} files for this assignment."
+      },
+      "fileType": {
+        "title": "Unsupported file type",
+        "description": "Please upload a file type allowed for this assignment."
+      },
+      "fileSize": {
+        "title": "File too large",
+        "description": "Each file must be under {size}MB."
+      },
+      "upload": {
+        "title": "Files uploaded",
+        "description": "{count} file(s) added to your submission."
+      },
+      "fileRemoved": {
+        "title": "File removed",
+        "description": "Selected file was removed from this draft."
+      },
+      "draftSaved": {
+        "title": "Draft saved",
+        "description": "Your assignment draft has been saved locally."
+      },
+      "submitFailed": {
+        "title": "Submission incomplete"
+      },
+      "submitSuccess": {
+        "title": "Assignment submitted",
+        "description": "Your submission was sent successfully."
+      },
+      "replayEmpty": {
+        "title": "No recording available",
+        "description": "Record or upload audio before replaying."
+      },
+      "replay": {
+        "title": "Replay opened",
+        "description": "Audio replay is simulated in this prototype."
+      }
+    }
+  },
+  "studentTeacherFeedback": {
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "assignmentTypes": {
+      "writing": "Writing Task",
+      "speaking": "Speaking Task",
+      "questionSet": "Question Set",
+      "mixed": "Mixed Assignment"
+    },
+    "status": {
+      "reviewed": "Reviewed"
+    },
+    "meta": {
+      "teacher": "Teacher: {name}",
+      "submitted": "Submitted: {time}",
+      "reviewed": "Reviewed: {time}",
+      "dateRange": "Submitted {submittedDate} - Reviewed {reviewedDate}"
+    },
+    "time": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "days2": "2 days ago",
+      "days3": "3 days ago",
+      "days5": "5 days ago",
+      "week1": "1 week ago"
+    },
+    "actions": {
+      "downloadPdf": "Download PDF",
+      "viewAnalytics": "View Analytics",
+      "viewFullSubmission": "View Full Submission",
+      "hideFullSubmission": "Hide Full Submission",
+      "backToAssignments": "Back to Assignments",
+      "goToDashboard": "Go to Dashboard"
+    },
+    "cards": {
+      "assessment": {
+        "title": "Teacher Assessment",
+        "bandLabel": "Band"
+      },
+      "detailedFeedback": {
+        "title": "Detailed Teacher Feedback"
+      },
+      "submissionSummary": {
+        "title": "Assignment Summary",
+        "promptLabel": "Assignment Prompt",
+        "submissionLabel": "Your Submission",
+        "wordCount": "Word count: {count}"
+      },
+      "criteria": {
+        "title": "Criteria Breakdown"
+      },
+      "nextSteps": {
+        "title": "Recommended Next Steps"
+      },
+      "coachNote": {
+        "title": "Coach Note",
+        "description": "Use these insights in your next focused practice session to convert feedback into measurable score improvement."
+      }
+    },
+    "criteria": {
+      "taskResponse": "Task Response",
+      "coherenceCohesion": "Coherence & Cohesion",
+      "lexicalResource": "Lexical Resource",
+      "grammaticalRange": "Grammatical Range",
+      "accuracy": "Accuracy",
+      "strategyUse": "Strategy Use",
+      "paraphraseControl": "Paraphrase Control",
+      "timeManagement": "Time Management"
+    },
+    "entries": {
+      "writingTech": {
+        "assessment": "Your essay demonstrates a good understanding of the prompt and maintains a clear position. The score is currently limited by repetitive grammatical framing and narrower lexical variation in body paragraphs. Strengthening transitions and expanding your word choice range can move this response toward Band 7.0.",
+        "prompt": "Some people believe that technology improves communication, while others think it reduces real human interaction. Discuss both views and give your opinion.",
+        "preview": "In the contemporary era, the rapid advancement of technology has fundamentally reshaped the way people communicate with each other. While digital tools improve speed and access, they can also reduce meaningful face-to-face interaction in daily life...",
+        "fullSubmission": "In the contemporary era, the rapid advancement of technology has fundamentally reshaped the way people communicate with each other. While many people argue that communication has become more efficient and inclusive, others believe that these developments weaken the depth of social relationships. This essay discusses both perspectives before presenting my view.\n\nOn the one hand, technology offers clear communication advantages. Instant messaging, video conferencing and collaborative platforms allow people to stay connected across long distances. In academic and professional contexts, this speed can increase productivity and reduce delays in decision-making. For example, international teams can now coordinate projects in real time without needing to travel.\n\nOn the other hand, frequent digital communication may reduce the quality of interpersonal exchange. Many conversations become shorter and less emotionally expressive when people rely on text-based interaction. In addition, overuse of social media can create superficial connections that replace deeper in-person dialogue. As a result, people may feel connected online but isolated in everyday life.\n\nIn my opinion, technology itself is not the problem; the issue lies in how it is used. If individuals balance digital convenience with intentional face-to-face communication, technology can strengthen rather than weaken human relationships.\n\nIn conclusion, technology improves access and efficiency in communication, but it can also reduce social depth when overused. A balanced approach is necessary to gain benefits without losing genuine interpersonal connection.",
+        "criteriaNote": "Criteria based on standard IELTS Writing band descriptors.",
+        "sections": {
+          "introThesis": {
+            "title": "Introduction & Thesis",
+            "feedback": "Your paraphrase is clear and the thesis establishes both sides of the discussion effectively. The opening is relevant and coherent, with a clear task focus.",
+            "highlight": "Use one stronger academic synonym in the first two sentences to increase lexical range immediately."
+          },
+          "bodyPositive": {
+            "title": "Body Paragraph 1: Positive Impacts",
+            "feedback": "The argument about communication efficiency is logical and the international-team example supports your point well. The paragraph progression is smooth.",
+            "highlight": "Add one sentence on social inclusion (e.g., rural or remote access) to improve depth."
+          },
+          "bodyNegative": {
+            "title": "Body Paragraph 2: Negative Impacts",
+            "feedback": "You identify a relevant downside and maintain topic focus. The comparison between online connection and isolation is clear and persuasive.",
+            "highlight": "Avoid repeating basic structures like \"can + verb\". Add one complex sentence with subordination."
+          },
+          "conclusion": {
+            "title": "Conclusion",
+            "feedback": "The conclusion is concise, balanced, and directly aligned with your position. It summarizes key points without introducing new ideas."
+          },
+          "vocabularyGrammar": {
+            "title": "Vocabulary & Grammar Notes",
+            "feedback": "Vocabulary is generally accurate, but some lexical choices are repeated across paragraphs. Grammar control is stable for simple structures, while complex variation is still limited.",
+            "highlight": "In your next draft, replace at least 4 repeated high-frequency words with precise academic alternatives."
+          }
+        },
+        "actions": {
+          "practiceSimilarTask": {
+            "title": "Practice Similar Task",
+            "description": "Reattempt a discussion essay with balanced argument structure.",
+            "cta": "Start Practice"
+          },
+          "reviewMistakes": {
+            "title": "Review Mistakes",
+            "description": "Revisit your recent weak areas and error patterns.",
+            "cta": "Open Mistake Analysis"
+          },
+          "openAiCoach": {
+            "title": "Open AI Coach",
+            "description": "Get a personalized next-session plan from AI Coach.",
+            "cta": "Open AI Coach"
+          }
+        }
+      },
+      "readingMatching": {
+        "assessment": "You apply the matching-headings process with improving control, especially in elimination steps. Accuracy is still affected when paraphrases are subtle. Continue building paraphrase recognition and decision speed.",
+        "prompt": "Reattempt a Matching Headings set and highlight why each eliminated option is incorrect.",
+        "preview": "For Paragraph A I selected heading iv because the paragraph focuses on long-term ecological impact rather than short-term industrial growth...",
+        "fullSubmission": "Paragraph A - Heading iv: The paragraph explains long-term ecological effects and contrasts them with short-term gains.\nParagraph B - Heading i: This paragraph focuses on policy shifts and implementation barriers.\nParagraph C - Heading vi: Main idea is public resistance despite scientific consensus.\nElimination note: I rejected heading iii because it was too specific and referenced a detail that appears only once.",
+        "criteriaNote": "Reading feedback criteria are aligned to task strategy and accuracy indicators.",
+        "sections": {
+          "instructionControl": {
+            "title": "Instruction Control",
+            "feedback": "You follow task instructions accurately and maintain consistent answer format."
+          },
+          "eliminationProcess": {
+            "title": "Elimination Process",
+            "feedback": "Your elimination notes are clearer than before and show stronger rationale for rejecting distractors.",
+            "highlight": "Write one short elimination reason immediately after each answer to reduce second-guessing."
+          },
+          "paraphraseRecognition": {
+            "title": "Paraphrase Recognition",
+            "feedback": "When wording changes are subtle, you still rely on surface keyword matching. Improve central-idea identification before option comparison."
+          }
+        },
+        "actions": {
+          "runReadingDrill": {
+            "title": "Run Reading Drill",
+            "description": "Practice a focused matching-headings speed set.",
+            "cta": "Start Drill"
+          },
+          "openCoachPlan": {
+            "title": "Open Coach Plan",
+            "description": "Get a targeted paraphrase recognition plan.",
+            "cta": "View Plan"
+          }
+        }
+      }
+    },
+    "feedback": {
+      "download": {
+        "title": "Report prepared",
+        "description": "PDF export is simulated in this prototype."
+      },
+      "action": {
+        "title": "Action opened",
+        "description": "This action is connected as a placeholder flow for now."
+      }
+    },
+    "empty": {
+      "notFound": {
+        "title": "Feedback not found",
+        "description": "This assignment feedback is unavailable right now."
+      },
+      "awaitingReview": {
+        "title": "Review in progress",
+        "description": "Your teacher has not published detailed feedback yet. Please check again later."
+      }
+    }
+  },
+  "studentAiCoach": {
+    "title": "AI Learning Coach",
+    "subtitle": "Your personalized AI assistant for improving IELTS performance.",
+    "summary": {
+      "estimatedBand": {
+        "label": "Estimated Band"
+      },
+      "targetBand": {
+        "label": "Target Band",
+        "meta": "Goal"
+      },
+      "strongestModule": {
+        "label": "Strongest Module"
+      },
+      "weakestModule": {
+        "label": "Weakest Module"
+      }
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "questionTypes": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "TFNG (True/False/NG)",
+      "multipleChoice": "Multiple Choice",
+      "sentenceCompletion": "Sentence Completion"
+    },
+    "chat": {
+      "title": "IELTS Tutor AI",
+      "history": "History",
+      "tryPracticeDrill": "Try Practice Drill",
+      "explainMore": "Explain More",
+      "inputPlaceholder": "Ask your AI Coach anything...",
+      "send": "Send",
+      "attachWriting": "Attach Writing",
+      "clearChat": "Clear Chat",
+      "explainMoreLead": "Let's deepen your plan: prioritize {weakestType}, then reinforce with {strongestType}.",
+      "explainMoreStep1": "1. Keep a short error log after each practice set.",
+      "explainMoreStep2": "2. Review only mistakes first, then retry without notes.",
+      "explainMoreStep3": "3. End each session with one confidence drill in your strongest area."
+    },
+    "accuracyByType": {
+      "title": "Accuracy by Type",
+      "note": "AI analysis suggests focusing on \"{type}\" to move closer to Band 7.0."
+    },
+    "studyStrategy": {
+      "title": "Study Strategy",
+      "items": {
+        "dailyReadingRhythm": {
+          "title": "Daily Reading Rhythm",
+          "description": "Practice Reading for 20m every morning to improve stamina."
+        },
+        "writingTaskFeedback": {
+          "title": "Writing Task 2 Feedback",
+          "description": "Submit 1 essay today. Your grammar score is slightly lower than usual."
+        },
+        "consolidateStrengths": {
+          "title": "Consolidate Strengths",
+          "description": "Maintain Listening accuracy with 1 Section 4 drill per week."
+        }
+      }
+    },
+    "recommended": {
+      "title": "Recommended for You",
+      "tags": {
+        "reading": "Reading",
+        "writing": "Writing",
+        "listening": "Listening",
+        "studyBank": "Study Bank"
+      },
+      "items": {
+        "practiceMatchingHeadings": {
+          "title": "Practice Matching Headings",
+          "description": "Run a focused drill on paragraph-main-idea matching and heading elimination.",
+          "cta": "Start Practice"
+        },
+        "focusTask2Structure": {
+          "title": "Focus on Writing Task 2 Structure",
+          "description": "Improve coherence with a clear thesis + two evidence-driven body paragraphs.",
+          "cta": "View Strategy"
+        },
+        "reviewTfngStrategy": {
+          "title": "Review TFNG Strategy",
+          "description": "Train distinction between contradiction and missing information in Reading.",
+          "cta": "Review Now"
+        },
+        "revisitStudyBank": {
+          "title": "Revisit Saved Questions",
+          "description": "Reattempt your bookmarked weak-area questions before starting new tests.",
+          "cta": "Open Study Bank"
+        }
+      }
+    },
+    "feedback": {
+      "clear": {
+        "title": "Chat cleared",
+        "description": "Conversation history has been reset to your latest coach baseline."
+      },
+      "attach": {
+        "title": "Writing attached",
+        "description": "Attachment is simulated. AI writing review flow can be connected next."
+      },
+      "history": {
+        "title": "History panel",
+        "description": "Saved coach sessions will appear here when backend history is enabled."
+      },
+      "strategy": {
+        "title": "Strategy opened",
+        "description": "Detailed coaching workflow is preparing for this action."
+      },
+      "recommendation": {
+        "title": "Recommendation opened",
+        "description": "This recommendation will connect to a dedicated flow in the next iteration."
+      }
+    }
+  },
+  "studentMessages": {
+    "title": "Messages with Teacher",
+    "subtitle": "Stay connected with your teacher, ask questions, and track assignment-specific guidance in one focused workspace.",
+    "labels": {
+      "teacherRole": "IELTS Instructor"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "mobile": {
+      "tabs": {
+        "conversations": "Conversations",
+        "chat": "Chat",
+        "teacher": "Teacher Info"
+      }
+    },
+    "topics": {
+      "writingFeedback": "Writing feedback",
+      "listeningStrategy": "Listening strategy",
+      "readingWeakArea": "Reading weak area"
+    },
+    "conversations": {
+      "title": "Conversations",
+      "searchPlaceholder": "Search conversations...",
+      "unreadCount": "{count} unread",
+      "empty": "No conversations match your search.",
+      "emptyPreview": "No messages yet.",
+      "clearedPreview": "Chat cleared. Send a new message."
+    },
+    "chat": {
+      "selectConversation": "Select a conversation to view messages.",
+      "empty": "No messages in this thread yet.",
+      "attachmentSize": "{size} KB",
+      "actions": {
+        "viewProfile": "View Profile",
+        "openAssignments": "Open Assignments",
+        "clearChat": "Clear Chat"
+      }
+    },
+    "composer": {
+      "placeholder": "Write a message to your teacher...",
+      "send": "Send",
+      "attach": "Attach",
+      "attachEssay": "Attach Essay",
+      "attachScreenshot": "Attach Screenshot",
+      "attachAudio": "Attach Audio",
+      "removeAttachment": "Remove attachment",
+      "attachmentOnlyMessage": "Shared an attachment.",
+      "attachmentPreview": "Sent an attachment"
+    },
+    "teacherInfo": {
+      "title": "Teacher Info",
+      "students": "Students",
+      "reviewsCompleted": "Reviews completed",
+      "recentAssignments": "Recent Assignments",
+      "noAssignments": "No assignment links in this conversation yet.",
+      "empty": "Select a conversation to view teacher details.",
+      "actions": {
+        "viewProfile": "View Teacher Profile",
+        "sendAssignment": "Send Assignment",
+        "scheduleSession": "Schedule Session"
+      }
+    },
+    "context": {
+      "title": "Conversation Context",
+      "description": "Use this thread to clarify teacher feedback, discuss next steps, and coordinate assignment follow-up.",
+      "connectedAssignments": "{count} linked assignments"
+    },
+    "relative": {
+      "justNow": "Just now",
+      "minutesAgo": "{value}m ago",
+      "hoursAgo": "{value}h ago",
+      "yesterday": "Yesterday",
+      "daysAgo": "{value} days ago"
+    },
+    "teacherProfiles": {
+      "sarah": {
+        "role": "IELTS Writing Specialist",
+        "expertise": "Focuses on argument structure, lexical range, and band-lifting writing strategies."
+      },
+      "david": {
+        "role": "IELTS Listening & Speaking Mentor",
+        "expertise": "Supports note-completion accuracy, fluency control, and high-pressure speaking confidence."
+      }
+    },
+    "seed": {
+      "previews": {
+        "sarahWriting": "Please tighten your second body paragraph and add one stronger example.",
+        "davidListening": "Focus on signpost words before filling note-completion gaps.",
+        "sarahReading": "Your elimination logic improved. Keep practicing paraphrase detection."
+      },
+      "messages": {
+        "msg1": "Great work on your last essay. Your thesis is clear, but paragraph two needs deeper support.",
+        "msg2": "Thank you. Should I focus on adding more academic examples or improving transitions first?",
+        "msg3": "Start with stronger examples. Then revise transitions in your final edit pass.",
+        "msg4": "I reviewed your Section 4 attempt. Your main issue is rushing after the first distractor.",
+        "msg5": "Understood. I will pause one second before writing each answer.",
+        "msg6": "Perfect. Also keep plural endings in mind for note completion.",
+        "msg7": "Your matching-headings score improved, but you still rely too much on direct keyword matching.",
+        "msg8": "Try identifying each paragraph's central idea before looking at options."
+      }
+    },
+    "feedback": {
+      "sent": {
+        "title": "Message sent",
+        "description": "Your message was added to the conversation."
+      },
+      "attachmentAdded": {
+        "title": "Attachment added",
+        "description": "{name} is ready to send."
+      },
+      "attachLimit": {
+        "title": "Attachment limit reached",
+        "description": "You can attach up to 3 files in one message."
+      },
+      "profile": {
+        "title": "Profile action",
+        "description": "Opening profile details for {teacher} is simulated in this prototype."
+      },
+      "schedule": {
+        "title": "Schedule requested",
+        "description": "Session scheduling flow will be connected in the next backend step."
+      },
+      "clear": {
+        "title": "Chat cleared",
+        "description": "Conversation history was cleared for this thread."
+      }
     }
   },
   "teacherProfile": {

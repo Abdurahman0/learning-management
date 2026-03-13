@@ -211,6 +211,13 @@
     },
     "sidebar": {
       "dashboard": "Dashboard",
+      "assignments": "Assignments",
+      "messages": "Xabarlar",
+      "aiCoach": "AI Coach",
+      "studyBank": "Study Bank",
+      "analytics": "Analitika",
+      "mistakeAnalysis": "Xatolar tahlili",
+      "tests": "Testlar",
       "reading": "Reading",
       "listening": "Listening",
       "writingSoon": "Writing",
@@ -2612,6 +2619,1167 @@
       "savedDraft": "Announcement draft sifatida saqlandi.",
       "published": "Announcement muvaffaqiyatli chop etildi.",
       "scheduled": "Announcement muvaffaqiyatli rejalashtirildi."
+    }
+  },
+  "studentMistakes": {
+    "title": "Xatolar tahlili",
+    "subtitle": "Xatolaringizni tushuning, zaif yo'nalishlarni aniqlang va IELTS natijangizni yaxshilang.",
+    "filters": {
+      "last7Days": "Oxirgi 7 kun",
+      "last30Days": "Oxirgi 30 kun",
+      "last3Months": "Oxirgi 3 oy"
+    },
+    "summary": {
+      "totalMistakesReviewed": {
+        "label": "Ko'rib chiqilgan xatolar soni",
+        "meta": "Bu davrda +{value}"
+      },
+      "mostDifficultType": {
+        "label": "Eng qiyin savol turi",
+        "meta": "So'nggi tahlillarda xatolar eng ko'p tushgan tur"
+      },
+      "weakestModule": {
+        "label": "Eng zaif modul",
+        "meta": "Tezroq o'sish uchun shu modulga ustuvor e'tibor bering"
+      },
+      "accuracyTrend": {
+        "label": "Aniqlik trendi",
+        "meta": "Oldingi davr bilan solishtirganda"
+      }
+    },
+    "charts": {
+      "questionType": {
+        "title": "Savol turi bo'yicha xatolar",
+        "subtitle": "Qaysi turda xatolar ko'proq takrorlanayotganini kuzating."
+      },
+      "module": {
+        "title": "Modul bo'yicha xatolar",
+        "subtitle": "Ko'rib chiqilgan xatolarning IELTS modullari bo'yicha taqsimoti.",
+        "centerLabel": "{module}",
+        "legendItem": "{module} ({value}%)"
+      },
+      "tooltips": {
+        "mistakes": "Xatolar: {value}",
+        "share": "Ulush: {value}%"
+      }
+    },
+    "sections": {
+      "commonErrorPatterns": "Ko'p uchraydigan xato andozalari",
+      "recommendedNextSteps": "Tavsiya etilgan keyingi qadamlar"
+    },
+    "questionTypes": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "multipleChoice": "Multiple Choice",
+      "sentenceCompletion": "Sentence Completion",
+      "labelling": "Labelling",
+      "summaryCompletion": "Summary Completion"
+    },
+    "questionTypesShort": {
+      "matchingHeadings": "Match Head.",
+      "trueFalseNotGiven": "TFNG",
+      "multipleChoice": "MCQ",
+      "sentenceCompletion": "Sent. Comp.",
+      "labelling": "Labelling",
+      "summaryCompletion": "Summary"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "errorPatterns": {
+      "learningTip": "O'rganish bo'yicha tavsiya",
+      "items": {
+        "keywordMatching": {
+          "title": "Kalit so'zga haddan tashqari tayanish",
+          "description": "Reading matnida parafrazlarni ko'rish o'rniga aynan bir xil so'zlarni izlashga moyillik bor.",
+          "tip": "Ko'p ishlatiladigan akademik fe'llar uchun parafrazlar ro'yxatini tuzing."
+        },
+        "timeManagement": {
+          "title": "Vaqt boshqaruvi",
+          "description": "Matching Headings kabi murakkab savollarda ortiqcha vaqt sarflanyapti.",
+          "tip": "1 daqiqalik qoida: tiqilib qolsangiz belgilang va keyingisiga o'ting."
+        },
+        "misreadingInstructions": {
+          "title": "Ko'rsatmalarni noto'g'ri talqin qilish",
+          "description": "True/False/Not Given va Yes/No/Not Given kabi javob formatlari aralashib ketmoqda.",
+          "tip": "Javob berishdan oldin ko'rsatmadagi asosiy so'zlarni ajratib oling."
+        }
+      }
+    },
+    "actions": {
+      "items": {
+        "practiceMatchingHeadings": {
+          "title": "Matching Headings mashqi",
+          "description": "Paragraf g'oyasini tez aniqlash va chalg'ituvchi variantlarni ajratish bo'yicha qisqa drill bajaring.",
+          "button": "Mashqni boshlash"
+        },
+        "reviewParaphrasingStrategy": {
+          "title": "Reading parafraz strategiyasini ko'rib chiqish",
+          "description": "Qiyin Reading to'plamidan oldin parafrazlar passage g'oyalari bilan qanday mos kelishini takrorlang.",
+          "button": "Strategiyani ko'rish"
+        },
+        "retakeReadingDrill": {
+          "title": "Reading drillni qayta ishlash",
+          "description": "Zaif yo'nalishlar bo'limiga o'tib qisqa Reading drillni qayta ishlab natijani solishtiring.",
+          "button": "Xatolarni ko'rish"
+        }
+      },
+      "feedback": {
+        "reviewParaphrasingStrategy": {
+          "title": "Strategiya ochildi",
+          "description": "Parafraz bo'yicha qisqa yo'riqnoma ko'rish uchun tayyor."
+        }
+      }
+    }
+  },
+  "studentProgress": {
+    "title": "Progress Analytics",
+    "subtitle": "O'quv jarayoningizni kuzating, andozalarni aniqlang va maqsad IELTS band sari yo'lingizni vizual ko'ring.",
+    "actions": {
+      "downloadReport": "Hisobotni yuklab olish",
+      "viewAllHistory": "To'liq tarixni ko'rish",
+      "openActivity": "Faoliyatni ochish"
+    },
+    "filters": {
+      "last6Tests": "Oxirgi 6 test",
+      "last12Tests": "Oxirgi 12 test"
+    },
+    "summary": {
+      "currentBand": {
+        "label": "Joriy band bahosi"
+      },
+      "targetBand": {
+        "label": "Maqsad band",
+        "meta": "Maqsad"
+      },
+      "practiceSessions": {
+        "label": "Mashg'ulot sessiyalari",
+        "meta": "Jami"
+      },
+      "averageAccuracy": {
+        "label": "O'rtacha aniqlik"
+      }
+    },
+    "charts": {
+      "bandProgress": {
+        "title": "Band natijasi progressi",
+        "subtitle": "So'nggi testlarda taxminiy bandingiz qanday o'zgarganini kuzating.",
+        "tooltip": "Band: {value}",
+        "labels": {
+          "test1": "Test 1",
+          "test2": "Test 2",
+          "test3": "Test 3",
+          "test4": "Test 4",
+          "test5": "Test 5",
+          "test6": "Test 6",
+          "test7": "Test 7",
+          "test8": "Test 8",
+          "test9": "Test 9",
+          "test10": "Test 10",
+          "test11": "Test 11",
+          "recent": "So'nggi"
+        }
+      },
+      "accuracy": {
+        "title": "Aniqlik yaxshilanishi",
+        "tooltip": "Aniqlik: {value}%",
+        "start": "Boshlanish: {value}%",
+        "current": "Hozirgi: {value}%",
+        "labels": {
+          "w1": "W1",
+          "w2": "W2",
+          "w3": "W3",
+          "w4": "W4",
+          "w5": "W5",
+          "w6": "W6"
+        }
+      },
+      "weekly": {
+        "title": "Haftalik o'qish faolligi",
+        "tooltip": "Sessiyalar: {value}",
+        "labels": {
+          "w1": "W1",
+          "w2": "W2",
+          "w3": "W3",
+          "w4": "W4"
+        }
+      }
+    },
+    "modulePerformance": {
+      "title": "Modul bo'yicha natija (%)",
+      "subtitle": "So'nggi mashg'ulotlar asosidagi joriy modul aniqligi."
+    },
+    "insights": {
+      "title": "O'rganish insightlari",
+      "items": {
+        "readingImproved": "Bu oy Reading aniqligi 8% ga oshdi.",
+        "listeningConsistent": "Listening sizning eng barqaror modulingiz.",
+        "writingWeakest": "Writing hali ham eng zaif modul bo'lib qolmoqda.",
+        "band7WritingNote": "Band 7 ni maqsad qilganlar odatda Writing mashqlarini hozirgi sur'atingizdan 2x ko'proq bajaradi."
+      }
+    },
+    "table": {
+      "title": "So'nggi mashg'ulot faoliyati",
+      "columns": {
+        "date": "Sana",
+        "module": "Modul",
+        "questionType": "Savol turi",
+        "accuracy": "Aniqlik",
+        "duration": "Davomiyligi",
+        "action": "Amal"
+      },
+      "dates": {
+        "today1045": "Bugun, 10:45",
+        "yesterday": "Kecha",
+        "oct22": "22 Okt 2023"
+      },
+      "duration": "{value} daq"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "questionTypes": {
+      "matchingHeadings": "Matching Headings",
+      "multipleChoice": "Multiple Choice",
+      "task2Essay": "Task 2: Essay",
+      "noteCompletion": "Note Completion",
+      "trueFalseNotGiven": "True / False / Not Given"
+    },
+    "feedback": {
+      "download": {
+        "title": "Hisobot tayyorlandi",
+        "description": "Hisobot eksporti hozircha simulyatsiya qilingan. Backend ulanishi keyin qo'shiladi."
+      },
+      "unavailable": {
+        "title": "Batafsil ko'rib chiqish tayyor emas",
+        "description": "Bu modul uchun review sahifasi ishlab chiqilmoqda va tez orada qo'shiladi."
+      }
+    }
+  },
+  "studentStudyBank": {
+    "title": "Study Bank",
+    "subtitle": "Fokuslangan takrorlash va mashq uchun saqlangan IELTS savollaringiz.",
+    "actions": {
+      "downloadBank": "Bankni yuklab olish",
+      "practiceAgain": "Qayta mashq qilish",
+      "remove": "O'chirish",
+      "removeFromBank": "Bankdan o'chirish",
+      "goToPractice": "Practicega o'tish",
+      "resetFilters": "Filtrlarni tiklash"
+    },
+    "summary": {
+      "savedQuestions": {
+        "label": "Saqlangan savollar",
+        "support": "yangi"
+      },
+      "modulesCovered": {
+        "label": "Qamrab olingan modullar",
+        "empty": "Modullar yo'q",
+        "speakingPending": "Speaking hali ko'rib chiqilmagan",
+        "allCovered": "Barcha modullar qamrab olingan"
+      },
+      "weakAreaQuestions": {
+        "label": "Zaif yo'nalish savollari",
+        "support": "Ustuvor fokus"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Saqlangan savollarni qidiring...",
+      "module": {
+        "all": "Modul: Barchasi",
+        "reading": "Modul: Reading",
+        "listening": "Modul: Listening",
+        "writing": "Modul: Writing",
+        "speaking": "Modul: Speaking"
+      },
+      "questionType": {
+        "all": "Savol turi: Barcha turlar",
+        "matchingHeadings": "Matching Headings",
+        "trueFalseNotGiven": "True / False / Not Given",
+        "multipleChoice": "Multiple Choice",
+        "sentenceCompletion": "Sentence Completion",
+        "noteCompletion": "Note Completion",
+        "task1Report": "Task 1",
+        "task2Essay": "Task 2"
+      },
+      "difficulty": {
+        "all": "Qiyinlik: Barcha darajalar",
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard"
+      },
+      "sort": {
+        "newest": "Saralash: Eng yangi",
+        "oldest": "Saralash: Eng eski",
+        "difficulty": "Saralash: Qiyinlik",
+        "module": "Saralash: Modul"
+      }
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "questionTypes": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "multipleChoice": "Multiple Choice",
+      "sentenceCompletion": "Sentence Completion",
+      "noteCompletion": "Note Completion",
+      "task1Report": "Task 1",
+      "task2Essay": "Task 2: Essay"
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
+    "savedAgo": {
+      "days3": "3 kun oldin saqlandi",
+      "week1": "1 hafta oldin saqlandi",
+      "weeks2": "2 hafta oldin saqlandi",
+      "days5": "5 kun oldin saqlandi",
+      "days9": "9 kun oldin saqlandi"
+    },
+    "preview": {
+      "title": "Savol preview",
+      "contextTitle": "Savol konteksti",
+      "questionTitle": "Savol",
+      "correctAnswer": "To'g'ri javob",
+      "lastAttempt": "Oxirgi urinish",
+      "explanationTitle": "Izoh",
+      "empty": "Tafsilotlar, javob solishtiruvi va izohni ko'rish uchun saqlangan savolni tanlang."
+    },
+    "suggestedReview": {
+      "title": "Tavsiya etilgan review",
+      "items": {
+        "weakType": "Siz ko'pincha {type} savollarida qiynalasiz. Kutubxonadagi \"keyword scanning\" masterclass'ni ko'rib chiqing.",
+        "band7": "Band 7 ni maqsad qilganlar Sentence Completion va TFNG savollarini 3x ko'proq mashq qiladi."
+      }
+    },
+    "empty": {
+      "all": {
+        "title": "Hozircha saqlangan savollar yo'q",
+        "description": "Practice vaqtida savollarni bookmark qiling va keyin shu yerda takrorlang."
+      },
+      "filtered": {
+        "title": "Joriy filtrlarga mos savollar topilmadi",
+        "description": "Filtrlarni o'zgartiring yoki barcha savollarni ko'rish uchun tiklang."
+      }
+    },
+    "feedback": {
+      "download": {
+        "title": "Study bank tayyorlandi",
+        "description": "Hozircha bank eksporti simulyatsiya qilindi. Backend yuklab olish keyin ulanadi."
+      },
+      "remove": {
+        "title": "Savol o'chirildi",
+        "description": "Savol study bankdan olib tashlandi."
+      }
+    }
+  },
+  "studentAssignments": {
+    "title": "Assignments",
+    "subtitle": "IELTS natijangizni yaxshilash va tayyorgarlikni izchil davom ettirish uchun o'qituvchingiz bergan vazifalar.",
+    "actions": {
+      "myProgress": "Mening progressim",
+      "viewDetails": "Batafsil ko'rish",
+      "submitWork": "Ishni topshirish",
+      "submitLate": "Kech topshirish",
+      "viewFeedback": "Feedbackni ko'rish",
+      "practiceAgain": "Qayta mashq qilish",
+      "updateSubmission": "Topshirishni yangilash",
+      "viewFullCalendar": "To'liq kalendarni ko'rish",
+      "resetFilters": "Filtrlarni tiklash",
+      "goToPractice": "Practicega o'tish"
+    },
+    "summary": {
+      "total": {
+        "label": "Jami",
+        "meta": "Berilgan assignments"
+      },
+      "active": {
+        "label": "Faol",
+        "meta": "Topshirilishi kutilmoqda"
+      },
+      "done": {
+        "label": "Bajarilgan",
+        "meta": "Muvaffaqiyatli topshirilgan"
+      },
+      "missed": {
+        "label": "O'tkazib yuborilgan",
+        "meta": "Muddati o'tgan vazifalar"
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Assignments qidirish...",
+      "toggleSort": "Saralashni almashtirish",
+      "module": {
+        "all": "Modul: Barchasi",
+        "reading": "Modul: Reading",
+        "listening": "Modul: Listening",
+        "writing": "Modul: Writing",
+        "speaking": "Modul: Speaking"
+      },
+      "status": {
+        "all": "Status: Barchasi"
+      },
+      "sort": {
+        "urgent": "Dolzarb",
+        "deadlineAsc": "Deadline (Yaqin)",
+        "deadlineDesc": "Deadline (Uzoq)"
+      }
+    },
+    "status": {
+      "pending": "Kutilmoqda",
+      "submitted": "Topshirilgan",
+      "reviewed": "Ko'rib chiqilgan",
+      "overdue": "Muddati o'tgan"
+    },
+    "urgency": {
+      "dueInDays": "{days} kundan keyin",
+      "lateByDays": "{days} kun kechikkan",
+      "dueToday": "Bugun deadline",
+      "reviewed": "O'qituvchi ko'rib chiqqan"
+    },
+    "list": {
+      "assignedBy": "{name} tomonidan berilgan",
+      "estimatedTime": "Taxminiy {minutes} daqiqa",
+      "assignedDate": "Berilgan sana: {date}"
+    },
+    "meta": {
+      "audioRequired": "Audio talab qilinadi",
+      "essayDraft": "Essay draft talab qilinadi",
+      "timedPractice": "Vaqtli mashq",
+      "speakingRecording": "Ovoz yozuvi talab qilinadi"
+    },
+    "deadlines": {
+      "title": "Yaqin deadline'lar",
+      "empty": "Hozircha yaqin deadline yo'q.",
+      "anytime": "Istalgan vaqtda"
+    },
+    "studyTip": {
+      "title": "Study Tip",
+      "content": "Task 2 yozishda aynan 5 daqiqa reja tuzing. Toza struktura vaqtni tejaydi va coherence'ni oshiradi.",
+      "author": "Sarah J., Senior Tutor"
+    },
+    "empty": {
+      "all": {
+        "title": "Hozircha assignments yo'q",
+        "description": "O'qituvchi bergan vazifalar shu yerda ko'rinadi."
+      },
+      "filtered": {
+        "title": "Joriy filtrlarga mos assignments topilmadi",
+        "description": "Filtrlarni o'zgartiring yoki barchasini ko'rish uchun tiklang."
+      }
+    },
+    "feedback": {
+      "sortChanged": {
+        "title": "Saralash yangilandi",
+        "description": "Assignments endi {sort} bo'yicha saralandi."
+      },
+      "lateSubmission": {
+        "title": "Kech topshirish rejimi",
+        "description": "Bu assignment muddati o'tgan, ammo topshirish hali ochiq."
+      },
+      "submissionOpened": {
+        "title": "Topshirish ochildi",
+        "description": "Oldingi submission yangilash uchun ochildi."
+      }
+    }
+  },
+  "studentAssignmentSubmission": {
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "header": {
+      "assignedBy": "{name} tomonidan berilgan",
+      "anytime": "Istalgan vaqtda topshirish",
+      "remainingDays": "{days} kun qoldi",
+      "overdueDays": "{days} kun kechikkan"
+    },
+    "status": {
+      "pending": "Pending",
+      "submitted": "Topshirilgan",
+      "reviewed": "Ko'rib chiqilgan",
+      "overdue": "Muddati o'tgan"
+    },
+    "instructions": {
+      "title": "Topshiriq ko'rsatmalari",
+      "teacherNote": "O'qituvchi eslatmasi"
+    },
+    "content": {
+      "instructions": {
+        "writingDefault": "Javobni IELTS formatida yozing va kirishdan xulosagacha aniq strukturani saqlang.",
+        "speakingDefault": "Javobingizni ravon yozib oling, keyin fluency va coherence bo'yicha qisqa self-review yozing.",
+        "questionSetDefault": "Berilgan savollar to'plamini yakunlang va noaniq savollarda distractorlarni qanday chiqarib tashlaganingizni ko'rsating.",
+        "writingTechEssay": "Ba'zilar texnologiya muloqotni yaxshilaydi deb hisoblaydi, boshqalar esa u real insoniy aloqani kamaytiradi deydi. Ikkala qarashni muhokama qiling va o'z fikringizni bildiring.",
+        "writingTask1Report": "Diagrammadagi asosiy trendlarni yoritib bering. Asosiy xususiyatlarni tanlab, muhim taqqoslashlarni keltiring.",
+        "speakingMock": "Speaking Part 2: O'quv maqsadlaringizga ilhom bergan inson haqida gapiring.",
+        "speakingJournal": "Bu haftadagi learning progress haqida qisqa fluency journal yozib oling va bitta aniq yaxshilanishni ayting.",
+        "readingMatchingHeadings": "Har bir paragrafga mos headingni toping va qolgan variantlar nega mos emasligini izohlang.",
+        "readingTfng": "True / False / Not Given savollariga javob bering va qaysi gaplar qo'llab-quvvatlanganini, inkor qilinganini yoki qo'llab-quvvatlanmaganini tushuntiring.",
+        "listeningSection4": "Section 4 javoblarini yakunlang va audioda distractorlar qayerda bo'lganini qisqa yozib topshiring.",
+        "listeningNoteCompletion": "Note completion bo'shliqlarini audioga mos aniq so'zlar bilan to'ldiring va spelling/pluralni tekshiring.",
+        "vocabularyMixed": "Vocabulary mini-quizni yakunlang va hali ham adashayotgan collocationlaringiz haqida qisqa reflection yozing."
+      },
+      "teacherNotes": {
+        "writingDefault": "Coherencega e'tibor bering va bir xil gap strukturasi takrorlanishini kamaytiring.",
+        "speakingDefault": "Tezlikdan ko'ra tabiiy gapirishga ustuvorlik bering. G'oyalarni bog'lab boring.",
+        "questionSetDefault": "Avval aniqlik. Noaniq savollarni belgilang va submissiondan oldin instruction keywordlarni qayta tekshiring.",
+        "writingTechEssay": "Aniq struktura va kuchli misollarga e'tibor qarating.",
+        "writingTask1Report": "Shaxsiy fikr qo'shmang. Overview qisqa va data-markazli bo'lsin.",
+        "speakingMock": "Bitta aniq voqeani tanlang va har nuqtani yetarli detail bilan kengaytiring.",
+        "speakingJournal": "Filler so'zlar va pauzalarni kuzating. G'oyalar orasida silliq o'tishni maqsad qiling.",
+        "readingMatchingHeadings": "Avval markaziy g'oyani toping, keyin headingni moslang.",
+        "readingTfng": "Matndan tashqari xulosa qilmang. Dalil bo'lmasa Not Given tanlang.",
+        "listeningSection4": "Javob o'zgarishini ko'rsatuvchi signpost languagega e'tibor bering.",
+        "listeningNoteCompletion": "Topshirishdan oldin spelling va plural qo'shimchalarni tekshiring.",
+        "vocabularyMixed": "Readingda ko'p adashayotgan academic collocationlarga ustuvorlik bering."
+      }
+    },
+    "workspace": {
+      "typeTitles": {
+        "writing": "Sizning javobingiz",
+        "speaking": "Speaking submission",
+        "questionSet": "Savollar to'plami javoblari",
+        "mixed": "Aralash submission maydoni"
+      },
+      "writing": {
+        "wordCount": "So'z soni: {count}",
+        "goal": "Maqsad: {min}-{max} so'z",
+        "placeholderTask2": "Task 2 javobingizni shu yerga yozing...",
+        "placeholderTask1": "Task 1 reportingizni shu yerga yozing..."
+      },
+      "speaking": {
+        "prompt": "Speaking prompt",
+        "start": "Yozishni boshlash",
+        "stop": "To'xtatish",
+        "replay": "Qayta eshitish",
+        "uploadAudio": "Audio yuklash",
+        "recordingTime": "Yozilgan vaqt: {time}",
+        "recordingLimit": "Limit: {time}",
+        "defaultPrompt": "Yaqinda duch kelgan o'quv qiyinchiligingiz va uni qanday hal qilganingiz haqida gapiring.",
+        "notesPlaceholder": "Pronunciation, fluency va grammar bo'yicha self-review izohlarini yozing...",
+        "prompts": {
+          "mockPart2": "Academic o'sishingizga ilhom bergan inson haqida gapiring. U kimligi, nima qilgani va nega sizga ta'sir qilganini tushuntiring.",
+          "fluencyJournal": "Shu haftadagi bitta speaking mashg'ulotida nutqingiz qanday ravonlashganini ayting. Nima o'zgargani va keyin nima takrorlashingizni qo'shing."
+        },
+        "checklist": {
+          "intro": "Aniq bir jumlalik kirish bilan boshlang.",
+          "examples": "Har asosiy fikrga bitta aniq misol qo'shing.",
+          "closing": "Qisqa va aniq yakuniy jumla bilan tugating.",
+          "transition": "G'oyalar orasida transition iboralar ishlating.",
+          "selfReview": "Bitta zaif nuqta va bitta yaxshilash maqsadini ayting."
+        }
+      },
+      "questionSet": {
+        "progress": "{total} tadan {answered} tasi javoblangan",
+        "defaults": {
+          "q1Prompt": "Matn/audiodagi bitta asosiy fikrni o'z so'zlaringiz bilan yozing.",
+          "q2Prompt": "Asosiy fikr uchun eng to'g'ri javobni tanlang.",
+          "q3Prompt": "Gapni ko'pi bilan ikki so'z bilan to'ldiring.",
+          "shortAnswerPlaceholder": "Javobni yozing...",
+          "sentencePlaceholder": "Gapni to'ldiring...",
+          "options": {
+            "a": "Variant A",
+            "b": "Variant B",
+            "c": "Variant C",
+            "d": "Variant D"
+          }
+        },
+        "matchingHeadings": {
+          "q1Prompt": "A paragrafga qaysi heading mos?",
+          "q2Prompt": "B paragrafga qaysi heading mos?",
+          "q3Prompt": "C paragrafga qaysi heading mos?",
+          "q4Prompt": "Oxirgi bo'lib qaysi headingni chiqarib tashladingiz va nega?",
+          "headingPlaceholder": "Heading raqamini kiriting (masalan, iii)...",
+          "eliminationPlaceholder": "Bitta chiqarib tashlash sababini yozing..."
+        },
+        "tfng": {
+          "q1Prompt": "Yangi siyosat barcha bo'limlarda qo'llanildi.",
+          "q2Prompt": "Tadqiqotchilar natijalarda uzoq muddatli pasayishni tasdiqladi.",
+          "q3Prompt": "Ishtirokchilarga vazifadan oldin yozma ko'rsatma berildi.",
+          "options": {
+            "true": "True",
+            "false": "False",
+            "notGiven": "Not Given"
+          }
+        },
+        "listeningNotes": {
+          "q1Prompt": "1-noteni to'ldiring (ko'pi bilan 2 so'z).",
+          "q2Prompt": "2-noteni to'ldiring (ko'pi bilan 2 so'z).",
+          "q3Prompt": "3-noteni to'ldiring (ko'pi bilan 2 so'z).",
+          "answerPlaceholder": "Audiodagi aniq so'z(lar)ni kiriting..."
+        }
+      },
+      "mixed": {
+        "reflectionPlaceholder": "Qilgan xatolaringiz va keyingi yaxshilash rejasi haqida qisqa reflection yozing.",
+        "questions": {
+          "q1Prompt": "Qaysi collocation kontekstga eng mos?",
+          "q2Prompt": "Tanlagan collocation bilan bitta gap yozing.",
+          "q3Prompt": "Gapni bitta academic linker bilan to'ldiring.",
+          "shortPlaceholder": "Gapingizni yozing...",
+          "sentencePlaceholder": "Mos linkerni kiriting...",
+          "options": {
+            "a": "Take responsibility",
+            "b": "Do a progress",
+            "c": "Make a discussion"
+          }
+        }
+      }
+    },
+    "attachments": {
+      "title": "Fayl biriktirish",
+      "dropzone": "Fayllarni tashlang yoki tanlash uchun bosing",
+      "helper": "Maksimum {count} ta fayl, har biri {size}MB gacha",
+      "uploadButton": "Fayl yuklash",
+      "empty": "Hali fayl yuklanmagan.",
+      "fileSize": "{size} KB"
+    },
+    "quickTips": {
+      "title": "Tezkor tavsiyalar"
+    },
+    "tips": {
+      "writing": {
+        "1": "Yakuniy fikrni aytishdan oldin vazifaning ikkala tomonini ham yoritib bering.",
+        "2": "Coherence uchun formal linking phrase'lardan foydalaning.",
+        "3": "Har paragrafda bitta aniq supporting idea bo'lsin."
+      },
+      "speaking": {
+        "1": "Misollardan oldin qisqa kirish bilan boshlang.",
+        "2": "Shoshmasdan tabiiy transitionlar ishlating.",
+        "3": "Murakkablikdan ko'ra ravonlik va aniqlikka e'tibor bering."
+      },
+      "questionSet": {
+        "1": "Javobdan oldin instruction keyword va word limitni tekshiring.",
+        "2": "Qotib qolgan savolni o'tkazib, keyin qayting.",
+        "3": "Bir xil xatoni takrorlamaslik uchun distractorlarni tahlil qiling."
+      },
+      "mixed": {
+        "1": "Avval objective savollarni tugating, keyin reflection yozing.",
+        "2": "Reflectionda bitta aniq misol keltiring.",
+        "3": "Topshirishdan oldin spelling va collocationni tekshiring."
+      }
+    },
+    "support": {
+      "title": "Submission checklist",
+      "item1": "Instructions va teacher note'ni yana bir marta ko'rib chiqing.",
+      "item2": "Eng kuchli dalil/misolingiz kiritilganini tekshiring.",
+      "item3": "Aniqlik va format bo'yicha yakuniy tekshiruv qiling."
+    },
+    "actions": {
+      "cancel": "Bekor qilish",
+      "saveDraft": "Draft saqlash",
+      "submit": "Topshiriqni yuborish",
+      "backToAssignments": "Assignments ga qaytish"
+    },
+    "footer": {
+      "notSavedYet": "Draft hali saqlanmagan",
+      "lastSaved": "Oxirgi saqlangan vaqt: {date}"
+    },
+    "validation": {
+      "missingSubmission": "Bu topshiriq uchun submission template hali tayyor emas.",
+      "writing": "Topshirishdan oldin kamida {min} so'z yozing.",
+      "speaking": "Topshirishdan oldin audio yozing yoki yuklang.",
+      "questionSet": "Topshirishdan oldin kamida {min} ta savolga javob bering.",
+      "mixedWriting": "Reflection bo'limida kamida {min} so'z yozing.",
+      "mixedQuestions": "Kamida {min} ta savol javobini to'ldiring."
+    },
+    "confirm": {
+      "cancelWithChanges": "Saqlanmagan o'zgarishlar bor. Shunga qaramay chiqilsinmi?"
+    },
+    "empty": {
+      "notFound": {
+        "title": "Topshiriq topilmadi",
+        "description": "Bu topshiriq o'chirilgan bo'lishi yoki joriy ko'rinishda mavjud bo'lmasligi mumkin."
+      }
+    },
+    "feedback": {
+      "recordingLimit": {
+        "title": "Yozuv to'xtatildi",
+        "description": "Yozuv uchun maksimal vaqt tugadi."
+      },
+      "maxFiles": {
+        "title": "Yuklash limiti to'ldi",
+        "description": "Bu topshiriq uchun ko'pi bilan {count} ta fayl yuklashingiz mumkin."
+      },
+      "fileType": {
+        "title": "Fayl turi mos emas",
+        "description": "Topshiriq uchun ruxsat etilgan fayl turini yuklang."
+      },
+      "fileSize": {
+        "title": "Fayl hajmi katta",
+        "description": "Har bir fayl {size}MB dan kichik bo'lishi kerak."
+      },
+      "upload": {
+        "title": "Fayllar yuklandi",
+        "description": "{count} ta fayl submissionga qo'shildi."
+      },
+      "fileRemoved": {
+        "title": "Fayl olib tashlandi",
+        "description": "Tanlangan fayl draftdan olib tashlandi."
+      },
+      "draftSaved": {
+        "title": "Draft saqlandi",
+        "description": "Topshiriq drafti lokal tarzda saqlandi."
+      },
+      "submitFailed": {
+        "title": "Submission to'liq emas"
+      },
+      "submitSuccess": {
+        "title": "Topshiriq yuborildi",
+        "description": "Submission muvaffaqiyatli yuborildi."
+      },
+      "replayEmpty": {
+        "title": "Yozuv mavjud emas",
+        "description": "Qayta eshitishdan oldin audio yozing yoki yuklang."
+      },
+      "replay": {
+        "title": "Replay ochildi",
+        "description": "Bu prototipda audio replay simulyatsiya qilingan."
+      }
+    }
+  },
+  "studentTeacherFeedback": {
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "assignmentTypes": {
+      "writing": "Writing Task",
+      "speaking": "Speaking Task",
+      "questionSet": "Question Set",
+      "mixed": "Mixed Assignment"
+    },
+    "status": {
+      "reviewed": "Ko'rib chiqilgan"
+    },
+    "meta": {
+      "teacher": "O'qituvchi: {name}",
+      "submitted": "Topshirilgan: {time}",
+      "reviewed": "Tekshirilgan: {time}",
+      "dateRange": "Topshirilgan {submittedDate} - Tekshirilgan {reviewedDate}"
+    },
+    "time": {
+      "today": "Bugun",
+      "yesterday": "Kecha",
+      "days2": "2 kun oldin",
+      "days3": "3 kun oldin",
+      "days5": "5 kun oldin",
+      "week1": "1 hafta oldin"
+    },
+    "actions": {
+      "downloadPdf": "PDF yuklash",
+      "viewAnalytics": "Analytics ko'rish",
+      "viewFullSubmission": "To'liq submissionni ko'rish",
+      "hideFullSubmission": "To'liq submissionni yashirish",
+      "backToAssignments": "Assignments ga qaytish",
+      "goToDashboard": "Dashboardga o'tish"
+    },
+    "cards": {
+      "assessment": {
+        "title": "Teacher Assessment",
+        "bandLabel": "Band"
+      },
+      "detailedFeedback": {
+        "title": "Detailed Teacher Feedback"
+      },
+      "submissionSummary": {
+        "title": "Assignment Summary",
+        "promptLabel": "Assignment prompt",
+        "submissionLabel": "Sizning submission",
+        "wordCount": "So'z soni: {count}"
+      },
+      "criteria": {
+        "title": "Criteria Breakdown"
+      },
+      "nextSteps": {
+        "title": "Tavsiya etilgan keyingi qadamlar"
+      },
+      "coachNote": {
+        "title": "Coach eslatmasi",
+        "description": "Bu xulosalarni keyingi fokus sessiyangizda qo'llang va feedbackni aniq ball o'sishiga aylantiring."
+      }
+    },
+    "criteria": {
+      "taskResponse": "Task Response",
+      "coherenceCohesion": "Coherence & Cohesion",
+      "lexicalResource": "Lexical Resource",
+      "grammaticalRange": "Grammatical Range",
+      "accuracy": "Aniqlik",
+      "strategyUse": "Strategiya qo'llash",
+      "paraphraseControl": "Paraphrase nazorati",
+      "timeManagement": "Vaqt boshqaruvi"
+    },
+    "entries": {
+      "writingTech": {
+        "assessment": "Essayingiz promptni yaxshi tushungan va aniq pozitsiyani saqlagan. Ballni hozircha cheklayotgan jihat - body paragraphlarda grammatik strukturalarning takrorlanishi va lexical variety ning nisbatan torligi. Transitionlarni kuchaytirish va so'z boyligini kengaytirish bu javobni Band 7.0 ga yaqinlashtiradi.",
+        "prompt": "Ba'zilar texnologiya muloqotni yaxshilaydi deb hisoblaydi, boshqalar esa u real insoniy aloqani kamaytiradi deydi. Ikkala qarashni muhokama qiling va o'z fikringizni bildiring.",
+        "preview": "Hozirgi davrda texnologiyaning jadal rivojlanishi odamlarning muloqot uslubini tubdan o'zgartirdi. Raqamli vositalar tezlik va qulaylikni oshirsa-da, ular ayrim holatlarda mazmunli yuzma-yuz muloqotni kamaytirishi mumkin...",
+        "fullSubmission": "Hozirgi davrda texnologiyaning jadal rivojlanishi odamlarning muloqot uslubini tubdan o'zgartirdi. Ko'pchilik bu jarayonni samaradorlik va imkoniyatlar oshishi bilan bog'lasa, boshqalar buning natijasida insoniy aloqalar chuqurligi susayishini ta'kidlaydi. Ushbu esse ikkala qarashni muhokama qiladi va yakunda shaxsiy fikrimni bildiradi.\n\nBirinchidan, texnologiya muloqot samaradorligini oshiradi. Tezkor xabar almashish, videoqo'ng'iroqlar va onlayn hamkorlik platformalari uzoq masofadagi odamlarni birlashtiradi. Akademik va ish muhitida bu qaror qabul qilishni tezlashtiradi va vaqt yo'qotilishini kamaytiradi. Masalan, xalqaro jamoalar bir loyihani real vaqtda boshqara oladi.\n\nBiroq, raqamli aloqaning ortishi yuzma-yuz suhbat sifatiga salbiy ta'sir qilishi mumkin. Matnli yozishmalar ko'pincha qisqa va hissiy jihatdan kamroq ifodali bo'ladi. Ijtimoiy tarmoqlardan ortiqcha foydalanish esa chuqur munosabatlar o'rniga yuzaki aloqalarni ko'paytiradi.\n\nMening fikrimcha, muammo texnologiyaning o'zida emas, undan qanday foydalanilishida. Agar odamlar raqamli qulaylikni ongli ravishda real muloqot bilan muvozanatlashtirsa, texnologiya munosabatlarni zaiflashtirmaydi, aksincha kuchaytiradi.\n\nXulosa qilib aytganda, texnologiya muloqot tezligi va imkoniyatlarini oshiradi, lekin nazoratsiz foydalanilganda ijtimoiy chuqurlikni kamaytirishi mumkin. Shuning uchun muvozanatli yondashuv zarur.",
+        "criteriaNote": "Mezonlar IELTS Writing band descriptorlariga asoslangan.",
+        "sections": {
+          "introThesis": {
+            "title": "Introduction & Thesis",
+            "feedback": "Parafraza aniq va thesis ikki qarashni ham to'g'ri ochib beradi. Kirish qismi vazifaga mos hamda coherent.",
+            "highlight": "Birinchi ikki jumlada bitta kuchliroq academic synonym qo'llab lexical range ni oshiring."
+          },
+          "bodyPositive": {
+            "title": "Body Paragraph 1: Positive Impacts",
+            "feedback": "Kommunikatsiya samaradorligi bo'yicha argument mantiqli va misol mos tanlangan. Paragraf ichidagi fikr oqimi yaxshi.",
+            "highlight": "Ijtimoiy inklyuziya (masalan, chekka hududlar) bo'yicha bitta qo'shimcha gap qo'shsangiz tahlil chuqurlashadi."
+          },
+          "bodyNegative": {
+            "title": "Body Paragraph 2: Negative Impacts",
+            "feedback": "Salbiy tomon aniq ko'rsatilgan va paragraf mavzudan chiqmagan. Online aloqa va yolg'izlik orasidagi taqqoslash yaxshi ishlagan.",
+            "highlight": "\"can + verb\" kabi sodda strukturalarni kamaytiring. Kamida bitta murakkab subordinatsiyali gap qo'shing."
+          },
+          "conclusion": {
+            "title": "Conclusion",
+            "feedback": "Xulosa qisqa, muvozanatli va pozitsiyangiz bilan mos. Yangi g'oya kiritmasdan asosiy fikrlarni to'g'ri yakunlagansiz."
+          },
+          "vocabularyGrammar": {
+            "title": "Vocabulary & Grammar Notes",
+            "feedback": "So'z tanlovi asosan to'g'ri, lekin ayrim lexical birliklar paragrafdan paragrafga takrorlangan. Sodda grammar nazorati yaxshi, murakkab variatsiya esa hali cheklangan.",
+            "highlight": "Keyingi draftda kamida 4 ta takrorlangan yuqori chastotali so'zni aniq academic alternativalar bilan almashtiring."
+          }
+        },
+        "actions": {
+          "practiceSimilarTask": {
+            "title": "O'xshash taskni mashq qilish",
+            "description": "Muvozanatli argument strukturasi bilan discussion essay ni qayta bajaring.",
+            "cta": "Practice boshlash"
+          },
+          "reviewMistakes": {
+            "title": "Xatolarni ko'rib chiqish",
+            "description": "So'nggi zaif yo'nalishlar va error patternlarni qayta ko'ring.",
+            "cta": "Mistake Analysis ni ochish"
+          },
+          "openAiCoach": {
+            "title": "AI Coach ni ochish",
+            "description": "Keyingi sessiya uchun shaxsiy plan oling.",
+            "cta": "AI Coach ni ochish"
+          }
+        }
+      },
+      "readingMatching": {
+        "assessment": "Matching headings strategiyasida jarayon nazorati yaxshilanmoqda, ayniqsa elimination qadamlarida. Paraphrase nozik bo'lganda aniqlik hali pasayadi. Paraphrase aniqlash va qaror tezligini davomli mashq qiling.",
+        "prompt": "Matching Headings to'plamini qayta bajaring va nega chiqarib tashlangan variantlar noto'g'ri ekanini belgilang.",
+        "preview": "A paragraf uchun iv ni tanladim, chunki unda qisqa muddatli iqtisodiy foydadan ko'ra uzoq muddatli ekologik ta'sir yoritilgan...",
+        "fullSubmission": "Paragraph A - Heading iv: Paragraf uzoq muddatli ekologik oqibatlarni asosiy g'oya qiladi.\nParagraph B - Heading i: Siyosatdagi o'zgarish va amalga oshirishdagi to'siqlar markaziy fikr.\nParagraph C - Heading vi: Ilmiy konsensus bo'lsa ham jamoatchilik qarshiligi ustuvor mavzu.\nElimination note: iii ni chiqarib tashladim, chunki u faqat bitta kichik detalga asoslangan va paragrafning umumiy fikrini bermaydi.",
+        "criteriaNote": "Reading feedback mezonlari task strategiyasi va aniqlik ko'rsatkichlari asosida tuzilgan.",
+        "sections": {
+          "instructionControl": {
+            "title": "Instruction Control",
+            "feedback": "Task instruktsiyalariga to'g'ri amal qilgansiz va javob formatini barqaror saqlagansiz."
+          },
+          "eliminationProcess": {
+            "title": "Elimination Process",
+            "feedback": "Elimination izohlaringiz avvalgiga nisbatan aniqroq va distractorlarni chiqarib tashlash sabablari kuchliroq.",
+            "highlight": "Har javobdan keyin bitta qisqa elimination sababi yozish ikkilanishni kamaytiradi."
+          },
+          "paraphraseRecognition": {
+            "title": "Paraphrase Recognition",
+            "feedback": "Nozik qayta ifodalashlarda siz hali ham surface keyword matchingga tayanib qolasiz. Avval central ideani topib, keyin variantlarni solishtiring."
+          }
+        },
+        "actions": {
+          "runReadingDrill": {
+            "title": "Reading drill ishga tushirish",
+            "description": "Matching headings bo'yicha fokus speed set bajaring.",
+            "cta": "Drill boshlash"
+          },
+          "openCoachPlan": {
+            "title": "Coach planini ochish",
+            "description": "Paraphrase aniqlash bo'yicha target plan oling.",
+            "cta": "Planni ko'rish"
+          }
+        }
+      }
+    },
+    "feedback": {
+      "download": {
+        "title": "Hisobot tayyorlandi",
+        "description": "PDF export bu prototipda simulyatsiya qilingan."
+      },
+      "action": {
+        "title": "Amal ochildi",
+        "description": "Bu amal hozircha placeholder flow bilan ulangan."
+      }
+    },
+    "empty": {
+      "notFound": {
+        "title": "Feedback topilmadi",
+        "description": "Ushbu assignment uchun feedback hozircha mavjud emas."
+      },
+      "awaitingReview": {
+        "title": "Review jarayonda",
+        "description": "O'qituvchi hali batafsil feedbackni e'lon qilmagan. Keyinroq qayta tekshiring."
+      }
+    }
+  },
+  "studentAiCoach": {
+    "title": "AI Learning Coach",
+    "subtitle": "IELTS natijangizni yaxshilash uchun shaxsiy AI yordamchingiz.",
+    "summary": {
+      "estimatedBand": {
+        "label": "Taxminiy band"
+      },
+      "targetBand": {
+        "label": "Maqsad band",
+        "meta": "Maqsad"
+      },
+      "strongestModule": {
+        "label": "Eng kuchli modul"
+      },
+      "weakestModule": {
+        "label": "Eng zaif modul"
+      }
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "questionTypes": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "TFNG (True/False/NG)",
+      "multipleChoice": "Multiple Choice",
+      "sentenceCompletion": "Sentence Completion"
+    },
+    "chat": {
+      "title": "IELTS Tutor AI",
+      "history": "Tarix",
+      "tryPracticeDrill": "Practice Drillni boshlash",
+      "explainMore": "Batafsil tushuntir",
+      "inputPlaceholder": "AI Coach'ga istalgan savolni yozing...",
+      "send": "Yuborish",
+      "attachWriting": "Writing biriktirish",
+      "clearChat": "Chatni tozalash",
+      "explainMoreLead": "Rejani chuqurlashtiramiz: avval {weakestType} ga e'tibor bering, keyin {strongestType} bilan mustahkamlang.",
+      "explainMoreStep1": "1. Har bir mashqdan keyin qisqa xato jurnali tuzing.",
+      "explainMoreStep2": "2. Avval faqat xatolarni tahlil qiling, keyin notesiz qayta yeching.",
+      "explainMoreStep3": "3. Har sessiyani eng kuchli yo'nalishdagi bitta confidence drill bilan yakunlang."
+    },
+    "accuracyByType": {
+      "title": "Savol turi bo'yicha aniqlik",
+      "note": "AI tahlili Band 7.0 ga yaqinlashish uchun \"{type}\"ga e'tibor qaratishni tavsiya qiladi."
+    },
+    "studyStrategy": {
+      "title": "O'qish strategiyasi",
+      "items": {
+        "dailyReadingRhythm": {
+          "title": "Daily Reading Rhythm",
+          "description": "Staminani oshirish uchun har tong 20 daqiqa Reading mashq qiling."
+        },
+        "writingTaskFeedback": {
+          "title": "Writing Task 2 Feedback",
+          "description": "Bugun 1 ta essay topshiring. Grammar natijangiz odatdagidan biroz past."
+        },
+        "consolidateStrengths": {
+          "title": "Consolidate Strengths",
+          "description": "Listening aniqligini ushlab turish uchun haftasiga 1 ta Section 4 drill bajaring."
+        }
+      }
+    },
+    "recommended": {
+      "title": "Siz uchun tavsiya etiladi",
+      "tags": {
+        "reading": "Reading",
+        "writing": "Writing",
+        "listening": "Listening",
+        "studyBank": "Study Bank"
+      },
+      "items": {
+        "practiceMatchingHeadings": {
+          "title": "Matching Headings mashqi",
+          "description": "Paragraf asosiy g'oyasini aniqlash va headinglarni chiqarib tashlash bo'yicha fokus drill bajaring.",
+          "cta": "Mashqni boshlash"
+        },
+        "focusTask2Structure": {
+          "title": "Writing Task 2 strukturasi",
+          "description": "Aniq thesis va dalilga asoslangan 2 ta body paragraph bilan coherence'ni yaxshilang.",
+          "cta": "Strategiyani ko'rish"
+        },
+        "reviewTfngStrategy": {
+          "title": "TFNG strategiyasini ko'rib chiqish",
+          "description": "Readingda contradiction va missing information farqini mashq qiling.",
+          "cta": "Hozir ko'rish"
+        },
+        "revisitStudyBank": {
+          "title": "Saqlangan savollarni qayta ko'rish",
+          "description": "Yangi testdan oldin weak-area bookmark savollarini qayta ishlang.",
+          "cta": "Study Bankni ochish"
+        }
+      }
+    },
+    "feedback": {
+      "clear": {
+        "title": "Chat tozalandi",
+        "description": "Suhbat tarixi so'nggi coach baseline holatiga qaytarildi."
+      },
+      "attach": {
+        "title": "Writing biriktirildi",
+        "description": "Biriktirish hozircha simulyatsiya qilindi. AI writing review keyin ulanadi."
+      },
+      "history": {
+        "title": "Tarix paneli",
+        "description": "Backend history yoqilganda saqlangan coach sessiyalari shu yerda ko'rinadi."
+      },
+      "strategy": {
+        "title": "Strategiya ochildi",
+        "description": "Bu amal uchun batafsil coach workflow tayyorlanmoqda."
+      },
+      "recommendation": {
+        "title": "Tavsiya ochildi",
+        "description": "Bu tavsiya keyingi iteratsiyada alohida oqimga ulanadi."
+      }
+    }
+  },
+  "studentMessages": {
+    "title": "Teacher bilan Messages",
+    "subtitle": "Teacher bilan doimiy aloqada bo'ling, savollar bering va assignment bo'yicha aniq yo'nalishlarni bitta focused workspace'da kuzating.",
+    "labels": {
+      "teacherRole": "IELTS Instructor"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "mobile": {
+      "tabs": {
+        "conversations": "Suhbatlar",
+        "chat": "Chat",
+        "teacher": "Teacher info"
+      }
+    },
+    "topics": {
+      "writingFeedback": "Writing feedback",
+      "listeningStrategy": "Listening strategiya",
+      "readingWeakArea": "Reading weak area"
+    },
+    "conversations": {
+      "title": "Suhbatlar",
+      "searchPlaceholder": "Suhbatlarni qidiring...",
+      "unreadCount": "{count} ta unread",
+      "empty": "Qidiruv bo'yicha suhbat topilmadi.",
+      "emptyPreview": "Hali xabar yo'q.",
+      "clearedPreview": "Chat tozalandi. Yangi xabar yuboring."
+    },
+    "chat": {
+      "selectConversation": "Xabarlarni ko'rish uchun suhbatni tanlang.",
+      "empty": "Bu suhbatda hali xabar yo'q.",
+      "attachmentSize": "{size} KB",
+      "actions": {
+        "viewProfile": "Profilni ko'rish",
+        "openAssignments": "Assignments ochish",
+        "clearChat": "Chatni tozalash"
+      }
+    },
+    "composer": {
+      "placeholder": "Teacherga xabar yozing...",
+      "send": "Yuborish",
+      "attach": "Biriktirish",
+      "attachEssay": "Essay biriktirish",
+      "attachScreenshot": "Screenshot biriktirish",
+      "attachAudio": "Audio biriktirish",
+      "removeAttachment": "Biriktirmani olib tashlash",
+      "attachmentOnlyMessage": "Biriktirma yuborildi.",
+      "attachmentPreview": "Biriktirma yuborildi"
+    },
+    "teacherInfo": {
+      "title": "Teacher info",
+      "students": "Studentlar",
+      "reviewsCompleted": "Yakunlangan reviewlar",
+      "recentAssignments": "So'nggi assignments",
+      "noAssignments": "Bu suhbatga bog'langan assignment yo'q.",
+      "empty": "Teacher ma'lumotlarini ko'rish uchun suhbatni tanlang.",
+      "actions": {
+        "viewProfile": "Teacher profilini ko'rish",
+        "sendAssignment": "Assignment yuborish",
+        "scheduleSession": "Session rejalash"
+      }
+    },
+    "context": {
+      "title": "Suhbat konteksti",
+      "description": "Bu thread orqali feedbackni aniqlashtiring, keyingi qadamlarni kelishib oling va assignment follow-up jarayonini boshqaring.",
+      "connectedAssignments": "{count} ta bog'langan assignment"
+    },
+    "relative": {
+      "justNow": "Hozirgina",
+      "minutesAgo": "{value}m oldin",
+      "hoursAgo": "{value}h oldin",
+      "yesterday": "Kecha",
+      "daysAgo": "{value} kun oldin"
+    },
+    "teacherProfiles": {
+      "sarah": {
+        "role": "IELTS Writing Specialist",
+        "expertise": "Argument strukturasi, lexical range va writing'da band oshirish strategiyalariga e'tibor beradi."
+      },
+      "david": {
+        "role": "IELTS Listening & Speaking Mentor",
+        "expertise": "Note completion aniqligi, fluency nazorati va speaking confidence bo'yicha yordam beradi."
+      }
+    },
+    "seed": {
+      "previews": {
+        "sarahWriting": "Ikkinchi body paragraphni kuchaytiring va bitta kuchliroq misol qo'shing.",
+        "davidListening": "Note completion gaplarini to'ldirishdan oldin signpost so'zlarga e'tibor qarating.",
+        "sarahReading": "Elimination logikangiz yaxshilangan. Paraphrase aniqlashni davom ettiring."
+      },
+      "messages": {
+        "msg1": "So'nggi essayingiz yaxshi. Thesis aniq, lekin ikkinchi paragrafda dalillar chuqurroq bo'lishi kerak.",
+        "msg2": "Rahmat. Avval academic misollarni kuchaytiraymi yoki transitionlarni yaxshilaymi?",
+        "msg3": "Avval misollarni kuchaytiring. Keyin yakuniy tahrirda transitionlarni yangilang.",
+        "msg4": "Section 4 attemptni ko'rdim. Asosiy muammo - birinchi distractordan keyin shoshilish.",
+        "msg5": "Tushunarli. Har javobni yozishdan oldin bir soniya pauza qilaman.",
+        "msg6": "Ajoyib. Note completionda plural qo'shimchalarga ham e'tibor bering.",
+        "msg7": "Matching headings natijangiz yaxshilangan, ammo siz hali ham keyword matchingga ortiqcha tayanayapsiz.",
+        "msg8": "Variantlarga qarashdan oldin har paragrafning markaziy g'oyasini aniqlashni sinab ko'ring."
+      }
+    },
+    "feedback": {
+      "sent": {
+        "title": "Xabar yuborildi",
+        "description": "Xabaringiz suhbatga qo'shildi."
+      },
+      "attachmentAdded": {
+        "title": "Biriktirma qo'shildi",
+        "description": "{name} yuborishga tayyor."
+      },
+      "attachLimit": {
+        "title": "Biriktirma limiti tugadi",
+        "description": "Bitta xabarda ko'pi bilan 3 ta fayl biriktira olasiz."
+      },
+      "profile": {
+        "title": "Profil amali",
+        "description": "{teacher} uchun profil ochish bu prototipda simulyatsiya qilingan."
+      },
+      "schedule": {
+        "title": "Session so'rovi yuborildi",
+        "description": "Session rejalash oqimi keyingi backend bosqichida ulanadi."
+      },
+      "clear": {
+        "title": "Chat tozalandi",
+        "description": "Ushbu thread bo'yicha xabarlar tarixi tozalandi."
+      }
     }
   },
   "teacherProfile": {
