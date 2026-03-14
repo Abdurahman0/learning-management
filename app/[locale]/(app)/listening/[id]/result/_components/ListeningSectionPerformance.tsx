@@ -20,24 +20,24 @@ type ListeningSectionPerformanceProps = {
 function getTone(percent: number) {
   if (percent >= 75) {
     return {
-      card: "border-emerald-400/20 bg-emerald-500/[0.06]",
-      bar: "bg-emerald-400/85",
-      value: "text-emerald-200",
+      card: "border-emerald-200 bg-emerald-50 dark:border-emerald-400/20 dark:bg-emerald-500/[0.06]",
+      bar: "bg-emerald-500 dark:bg-emerald-400/85",
+      value: "text-emerald-700 dark:text-emerald-200",
     };
   }
 
   if (percent >= 45) {
     return {
-      card: "border-blue-400/20 bg-blue-500/[0.06]",
-      bar: "bg-blue-400/85",
-      value: "text-blue-200",
+      card: "border-blue-200 bg-blue-50 dark:border-blue-400/20 dark:bg-blue-500/[0.06]",
+      bar: "bg-blue-500 dark:bg-blue-400/85",
+      value: "text-blue-700 dark:text-blue-200",
     };
   }
 
   return {
-    card: "border-rose-400/25 bg-rose-500/[0.07]",
-    bar: "bg-rose-400/85",
-    value: "text-rose-200",
+    card: "border-rose-200 bg-rose-50 dark:border-rose-400/25 dark:bg-rose-500/[0.07]",
+    bar: "bg-rose-500 dark:bg-rose-400/85",
+    value: "text-rose-700 dark:text-rose-200",
   };
 }
 
@@ -47,7 +47,7 @@ export function ListeningSectionPerformance({ items }: ListeningSectionPerforman
   if (!items.length) return null;
 
   return (
-    <Card className="gap-4 rounded-3xl border-border/75 bg-card/75 p-4 shadow-none sm:p-5">
+    <Card className="gap-4 rounded-3xl border-slate-200/85 bg-white/95 p-4 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none sm:p-5">
       <div className="space-y-1">
         <p className="text-[11px] tracking-[0.16em] text-muted-foreground uppercase">{t("sectionPerformanceEyebrow")}</p>
         <h2 className="text-lg font-semibold tracking-tight">{t("sectionPerformance")}</h2>
@@ -65,7 +65,7 @@ export function ListeningSectionPerformance({ items }: ListeningSectionPerforman
               <p className="text-sm text-muted-foreground">
                 {item.correct}/{item.total}
               </p>
-              <div className="h-1.5 w-full rounded-full bg-background/70">
+              <div className="h-1.5 w-full rounded-full bg-slate-200/80 dark:bg-background/70">
                 <div className={cn("h-full rounded-full transition-all", tone.bar)} style={{ width: `${item.percent}%` }} />
               </div>
             </Card>

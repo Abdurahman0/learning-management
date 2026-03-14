@@ -3,7 +3,7 @@
 import {useState} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
-import {BarChart3, BookMarked, BookOpen, ChevronDown, ClipboardList, Headphones, Home, Lock, MessageSquare, Mic, PenLine, Sparkles, TriangleAlert} from "lucide-react";
+import {BarChart3, BookCheck, BookOpen, CalendarClock, ChevronDown, ClipboardList, Headphones, Home, Lock, Mic, PenLine, Sparkles} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
@@ -46,10 +46,9 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
   const dashboardHref = role === "admin" ? `/${locale}/admin` : role === "teacher" ? `/${locale}/teacher` : `/${locale}/dashboard`;
   const aiCoachHref = `/${locale}/ai-coach`;
   const assignmentsHref = `/${locale}/assignments`;
-  const messagesHref = `/${locale}/messages`;
-  const studyBankHref = `/${locale}/study-bank`;
+  const reviewCenterHref = `/${locale}/review-center`;
+  const sessionsHref = `/${locale}/sessions`;
   const analyticsHref = `/${locale}/analytics`;
-  const mistakesHref = `/${locale}/mistake-analysis`;
   const readingHref = `/${locale}/reading`;
   const listeningHref = `/${locale}/listening`;
 
@@ -73,22 +72,23 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
           icon: ClipboardList
         },
         {
-          key: "messages",
-          label: t("sidebar.messages"),
-          href: messagesHref,
-          icon: MessageSquare
+          key: "sessions",
+          label: t("sidebar.sessions"),
+          href: sessionsHref,
+          icon: CalendarClock
         },
+        // Temporarily disabled while the product shifts from chat to 1-to-1 sessions.
+        // {
+        //   key: "messages",
+        //   label: t("sidebar.messages"),
+        //   href: messagesHref,
+        //   icon: MessageSquare
+        // },
         {
           key: "aiCoach",
           label: t("sidebar.aiCoach"),
           href: aiCoachHref,
           icon: Sparkles
-        },
-        {
-          key: "studyBank",
-          label: t("sidebar.studyBank"),
-          href: studyBankHref,
-          icon: BookMarked
         },
         {
           key: "analytics",
@@ -97,10 +97,10 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
           icon: BarChart3
         },
         {
-          key: "mistakeAnalysis",
-          label: t("sidebar.mistakeAnalysis"),
-          href: mistakesHref,
-          icon: TriangleAlert
+          key: "reviewCenter",
+          label: t("sidebar.reviewCenter"),
+          href: reviewCenterHref,
+          icon: BookCheck
         }
       ]
     : [];

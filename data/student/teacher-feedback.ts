@@ -71,7 +71,7 @@ export const STUDENT_TEACHER_FEEDBACK: StudentTeacherFeedbackRecord[] = [
         descriptionKey: "entries.writingTech.actions.reviewMistakes.description",
         ctaKey: "entries.writingTech.actions.reviewMistakes.cta",
         action: "navigate",
-        href: "/mistake-analysis"
+        href: "/review-center"
       },
       {
         id: "openAiCoach",

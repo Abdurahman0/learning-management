@@ -3,7 +3,7 @@
 import {useState, type ReactNode} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
-import {BarChart3, BookMarked, BookOpen, ChevronDown, CircleUserRound, ClipboardList, Headphones, Home, Lock, Menu, MessageSquare, Mic, PenLine, Sparkles, TriangleAlert} from "lucide-react";
+import {BarChart3, BookCheck, BookOpen, CalendarClock, ChevronDown, CircleUserRound, ClipboardList, Headphones, Home, Lock, Menu, Mic, PenLine, Sparkles} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import ReactCountryFlag from "react-country-flag";
 
@@ -50,7 +50,7 @@ export function GuestShell({children}: GuestShellProps) {
   const totalTests = 4;
   const baseRoute = `/${locale}`;
   const dashboardHref = role === "admin" ? `/${locale}/admin` : role === "teacher" ? `/${locale}/teacher` : `/${locale}/dashboard`;
-  const topLevelRoutes = isGuest ? "(reading|listening|settings)" : "(dashboard|assignments|messages|ai-coach|study-bank|analytics|mistake-analysis|reading|listening|settings)";
+  const topLevelRoutes = isGuest ? "(reading|listening|settings)" : "(dashboard|assignments|sessions|ai-coach|review-center|analytics|reading|listening|settings)";
   const isMobileHeaderVisible = new RegExp(`^${baseRoute}/${topLevelRoutes}/?$`).test(pathname);
   const pathWithoutLocale = pathname.replace(/^\/(uz|en)(?=\/|$)/, "") || "/";
   const hideSidebar = /^\/(reading|listening)\/[^/]+(?:\/result)?\/?$/.test(pathWithoutLocale)
@@ -64,11 +64,12 @@ export function GuestShell({children}: GuestShellProps) {
   const mobileSecondaryItems: MobileNavItem[] = isStudent
     ? [
         {key: "assignments", label: t("sidebar.assignments"), href: `/${locale}/assignments`, icon: ClipboardList},
-        {key: "messages", label: t("sidebar.messages"), href: `/${locale}/messages`, icon: MessageSquare},
+        {key: "sessions", label: t("sidebar.sessions"), href: `/${locale}/sessions`, icon: CalendarClock},
+        // Temporarily disabled while the product shifts from chat to 1-to-1 sessions.
+        // {key: "messages", label: t("sidebar.messages"), href: `/${locale}/messages`, icon: MessageSquare},
         {key: "aiCoach", label: t("sidebar.aiCoach"), href: `/${locale}/ai-coach`, icon: Sparkles},
-        {key: "studyBank", label: t("sidebar.studyBank"), href: `/${locale}/study-bank`, icon: BookMarked},
+        {key: "reviewCenter", label: t("sidebar.reviewCenter"), href: `/${locale}/review-center`, icon: BookCheck},
         {key: "analytics", label: t("sidebar.analytics"), href: `/${locale}/analytics`, icon: BarChart3},
-        {key: "mistakeAnalysis", label: t("sidebar.mistakeAnalysis"), href: `/${locale}/mistake-analysis`, icon: TriangleAlert}
       ]
     : [];
 

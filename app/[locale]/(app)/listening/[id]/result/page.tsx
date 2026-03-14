@@ -1,35 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { getListeningAnswerMeta } from "@/data/listening-answer-keys";
-import { getListeningTestById, type ListeningSectionId } from "@/data/listening-tests-full";
+import { getListeningTestById } from "@/data/listening-tests-full";
+import { LISTENING_REVIEW_ACTIONS, type ListeningReviewActionKey } from "@/data/student/listening-review";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { flattenListeningQuestions } from "@/lib/listening-questions";
-import { loadAttemptResult, loadLatestAttemptResult, type PersistedAttempt } from "@/lib/test-attempt-storage";
-import { ListeningQuestionAnalysisPanel } from "./_components/ListeningQuestionAnalysisPanel";
+import { buildListeningReviewInsights } from "@/lib/listening-review-insights";
+import {
+  loadAttemptResult,
+  loadLatestAttemptResult,
+  type PersistedAttempt,
+} from "@/lib/test-attempt-storage";
 import { ListeningResultSummaryHeader } from "./_components/ListeningResultSummaryHeader";
 import {
   ListeningSectionPerformance,
   type ListeningSectionPerformanceItem,
 } from "./_components/ListeningSectionPerformance";
-import {
-  ListeningTranscriptReviewPanel,
-  type ListeningReviewSection,
-} from "./_components/ListeningTranscriptReviewPanel";
-
-type QuestionStatus = "correct" | "incorrect" | "skipped";
-
-function getQuestionStatus(grading: ReturnType<typeof gradeTest>, questionId: string): QuestionStatus {
-  const result = grading.byQuestion[questionId];
-  if (!result?.normalizedUser) return "skipped";
-  return result.isCorrect ? "correct" : "incorrect";
-}
+import { ListeningAiLearningCoachCard } from "./_components/ListeningAiLearningCoachCard";
+import { ListeningMistakeHeatmapCard } from "./_components/ListeningMistakeHeatmapCard";
+import { ListeningNextLearningActions } from "./_components/ListeningNextLearningActions";
+import { ListeningTypePerformance } from "./_components/ListeningTypePerformance";
 
 function estimateListeningBand(correct: number) {
   if (correct >= 39) return "9.0";
@@ -53,22 +50,20 @@ function estimateListeningBand(correct: number) {
 export default function ListeningResultPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const locale = useLocale();
   const tResults = useTranslations("testResults");
   const t = useTranslations("listeningResult");
   const isClient = useSyncExternalStore(
     () => () => {},
     () => true,
-    () => false
+    () => false,
   );
 
   const testId = typeof params?.id === "string" ? params.id : "";
   const attemptId = searchParams.get("attempt") ?? "";
   const test = getListeningTestById(testId);
-
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [activeSectionId, setActiveSectionId] = useState<ListeningSectionId>("s1");
-  const [highlightedEvidenceQuestionId, setHighlightedEvidenceQuestionId] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const flatQuestions = useMemo(() => {
     if (!test) return [];
@@ -99,19 +94,18 @@ export default function ListeningResultPage() {
     return gradeTest(gradeable, attempt.answers);
   }, [attempt, gradeable]);
 
-  useEffect(() => {
-    if (!highlightedEvidenceQuestionId) return;
-    const timer = window.setTimeout(() => setHighlightedEvidenceQuestionId(null), 2400);
-    return () => window.clearTimeout(timer);
-  }, [highlightedEvidenceQuestionId]);
-
   const sectionPerformance = useMemo(() => {
     if (!test || !grading) return [] as ListeningSectionPerformanceItem[];
 
     return test.sections.map((section, index) => {
-      const sectionQuestions = flatQuestions.filter((question) => question.sectionId === section.id);
+      const sectionQuestions = flatQuestions.filter(
+        (question) => question.sectionId === section.id,
+      );
       const total = sectionQuestions.length;
-      const correct = sectionQuestions.reduce((sum, question) => sum + (grading.byQuestion[question.id]?.isCorrect ? 1 : 0), 0);
+      const correct = sectionQuestions.reduce(
+        (sum, question) => sum + (grading.byQuestion[question.id]?.isCorrect ? 1 : 0),
+        0,
+      );
       return {
         sectionId: section.id,
         label: t("partLabel", { index: index + 1 }),
@@ -122,53 +116,24 @@ export default function ListeningResultPage() {
     });
   }, [flatQuestions, grading, t, test]);
 
-  const reviewSections = useMemo(() => {
-    if (!test || !grading) return [] as ListeningReviewSection[];
-
-    return test.sections.map((section, index) => ({
-      sectionId: section.id,
-      label: t("partLabel", { index: index + 1 }),
-      title: section.title,
-      instructions: section.instructions,
-      nowPlayingLabel: section.audioMeta.nowPlayingLabel,
-      audioTitle: section.audioMeta.currentTrackTitle,
-      evidenceItems: flatQuestions
-        .filter((question) => question.sectionId === section.id)
-        .map((question) => {
-          const meta = getListeningAnswerMeta(question.id);
-          return {
-            questionId: question.id,
-            questionNumber: question.number,
-            prompt: question.prompt,
-            quote: meta?.evidence.transcriptQuote ?? question.prompt,
-            timeRange: meta?.evidence.timeRange,
-            status: getQuestionStatus(grading, question.id),
-          };
-        }),
-    }));
-  }, [flatQuestions, grading, t, test]);
-
-  const handleJumpEvidence = useCallback((questionId: string) => {
-    const meta = getListeningAnswerMeta(questionId);
-    if (meta?.evidence.sectionId) {
-      setActiveSectionId(meta.evidence.sectionId);
-    }
-    setHighlightedEvidenceQuestionId(questionId);
-
-    window.setTimeout(() => {
-      const node = document.getElementById(`listening-evidence-${questionId}`);
-      node?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 120);
-  }, []);
+  useEffect(() => {
+    if (!actionNotice) return;
+    const timer = window.setTimeout(() => setActionNotice(null), 2200);
+    return () => window.clearTimeout(timer);
+  }, [actionNotice]);
 
   if (!test) {
     return (
       <div className="mx-auto mt-8 max-w-3xl px-4">
         <Card className="p-6">
           <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{tResults("missingAttemptDescription")}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {tResults("missingAttemptDescription")}
+          </p>
           <Button className="mt-4" asChild>
-            <Link href={`/${locale}/listening/${testId}?restart=1`}>{tResults("retakeTest")}</Link>
+            <Link href={`/${locale}/listening/${testId}?restart=1`}>
+              {tResults("retakeTest")}
+            </Link>
           </Button>
         </Card>
       </div>
@@ -190,24 +155,66 @@ export default function ListeningResultPage() {
       <div className="mx-auto mt-8 max-w-3xl px-4">
         <Card className="p-6">
           <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{tResults("missingAttemptDescription")}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {tResults("missingAttemptDescription")}
+          </p>
           <Button className="mt-4" asChild>
-            <Link href={`/${locale}/listening/${testId}?restart=1`}>{tResults("retakeTest")}</Link>
+            <Link href={`/${locale}/listening/${testId}?restart=1`}>
+              {tResults("retakeTest")}
+            </Link>
           </Button>
         </Card>
       </div>
     );
   }
 
-  const timerSpentSec = Math.max(0, test.durationMinutes * 60 - attempt.timeRemainingSec);
-  const fallbackSpentSec = Math.max(0, attempt.finishedAt ? Math.floor((attempt.finishedAt - attempt.startedAt) / 1000) : 0);
+  const timerSpentSec = Math.max(
+    0,
+    test.durationMinutes * 60 - attempt.timeRemainingSec,
+  );
+  const fallbackSpentSec = Math.max(
+    0,
+    attempt.finishedAt ? Math.floor((attempt.finishedAt - attempt.startedAt) / 1000) : 0,
+  );
   const effectiveSpentSec = attempt.timerUsed ? timerSpentSec : fallbackSpentSec;
-  const minutes = Math.floor(effectiveSpentSec / 60).toString().padStart(2, "0");
+  const minutes = Math.floor(effectiveSpentSec / 60)
+    .toString()
+    .padStart(2, "0");
   const seconds = (effectiveSpentSec % 60).toString().padStart(2, "0");
   const estimatedBand = estimateListeningBand(grading.correctCount);
-  const resolvedActiveSectionId = test.sections.some((section) => section.id === activeSectionId)
-    ? activeSectionId
-    : (test.sections[0]?.id ?? "s1");
+  const reviewInsights = buildListeningReviewInsights({
+    questions: flatQuestions,
+    grading,
+    sectionPerformance,
+  });
+  const weakestTypeLabel = reviewInsights.weakestType
+    ? t(`questionTypes.${reviewInsights.weakestType.type}`)
+    : t("notAvailable");
+  const weakestSectionLabel = reviewInsights.weakestSection?.label ?? t("notAvailable");
+  const coachInsights = [
+    t("coachInsightWeakPart", { part: weakestSectionLabel }),
+    t("coachInsightWeakType", { type: weakestTypeLabel }),
+    t("coachInsightSkipped", { count: reviewInsights.skippedCount }),
+  ];
+  const handleLearningAction = (actionKey: ListeningReviewActionKey) => {
+    if (actionKey === "openAiCoach") {
+      router.push(`/${locale}/ai-coach`);
+      return;
+    }
+    if (
+      actionKey === "practiceWeakPart" ||
+      actionKey === "practiceWeakType" ||
+      actionKey === "startSimilarListening"
+    ) {
+      router.push(`/${locale}/listening`);
+      return;
+    }
+    if (actionKey === "openReviewCenter") {
+      router.push(`/${locale}/review-center`);
+      return;
+    }
+    setActionNotice(t("actionPlaceholder", { action: t(actionKey) }));
+  };
 
   return (
     <section className="mx-auto w-full max-w-[1780px] space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
@@ -223,37 +230,34 @@ export default function ListeningResultPage() {
         timerUsed={attempt.timerUsed}
         minutes={minutes}
         seconds={seconds}
+        reviewHref={`/${locale}/listening/${test.id}/review?attempt=${attempt.attemptId}`}
       />
 
       <ListeningSectionPerformance items={sectionPerformance} />
+      <ListeningTypePerformance items={reviewInsights.typePerformance} />
 
-      <section id="review-main" className="grid min-h-0 items-start gap-4 xl:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)]">
-        <ListeningTranscriptReviewPanel
-          sections={reviewSections}
-          activeSectionId={resolvedActiveSectionId}
-          highlightedQuestionId={highlightedEvidenceQuestionId}
-          onSectionChange={(sectionId) => setActiveSectionId(sectionId as ListeningSectionId)}
-        />
+      {actionNotice ? (
+        <Card className="border-blue-300/70 bg-blue-100/70 p-3 text-sm text-blue-700 dark:border-blue-500/35 dark:bg-blue-500/10 dark:text-blue-100">
+          {actionNotice}
+        </Card>
+      ) : null}
 
-        <ListeningQuestionAnalysisPanel
-          questions={flatQuestions}
-          answers={attempt.answers}
-          grading={grading}
-          expanded={expanded}
-          onToggleExplanation={(questionId) => {
-            setExpanded((previous) => {
-              const next = new Set(previous);
-              if (next.has(questionId)) {
-                next.delete(questionId);
-              } else {
-                next.add(questionId);
-              }
-              return next;
-            });
-          }}
-          onJumpEvidence={handleJumpEvidence}
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <ListeningAiLearningCoachCard
+          weakestSectionLabel={weakestSectionLabel}
+          weakestTypeLabel={weakestTypeLabel}
+          skippedCount={reviewInsights.skippedCount}
+          accuracy={reviewInsights.overallAccuracy}
+          insights={coachInsights}
+          onAction={handleLearningAction}
         />
-      </section>
+        <ListeningMistakeHeatmapCard items={reviewInsights.heatmap} />
+      </div>
+
+      <ListeningNextLearningActions
+        actions={LISTENING_REVIEW_ACTIONS}
+        onAction={handleLearningAction}
+      />
     </section>
   );
 }

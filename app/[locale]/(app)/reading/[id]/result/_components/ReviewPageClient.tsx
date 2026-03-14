@@ -223,6 +223,7 @@ export function ReviewPageClient() {
       ? tReadingResult("passageLabel", { index: Number(weakestPassageNumber) })
       : reviewData.aiCoach.weakestPassage,
   };
+  const resolvedAttemptId = attempt.attemptId;
 
   return (
     <section className="mx-auto w-full max-w-[1780px] space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
@@ -237,6 +238,8 @@ export function ReviewPageClient() {
         minutes={minutes}
         seconds={seconds}
         timerUsed={attempt.timerUsed}
+        showResultsButton
+        resultsHref={`/${locale}/reading/${test.id}/result?attempt=${resolvedAttemptId}`}
       />
 
       <QuestionTypePerformance items={accuracyByType} />
@@ -271,7 +274,7 @@ export function ReviewPageClient() {
 
       <section className="space-y-5">
         {actionNotice ? (
-          <Card className="border-blue-500/35 bg-blue-500/10 p-3 text-sm text-blue-100">
+          <Card className="border-blue-300/70 bg-blue-100/70 p-3 text-sm text-blue-700 dark:border-blue-500/35 dark:bg-blue-500/10 dark:text-blue-100">
             {actionNotice}
           </Card>
         ) : null}

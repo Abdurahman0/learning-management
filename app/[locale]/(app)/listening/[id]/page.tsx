@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   BookOpen,
   Bookmark,
@@ -13,6 +13,7 @@ import {
   MoveRight,
   Pause,
   Play,
+  SlidersHorizontal,
   User,
   Volume2,
 } from "lucide-react";
@@ -48,8 +49,15 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import { createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress, saveAttemptResult, type AttemptMode } from "@/lib/test-attempt-storage";
+import { getListeningAnswerMeta } from "@/data/listening-answer-keys";
+import { gradeTest, type GradeableQuestion } from "@/lib/grading";
+import { flattenListeningQuestions } from "@/lib/listening-questions";
 import { Highlightable } from "@/components/test/Highlightable";
 import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
+import { useTestAppearance } from "@/lib/test-appearance";
+import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
+import { ListeningQuestionAnalysisPanel } from "./result/_components/ListeningQuestionAnalysisPanel";
+import { ListeningTranscriptReviewPanel, type ListeningReviewSection } from "./result/_components/ListeningTranscriptReviewPanel";
 
 function formatTime(seconds: number) {
   const safe = Math.max(0, seconds);
@@ -97,7 +105,7 @@ function QuestionChip({
   return (
     <span
       className={cn(
-        "inline-flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-semibold",
+        "test-chip inline-flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-semibold",
         active && "bg-blue-600 text-white",
         !active &&
           subtle &&
@@ -140,9 +148,10 @@ export default function ListeningTestPage() {
 }
 
 function ListeningTestClient({ testId, requestedMode = null }: { testId: string; requestedMode?: AttemptMode | null }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations("listeningTest");
+  const tListeningResult = useTranslations("listeningResult");
+  const tOptions = useTranslations("testOptions");
   const locale = useLocale();
   const test = getListeningTestById(testId)!;
   const restartRequested = searchParams.get("restart") === "1";
@@ -179,6 +188,9 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
   const [attemptId, setAttemptId] = useState("");
   const [startedAt, setStartedAt] = useState(0);
   const [finishOpen, setFinishOpen] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [expandedReviewQuestions, setExpandedReviewQuestions] = useState<Set<string>>(new Set());
+  const [highlightedEvidenceQuestionId, setHighlightedEvidenceQuestionId] = useState<string | null>(null);
   const [activeQuestionNumber, setActiveQuestionNumber] = useState(1);
   const [answers, setAnswers] = useState<AnswersMap>({});
   const [marked, setMarked] = useState<Set<number>>(new Set());
@@ -195,38 +207,86 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
   const [isSmallLandscape, setIsSmallLandscape] = useState(false);
+  const [realModeConfirmOpen, setRealModeConfirmOpen] = useState(false);
+  const [realModeStarting, setRealModeStarting] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const {
+    appearance,
+    setContrast,
+    setTextSize,
+    isFullscreen,
+    toggleFullscreen,
+  } = useTestAppearance("test-taking");
 
   const questionsScrollRef = useRef<HTMLDivElement | null>(null);
   const questionRefs = useRef<Map<number, HTMLElement>>(new Map());
   const pendingJumpRef = useRef<number | null>(null);
   const realModeAutoFinishedRef = useRef(false);
   const initDoneRef = useRef(false);
+  const realModeStartTimeoutRef = useRef<number | null>(null);
   const leaveWarningMessage = t.has("leaveWarning")
     ? t("leaveWarning")
     : "Are you sure you want to quit this test? Your results will not be saved.";
+  const realModeTitle = t.has("realMode")
+    ? t("realMode")
+    : "Real mode";
+  const realModeLockedTimerLabel = t.has("realModeTimerLocked")
+    ? t("realModeTimerLocked")
+    : "Timer is locked in real mode";
+  const realModeLockedAudioLabel = t.has("realModeAudioLocked")
+    ? t("realModeAudioLocked")
+    : "Audio controls are locked in real mode";
+  const realModeProgressLockedLabel = t.has("realModeProgressLocked")
+    ? t("realModeProgressLocked")
+    : "Audio progress is locked in real mode";
+  const realModeCountdownLabel = t.has("realModeStartsSoon")
+    ? t("realModeStartsSoon")
+    : "Audio starts in 1 second...";
 
   useTestLeaveWarning({
-    enabled: Boolean(attemptId),
+    enabled: Boolean(attemptId) && !reviewMode,
     message: leaveWarningMessage,
   });
 
   const resetAttemptState = (nextMode: AttemptMode | null = null) => {
+    if (realModeStartTimeoutRef.current) {
+      window.clearTimeout(realModeStartTimeoutRef.current);
+      realModeStartTimeoutRef.current = null;
+    }
+
     const freshAttemptId = createAttemptId();
     setAttemptId(freshAttemptId);
     setStartedAt(Date.now());
     setAttemptMode(nextMode);
     setFinishOpen(false);
+    setReviewMode(false);
+    setExpandedReviewQuestions(new Set());
+    setHighlightedEvidenceQuestionId(null);
     setActiveSectionId("s1");
     setActiveQuestionNumber(1);
     setAnswers({});
     setMarked(new Set());
     setRemainingSeconds(test.durationMinutes * 60);
-    setTimerRunning(nextMode === "real");
-    setAudioPlaying(nextMode === "real");
+    setTimerRunning(false);
+    setAudioPlaying(false);
     setAudioProgress(37);
     setPaletteOpen(false);
+    setRealModeStarting(false);
+    setRealModeConfirmOpen(nextMode === "real");
     realModeAutoFinishedRef.current = false;
     pendingJumpRef.current = null;
+  };
+
+  const clearAttemptQueryParams = () => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("restart");
+    url.searchParams.delete("mode");
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
   };
 
   useEffect(() => {
@@ -236,14 +296,12 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
     initDoneRef.current = true;
 
     if (restartRequested || requestedMode) {
-      resetAttemptState(requestedMode ?? null);
-      if (typeof window !== "undefined") {
-        const url = new URL(window.location.href);
-        url.searchParams.delete("restart");
-        url.searchParams.delete("mode");
-        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
-      }
-      return;
+      const mode = requestedMode ?? null;
+      const resetTimer = window.setTimeout(() => {
+        resetAttemptState(mode);
+      }, 0);
+      clearAttemptQueryParams();
+      return () => window.clearTimeout(resetTimer);
     }
 
     const latestId = loadLatestAttemptId("listening", test.id);
@@ -259,24 +317,46 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
         }
       });
 
-      setAttemptId(saved.attemptId);
-      setStartedAt(saved.startedAt);
-      setAnswers(restoredAnswers);
-      setMarked(new Set(saved.markedQuestionIds.map((id) => Number(id.replace(`${test.id}-q`, ""))).filter((v) => Number.isFinite(v))));
-      setRemainingSeconds(saved.timeRemainingSec);
-      setAttemptMode(restoredMode);
-      setTimerRunning(restoredMode === "real" && saved.timeRemainingSec > 0);
-      setAudioPlaying(restoredMode === "real");
+      const hydrateTimer = window.setTimeout(() => {
+        setAttemptId(saved.attemptId);
+        setStartedAt(saved.startedAt);
+        setAnswers(restoredAnswers);
+        setMarked(new Set(saved.markedQuestionIds.map((id) => Number(id.replace(`${test.id}-q`, ""))).filter((v) => Number.isFinite(v))));
+        setRemainingSeconds(saved.timeRemainingSec);
+        setAttemptMode(restoredMode);
+        setTimerRunning(restoredMode === "real" && saved.timeRemainingSec > 0);
+        setAudioPlaying(restoredMode === "real");
+        realModeAutoFinishedRef.current = false;
+      }, 0);
+      return () => window.clearTimeout(hydrateTimer);
+    }
+
+    const initTimer = window.setTimeout(() => {
+      setAttemptId(createAttemptId());
+      setStartedAt(Date.now());
+      setAttemptMode(null);
+      setTimerRunning(false);
       realModeAutoFinishedRef.current = false;
+    }, 0);
+    return () => window.clearTimeout(initTimer);
+  }, [requestedMode, restartRequested, test.id]);
+
+  useEffect(() => {
+    if (!(restartRequested || requestedMode)) {
+      return;
+    }
+    if (attemptMode !== null) {
       return;
     }
 
-    setAttemptId(createAttemptId());
-    setStartedAt(Date.now());
-    setAttemptMode(null);
-    setTimerRunning(false);
-    realModeAutoFinishedRef.current = false;
-  }, [requestedMode, restartRequested, test.id]);
+    const mode = requestedMode ?? null;
+    const resetTimer = window.setTimeout(() => {
+      resetAttemptState(mode);
+    }, 0);
+    clearAttemptQueryParams();
+
+    return () => window.clearTimeout(resetTimer);
+  }, [attemptMode, requestedMode, restartRequested]);
 
   const sectionByQuestion = useMemo(() => {
     const map = new Map<number, ListeningSectionFull["id"]>();
@@ -341,6 +421,66 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
   const timeSpent = test.durationMinutes * 60 - remainingSeconds;
   const isRealMode = attemptMode === "real";
   const showModePicker = attemptMode === null;
+  const flatQuestions = useMemo(
+    () => flattenListeningQuestions(test.id, test.sections),
+    [test.id, test.sections]
+  );
+  const persistedAnswersByQuestionId = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(answers).map(([number, value]) => [`${test.id}-q${number}`, value])
+      ) as Record<string, string | string[] | null>,
+    [answers, test.id]
+  );
+  const gradeableQuestions = useMemo<GradeableQuestion[]>(
+    () =>
+      flatQuestions.map((question) => {
+        const meta = getListeningAnswerMeta(question.id);
+        return {
+          id: question.id,
+          number: question.number,
+          type: question.type,
+          correctAnswer: meta?.correctAnswer,
+          acceptableAnswers: meta?.acceptableAnswers,
+        };
+      }),
+    [flatQuestions]
+  );
+  const grading = useMemo(
+    () => gradeTest(gradeableQuestions, persistedAnswersByQuestionId),
+    [gradeableQuestions, persistedAnswersByQuestionId]
+  );
+  const reviewSections = useMemo(() => {
+    return test.sections.map((section, index) => ({
+      sectionId: section.id,
+      label: tListeningResult("partLabel", { index: index + 1 }),
+      title: section.title,
+      instructions: section.instructions,
+      nowPlayingLabel: section.audioMeta.nowPlayingLabel,
+      audioTitle: section.audioMeta.currentTrackTitle,
+      evidenceItems: flatQuestions
+        .filter((question) => question.sectionId === section.id)
+        .map((question) => {
+          const meta = getListeningAnswerMeta(question.id);
+          const graded = grading.byQuestion[question.id];
+          return {
+            questionId: question.id,
+            questionNumber: question.number,
+            prompt: question.prompt,
+            quote: meta?.evidence.transcriptQuote ?? question.prompt,
+            timeRange: meta?.evidence.timeRange,
+            status: !graded?.normalizedUser
+              ? "skipped"
+              : graded.isCorrect
+                ? "correct"
+                : "incorrect",
+          } as const;
+        }),
+    })) as ListeningReviewSection[];
+  }, [flatQuestions, grading.byQuestion, tListeningResult, test.sections]);
+  const resolvedActiveSectionId = test.sections.some((section) => section.id === activeSectionId)
+    ? activeSectionId
+    : (test.sections[0]?.id ?? "s1");
 
   useEffect(() => {
     if (!attemptId || !attemptMode) return;
@@ -505,16 +645,64 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
     setAttemptMode(mode);
 
     if (mode === "real") {
-      setTimerRunning(true);
-      setAudioPlaying(true);
+      if (realModeStartTimeoutRef.current) {
+        window.clearTimeout(realModeStartTimeoutRef.current);
+        realModeStartTimeoutRef.current = null;
+      }
+      setTimerRunning(false);
+      setAudioPlaying(false);
+      setRealModeStarting(false);
+      setRealModeConfirmOpen(true);
       return;
     }
 
+    setRealModeConfirmOpen(false);
+    setRealModeStarting(false);
     setTimerRunning(false);
     setAudioPlaying(false);
   };
 
-  const finishTest = () => {
+  const cancelRealModeStart = () => {
+    if (realModeStartTimeoutRef.current) {
+      window.clearTimeout(realModeStartTimeoutRef.current);
+      realModeStartTimeoutRef.current = null;
+    }
+    setAttemptMode(null);
+    setRealModeConfirmOpen(false);
+    setRealModeStarting(false);
+    setTimerRunning(false);
+    setAudioPlaying(false);
+  };
+
+  const confirmRealModeStart = () => {
+    if (realModeStartTimeoutRef.current) {
+      window.clearTimeout(realModeStartTimeoutRef.current);
+      realModeStartTimeoutRef.current = null;
+    }
+    setRealModeConfirmOpen(false);
+    setRealModeStarting(true);
+    realModeStartTimeoutRef.current = window.setTimeout(() => {
+      setTimerRunning(true);
+      setAudioPlaying(true);
+      setRealModeStarting(false);
+      realModeStartTimeoutRef.current = null;
+    }, 1000);
+  };
+
+  const handleJumpEvidenceFromReview = useCallback((questionId: string) => {
+    const meta = getListeningAnswerMeta(questionId);
+    if (meta?.evidence.sectionId) {
+      setActiveSectionId(meta.evidence.sectionId);
+    }
+    setHighlightedEvidenceQuestionId(questionId);
+
+    window.setTimeout(() => {
+      const node = document.getElementById(`listening-evidence-${questionId}`);
+      node?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+  }, []);
+
+  const finishTest = useCallback(() => {
     if (!attemptId) return;
     const finishedAt = Date.now();
     const persistedAnswers = Object.fromEntries(
@@ -534,19 +722,49 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
       timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
     });
 
-    router.push(`/${locale}/listening/${test.id}/result?attempt=${attemptId}`);
-  };
+    setFinishOpen(false);
+    setPaletteOpen(false);
+    setTimerRunning(false);
+    setAudioPlaying(false);
+    setReviewMode(true);
+  }, [
+    answers,
+    attemptId,
+    attemptMode,
+    marked,
+    remainingSeconds,
+    startedAt,
+    test.durationMinutes,
+    test.id,
+    timerRunning,
+  ]);
 
   useEffect(() => {
-    if (!isRealMode || remainingSeconds > 0 || !attemptId || realModeAutoFinishedRef.current) {
+    if (!highlightedEvidenceQuestionId) return;
+    const timer = window.setTimeout(() => setHighlightedEvidenceQuestionId(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [highlightedEvidenceQuestionId]);
+
+  useEffect(() => {
+    if (!isRealMode || reviewMode || remainingSeconds > 0 || !attemptId || realModeAutoFinishedRef.current) {
       return;
     }
 
     realModeAutoFinishedRef.current = true;
-    setTimerRunning(false);
-    setFinishOpen(false);
-    finishTest();
-  }, [attemptId, finishTest, isRealMode, remainingSeconds]);
+    const finishTimer = window.setTimeout(() => {
+      finishTest();
+    }, 0);
+    return () => window.clearTimeout(finishTimer);
+  }, [attemptId, finishTest, isRealMode, remainingSeconds, reviewMode]);
+
+  useEffect(() => {
+    return () => {
+      if (realModeStartTimeoutRef.current) {
+        window.clearTimeout(realModeStartTimeoutRef.current);
+        realModeStartTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const isQuestionMarked = (questionNumber: number) => marked.has(questionNumber);
   const markedQuestionClass = (questionNumber: number) =>
@@ -557,12 +775,12 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
   const renderBlock = (block: ListeningBlock) => {
     if (block.type === "noteForm") {
       return (
-        <Card className="min-w-0 gap-0 rounded-lg border border-border bg-muted/20 p-4 overflow-hidden">
+        <Card className="test-panel test-soft-surface min-w-0 gap-0 rounded-lg border border-border bg-muted/20 p-4 overflow-hidden">
           <h4 className="text-center text-base font-semibold tracking-wide">
             {block.title}
           </h4>
           {block.description ? (
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="test-muted-copy mt-2 text-sm text-muted-foreground">
               {block.description}
             </p>
           ) : null}
@@ -611,7 +829,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                   onFocus={() => setActiveQuestionNumber(field.questionNumber)}
                   placeholder={field.placeholder ?? "..."}
                   className={cn(
-                    "w-full min-w-0 h-10",
+                    "test-input-surface w-full min-w-0 h-10",
                     isSmallLandscape && "h-11",
                   )}
                 />
@@ -624,7 +842,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
     if (block.type === "tableCompletion") {
       return (
-        <Card className="min-w-0 gap-0 rounded-lg border border-border bg-card p-0 overflow-hidden">
+        <Card className="test-panel min-w-0 gap-0 rounded-lg border border-border bg-card p-0 overflow-hidden">
           <h4 className="border-b border-border px-4 py-3 text-sm font-semibold">
             {block.title}
           </h4>
@@ -679,7 +897,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                           }
                           placeholder="..."
                           className={cn(
-                            "w-full min-w-0 h-10",
+                            "test-input-surface w-full min-w-0 h-10",
                             isSmallLandscape && "h-11",
                           )}
                         />
@@ -698,7 +916,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
       return (
         <div className="space-y-3">
           {block.title ? (
-            <p className="text-sm font-medium text-muted-foreground">
+            <p className="test-muted-copy text-sm font-medium text-muted-foreground">
               {block.title}
             </p>
           ) : null}
@@ -713,7 +931,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                 }
                 questionRefs.current.set(question.questionNumber, el);
               }}
-              className={cn("min-w-0 rounded-lg border border-border bg-card p-4 scroll-mt-24 overflow-hidden", markedQuestionClass(question.questionNumber))}
+              className={cn("test-panel min-w-0 rounded-lg border border-border bg-card p-4 scroll-mt-24 overflow-hidden", markedQuestionClass(question.questionNumber))}
               onClick={() => setActiveQuestionNumber(question.questionNumber)}
             >
               <p className="break-words text-sm font-medium">
@@ -756,9 +974,9 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
     if (block.type === "matching") {
       return (
-        <Card className="min-w-0 gap-0 rounded-lg border border-border bg-card p-4 overflow-hidden">
+        <Card className="test-panel min-w-0 gap-0 rounded-lg border border-border bg-card p-4 overflow-hidden">
           <h4 className="text-sm font-semibold">{block.title}</h4>
-          <div className="mt-3 rounded-lg border border-border bg-muted/20 p-3 text-sm">
+          <div className="test-soft-surface mt-3 rounded-lg border border-border bg-muted/20 p-3 text-sm">
             <p className="font-medium">{t("options")}</p>
             <ul className="mt-1 space-y-1">
               {block.options.map((option) => (
@@ -806,7 +1024,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                     aria-label={`Question ${item.questionNumber}`}
                     onFocus={() => setActiveQuestionNumber(item.questionNumber)}
                     className={cn(
-                      "w-full h-10",
+                      "test-input-surface w-full h-10",
                       isSmallLandscape && "h-11",
                       !isSmallLandscape && "md:max-w-[220px]",
                     )}
@@ -830,9 +1048,9 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
     if (block.type === "diagramLabeling") {
       return (
-        <Card className="min-w-0 gap-0 rounded-lg border border-border bg-card p-4 overflow-hidden">
+        <Card className="test-panel min-w-0 gap-0 rounded-lg border border-border bg-card p-4 overflow-hidden">
           <h4 className="text-sm font-semibold">{block.title}</h4>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="test-muted-copy mt-1 text-sm text-muted-foreground">
             {block.description}
           </p>
           <div
@@ -841,8 +1059,8 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
               !isSmallLandscape && "md:grid-cols-[minmax(0,1fr)_240px]",
             )}
           >
-            <div className="relative min-h-[220px] min-w-0 overflow-hidden rounded-lg border border-dashed border-border bg-muted/30 p-3">
-              <p className="text-[10px] tracking-wider text-muted-foreground uppercase">
+            <div className="test-soft-surface relative min-h-[220px] min-w-0 overflow-hidden rounded-lg border border-dashed border-border bg-muted/30 p-3">
+              <p className="test-muted-copy text-[10px] tracking-wider text-muted-foreground uppercase">
                 Diagram Placeholder
               </p>
               {block.items.map((item, idx) => {
@@ -870,7 +1088,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
             </div>
 
             <div className="space-y-3">
-              <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm">
+              <div className="test-soft-surface rounded-lg border border-border bg-muted/20 p-3 text-sm">
                 <p className="font-medium">{t("options")}</p>
                 <ul className="mt-1 space-y-1">
                   {block.options.map((option) => (
@@ -911,7 +1129,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                       }
                       placeholder={item.label}
                       className={cn(
-                        "w-full min-w-0 h-10",
+                        "test-input-surface w-full min-w-0 h-10",
                         isSmallLandscape && "h-11",
                       )}
                     />
@@ -925,9 +1143,9 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
     }
 
     return (
-      <Card className="min-w-0 gap-0 rounded-lg border border-border bg-muted/20 p-4 overflow-hidden">
+      <Card className="test-panel test-soft-surface min-w-0 gap-0 rounded-lg border border-border bg-muted/20 p-4 overflow-hidden">
         <h4 className="text-base font-semibold">{block.title}</h4>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="test-muted-copy mt-1 text-sm text-muted-foreground">
           {block.instruction}
         </p>
         <div className="mt-3 space-y-3 text-sm leading-7">
@@ -957,7 +1175,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                 onFocus={() => setActiveQuestionNumber(line.questionNumber)}
                 placeholder="..."
                 className={cn(
-                  "w-full min-w-0 h-10 sm:w-44",
+                  "test-input-surface w-full min-w-0 h-10 sm:w-44",
                   isSmallLandscape && "h-11",
                 )}
               />
@@ -970,7 +1188,11 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
   };
 
   return (
-    <section className="mx-0 my-0 flex h-[calc(100vh-2rem)] w-full max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-background lg:-mx-10 lg:-my-8">
+    <section
+      data-test-contrast={appearance.contrast}
+      data-test-size={appearance.textSize}
+      className="test-appearance-root mx-0 my-0 flex h-[calc(100dvh-2rem)] w-full max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-background lg:-mx-10 lg:-my-8"
+    >
       <header className="sticky top-0 z-40 w-full max-w-full overflow-x-hidden border-b border-border bg-background/95 backdrop-blur">
         <div
           className={cn(
@@ -1007,6 +1229,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
             </p>
           </div>
 
+          {!reviewMode ? (
           <div className="shrink-0 min-w-0 flex items-center gap-2">
             <Badge
               variant="secondary"
@@ -1020,7 +1243,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
             </Badge>
             <Button
               type="button"
-              aria-label={isRealMode ? "Timer is locked in real mode" : timerRunning ? t("stopTimer") : t("startTimer")}
+              aria-label={isRealMode ? realModeLockedTimerLabel : timerRunning ? t("stopTimer") : t("startTimer")}
               variant={isRealMode || timerRunning ? "outline" : "default"}
               disabled={isRealMode}
               className={cn(
@@ -1045,29 +1268,55 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                 <Play className="size-4" />
               )}
               <span className="hidden sm:inline">
-                {isRealMode ? "Real mode" : timerRunning ? t("stop") : t("start")}
+                {isRealMode ? realModeTitle : timerRunning ? t("stop") : t("start")}
               </span>
             </Button>
           </div>
+          ) : null}
 
           <div className="shrink-0 min-w-0 flex items-center gap-1 sm:gap-3">
-            <p className="hidden text-right text-sm font-semibold text-slate-800 lg:block">
-              <span className="block text-[11px] tracking-[0.14em] text-slate-500 uppercase">
+            <p className="hidden text-right text-sm font-semibold text-foreground lg:block">
+              <span className="test-muted-copy block text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
                 {t("progress")}
               </span>
               {answeredCount} / {test.totalQuestions} {t("questions")}
             </p>
             <Button
-              className={cn(
-                "h-9 shrink-0 rounded-xl bg-blue-600 px-2 text-sm font-semibold hover:bg-blue-600/90 sm:px-4",
-                isSmallLandscape && "h-8 px-2 text-xs",
-              )}
-              aria-label={t("finishTest")}
-              disabled={!attemptMode}
-              onClick={() => setFinishOpen(true)}
+              type="button"
+              variant="outline"
+              className="h-9 shrink-0 rounded-xl border-border/70 bg-background/60 px-2 text-xs sm:px-3 sm:text-sm"
+              aria-label={tOptions("title")}
+              onClick={() => setOptionsOpen(true)}
             >
-              {t("finishTest")}
+              <SlidersHorizontal className="size-4" />
+              <span className="hidden sm:inline">{tOptions("title")}</span>
             </Button>
+            {reviewMode ? (
+              <Button
+                asChild
+                className={cn(
+                  "h-9 shrink-0 rounded-xl bg-blue-600 px-2 text-sm font-semibold hover:bg-blue-600/90 sm:px-4",
+                  isSmallLandscape && "h-8 px-2 text-xs",
+                )}
+                aria-label={tListeningResult("resultsButton")}
+              >
+                <Link href={`/${locale}/listening/${test.id}/result?attempt=${attemptId}`}>
+                  {tListeningResult("resultsButton")}
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                className={cn(
+                  "h-9 shrink-0 rounded-xl bg-blue-600 px-2 text-sm font-semibold hover:bg-blue-600/90 sm:px-4",
+                  isSmallLandscape && "h-8 px-2 text-xs",
+                )}
+                aria-label={t("finishTest")}
+                disabled={!attemptMode}
+                onClick={() => setFinishOpen(true)}
+              >
+                {t("finishTest")}
+              </Button>
+            )}
             <Avatar aria-label={t("userAvatar")} className="hidden sm:flex">
               <AvatarFallback className="bg-amber-100 text-amber-700">
                 <User className="size-4" />
@@ -1077,6 +1326,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
         </div>
       </header>
 
+      {!reviewMode ? (
       <div
         className={cn(
           "sticky top-14 z-30 border-b border-border bg-background/95 px-3 py-2 backdrop-blur sm:top-16 sm:px-4 lg:px-8",
@@ -1098,7 +1348,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
               if (isRealMode) return;
               setAudioPlaying((prev) => !prev);
             }}
-            aria-label={isRealMode ? "Audio controls are locked in real mode" : audioPlaying ? t("pauseAudio") : t("playAudio")}
+            aria-label={isRealMode ? realModeLockedAudioLabel : audioPlaying ? t("pauseAudio") : t("playAudio")}
           >
             {audioPlaying ? (
               <Pause className="size-4" />
@@ -1109,14 +1359,19 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
           <div className="w-full min-w-0 max-w-full overflow-hidden">
             <div className="mb-1 flex min-w-0 items-center justify-between gap-2 text-[11px] text-muted-foreground">
-              <p className="min-w-0 truncate">
+              <p className="test-muted-copy min-w-0 truncate">
                 {activeSection.audioMeta.nowPlayingLabel} -{" "}
                 {activeSection.audioMeta.currentTrackTitle}
               </p>
-              <p className={cn("shrink-0", isSmallLandscape && "text-[10px]")}>
+              <p className={cn("test-muted-copy shrink-0", isSmallLandscape && "text-[10px]")}>
                 30:00
               </p>
             </div>
+            {realModeStarting ? (
+              <p className="mb-1 rounded-lg border border-blue-400/40 bg-blue-500/10 px-2 py-1 text-[11px] font-medium text-blue-700 dark:text-blue-200">
+                {realModeCountdownLabel}
+              </p>
+            ) : null}
             <div
               className={cn(
                 "grid w-full min-w-0 grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_120px] sm:gap-3",
@@ -1133,7 +1388,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                   if (isRealMode) return;
                   setAudioProgress(Number(e.target.value));
                 }}
-                aria-label={isRealMode ? "Audio progress is locked in real mode" : t("audioProgress")}
+                aria-label={isRealMode ? realModeProgressLockedLabel : t("audioProgress")}
                 className={cn("h-1.5 w-full min-w-0", isRealMode && "cursor-not-allowed opacity-60")}
               />
               <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden">
@@ -1152,10 +1407,40 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
           </div>
         </div>
       </div>
+      ) : null}
 
-      <main className="grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-3 px-2 py-2 sm:px-3 sm:py-3 lg:gap-4 lg:px-5 lg:py-4">
+      <main className="test-scaleable grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-3 px-2 py-2 sm:px-3 sm:py-3 lg:gap-4 lg:px-5 lg:py-4">
+        {reviewMode ? (
+          <section id="review-main" className="grid min-h-0 items-start gap-4 xl:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)]">
+            <ListeningTranscriptReviewPanel
+              sections={reviewSections}
+              activeSectionId={resolvedActiveSectionId}
+              highlightedQuestionId={highlightedEvidenceQuestionId}
+              onSectionChange={(sectionId) => setActiveSectionId(sectionId as "s1" | "s2" | "s3" | "s4")}
+            />
+
+            <ListeningQuestionAnalysisPanel
+              questions={flatQuestions}
+              answers={persistedAnswersByQuestionId}
+              grading={grading}
+              expanded={expandedReviewQuestions}
+              onToggleExplanation={(questionId) => {
+                setExpandedReviewQuestions((previous) => {
+                  const next = new Set(previous);
+                  if (next.has(questionId)) {
+                    next.delete(questionId);
+                  } else {
+                    next.add(questionId);
+                  }
+                  return next;
+                });
+              }}
+              onJumpEvidence={handleJumpEvidenceFromReview}
+            />
+          </section>
+        ) : (
         <section className="min-h-0 min-w-0">
-          <Card className="h-full min-h-0 gap-0 overflow-hidden py-0">
+          <Card className="test-panel h-full min-h-0 gap-0 overflow-hidden py-0">
             <div className="border-b border-border px-3 py-2">
               {isSmallLandscape ? (
                 <Select
@@ -1204,8 +1489,8 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
             <div
               ref={questionsScrollRef}
               className={cn(
-                "h-[calc(100vh-14.6rem)] min-w-0 overflow-y-auto px-3 py-3 sm:h-[calc(100vh-15.2rem)] sm:px-4 sm:py-4 lg:h-[calc(100vh-16.8rem)] lg:px-5",
-                isSmallLandscape && "h-[calc(100vh-11.2rem)] py-2",
+                "h-[calc(100dvh-11.4rem)] min-w-0 overflow-y-auto px-3 py-3 sm:h-[calc(100dvh-12rem)] sm:px-4 sm:py-4 lg:h-[calc(100dvh-12.8rem)] lg:px-5",
+                isSmallLandscape && "h-[calc(100dvh-9.8rem)] py-2",
               )}
             >
               <Highlightable
@@ -1215,8 +1500,8 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                 noteScopeKey={`section:${activeSection.id}`}
                 contentVersion={`${activeSection.id}:${isSmallLandscape ? "compact" : "full"}`}
                 className={cn(
-                  "space-y-4 pb-28 lg:pb-10",
-                  isSmallLandscape && "pb-24",
+                  "space-y-4 pb-14 lg:pb-3",
+                  isSmallLandscape && "pb-12",
                 )}
               >
                 <div>
@@ -1227,7 +1512,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                     {activeSection.questionRangeLabel}
                   </p>
                 </div>
-                <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm break-words">
+                <div className="test-soft-surface rounded-lg border border-border bg-muted/20 p-3 text-sm break-words">
                   {activeSection.instructions}
                 </div>
 
@@ -1241,11 +1526,11 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
             <div
               className={cn(
-                "sticky bottom-0 z-20 border-t border-border bg-background/95 px-3 py-3 backdrop-blur sm:px-4",
-                isSmallLandscape && "py-2",
+                "test-panel sticky bottom-0 z-20 border-t border-border bg-background/95 px-2.5 py-1.5 backdrop-blur sm:px-3 sm:py-2",
+                isSmallLandscape && "py-1",
               )}
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 sm:flex-nowrap sm:gap-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 lg:hidden">
                 <Button
                   type="button"
                   variant="ghost"
@@ -1256,6 +1541,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                     const next = Math.max(1, current - 1) as 1 | 2 | 3 | 4;
                     handleSectionChange(`s${next}`);
                   }}
+                  className="h-8 rounded-lg px-2.5 text-xs"
                 >
                   <MoveLeft className="size-4" />
                   {t("previousSection")}
@@ -1276,26 +1562,13 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                       return copy;
                     });
                   }}
+                  className="h-8 rounded-lg px-2.5 text-xs"
                 >
                   {marked.has(activeQuestionNumber) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
                   {marked.has(activeQuestionNumber)
                     ? (t.has("unmark") ? t("unmark") : "Unmark")
                     : t("markForReview")}
                 </Toggle>
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  aria-label={paletteTitle}
-                  className={cn(
-                    "order-4 w-full sm:order-3 sm:w-auto lg:hidden",
-                    isSmallLandscape && "sm:order-4 sm:w-full",
-                  )}
-                  onClick={() => setPaletteOpen(true)}
-                >
-                  <Grid2x2 className="size-4" />
-                  {paletteTitle}
-                </Button>
 
                 <Button
                   type="button"
@@ -1307,16 +1580,53 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                     const next = Math.min(4, current + 1) as 1 | 2 | 3 | 4;
                     handleSectionChange(`s${next}`);
                   }}
-                  className="text-blue-700 hover:text-blue-700"
+                  className="h-8 rounded-lg px-2.5 text-xs text-blue-700 hover:text-blue-700 dark:text-blue-300"
                 >
                   {t("nextSection")}
                   <MoveRight className="size-4" />
                 </Button>
+
+                <Button
+                  type="button"
+                  variant="secondary"
+                  aria-label={paletteTitle}
+                  className="h-8 rounded-lg px-2.5 text-xs"
+                  onClick={() => setPaletteOpen(true)}
+                >
+                  <Grid2x2 className="size-4" />
+                  {paletteTitle}
+                </Button>
               </div>
 
-              <div className="mt-2 hidden border-t border-border/70 pt-2.5 lg:block">
-                <div className="flex min-w-0 items-center gap-4">
-                  <div className="flex shrink-0 items-center gap-2">
+              <div className="mt-1.5 min-w-0 overflow-x-auto [scrollbar-width:thin] lg:hidden">
+                <div className="inline-flex min-w-full items-center gap-1.5 pr-1">
+                  {sectionPaletteSections.map((section) => {
+                    const isActiveSection = section.sectionId === activeSectionId;
+                    return (
+                      <button
+                        key={section.sectionId}
+                        type="button"
+                        className={cn(
+                          "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-[11px] font-semibold transition-colors",
+                          isActiveSection
+                            ? "border-blue-400/60 bg-blue-500/10 text-foreground"
+                            : "border-border/70 bg-background/70 text-muted-foreground hover:text-foreground"
+                        )}
+                        onClick={() => handleSectionChange(section.sectionId)}
+                      >
+                        <span>{t("sectionTab", { index: section.index })}</span>
+                        <span className="text-[10px] opacity-85">
+                          {section.answered}/{section.numbers.length}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="hidden min-w-0 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-5">
+                <div className="min-w-0 overflow-x-auto [scrollbar-width:thin]">
+                  <div className="inline-flex min-w-full items-center gap-2 pr-1">
                     {sectionPaletteSections.map((section) => {
                       const isActiveSection = section.sectionId === activeSectionId;
                       return (
@@ -1324,7 +1634,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                           key={section.sectionId}
                           type="button"
                           className={cn(
-                            "inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-semibold transition-colors",
+                            "inline-flex h-8 shrink-0 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition-colors",
                             isActiveSection
                               ? "border-blue-400/60 bg-blue-500/10 text-foreground"
                               : "border-border/70 bg-background/70 text-muted-foreground hover:text-foreground"
@@ -1338,47 +1648,103 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                         </button>
                       );
                     })}
-                  </div>
 
-                  <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
-                    <div className="inline-flex min-w-full items-center gap-1.5 pr-1">
-                      {(activeSectionPalette?.numbers ?? []).map((number) => {
-                        const answered = isAnswered(answers[number]);
-                        const isMarked = marked.has(number);
-                        const isCurrent = activeQuestionNumber === number;
+                    <Separator orientation="vertical" className="mx-1 h-5" />
 
-                        return (
-                          <Button
-                            key={number}
-                            type="button"
-                            variant="outline"
-                            aria-label={getJumpToQuestionLabel(number)}
-                            onClick={() => jumpToQuestion(number)}
-                            className={cn(
-                              "relative h-7 min-w-7 rounded-md border px-1 text-xs font-semibold shadow-none",
-                              isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
-                              !isCurrent && answered && "border-blue-300 bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
-                              !isCurrent && !answered && "border-border bg-background text-foreground/85",
-                              isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
-                            )}
-                          >
-                            {number}
-                            {isMarked ? (
-                              <span
-                                className="absolute right-1 top-1 size-1 rounded-full bg-amber-500"
-                                aria-hidden="true"
-                              />
-                            ) : null}
-                          </Button>
-                        );
-                      })}
-                    </div>
+                    {(activeSectionPalette?.numbers ?? []).map((number) => {
+                      const answered = isAnswered(answers[number]);
+                      const isMarked = marked.has(number);
+                      const isCurrent = activeQuestionNumber === number;
+
+                      return (
+                        <Button
+                          key={number}
+                          type="button"
+                          variant="outline"
+                          aria-label={getJumpToQuestionLabel(number)}
+                          onClick={() => jumpToQuestion(number)}
+                          className={cn(
+                            "relative h-8 min-w-8 rounded-md border px-1.5 text-xs font-semibold shadow-none",
+                            isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                            !isCurrent && answered && "border-blue-300 bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
+                            !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                            isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                          )}
+                        >
+                          {number}
+                          {isMarked ? (
+                            <span
+                              className="absolute right-1 top-1 size-1 rounded-full bg-amber-500"
+                              aria-hidden="true"
+                            />
+                          ) : null}
+                        </Button>
+                      );
+                    })}
                   </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-label={t("previousSection")}
+                    disabled={activeSection.id === "s1"}
+                    onClick={() => {
+                      const current = Number(activeSection.id.slice(1));
+                      const next = Math.max(1, current - 1) as 1 | 2 | 3 | 4;
+                      handleSectionChange(`s${next}`);
+                    }}
+                    className="h-9 rounded-lg px-3.5 text-sm"
+                  >
+                    <MoveLeft className="size-4" />
+                    {t("previousSection")}
+                  </Button>
+
+                  <Toggle
+                    aria-label={t("markForReview")}
+                    variant="outline"
+                    pressed={marked.has(activeQuestionNumber)}
+                    onPressedChange={(next) => {
+                      setMarked((prev) => {
+                        const copy = new Set(prev);
+                        if (next) {
+                          copy.add(activeQuestionNumber);
+                        } else {
+                          copy.delete(activeQuestionNumber);
+                        }
+                        return copy;
+                      });
+                    }}
+                    className="h-9 rounded-lg px-3.5 text-sm"
+                  >
+                    {marked.has(activeQuestionNumber) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
+                    {marked.has(activeQuestionNumber)
+                      ? (t.has("unmark") ? t("unmark") : "Unmark")
+                      : t("markForReview")}
+                  </Toggle>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-label={t("nextSection")}
+                    disabled={activeSection.id === "s4"}
+                    onClick={() => {
+                      const current = Number(activeSection.id.slice(1));
+                      const next = Math.min(4, current + 1) as 1 | 2 | 3 | 4;
+                      handleSectionChange(`s${next}`);
+                    }}
+                    className="h-9 rounded-lg px-3.5 text-sm text-blue-700 hover:text-blue-700 dark:text-blue-300"
+                  >
+                    {t("nextSection")}
+                    <MoveRight className="size-4" />
+                  </Button>
                 </div>
               </div>
             </div>
           </Card>
         </section>
+        )}
       </main>
 
       <Sheet open={paletteOpen} onOpenChange={setPaletteOpen}>
@@ -1475,23 +1841,69 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
         </SheetContent>
       </Sheet>
 
+      <TestOptionsSheet
+        open={optionsOpen}
+        onOpenChange={setOptionsOpen}
+        isCompact={isCompact}
+        appearance={appearance}
+        onContrastChange={setContrast}
+        onTextSizeChange={setTextSize}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={toggleFullscreen}
+      />
+
       {showModePicker ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg p-5">
-            <h3 className="text-lg font-semibold">Choose test mode</h3>
+          <Card className="w-full max-w-lg border-border/80 bg-gradient-to-br from-card via-card to-blue-500/5 p-5 shadow-xl sm:p-6">
+            <h3 className="text-lg font-semibold">{t.has("modePickerTitle") ? t("modePickerTitle") : "Choose test mode"}</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Real mode starts immediately and cannot be paused. Practice mode lets you pause and continue the timer.
+              {t.has("modePickerDescription")
+                ? t("modePickerDescription")
+                : "Choose how you want to take this listening test."}
             </p>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              <Button type="button" onClick={() => chooseAttemptMode("real")}>Real mode</Button>
+              <Button type="button" onClick={() => chooseAttemptMode("real")}>
+                {t.has("modeReal") ? t("modeReal") : "Real mode"}
+              </Button>
               <Button type="button" variant="outline" onClick={() => chooseAttemptMode("practice")}>
-                Practice mode
+                {t.has("modePractice") ? t("modePractice") : "Practice mode"}
               </Button>
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">Real: timer auto-starts, cannot be stopped, and test ends when time reaches zero.</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Practice: you can start, pause, and resume the timer anytime.
+            <p className="mt-3 text-xs text-muted-foreground">
+              {t.has("realModeRule")
+                ? t("realModeRule")
+                : "Real mode: timer and audio run like the exam and playback controls are locked."}
             </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t.has("practiceModeRule")
+                ? t("practiceModeRule")
+                : "Practice mode: you can start, pause, and continue freely."}
+            </p>
+          </Card>
+        </div>
+      ) : null}
+
+      {realModeConfirmOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-lg border-border/80 bg-gradient-to-br from-card via-card to-blue-500/10 p-5 shadow-xl sm:p-6">
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold tracking-tight">
+                {t.has("realModeStartTitle") ? t("realModeStartTitle") : "Start Listening Test?"}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {t.has("realModeStartDescription")
+                  ? t("realModeStartDescription")
+                  : "In Real Mode, the audio starts automatically and cannot be paused or replayed. Make sure you are ready before you begin."}
+              </p>
+            </div>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="outline" onClick={cancelRealModeStart}>
+                {t.has("realModeCancelCta") ? t("realModeCancelCta") : t("cancel")}
+              </Button>
+              <Button type="button" onClick={confirmRealModeStart}>
+                {t.has("realModeStartCta") ? t("realModeStartCta") : "Start Now"}
+              </Button>
+            </div>
           </Card>
         </div>
       ) : null}

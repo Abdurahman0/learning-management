@@ -3,8 +3,6 @@ import {redirect} from "next/navigation";
 
 import {AUTH_COOKIE_NAME, parseSessionRole} from "@/lib/auth/session";
 
-import {StudentMistakeAnalysisPageClient} from "./_components/StudentMistakeAnalysisPageClient";
-
 type MistakeAnalysisPageProps = {
   params: Promise<{
     locale: string;
@@ -28,6 +26,5 @@ export default async function MistakeAnalysisPage({params}: MistakeAnalysisPageP
     redirect(`/${locale}/teacher`);
   }
 
-  return <StudentMistakeAnalysisPageClient />;
+  redirect(`/${locale}/review-center`);
 }
-

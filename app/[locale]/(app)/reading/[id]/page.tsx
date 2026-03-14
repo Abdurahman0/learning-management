@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { BookOpen, Bookmark, BookmarkCheck, CheckCircle2, Clock3, Grid2x2, HelpCircle, MoveLeft, MoveRight, Play, RotateCcw, Square, User, XCircle } from "lucide-react";
+import { useParams, useSearchParams } from "next/navigation";
+import { BookOpen, Bookmark, BookmarkCheck, Clock3, Grid2x2, HelpCircle, MoveLeft, MoveRight, Play, RotateCcw, SlidersHorizontal, Square, User } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { getReadingTestById, type ReadingQuestion } from "@/data/reading-tests";
@@ -39,6 +39,9 @@ import {
   type ReadingHighlightColor,
 } from "@/lib/reading-highlights";
 import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
+import { useTestAppearance } from "@/lib/test-appearance";
+import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
+import { ReviewQuestionsPanel } from "./result/_components/ReviewQuestionsPanel";
 
 const DEFAULT_SPLIT = 50;
 
@@ -149,7 +152,8 @@ type ReadingTestClientProps = {
 
 function ReadingTestClient({ test, restartRequested = false, requestedMode = null }: ReadingTestClientProps) {
   const t = useTranslations("readingTest");
-  const router = useRouter();
+  const tReadingResult = useTranslations("readingResult");
+  const tOptions = useTranslations("testOptions");
   const locale = useLocale();
   const [attemptId, setAttemptId] = useState<string>("");
   const [startedAt, setStartedAt] = useState<number>(0);
@@ -166,9 +170,31 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
   const [remainingSeconds, setRemainingSeconds] = useState(test.durationMinutes * 60);
   const [timerRunning, setTimerRunning] = useState(false);
   const [attemptMode, setAttemptMode] = useState<AttemptMode | null>(null);
-  const [splitPct, setSplitPct] = useState(DEFAULT_SPLIT);
-  const [mounted, setMounted] = useState(false);
-  const [highlights, setHighlights] = useState<ReadingHighlight[]>([]);
+  const splitStorageKey = "readingSplitPct";
+  const [splitPct, setSplitPct] = useState(() => {
+    if (typeof window === "undefined") return DEFAULT_SPLIT;
+    try {
+      const rawSplit = window.localStorage.getItem(splitStorageKey);
+      const parsedSplit = rawSplit ? Number(rawSplit) : NaN;
+      return Number.isFinite(parsedSplit)
+        ? clampSplitPct(parsedSplit)
+        : DEFAULT_SPLIT;
+    } catch {
+      return DEFAULT_SPLIT;
+    }
+  });
+  const [highlights, setHighlights] = useState<ReadingHighlight[]>(() => {
+    if (typeof window === "undefined") return [];
+    return loadReadingHighlights(test.id);
+  });
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const {
+    appearance,
+    setContrast,
+    setTextSize,
+    isFullscreen,
+    toggleFullscreen,
+  } = useTestAppearance("test-taking");
 
   const splitContainerRef = useRef<HTMLDivElement | null>(null);
   const questionsScrollRef = useRef<HTMLDivElement | null>(null);
@@ -178,7 +204,6 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
   const shouldAutoScrollQuestionRef = useRef(false);
   const realModeAutoFinishedRef = useRef(false);
   const initDoneRef = useRef(false);
-  const splitStorageKey = "readingSplitPct";
   const leaveWarningMessage = t.has("leaveWarning")
     ? t("leaveWarning")
     : "Are you sure you want to quit this test? Your results will not be saved.";
@@ -210,6 +235,18 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
     pendingParagraphRef.current = null;
   };
 
+  const clearAttemptQueryParams = () => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("restart");
+    url.searchParams.delete("mode");
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  };
+
   useEffect(() => {
     if (initDoneRef.current) {
       return;
@@ -217,14 +254,12 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
     initDoneRef.current = true;
 
     if (restartRequested || requestedMode) {
-      resetAttemptState(requestedMode ?? null);
-      if (typeof window !== "undefined") {
-        const url = new URL(window.location.href);
-        url.searchParams.delete("restart");
-        url.searchParams.delete("mode");
-        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
-      }
-      return;
+      const mode = requestedMode ?? null;
+      const resetTimer = window.setTimeout(() => {
+        resetAttemptState(mode);
+      }, 0);
+      clearAttemptQueryParams();
+      return () => window.clearTimeout(resetTimer);
     }
 
     const latestId = loadLatestAttemptId("reading", test.id);
@@ -232,24 +267,46 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
 
     if (saved) {
       const restoredMode = saved.mode ?? "practice";
-      setAttemptId(saved.attemptId);
-      setAnswers(saved.answers as Record<string, AnswerValue>);
-      setMarked(new Set(saved.markedQuestionIds));
-      setStartedAt(saved.startedAt);
-      setRemainingSeconds(saved.timeRemainingSec);
-      setAttemptMode(restoredMode);
-      setTimerRunning(restoredMode === "real" && saved.timeRemainingSec > 0);
+      const hydrateTimer = window.setTimeout(() => {
+        setAttemptId(saved.attemptId);
+        setAnswers(saved.answers as Record<string, AnswerValue>);
+        setMarked(new Set(saved.markedQuestionIds));
+        setStartedAt(saved.startedAt);
+        setRemainingSeconds(saved.timeRemainingSec);
+        setAttemptMode(restoredMode);
+        setTimerRunning(restoredMode === "real" && saved.timeRemainingSec > 0);
+        realModeAutoFinishedRef.current = false;
+      }, 0);
+      return () => window.clearTimeout(hydrateTimer);
+    }
+
+    const initTimer = window.setTimeout(() => {
+      const newAttemptId = createAttemptId();
+      setAttemptId(newAttemptId);
+      setStartedAt(Date.now());
+      setAttemptMode(null);
+      setTimerRunning(false);
       realModeAutoFinishedRef.current = false;
+    }, 0);
+    return () => window.clearTimeout(initTimer);
+  }, [requestedMode, restartRequested, test.id]);
+
+  useEffect(() => {
+    if (!(restartRequested || requestedMode)) {
+      return;
+    }
+    if (attemptMode !== null) {
       return;
     }
 
-    const newAttemptId = createAttemptId();
-    setAttemptId(newAttemptId);
-    setStartedAt(Date.now());
-    setAttemptMode(null);
-    setTimerRunning(false);
-    realModeAutoFinishedRef.current = false;
-  }, [requestedMode, restartRequested, test.id]);
+    const mode = requestedMode ?? null;
+    const resetTimer = window.setTimeout(() => {
+      resetAttemptState(mode);
+    }, 0);
+    clearAttemptQueryParams();
+
+    return () => window.clearTimeout(resetTimer);
+  }, [attemptMode, requestedMode, restartRequested]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
@@ -260,33 +317,16 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
   }, []);
 
   useEffect(() => {
-    setMounted(true);
-    try {
-      const rawSplit = window.localStorage.getItem(splitStorageKey);
-      const parsedSplit = rawSplit ? Number(rawSplit) : NaN;
-      if (Number.isFinite(parsedSplit)) {
-        setSplitPct(clampSplitPct(parsedSplit));
-      }
-
-      setHighlights(loadReadingHighlights(test.id));
-    } catch {
-      // Ignore storage failures.
-    }
-  }, [splitStorageKey, test.id]);
-
-  useEffect(() => {
-    if (!mounted) return;
     try {
       window.localStorage.setItem(splitStorageKey, String(splitPct));
     } catch {
       // Ignore storage failures.
     }
-  }, [mounted, splitPct, splitStorageKey]);
+  }, [splitPct, splitStorageKey]);
 
   useEffect(() => {
-    if (!mounted) return;
     saveReadingHighlights(test.id, highlights);
-  }, [highlights, mounted, test.id]);
+  }, [highlights, test.id]);
 
   useEffect(() => {
     if (!timerRunning || remainingSeconds <= 0) {
@@ -425,7 +465,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
   const timeSpent = test.durationMinutes * 60 - remainingSeconds;
   const isRealMode = attemptMode === "real";
   const showModePicker = attemptMode === null && !reviewMode;
-  const gridPct = mounted ? splitPct : DEFAULT_SPLIT;
+  const gridPct = splitPct;
   const passagePaletteSections = useMemo(() => {
     return test.passages.map((passage, index) => {
       const numbers = test.questions
@@ -460,12 +500,13 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
   const passageParagraphs = useMemo(() => {
     const text = activePassage?.text ?? "";
     const paragraphs = text.split("\n\n");
-    let cursor = 0;
-    return paragraphs.map((paragraph, index) => {
-      const start = cursor;
-      cursor += paragraph.length + 2;
-      return { paragraph, index, start };
-    });
+    return paragraphs.map((paragraph, index) => ({
+      paragraph,
+      index,
+      start: paragraphs
+        .slice(0, index)
+        .reduce((total, item) => total + item.length + 2, 0),
+    }));
   }, [activePassage]);
 
   const getPassageLocalHighlights = (paragraphStart: number, paragraphLength: number) => {
@@ -624,6 +665,24 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
+  const jumpToEvidenceFromReview = useCallback(
+    (questionId: string) => {
+      const question = test.questions.find((item) => item.id === questionId);
+      const evidence = question?.evidenceSpans[0];
+      if (!evidence) return;
+
+      const paragraphId = `para-${evidence.passageId}-${evidence.paragraphIndex}`;
+      pendingParagraphRef.current = paragraphId;
+      if (evidence.passageId !== activePassageId) {
+        setActivePassageId(evidence.passageId);
+        return;
+      }
+      const target = document.getElementById(paragraphId);
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    },
+    [activePassageId, test.questions]
+  );
+
   const finishTest = useCallback(() => {
     if (!attemptId) return;
 
@@ -641,18 +700,15 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
       timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
     });
 
-    setReviewMode(false);
+    setReviewMode(true);
     setFinishOpen(false);
     setTimerRunning(false);
-    router.push(`/${locale}/reading/${test.id}/result?attempt=${attemptId}`);
   }, [
     answers,
     attemptId,
     attemptMode,
-    locale,
     marked,
     remainingSeconds,
-    router,
     startedAt,
     test.durationMinutes,
     test.id,
@@ -677,7 +733,10 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
     }
 
     realModeAutoFinishedRef.current = true;
-    finishTest();
+    const finishTimer = window.setTimeout(() => {
+      finishTest();
+    }, 0);
+    return () => window.clearTimeout(finishTimer);
   }, [finishTest, isRealMode, remainingSeconds, reviewMode]);
 
   const handleRestartTest = () => {
@@ -718,7 +777,11 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
   };
 
   return (
-    <section className="-mx-4 -my-4 flex h-[calc(100vh-2rem)] flex-col overflow-x-hidden overflow-y-hidden bg-background text-foreground sm:-mx-5 lg:-mx-10 lg:-my-8">
+    <section
+      data-test-contrast={appearance.contrast}
+      data-test-size={appearance.textSize}
+      className="test-appearance-root -mx-4 -my-4 flex h-[calc(100vh-2rem)] flex-col overflow-x-hidden overflow-y-hidden bg-background text-foreground sm:-mx-5 lg:-mx-10 lg:-my-8"
+    >
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
         <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-4 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
@@ -766,9 +829,19 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
 
           <div className="order-2 flex min-w-0 items-center gap-2 sm:order-3 sm:gap-3">
             <p className="hidden text-right text-sm font-semibold text-foreground lg:block">
-              <span className="block text-xs tracking-[0.14em] text-muted-foreground uppercase">{t("progress")}</span>
+              <span className="test-muted-copy block text-xs tracking-[0.14em] text-muted-foreground uppercase">{t("progress")}</span>
               {answeredCount} / {test.totalQuestions} {t("questions")}
             </p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOptionsOpen(true)}
+              className="h-9 rounded-xl border-border/70 bg-background/60 px-2 text-xs sm:h-10 sm:px-3 sm:text-sm"
+              aria-label={tOptions("title")}
+            >
+              <SlidersHorizontal className="size-4" />
+              <span className="hidden sm:inline">{tOptions("title")}</span>
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -778,15 +851,27 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
               {t.has("clearHighlights") ? t("clearHighlights") : "Clear highlights"}
             </Button>
             {reviewMode ? (
-              <Button
-                type="button"
-                aria-label={t.has("restartTest") ? t("restartTest") : "Restart test"}
-                onClick={handleRestartTest}
-                className="h-9 rounded-xl bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90 sm:h-10 sm:px-6"
-              >
-                <RotateCcw className="size-4" />
-                {t.has("restartTest") ? t("restartTest") : "Restart test"}
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  asChild
+                  className="h-9 rounded-xl bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90 sm:h-10 sm:px-6"
+                >
+                  <Link href={`/${locale}/reading/${test.id}/result?attempt=${attemptId}`}>
+                    {tReadingResult("resultsButton")}
+                  </Link>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label={t.has("restartTest") ? t("restartTest") : "Restart test"}
+                  onClick={handleRestartTest}
+                  className="h-9 rounded-xl px-3 text-xs sm:h-10 sm:px-4 sm:text-sm"
+                >
+                  <RotateCcw className="size-4" />
+                  {t.has("restartTest") ? t("restartTest") : "Restart test"}
+                </Button>
+              </>
             ) : (
               <Button
                 aria-label={t("finishTest")}
@@ -806,7 +891,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
         </div>
       </header>
 
-      <div className="border-b border-border/70 px-3 py-2 lg:hidden">
+      <div className="test-panel border-b border-border/70 px-3 py-2 lg:hidden">
         <div className="grid grid-cols-2 rounded-xl border border-border bg-card/70 p-1">
           <Button
             type="button"
@@ -831,13 +916,13 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
 
       <main
         ref={splitContainerRef}
-        className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden px-2 py-2 sm:px-3 sm:py-3 lg:[grid-template-columns:var(--reading-grid)] lg:gap-0 lg:px-0 lg:py-0"
+        className="test-scaleable grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden px-2 py-2 sm:px-3 sm:py-3 lg:[grid-template-columns:var(--reading-grid)] lg:gap-0 lg:px-0 lg:py-0"
         style={{ "--reading-grid": `${gridPct}% 8px minmax(0, 1fr)` } as CSSProperties}
       >
         <div className={cn("min-h-0 min-w-0 px-1 sm:px-0 lg:px-5 lg:py-4", isCompact && mobilePanel !== "passage" && "hidden")}>
-          <Card className="flex h-full min-h-0 flex-col justify-start overflow-hidden border-border/80 bg-card/80 py-0 shadow-sm dark:shadow-black/25">
+          <Card className="test-panel flex h-full min-h-0 flex-col justify-start overflow-hidden border-border/80 bg-card/80 py-0 shadow-sm dark:shadow-black/25">
             <Tabs value={activePassageId} onValueChange={handlePassageChange} className="shrink-0">
-              <div className="sticky top-0 z-10 border-b border-border/80 bg-card/95 px-3 pt-1 backdrop-blur supports-[backdrop-filter]:bg-card/90">
+              <div className="test-panel sticky top-0 z-10 border-b border-border/80 bg-card/95 px-3 pt-1 backdrop-blur supports-[backdrop-filter]:bg-card/90">
                 <TabsList className="h-11 w-full justify-start overflow-x-auto">
                   {test.passages.map((passage, index) => (
                     <TabsTrigger key={passage.id} value={passage.id} className="h-11 shrink-0 px-4 text-sm" aria-label={`Passage ${index + 1}`}>
@@ -887,7 +972,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                   }));
 
                   return (
-                    <p id={paragraphId} key={paragraphId} className="break-words text-[15px] leading-relaxed text-foreground/90 sm:text-base">
+                    <p id={paragraphId} key={paragraphId} className="test-body-copy break-words text-foreground/90">
                       <HighlightableText
                         text={paragraph}
                         userHighlights={getPassageLocalHighlights(paragraphStart, paragraph.length)}
@@ -947,7 +1032,27 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
         />
 
         <div className={cn("min-h-0 min-w-0 px-1 sm:px-0 lg:px-5 lg:py-4", isCompact && mobilePanel !== "questions" && "hidden")}>
-          <Card className="h-full min-h-0 gap-0 overflow-hidden border-border/80 bg-card/80 py-0 shadow-sm dark:shadow-black/25">
+          {reviewMode ? (
+            <ReviewQuestionsPanel
+              questions={test.questions}
+              answers={answers}
+              grading={grading}
+              expanded={expandedExplanations}
+              onToggleExplanation={(questionId) => {
+                setExpandedExplanations((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(questionId)) {
+                    next.delete(questionId);
+                  } else {
+                    next.add(questionId);
+                  }
+                  return next;
+                });
+              }}
+              onJumpEvidence={jumpToEvidenceFromReview}
+            />
+          ) : (
+          <Card className="test-panel h-full min-h-0 gap-0 overflow-hidden border-border/80 bg-card/80 py-0 shadow-sm dark:shadow-black/25">
             <div ref={questionsScrollRef} className="h-[calc(100vh-16.3rem)] min-w-0 overflow-y-auto px-3 py-4 sm:h-[calc(100vh-16.9rem)] sm:px-4 lg:h-[calc(100vh-18rem)] lg:px-5 lg:py-5 [scrollbar-color:hsl(var(--border))_transparent]">
               <div className="space-y-7 pb-20">
                 {groupedQuestions.map((group) => {
@@ -970,11 +1075,11 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                     <section key={group.title} className="space-y-4">
                       <div>
                         <h3 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{group.title}</h3>
-                        {group.instruction ? <p className="mt-1 break-words text-sm text-muted-foreground">{group.instruction}</p> : null}
+                        {group.instruction ? <p className="test-muted-copy mt-1 break-words text-sm text-muted-foreground">{group.instruction}</p> : null}
                       </div>
 
                       {headings ? (
-                        <div className="rounded-lg border border-border/80 bg-muted/35 p-3">
+                        <div className="test-soft-surface rounded-lg border border-border/80 bg-muted/35 p-3">
                           <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{t("headingsList")}</p>
                           <ul className="mt-2 space-y-1 text-sm">
                             {headings.headingOptions.map((heading, headingIndex) => {
@@ -1052,7 +1157,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                                 questionRefs.current.set(question.number, el);
                               }}
                               className={cn(
-                                "scroll-mt-24 rounded-xl border p-4 transition-all duration-200",
+                                "test-panel scroll-mt-24 rounded-xl border p-4 transition-all duration-200",
                                 "hover:border-border hover:bg-accent/20",
                                 active
                                   ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/40"
@@ -1100,7 +1205,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                               </div>
 
                               {reviewMode ? (
-                                <p className="mb-3 text-xs text-muted-foreground">
+                                <p className="test-muted-copy mb-3 text-xs text-muted-foreground">
                                   {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
                                   {Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : question.correctAnswer}
                                 </p>
@@ -1194,7 +1299,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                                   disabled={reviewMode}
                                   onValueChange={(nextValue) => setAnswers((prev) => ({ ...prev, [question.id]: nextValue }))}
                                 >
-                                  <SelectTrigger className="max-w-[280px] bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
+                                  <SelectTrigger className="test-input-surface max-w-[280px] bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
                                     <SelectValue placeholder={t("selectHeading")} />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1211,7 +1316,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                                   disabled={reviewMode}
                                   onValueChange={(nextValue) => setAnswers((prev) => ({ ...prev, [question.id]: nextValue }))}
                                 >
-                                  <SelectTrigger className="max-w-[220px] bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
+                                  <SelectTrigger className="test-input-surface max-w-[220px] bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
                                     <SelectValue placeholder={t("selectParagraph")} />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1229,7 +1334,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                                   disabled={reviewMode}
                                   onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
                                   placeholder={t("oneWordOnly")}
-                                  className="max-w-sm bg-background/70 placeholder:text-muted-foreground/80 dark:bg-muted/30"
+                                  className="test-input-surface max-w-sm bg-background/70 placeholder:text-muted-foreground/80 dark:bg-muted/30"
                                 />
                               ) : null}
 
@@ -1240,9 +1345,9 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                                     {t.has("explain") ? t("explain") : "Explain"}
                                   </Button>
                                   {expandedExplanations.has(question.id) ? (
-                                    <div className="rounded-md border border-border/80 bg-muted/25 p-3 text-sm">
+                                    <div className="test-soft-surface rounded-md border border-border/80 bg-muted/25 p-3 text-sm">
                                       <p className="text-foreground/90">{question.explanation}</p>
-                                      <p className="mt-2 text-xs text-muted-foreground">
+                                      <p className="test-muted-copy mt-2 text-xs text-muted-foreground">
                                         {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
                                         {Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : question.correctAnswer}
                                       </p>
@@ -1260,7 +1365,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
               </div>
             </div>
 
-            <div className="sticky bottom-0 z-20 border-t border-border/80 bg-card/95 px-3 py-3 backdrop-blur sm:px-4">
+            <div className="test-panel sticky bottom-0 z-20 border-t border-border/80 bg-card/95 px-3 py-3 backdrop-blur sm:px-4">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <div className="flex items-center gap-1 sm:gap-2">
                   <Button
@@ -1377,6 +1482,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
               </div>
             </div>
           </Card>
+          )}
         </div>
       </main>
 
@@ -1435,6 +1541,17 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      <TestOptionsSheet
+        open={optionsOpen}
+        onOpenChange={setOptionsOpen}
+        isCompact={isCompact}
+        appearance={appearance}
+        onContrastChange={setContrast}
+        onTextSizeChange={setTextSize}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={toggleFullscreen}
+      />
 
       {showModePicker ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">

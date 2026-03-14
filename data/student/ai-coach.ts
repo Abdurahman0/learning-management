@@ -90,7 +90,7 @@ export const STUDENT_COACH_RECOMMENDATIONS: StudentCoachRecommendation[] = [
   {id: "practiceMatchingHeadings", tag: "reading", action: "navigate", href: "/reading"},
   {id: "focusTask2Structure", tag: "writing", action: "toast"},
   {id: "reviewTfngStrategy", tag: "listening", action: "navigate", href: "/reading"},
-  {id: "revisitStudyBank", tag: "studyBank", action: "navigate", href: "/study-bank"}
+  {id: "revisitStudyBank", tag: "studyBank", action: "navigate", href: "/review-center"}
 ];
 
 export function buildCoachReply(question: string) {

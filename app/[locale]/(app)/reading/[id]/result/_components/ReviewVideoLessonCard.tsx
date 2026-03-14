@@ -20,15 +20,15 @@ export function ReviewVideoLessonCard({ lesson, onAction }: ReviewVideoLessonCar
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-xl font-semibold tracking-tight">{t("videoLesson")}</h2>
-        <Badge variant="secondary" className="border-blue-400/40 bg-blue-500/15 text-blue-100">
+        <Badge variant="secondary" className="border-blue-300 bg-blue-100 text-blue-700 dark:border-blue-400/40 dark:bg-blue-500/15 dark:text-blue-100">
           {lesson.tag}
         </Badge>
       </div>
 
-      <Card className="overflow-hidden border-border/80 bg-card/70 p-0">
+      <Card className="overflow-hidden border-slate-200/85 bg-white/95 p-0 shadow-sm shadow-slate-200/50 dark:border-border/80 dark:bg-card/70 dark:shadow-none">
         <div className="grid gap-0 lg:grid-cols-[300px_minmax(0,1fr)]">
-          <div className="relative flex min-h-[180px] items-center justify-center border-b border-border/70 bg-gradient-to-br from-blue-700/35 via-indigo-700/20 to-background lg:border-r lg:border-b-0">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(59,130,246,0.25),transparent_55%)]" />
+          <div className="relative flex min-h-[180px] items-center justify-center border-b border-slate-200 bg-gradient-to-br from-blue-100 via-indigo-100/40 to-white dark:border-border/70 dark:from-blue-700/35 dark:via-indigo-700/20 dark:to-background lg:border-r lg:border-b-0">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(59,130,246,0.2),transparent_55%)] dark:bg-[radial-gradient(circle_at_20%_10%,rgba(59,130,246,0.25),transparent_55%)]" />
             <div className="relative text-center">
               <Button
                 size="icon"
@@ -39,7 +39,7 @@ export function ReviewVideoLessonCard({ lesson, onAction }: ReviewVideoLessonCar
               </Button>
               <p className="mt-2 text-xs text-muted-foreground">{lesson.thumbnailLabel ?? t("videoLesson")}</p>
             </div>
-            <Badge className="absolute bottom-3 right-3 bg-background/80 text-foreground">
+            <Badge className="absolute bottom-3 right-3 border border-slate-200 bg-white/90 text-slate-700 dark:border-border dark:bg-background/80 dark:text-foreground">
               {lesson.duration}
             </Badge>
           </div>
@@ -70,7 +70,7 @@ export function ReviewVideoLessonCard({ lesson, onAction }: ReviewVideoLessonCar
                       key={`${stamp.label}-${stamp.time}`}
                       size="sm"
                       variant="outline"
-                      className="bg-background/50"
+                      className="border-slate-200 bg-white/80 hover:bg-slate-100 dark:border-border dark:bg-background/50 dark:hover:bg-background/70"
                       onClick={() => onAction(`${stamp.label} (${stamp.time})`)}
                     >
                       {stamp.label}

@@ -4,7 +4,7 @@ import {Award, Flame, Star} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
-import type {Achievement} from "@/data/dashboard-demo";
+import type {Achievement} from "@/data/student/dashboard";
 import {cn} from "@/lib/utils";
 
 type AchievementsGridProps = {

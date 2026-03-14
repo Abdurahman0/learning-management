@@ -224,7 +224,9 @@
       "speakingSoon": "Speaking",
       "guestMode": "Mehmon rejimi",
       "dailyProgress": "Kunlik progress",
-      "createAccount": "Bepul akkaunt yaratish"
+      "createAccount": "Bepul akkaunt yaratish",
+      "sessions": "1-to-1 Sessionlar",
+      "reviewCenter": "Review Center"
     },
     "meta": {
       "minutes": "Daqiqa",
@@ -282,6 +284,24 @@
     "cancel": "Bekor qilish",
     "confirmFinish": "Yakunlash va baholash"
   },
+  "testOptions": {
+    "title": "Sozlamalar",
+    "description": "Test jarayoni uchun o'qish va ko'rish parametrlarini moslang.",
+    "contrast": "Kontrast",
+    "contrastHint": "Test davomida matn va panellar ko'rinishini kuchaytiradi.",
+    "contrastDefault": "Standart",
+    "contrastHigh": "Yuqori kontrast",
+    "textSize": "Matn o'lchami",
+    "textSizeHint": "Testdan chiqmasdan matn va savol yozuvlarini kattalashtiring yoki kichraytiring.",
+    "textSizeSmall": "Kichik",
+    "textSizeMedium": "O'rta",
+    "textSizeLarge": "Katta",
+    "fullscreen": "To'liq ekran",
+    "fullscreenHint": "Imtihonga o'xshash, chalg'itmaydigan ko'rinish uchun to'liq ekranni yoqing.",
+    "enterFullscreen": "To'liq ekranga o'tish",
+    "exitFullscreen": "To'liq ekrandan chiqish",
+    "close": "Yopish"
+  },
   "listeningTest": {
     "title": "Academic Listening Test",
     "progress": "Progress",
@@ -319,6 +339,21 @@
     "finishSummary": "Siz {total} ta savoldan {answered} tasiga javob berdingiz. {unanswered} ta javobsiz qoldi.",
     "timeSpent": "Sarflangan vaqt: {seconds} soniya",
     "leaveWarning": "Testdan chiqmoqchimisiz? Natijalar saqlanmaydi.",
+    "modePickerTitle": "Test rejimini tanlang",
+    "modePickerDescription": "Listening testini qanday rejimda ishlashni tanlang.",
+    "modeReal": "Haqiqiy rejim",
+    "modePractice": "Mashq rejimi",
+    "realModeRule": "Haqiqiy rejim: taymer va audio imtihon kabi ishlaydi, ijro boshqaruvlari bloklanadi.",
+    "practiceModeRule": "Mashq rejimi: taymerni xohlagan payt boshlash, pauza qilish va davom ettirish mumkin.",
+    "realModeStartTitle": "Listening testini boshlaysizmi?",
+    "realModeStartDescription": "Haqiqiy rejimda audio avtomatik boshlanadi va uni pauza qilish yoki qayta ijro etish mumkin emas. Boshlashdan oldin tayyor ekaningizga ishonch hosil qiling.",
+    "realModeStartCta": "Hozir boshlash",
+    "realModeCancelCta": "Bekor qilish",
+    "realModeStartsSoon": "Audio 1 soniyadan so'ng boshlanadi...",
+    "realMode": "Haqiqiy rejim",
+    "realModeTimerLocked": "Haqiqiy rejimda taymer bloklangan",
+    "realModeAudioLocked": "Haqiqiy rejimda audio boshqaruvi bloklangan",
+    "realModeProgressLocked": "Haqiqiy rejimda audio progress boshqaruvi bloklangan",
     "cancel": "Bekor qilish",
     "confirmFinish": "Yakunlash va baholash"
   },
@@ -555,6 +590,10 @@
     "explain": "Izoh",
     "hideExplanation": "Izohni yopish",
     "jumpToEvidence": "Dalilga o'tish",
+    "resultsButton": "Natijalar",
+    "summaryOnlyTitle": "Qisqa natija hisoboti",
+    "summaryOnlyDescription": "Bu sahifada faqat umumiy natijalar saqlanadi. Savollar va izohlarni ko'rish uchun Review sahifasini oching.",
+    "openReview": "Review sahifasini ochish",
     "skipped": "Javobsiz",
     "correctStatus": "To'g'ri",
     "incorrectStatus": "Noto'g'ri",
@@ -585,6 +624,8 @@
     "practiceTest": "Mashq testi",
     "sectionPerformanceEyebrow": "Bo'lim natijalari",
     "sectionPerformance": "Part bo'yicha natija",
+    "performanceByTypeEyebrow": "Savol turi bo'yicha",
+    "performanceByType": "Savol turi bo'yicha natija",
     "partLabel": "Part {index}",
     "listeningReview": "Listening tahlili",
     "selectedEvidence": "Tanlangan dalil",
@@ -597,6 +638,32 @@
     "hideExplanation": "Izohni yopish",
     "jumpToEvidence": "Dalilga o'tish",
     "goToQuestion": "Savolga o'tish",
+    "resultsButton": "Natijalar",
+    "summaryOnlyTitle": "Qisqa natija hisoboti",
+    "summaryOnlyDescription": "Bu sahifada faqat umumiy natijalar ko'rsatiladi. Chuqur tahlil uchun Review sahifasini oching.",
+    "openReview": "Review sahifasini ochish",
+    "aiLearningCoach": "AI Learning Coach",
+    "coachWeakestPart": "Eng zaif qism",
+    "coachWeakestType": "Eng zaif savol turi",
+    "coachSkippedQuestions": "O'tkazib yuborilgan savollar",
+    "coachAccuracy": "Aniqlik",
+    "coachInsightsTitle": "Coach xulosalari",
+    "coachInsightWeakPart": "{part} da xatolar eng ko'p. Ushbu qismni qayta ishlab, e'tiborli note-taking qiling.",
+    "coachInsightWeakType": "Hozircha eng zaif tur: {type}. Shu formatni vaqt bilan mashq qiling.",
+    "coachInsightSkipped": "Siz {count} ta savolni o'tkazib yuborgansiz. Har 5 savolda pacing nazoratini qo'llang.",
+    "mistakeHeatmap": "Xatolar Heatmap",
+    "nextLearningActions": "Keyingi o'quv amallari",
+    "practiceWeakPart": "Zaif qismni mashq qilish",
+    "practiceWeakType": "Zaif turni mashq qilish",
+    "reviewSkippedQuestions": "O'tkazib yuborilgan savollarni ko'rish",
+    "startSimilarListening": "O'xshash listening setini boshlash",
+    "openAiCoach": "AI Coachni ochish",
+    "openReviewCenter": "Review Centerga o'tish",
+    "startPractice": "Mashqni boshlash",
+    "actionPlaceholder": "Demo amal: {action}",
+    "excellent": "A'lo",
+    "average": "O'rtacha",
+    "critical": "Tanqidiy",
     "correctStatus": "To'g'ri",
     "incorrectStatus": "Noto'g'ri",
     "skippedStatus": "Javobsiz",
@@ -637,7 +704,10 @@
       "currentBand": "Current Band",
       "testsTaken": "Tests Taken",
       "avgScore": "Avg Score",
-      "studyStreak": "Study Streak"
+      "studyStreak": "Study Streak",
+      "reading": "Reading aniqligi",
+      "listening": "Listening aniqligi",
+      "streakRule": "Streak qoidasi: bugun kamida bitta test bajarilsa +1, test bajarilmasa -1 (minimum 0)."
     },
     "scoreProgress": {
       "title": "Score Progress",
@@ -680,7 +750,20 @@
       "title": "Your Achievements",
       "subtitle": "Collect badges as you progress towards your goal"
     },
-    "copyright": "All rights reserved."
+    "copyright": "All rights reserved.",
+    "actions": {
+      "bookSession": "1-to-1 session bron qilish"
+    },
+    "feedback": {
+      "placeholder": {
+        "title": "Funksiya navbatda",
+        "description": "Bu amal keyingi relizga qadar placeholder sifatida ulangan."
+      },
+      "reviewDetails": {
+        "title": "Review tafsilotlari",
+        "description": "Batafsil review oqimi backend attempt yozuvlari bilan keyin ulanadi."
+      }
+    }
   },
   "adminDashboard": {
     "sidebar": {
@@ -3890,6 +3973,216 @@
       "hoursAgo": "{value}h oldin",
       "yesterday": "Kecha",
       "daysAgo": "{value} kun oldin"
+    }
+  },
+  "studentSessions": {
+    "title": "1-to-1 Sessionlar",
+    "subtitle": "Teacher bilan focused sessionlarni bron qiling va upcoming support meetinglarni bitta joyda kuzating.",
+    "summary": {
+      "total": "Jami session",
+      "upcoming": "Upcoming",
+      "completed": "Yakunlangan"
+    },
+    "filters": {
+      "teacher": "Teacher",
+      "allTeachers": "Barcha teacherlar"
+    },
+    "sessions": {
+      "title": "Mening sessionlarim",
+      "empty": "Bu filter bo'yicha sessionlar topilmadi."
+    },
+    "availability": {
+      "title": "Slot bron qilish"
+    },
+    "status": {
+      "scheduled": "Rejalangan",
+      "completed": "Yakunlangan",
+      "pending": "Tasdiq kutilmoqda",
+      "cancelled": "Bekor qilingan"
+    },
+    "meetingType": {
+      "zoom": "Zoom",
+      "googleMeet": "Google Meet",
+      "inPlatform": "Platforma ichida"
+    },
+    "actions": {
+      "openAssignments": "Assignments ochish",
+      "joinSession": "Sessionga kirish",
+      "viewRecap": "Recapni ko'rish",
+      "bookSlot": "Slot bron qilish",
+      "booked": "Bron qilindi",
+      "slotUnavailable": "Mavjud emas"
+    },
+    "feedback": {
+      "join": {
+        "title": "Session havolasi tayyor",
+        "description": "Live meetingga kirish oqimi hozircha placeholder ko'rinishida ulangan."
+      },
+      "booked": {
+        "title": "Session bron qilindi",
+        "description": "1-to-1 so'rovingiz bu prototip holatida saqlandi."
+      }
+    }
+  },
+  "studentReviewCenter": {
+    "title": "Review Center",
+    "subtitle": "Zaif joylaringizni ko'rib chiqing, muhim savollarni qayta ishlang va IELTS natijangizni yaxshilang.",
+    "actions": {
+      "practiceNow": "Hozir mashq qilish"
+    },
+    "summary": {
+      "questionsToReview": "Ko'rib chiqiladigan savollar",
+      "mostDifficultType": "Eng qiyin savol turi",
+      "weakestModule": "Eng zaif modul",
+      "accuracyTrend": "Aniqlik trendi"
+    },
+    "insights": {
+      "mistakesByType": "Savol turi bo'yicha xatolar",
+      "mistakesByModule": "Modul bo'yicha xatolar",
+      "mistakeCount": "{value} ta xato",
+      "moduleShare": "Xatolarning {value}%"
+    },
+    "patterns": {
+      "keywordMatching": {
+        "title": "Keyword tuzog'i",
+        "description": "Ko'p holatda to'liq ma'noni emas, aynan bir xil so'zlarni tanlayapsiz."
+      },
+      "timeManagement": {
+        "title": "Vaqt bosimida xato",
+        "description": "Oxirgi sectionlarda vaqt qisqarganda aniqlik pasaymoqda."
+      },
+      "misreadingInstructions": {
+        "title": "Instruktsiyani noto'g'ri o'qish",
+        "description": "Ba'zi xatolar word limit yoki task talabini o'tkazib yuborishdan kelmoqda."
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Savol matni, manba yoki izoh bo'yicha qidiring...",
+      "module": {
+        "all": "Barcha modullar"
+      },
+      "reason": {
+        "all": "Barcha sabablar",
+        "wrong": "Noto'g'ri javob",
+        "saved": "Saqlangan",
+        "flagged": "Belgilangan",
+        "weakArea": "Zaif yo'nalish"
+      }
+    },
+    "reviewList": {
+      "title": "Review savollari",
+      "empty": "Hozirgi filter bo'yicha review savollari topilmadi.",
+      "actions": {
+        "review": "Ko'rish",
+        "practiceAgain": "Qayta mashq",
+        "remove": "Reviewdan olib tashlash"
+      }
+    },
+    "preview": {
+      "title": "Savol preview",
+      "question": "Savol",
+      "options": "Javob variantlari",
+      "correctAnswer": "To'g'ri javob",
+      "previousAnswer": "Oldingi javobingiz",
+      "explanation": "Tushuntirish",
+      "whyHere": "Nega Review Centerda",
+      "empty": "Batafsil preview uchun review savolini tanlang.",
+      "actions": {
+        "practiceAgain": "Qayta mashq",
+        "remove": "Reviewdan olib tashlash",
+        "openAnalytics": "Analyticsni ochish"
+      }
+    },
+    "nextSteps": {
+      "title": "Tavsiya etilgan keyingi qadamlar",
+      "secondaryAction": "Strategiyani ko'rish",
+      "items": {
+        "practiceMatchingHeadings": {
+          "title": "Matching Headings mashqi",
+          "description": "Paragraf va heading mosligini tezroq aniqlash uchun fokus drill bajaring.",
+          "primaryAction": "Mashqni boshlash"
+        },
+        "reviewParaphrasingStrategy": {
+          "title": "Reading paraphrase strategiyasi",
+          "description": "Javob tanlashdan oldin paraphrase mappingni qayta ko'rib chiqing.",
+          "primaryAction": "Strategiyani ko'rish"
+        },
+        "retakeReadingDrill": {
+          "title": "Reading drillni qayta ishlash",
+          "description": "So'nggi reading setni qayta bajaring va tuzatilgan qarorlarni solishtiring.",
+          "primaryAction": "Drillni qayta ishlash"
+        }
+      },
+      "aiCoach": {
+        "title": "Coach yordami kerakmi?",
+        "description": "Joriy review savollaringiz asosida shaxsiy reja olish uchun AI Coachni oching.",
+        "action": "AI Coachni ochish"
+      }
+    },
+    "reasons": {
+      "wrong": "Noto'g'ri",
+      "saved": "Saqlangan",
+      "flagged": "Belgilangan",
+      "weakArea": "Zaif yo'nalish"
+    },
+    "savedAgo": {
+      "days3": "3 kun oldin saqlangan",
+      "week1": "1 hafta oldin saqlangan",
+      "weeks2": "2 hafta oldin saqlangan",
+      "days5": "5 kun oldin saqlangan",
+      "days9": "9 kun oldin saqlangan"
+    },
+    "difficulty": {
+      "easy": "Oson",
+      "medium": "O'rta",
+      "hard": "Qiyin"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "questionTypes": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "multipleChoice": "Multiple Choice",
+      "sentenceCompletion": "Sentence Completion",
+      "labelling": "Labelling",
+      "summaryCompletion": "Summary Completion",
+      "noteCompletion": "Note Completion",
+      "task1Report": "Task 1 Report",
+      "task2Essay": "Task 2 Essay"
+    },
+    "questionTypesShort": {
+      "matchingHeadings": "MH",
+      "trueFalseNotGiven": "TFNG",
+      "multipleChoice": "MCQ",
+      "sentenceCompletion": "SC",
+      "labelling": "LBL",
+      "summaryCompletion": "SUM"
+    },
+    "feedback": {
+      "removed": {
+        "title": "Reviewdan olib tashlandi",
+        "description": "Tanlangan savol review navbatidan olib tashlandi."
+      },
+      "strategy": {
+        "title": "Strategiya ochildi",
+        "description": "Batafsil strategiya oqimi hozircha placeholder sifatida ulangan."
+      },
+      "practiceMatchingHeadings": {
+        "title": "Practice flow",
+        "description": "Matching Headings practice oqimi tayyor, keyingi bosqichda kengaytiriladi."
+      },
+      "reviewParaphrasingStrategy": {
+        "title": "Strategiya eslatmasi",
+        "description": "Paraphrasing strategiya tafsilotlari hozircha placeholder ko'rinishda."
+      },
+      "retakeReadingDrill": {
+        "title": "Retake rejalandi",
+        "description": "Reading retake oqimi placeholder amal sifatida ulangan."
+      }
     }
   }
 }

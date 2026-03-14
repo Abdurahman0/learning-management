@@ -37,30 +37,30 @@ function getQuestionStatus(grading: GradeTestResult, questionId: string): Questi
 function getStatusStyles(status: QuestionStatus) {
   if (status === "correct") {
     return {
-      card: "border-emerald-400/30 bg-emerald-500/[0.07]",
-      dot: "border-emerald-400/50 bg-emerald-500/25 text-emerald-200",
-      nav: "border-emerald-500/55 bg-emerald-500/20 text-emerald-100",
-      answer: "text-emerald-200",
-      badge: "border-emerald-400/40 bg-emerald-500/15 text-emerald-200",
+      card: "border-emerald-200 bg-emerald-50 dark:border-emerald-400/30 dark:bg-emerald-500/[0.07]",
+      dot: "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-400/50 dark:bg-emerald-500/25 dark:text-emerald-200",
+      nav: "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/55 dark:bg-emerald-500/20 dark:text-emerald-100",
+      answer: "text-emerald-700 dark:text-emerald-200",
+      badge: "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-emerald-200",
     };
   }
 
   if (status === "incorrect") {
     return {
-      card: "border-rose-400/35 bg-rose-500/[0.1]",
-      dot: "border-rose-400/55 bg-rose-500/25 text-rose-200",
-      nav: "border-rose-500/55 bg-rose-500/20 text-rose-100",
-      answer: "text-rose-200",
-      badge: "border-rose-400/45 bg-rose-500/15 text-rose-200",
+      card: "border-rose-200 bg-rose-50 dark:border-rose-400/35 dark:bg-rose-500/[0.1]",
+      dot: "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-400/55 dark:bg-rose-500/25 dark:text-rose-200",
+      nav: "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-500/55 dark:bg-rose-500/20 dark:text-rose-100",
+      answer: "text-rose-700 dark:text-rose-200",
+      badge: "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-400/45 dark:bg-rose-500/15 dark:text-rose-200",
     };
   }
 
   return {
-    card: "border-border/70 bg-background/40",
-    dot: "border-border/80 bg-background/65 text-muted-foreground",
-    nav: "border-border/70 bg-background/55 text-muted-foreground",
-    answer: "text-muted-foreground",
-    badge: "border-border/70 bg-background/55 text-muted-foreground",
+    card: "border-slate-200 bg-white dark:border-border/70 dark:bg-background/40",
+    dot: "border-slate-300 bg-slate-100 text-slate-600 dark:border-border/80 dark:bg-background/65 dark:text-muted-foreground",
+    nav: "border-slate-300 bg-white text-slate-600 dark:border-border/70 dark:bg-background/55 dark:text-muted-foreground",
+    answer: "text-slate-700 dark:text-muted-foreground",
+    badge: "border-slate-300 bg-white text-slate-700 dark:border-border/70 dark:bg-background/55 dark:text-muted-foreground",
   };
 }
 
@@ -75,8 +75,8 @@ export function ReviewQuestionsPanel({
   const t = useTranslations("readingResult");
 
   return (
-    <Card className="flex h-[64vh] min-h-0 flex-col overflow-hidden rounded-3xl border-border/75 bg-card/75 py-0 shadow-none xl:h-[calc(100vh-14.5rem)]">
-      <div className="sticky top-0 z-20 border-b border-border/70 bg-card/95 px-3.5 py-3 backdrop-blur sm:px-4">
+    <Card className="flex h-[64vh] min-h-0 flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-[calc(100vh-14.5rem)]">
+      <div className="sticky top-0 z-20 border-b border-slate-200/90 bg-white/95 px-3.5 py-3 backdrop-blur dark:border-border/70 dark:bg-card/95 sm:px-4">
         <div className="space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <p className="text-base font-semibold">{t("questionAnalysis")}</p>
@@ -165,7 +165,7 @@ export function ReviewQuestionsPanel({
                 </p>
                 <p>
                   <span className="font-medium text-muted-foreground">{t("correctAnswer")}:</span>{" "}
-                  <span className="text-emerald-200">{correctAnswer || t("notAvailable")}</span>
+                  <span className="text-emerald-700 dark:text-emerald-200">{correctAnswer || t("notAvailable")}</span>
                 </p>
               </div>
 
@@ -182,7 +182,7 @@ export function ReviewQuestionsPanel({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 rounded-lg border-border/70 bg-background/45 px-2.5 text-xs"
+                  className="h-8 rounded-lg border-slate-200 bg-white px-2.5 text-xs hover:bg-slate-100 dark:border-border/70 dark:bg-background/45 dark:hover:bg-background/60"
                   onClick={() => onJumpEvidence(question.id)}
                 >
                   {t("jumpToEvidence")}
@@ -190,7 +190,7 @@ export function ReviewQuestionsPanel({
               </div>
 
               {isOpen ? (
-                <div className="mt-3 rounded-xl border border-border/70 bg-background/50 p-3 text-sm">
+                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/90 p-3 text-sm dark:border-border/70 dark:bg-background/50">
                   <p>{answerMeta?.explanation ?? t("notAvailable")}</p>
                   {answerMeta?.evidence.startQuote ? (
                     <p className="mt-2 text-xs text-muted-foreground">{answerMeta.evidence.startQuote}</p>

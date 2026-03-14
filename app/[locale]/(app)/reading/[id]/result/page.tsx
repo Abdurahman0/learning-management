@@ -1,7 +1,7 @@
 "use client";
 
-import { ReviewPageClient } from "./_components/ReviewPageClient";
+import { ReadingSummaryPageClient } from "./_components/ReadingSummaryPageClient";
 
 export default function ReadingResultPage() {
-  return <ReviewPageClient />;
+  return <ReadingSummaryPageClient />;
 }

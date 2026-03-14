@@ -224,7 +224,9 @@
       "speakingSoon": "Speaking",
       "guestMode": "Guest mode",
       "dailyProgress": "Daily progress",
-      "createAccount": "Create free account"
+      "createAccount": "Create free account",
+      "sessions": "1-to-1 Sessions",
+      "reviewCenter": "Review Center"
     },
     "meta": {
       "minutes": "Minutes",
@@ -282,6 +284,24 @@
     "cancel": "Cancel",
     "confirmFinish": "Finish and grade"
   },
+  "testOptions": {
+    "title": "Options",
+    "description": "Adjust readability and viewing preferences for your test session.",
+    "contrast": "Contrast",
+    "contrastHint": "Improve text and panel visibility during the test.",
+    "contrastDefault": "Default",
+    "contrastHigh": "High Contrast",
+    "textSize": "Text Size",
+    "textSizeHint": "Scale reading and question text without leaving the test.",
+    "textSizeSmall": "Small",
+    "textSizeMedium": "Medium",
+    "textSizeLarge": "Large",
+    "fullscreen": "Fullscreen",
+    "fullscreenHint": "Use fullscreen for a focused exam-like experience.",
+    "enterFullscreen": "Enter Fullscreen",
+    "exitFullscreen": "Exit Fullscreen",
+    "close": "Close"
+  },
   "listeningTest": {
     "title": "Academic Listening Test",
     "progress": "Progress",
@@ -319,6 +339,21 @@
     "finishSummary": "You answered {answered} of {total}. {unanswered} unanswered.",
     "timeSpent": "Time spent: {seconds} seconds",
     "leaveWarning": "Are you sure you want to quit this test? Your results will not be saved.",
+    "modePickerTitle": "Choose test mode",
+    "modePickerDescription": "Choose how you want to take this listening test.",
+    "modeReal": "Real mode",
+    "modePractice": "Practice mode",
+    "realModeRule": "Real mode: timer and audio run like the exam and playback controls are locked.",
+    "practiceModeRule": "Practice mode: you can start, pause, and continue freely.",
+    "realModeStartTitle": "Start Listening Test?",
+    "realModeStartDescription": "In Real Mode, the audio starts automatically and cannot be paused or replayed. Make sure you are ready before you begin.",
+    "realModeStartCta": "Start Now",
+    "realModeCancelCta": "Cancel",
+    "realModeStartsSoon": "Audio starts in 1 second...",
+    "realMode": "Real mode",
+    "realModeTimerLocked": "Timer is locked in real mode",
+    "realModeAudioLocked": "Audio controls are locked in real mode",
+    "realModeProgressLocked": "Audio progress is locked in real mode",
     "cancel": "Cancel",
     "confirmFinish": "Finish and grade"
   },
@@ -555,6 +590,10 @@
     "explain": "Explain",
     "hideExplanation": "Hide explanation",
     "jumpToEvidence": "Jump to evidence",
+    "resultsButton": "Results",
+    "summaryOnlyTitle": "Summary Report",
+    "summaryOnlyDescription": "This page keeps only your score summary. Open the review page to inspect questions and explanations.",
+    "openReview": "Open Review",
     "skipped": "Skipped",
     "correctStatus": "Correct",
     "incorrectStatus": "Incorrect",
@@ -585,6 +624,8 @@
     "practiceTest": "Practice test",
     "sectionPerformanceEyebrow": "Section Performance",
     "sectionPerformance": "Performance by Part",
+    "performanceByTypeEyebrow": "Question Type Performance",
+    "performanceByType": "Performance by Question Type",
     "partLabel": "Part {index}",
     "listeningReview": "Listening Review",
     "selectedEvidence": "Selected Evidence",
@@ -597,6 +638,32 @@
     "hideExplanation": "Hide explanation",
     "jumpToEvidence": "Jump to evidence",
     "goToQuestion": "Go to question",
+    "resultsButton": "Results",
+    "summaryOnlyTitle": "Summary Report",
+    "summaryOnlyDescription": "This page keeps only your score summary. Open the review page for deep analysis and feedback.",
+    "openReview": "Open Review",
+    "aiLearningCoach": "AI Learning Coach",
+    "coachWeakestPart": "Weakest Part",
+    "coachWeakestType": "Weakest Question Type",
+    "coachSkippedQuestions": "Skipped Questions",
+    "coachAccuracy": "Accuracy",
+    "coachInsightsTitle": "Coach Insights",
+    "coachInsightWeakPart": "{part} has the highest error concentration. Repeat this section with focused note-taking.",
+    "coachInsightWeakType": "{type} is your weakest type right now. Practice this format with timed drills.",
+    "coachInsightSkipped": "You skipped {count} questions. Build pacing checkpoints every 5 questions.",
+    "mistakeHeatmap": "Mistake Heatmap",
+    "nextLearningActions": "Next Learning Actions",
+    "practiceWeakPart": "Practice Weak Part",
+    "practiceWeakType": "Practice Weak Type",
+    "reviewSkippedQuestions": "Review Skipped Questions",
+    "startSimilarListening": "Start Similar Listening Set",
+    "openAiCoach": "Open AI Coach",
+    "openReviewCenter": "Go to Review Center",
+    "startPractice": "Start Practice",
+    "actionPlaceholder": "Demo action: {action}",
+    "excellent": "Excellent",
+    "average": "Average",
+    "critical": "Critical",
     "correctStatus": "Correct",
     "incorrectStatus": "Incorrect",
     "skippedStatus": "Skipped",
@@ -637,7 +704,10 @@
       "currentBand": "Current Band",
       "testsTaken": "Tests Taken",
       "avgScore": "Avg Score",
-      "studyStreak": "Study Streak"
+      "studyStreak": "Study Streak",
+      "reading": "Reading Accuracy",
+      "listening": "Listening Accuracy",
+      "streakRule": "Streak rule: complete at least one test today to gain +1; no test today applies -1 (min 0)."
     },
     "scoreProgress": {
       "title": "Score Progress",
@@ -680,7 +750,20 @@
       "title": "Your Achievements",
       "subtitle": "Collect badges as you progress towards your goal"
     },
-    "copyright": "All rights reserved."
+    "copyright": "All rights reserved.",
+    "actions": {
+      "bookSession": "Book 1-to-1 Session"
+    },
+    "feedback": {
+      "placeholder": {
+        "title": "Feature queued",
+        "description": "This action is connected as a placeholder until the next release."
+      },
+      "reviewDetails": {
+        "title": "Review details",
+        "description": "Detailed review flow will be connected to backend attempt records."
+      }
+    }
   },
   "adminDashboard": {
     "sidebar": {
@@ -2490,7 +2573,13 @@
     "weakestType": "Weakest Type",
     "currentBand": "Current Band",
     "lastActivityLabel": "Last Activity",
-    "lastActivity": "Last Activity",
+    "lastActivity": {
+      "justNow": "Just now",
+      "minutesAgo": "{value}m ago",
+      "hoursAgo": "{value}h ago",
+      "yesterday": "Yesterday",
+      "daysAgo": "{value} days ago"
+    },
     "action": "Action",
     "viewProfile": "View Profile",
     "viewAllStudents": "View All {count} Students",
@@ -2561,14 +2650,7 @@
       "video_quiz": "Video tutorial with evidence-based quiz practice for {students} weak students.",
       "timed_drill": "Timed drill series ({count} items) to improve speed and decision accuracy in {skill}."
     },
-    "recommendationAssignmentInstruction": "Focus on {skill} and complete the {count}-item targeted practice sequence this week.",
-    "lastActivity": {
-      "justNow": "Just now",
-      "minutesAgo": "{value}m ago",
-      "hoursAgo": "{value}h ago",
-      "yesterday": "Yesterday",
-      "daysAgo": "{value} days ago"
-    }
+    "recommendationAssignmentInstruction": "Focus on {skill} and complete the {count}-item targeted practice sequence this week."
   },
   "teacherAnnouncements": {
     "title": "Announcements",
@@ -3892,6 +3974,216 @@
       "hoursAgo": "{value}h ago",
       "yesterday": "Yesterday",
       "daysAgo": "{value} days ago"
+    }
+  },
+  "studentSessions": {
+    "title": "1-to-1 Sessions",
+    "subtitle": "Book focused sessions with your teacher and track upcoming support meetings in one place.",
+    "summary": {
+      "total": "Total Sessions",
+      "upcoming": "Upcoming",
+      "completed": "Completed"
+    },
+    "filters": {
+      "teacher": "Teacher",
+      "allTeachers": "All teachers"
+    },
+    "sessions": {
+      "title": "My Sessions",
+      "empty": "No sessions match this filter yet."
+    },
+    "availability": {
+      "title": "Book a Slot"
+    },
+    "status": {
+      "scheduled": "Scheduled",
+      "completed": "Completed",
+      "pending": "Pending Confirmation",
+      "cancelled": "Cancelled"
+    },
+    "meetingType": {
+      "zoom": "Zoom",
+      "googleMeet": "Google Meet",
+      "inPlatform": "In-platform meeting"
+    },
+    "actions": {
+      "openAssignments": "Open Assignments",
+      "joinSession": "Join Session",
+      "viewRecap": "View Recap",
+      "bookSlot": "Book Slot",
+      "booked": "Booked",
+      "slotUnavailable": "Unavailable"
+    },
+    "feedback": {
+      "join": {
+        "title": "Session link prepared",
+        "description": "Live meeting join flow is connected as a placeholder for now."
+      },
+      "booked": {
+        "title": "Session booked",
+        "description": "Your 1-to-1 request is saved in this prototype state."
+      }
+    }
+  },
+  "studentReviewCenter": {
+    "title": "Review Center",
+    "subtitle": "Review your weak areas, revisit important questions, and improve your IELTS performance.",
+    "actions": {
+      "practiceNow": "Practice Now"
+    },
+    "summary": {
+      "questionsToReview": "Questions to Review",
+      "mostDifficultType": "Most Difficult Question Type",
+      "weakestModule": "Weakest Module",
+      "accuracyTrend": "Accuracy Trend"
+    },
+    "insights": {
+      "mistakesByType": "Mistakes by Question Type",
+      "mistakesByModule": "Mistakes by Module",
+      "mistakeCount": "{value} mistakes",
+      "moduleShare": "{value}% of mistakes"
+    },
+    "patterns": {
+      "keywordMatching": {
+        "title": "Keyword Matching Trap",
+        "description": "You often choose answers with exact words instead of matching the full meaning."
+      },
+      "timeManagement": {
+        "title": "Late Section Rushing",
+        "description": "Accuracy drops in final sections when time pressure increases."
+      },
+      "misreadingInstructions": {
+        "title": "Instruction Misread",
+        "description": "Some errors come from missing word limits or task-specific instructions."
+      }
+    },
+    "filters": {
+      "searchPlaceholder": "Search question text, source or explanation...",
+      "module": {
+        "all": "All modules"
+      },
+      "reason": {
+        "all": "All reasons",
+        "wrong": "Wrong answer",
+        "saved": "Saved",
+        "flagged": "Flagged",
+        "weakArea": "Weak area"
+      }
+    },
+    "reviewList": {
+      "title": "Review Questions",
+      "empty": "No review questions match your current filters.",
+      "actions": {
+        "review": "Review",
+        "practiceAgain": "Practice Again",
+        "remove": "Remove from Review"
+      }
+    },
+    "preview": {
+      "title": "Question Preview",
+      "question": "Question",
+      "options": "Answer Options",
+      "correctAnswer": "Correct Answer",
+      "previousAnswer": "Your Previous Answer",
+      "explanation": "Explanation",
+      "whyHere": "Why This Is in Review Center",
+      "empty": "Select a review question to see detailed preview.",
+      "actions": {
+        "practiceAgain": "Practice Again",
+        "remove": "Remove from Review",
+        "openAnalytics": "Open Related Analytics"
+      }
+    },
+    "nextSteps": {
+      "title": "Recommended Next Steps",
+      "secondaryAction": "View Strategy",
+      "items": {
+        "practiceMatchingHeadings": {
+          "title": "Practice Matching Headings",
+          "description": "Run one focused drill to improve paragraph-to-heading decision speed.",
+          "primaryAction": "Start Practice"
+        },
+        "reviewParaphrasingStrategy": {
+          "title": "Review Reading Paraphrasing Strategy",
+          "description": "Revisit paraphrase mapping before choosing answer options.",
+          "primaryAction": "View Strategy"
+        },
+        "retakeReadingDrill": {
+          "title": "Retake Reading Drill",
+          "description": "Retake your latest reading set and compare corrected decisions.",
+          "primaryAction": "Retake Drill"
+        }
+      },
+      "aiCoach": {
+        "title": "Need Coach Guidance?",
+        "description": "Open AI Coach for a personalized plan based on your current review items.",
+        "action": "Open AI Coach"
+      }
+    },
+    "reasons": {
+      "wrong": "Wrong",
+      "saved": "Saved",
+      "flagged": "Flagged",
+      "weakArea": "Weak area"
+    },
+    "savedAgo": {
+      "days3": "Saved 3 days ago",
+      "week1": "Saved 1 week ago",
+      "weeks2": "Saved 2 weeks ago",
+      "days5": "Saved 5 days ago",
+      "days9": "Saved 9 days ago"
+    },
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    },
+    "modules": {
+      "reading": "Reading",
+      "listening": "Listening",
+      "writing": "Writing",
+      "speaking": "Speaking"
+    },
+    "questionTypes": {
+      "matchingHeadings": "Matching Headings",
+      "trueFalseNotGiven": "True / False / Not Given",
+      "multipleChoice": "Multiple Choice",
+      "sentenceCompletion": "Sentence Completion",
+      "labelling": "Labelling",
+      "summaryCompletion": "Summary Completion",
+      "noteCompletion": "Note Completion",
+      "task1Report": "Task 1 Report",
+      "task2Essay": "Task 2 Essay"
+    },
+    "questionTypesShort": {
+      "matchingHeadings": "MH",
+      "trueFalseNotGiven": "TFNG",
+      "multipleChoice": "MCQ",
+      "sentenceCompletion": "SC",
+      "labelling": "LBL",
+      "summaryCompletion": "SUM"
+    },
+    "feedback": {
+      "removed": {
+        "title": "Removed from Review",
+        "description": "The selected question was removed from your review queue."
+      },
+      "strategy": {
+        "title": "Strategy Opened",
+        "description": "Detailed strategy flow is connected as a placeholder in this prototype."
+      },
+      "practiceMatchingHeadings": {
+        "title": "Practice Flow",
+        "description": "Matching Headings practice flow is prepared and will be expanded next."
+      },
+      "reviewParaphrasingStrategy": {
+        "title": "Strategy Note",
+        "description": "Paraphrasing strategy details are shown as a placeholder for now."
+      },
+      "retakeReadingDrill": {
+        "title": "Retake Planned",
+        "description": "Reading retake workflow is connected with a placeholder action."
+      }
     }
   }
 }

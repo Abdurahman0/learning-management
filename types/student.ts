@@ -61,6 +61,66 @@ export type StudentPracticeActivity = {
   href?: "/reading" | "/listening" | "/dashboard";
 };
 
+export type StudentProfile = {
+  id: string;
+  name: string;
+  targetBand: number;
+};
+
+export type StudentTestRecord = {
+  id: string;
+  studentId: string;
+  testName: string;
+  module: StudentModuleKey;
+  completedAt: string;
+  correctAnswers: number;
+  totalQuestions: number;
+  estimatedBand: number;
+};
+
+export type StudentStreakConfig = {
+  initialStreakDays: number;
+  windowStartDate: string;
+};
+
+export type StudentDailyStreakPoint = {
+  date: string;
+  hasTest: boolean;
+  streakAfterDay: number;
+};
+
+export type StudentStreakResult = {
+  currentStreakDays: number;
+  completedTestToday: boolean;
+  timeline: StudentDailyStreakPoint[];
+};
+
+export type StudentOneToOneSessionStatus = "scheduled" | "completed" | "cancelled" | "pending";
+
+export type StudentOneToOneMeetingType = "zoom" | "googleMeet" | "inPlatform";
+
+export type StudentOneToOneSession = {
+  id: string;
+  studentId: string;
+  teacherId: StudentAssignmentTeacherId;
+  title: string;
+  startsAt: string;
+  endsAt: string;
+  status: StudentOneToOneSessionStatus;
+  meetingType: StudentOneToOneMeetingType;
+  purpose: string;
+  note?: string;
+};
+
+export type StudentOneToOneAvailabilitySlot = {
+  id: string;
+  teacherId: StudentAssignmentTeacherId;
+  startsAt: string;
+  endsAt: string;
+  meetingType: StudentOneToOneMeetingType;
+  available: boolean;
+};
+
 export type StudentStudyBankQuestionTypeKey =
   | "matchingHeadings"
   | "trueFalseNotGiven"
@@ -83,11 +143,13 @@ export type StudentSavedQuestion = {
   snippet: string;
   context: string;
   question: string;
+  options?: string[];
   correctAnswer: string;
   previousAnswer: string;
   explanation: string;
   savedAt: string;
   savedAgoKey: "days3" | "week1" | "weeks2" | "days5" | "days9";
+  reviewReasons: StudentReviewReason[];
   isWeakArea: boolean;
   isNew: boolean;
   linkedPracticePath: "/reading" | "/listening" | "/dashboard";
@@ -97,6 +159,8 @@ export type StudentSavedQuestion = {
     questionId: string;
   };
 };
+
+export type StudentReviewReason = "wrong" | "saved" | "flagged" | "weakArea";
 
 export type StudentCoachMessageRole = "student" | "assistant";
 
@@ -129,7 +193,7 @@ export type StudentCoachRecommendation = {
   id: "practiceMatchingHeadings" | "focusTask2Structure" | "reviewTfngStrategy" | "revisitStudyBank";
   tag: "reading" | "writing" | "listening" | "studyBank";
   action: "navigate" | "toast";
-  href?: "/reading" | "/dashboard" | "/listening" | "/study-bank";
+  href?: "/reading" | "/dashboard" | "/listening" | "/study-bank" | "/review-center";
 };
 
 export type StudentAssignmentStatus = "pending" | "submitted" | "reviewed" | "overdue";

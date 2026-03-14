@@ -8,13 +8,14 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {Progress} from "@/components/ui/progress";
-import type {ContinueTest} from "@/data/dashboard-demo";
+import type {ContinueTest} from "@/data/student/dashboard";
 
 type ContinueCardProps = {
   test: ContinueTest;
+  onReviewDetails?: () => void;
 };
 
-export function ContinueCard({test}: ContinueCardProps) {
+export function ContinueCard({test, onReviewDetails}: ContinueCardProps) {
   const t = useTranslations("dashboard");
   const locale = useLocale();
   const progressPct = Math.round((test.progressQuestions / test.totalQuestions) * 100);
@@ -44,9 +45,11 @@ export function ContinueCard({test}: ContinueCardProps) {
           <Progress className="mt-2" value={progressPct} />
           <div className="mt-4 flex flex-wrap gap-2">
             <Button asChild>
-              <Link href={`/${locale}/reading/demo`}>{t("continueTest")}</Link>
+              <Link href={`/${locale}/reading`}>{t("continueTest")}</Link>
             </Button>
-            <Button variant="outline">{t("reviewDetails")}</Button>
+            <Button variant="outline" onClick={onReviewDetails}>
+              {t("reviewDetails")}
+            </Button>
           </div>
         </div>
       </CardContent>

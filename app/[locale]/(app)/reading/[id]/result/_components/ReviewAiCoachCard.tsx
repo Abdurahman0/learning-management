@@ -20,17 +20,17 @@ export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction }: ReviewA
   return (
     <section className="space-y-3">
       <h2 className="text-xl font-semibold tracking-tight">{t("aiLearningCoach")}</h2>
-      <Card className="space-y-5 border-border/80 bg-card/70 p-4 sm:p-5">
+      <Card className="space-y-5 border-slate-200/85 bg-white/95 p-4 shadow-sm shadow-slate-200/50 dark:border-border/80 dark:bg-card/70 dark:shadow-none sm:p-5">
         <div className="grid gap-2 sm:grid-cols-3">
-          <Card className="border-border/70 bg-background/45 p-3">
+          <Card className="border-slate-200 bg-slate-50/80 p-3 dark:border-border/70 dark:bg-background/45">
             <p className="text-xs text-muted-foreground">{t("score")}</p>
             <p className="text-2xl font-semibold">{coach.score}</p>
           </Card>
-          <Card className="border-border/70 bg-background/45 p-3">
+          <Card className="border-slate-200 bg-slate-50/80 p-3 dark:border-border/70 dark:bg-background/45">
             <p className="text-xs text-muted-foreground">{t("accuracy")}</p>
-            <p className="text-2xl font-semibold text-blue-300">{coach.accuracy}</p>
+            <p className="text-2xl font-semibold text-blue-700 dark:text-blue-300">{coach.accuracy}</p>
           </Card>
-          <Card className="border-border/70 bg-background/45 p-3">
+          <Card className="border-slate-200 bg-slate-50/80 p-3 dark:border-border/70 dark:bg-background/45">
             <p className="text-xs text-muted-foreground">{t("timeUsed")}</p>
             <p className="text-2xl font-semibold">{coach.timeUsed}</p>
           </Card>
@@ -49,7 +49,7 @@ export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction }: ReviewA
           ))}
         </div>
 
-        <Card className="border-blue-500/35 bg-blue-500/10 p-3">
+        <Card className="border-blue-300/70 bg-blue-100/70 p-3 dark:border-blue-500/35 dark:bg-blue-500/10">
           <p className="mb-2 text-sm font-semibold">{t("aiInsights")}</p>
           <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90">
             {coach.insights.map((insight) => (

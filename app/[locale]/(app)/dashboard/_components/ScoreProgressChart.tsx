@@ -6,7 +6,7 @@ import {useTranslations} from "next-intl";
 import {ChartContainer} from "@/components/ui/chart";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
-import type {ScorePoint} from "@/data/dashboard-demo";
+import type {ScorePoint} from "@/data/student/dashboard";
 
 type ScoreProgressChartProps = {
   points: ScorePoint[];

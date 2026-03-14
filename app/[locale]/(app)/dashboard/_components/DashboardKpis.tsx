@@ -1,10 +1,10 @@
 "use client";
 
-import {Award, Flame, GraduationCap, TrendingUp} from "lucide-react";
+import {BookOpenText, Flame, GraduationCap, Headphones, TrendingUp} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Card, CardContent} from "@/components/ui/card";
-import type {DashboardUserSummary} from "@/data/dashboard-demo";
+import type {DashboardUserSummary} from "@/data/student/dashboard";
 import {cn} from "@/lib/utils";
 
 type DashboardKpisProps = {
@@ -18,12 +18,13 @@ export function DashboardKpis({summary, onCurrentBandClick}: DashboardKpisProps)
   const items = [
     {label: t("kpis.currentBand"), value: summary.currentBand, icon: TrendingUp, bubble: "bg-blue-500/15 text-blue-300", onClick: onCurrentBandClick},
     {label: t("kpis.testsTaken"), value: summary.testsTaken, icon: GraduationCap, bubble: "bg-violet-500/15 text-violet-300"},
-    {label: t("kpis.avgScore"), value: summary.avgScore, icon: Award, bubble: "bg-emerald-500/15 text-emerald-300"},
+    {label: t("kpis.reading"), value: `${summary.readingAccuracy}%`, icon: BookOpenText, bubble: "bg-emerald-500/15 text-emerald-300"},
+    {label: t("kpis.listening"), value: `${summary.listeningAccuracy}%`, icon: Headphones, bubble: "bg-cyan-500/15 text-cyan-300"},
     {label: t("kpis.studyStreak"), value: `${summary.streakDays} ${t("days")}`, icon: Flame, bubble: "bg-orange-500/15 text-orange-300"}
   ];
 
   return (
-    <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
       {items.map((item) => (
         <Card
           key={item.label}

@@ -14,20 +14,20 @@ type ResultStatCardProps = {
 
 const toneStyles: Record<ResultStatCardTone, { card: string; value: string }> = {
   success: {
-    card: "border-emerald-400/20 bg-emerald-500/[0.07]",
-    value: "text-emerald-300",
+    card: "border-emerald-200 bg-emerald-50 dark:border-emerald-400/20 dark:bg-emerald-500/[0.07]",
+    value: "text-emerald-700 dark:text-emerald-300",
   },
   danger: {
-    card: "border-rose-400/25 bg-rose-500/[0.08]",
-    value: "text-rose-300",
+    card: "border-rose-200 bg-rose-50 dark:border-rose-400/25 dark:bg-rose-500/[0.08]",
+    value: "text-rose-700 dark:text-rose-300",
   },
   neutral: {
-    card: "border-border/65 bg-background/45",
-    value: "text-slate-200",
+    card: "border-slate-200 bg-white dark:border-border/65 dark:bg-background/45",
+    value: "text-slate-800 dark:text-slate-200",
   },
   info: {
-    card: "border-blue-400/25 bg-blue-500/[0.09]",
-    value: "text-blue-200",
+    card: "border-blue-200 bg-blue-50 dark:border-blue-400/25 dark:bg-blue-500/[0.09]",
+    value: "text-blue-700 dark:text-blue-200",
   },
 };
 

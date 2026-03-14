@@ -5,7 +5,7 @@ import {useTranslations} from "next-intl";
 import {Badge} from "@/components/ui/badge";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Progress} from "@/components/ui/progress";
-import type {DashboardUserSummary, SkillItem} from "@/data/dashboard-demo";
+import type {DashboardUserSummary, SkillItem} from "@/data/student/dashboard";
 
 type SkillsSnapshotProps = {
   skills: SkillItem[];

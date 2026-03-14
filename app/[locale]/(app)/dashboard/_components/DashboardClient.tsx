@@ -1,7 +1,9 @@
 "use client";
 
+import {useEffect, useState} from "react";
 import Link from "next/link";
-import {Brain, Sparkles} from "lucide-react";
+import {useRouter} from "next/navigation";
+import {Brain, CalendarClock, Sparkles} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {AchievementsGrid} from "./AchievementsGrid";
@@ -14,11 +16,40 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Separator} from "@/components/ui/separator";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
-import {DASHBOARD_DATA} from "@/data/dashboard-demo";
+import {DASHBOARD_DATA} from "@/data/student/dashboard";
+
+type Notice = {
+  title: string;
+  description: string;
+};
 
 export function DashboardClient() {
   const t = useTranslations("dashboard");
   const locale = useLocale();
+  const router = useRouter();
+  const [notice, setNotice] = useState<Notice | null>(null);
+
+  useEffect(() => {
+    if (!notice) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setNotice(null), 2500);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  const pushNotice = (title: string, description: string) => {
+    setNotice({title, description});
+  };
+
+  const handleWeakAreaAction = (module: "reading" | "listening" | "writing" | "speaking") => {
+    if (module === "reading" || module === "listening") {
+      router.push(`/${locale}/${module}`);
+      return;
+    }
+
+    pushNotice(t("feedback.placeholder.title"), t("feedback.placeholder.description"));
+  };
 
   return (
     <main className="mx-auto min-w-0 w-full max-w-[1780px] overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
@@ -37,18 +68,37 @@ export function DashboardClient() {
           <Button asChild>
             <Link href={`/${locale}/reading`}>{t("startNewTest")}</Link>
           </Button>
+          <Button asChild variant="secondary">
+            <Link href={`/${locale}/sessions`}>
+              <CalendarClock className="size-4" />
+              {t("actions.bookSession")}
+            </Link>
+          </Button>
         </div>
       </section>
+
+      {notice ? (
+        <Card className="mt-4 rounded-xl border border-blue-400/35 bg-blue-500/10 shadow-none">
+          <CardContent className="p-3">
+            <p className="text-sm font-semibold text-blue-700 dark:text-blue-100">{notice.title}</p>
+            <p className="text-sm text-blue-700/90 dark:text-blue-100/85">{notice.description}</p>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="mt-5">
         <DashboardKpis
           summary={DASHBOARD_DATA.userSummary}
           onCurrentBandClick={() => document.getElementById("skills-snapshot")?.scrollIntoView({behavior: "smooth", block: "start"})}
         />
+        <p className="mt-2 text-xs text-muted-foreground">{t("kpis.streakRule")}</p>
       </div>
 
       <section className="mt-4">
-        <ContinueCard test={DASHBOARD_DATA.continueTest} />
+        <ContinueCard
+          test={DASHBOARD_DATA.continueTest}
+          onReviewDetails={() => pushNotice(t("feedback.reviewDetails.title"), t("feedback.reviewDetails.description"))}
+        />
       </section>
 
       <section className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
@@ -71,11 +121,11 @@ export function DashboardClient() {
               <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">{item.module}</p>
+                  <p className="text-xs text-muted-foreground">{t(`skills.${item.module}`)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold text-rose-500">{item.accuracy}</p>
-                  <Button variant="link" className="h-auto p-0 text-xs">
+                  <Button variant="link" className="h-auto p-0 text-xs" onClick={() => handleWeakAreaAction(item.module)}>
                     {item.actionLabel}
                   </Button>
                 </div>
@@ -94,7 +144,7 @@ export function DashboardClient() {
           <CardContent>
             <Badge className="mb-3">{DASHBOARD_DATA.aiRecommendation.tag}</Badge>
             <p className="rounded-xl bg-muted/60 p-4 text-sm leading-relaxed text-muted-foreground">{DASHBOARD_DATA.aiRecommendation.message}</p>
-            <Button className="mt-4">
+            <Button className="mt-4" onClick={() => router.push(`/${locale}/ai-coach`)}>
               <Sparkles className="size-4" />
               {t("aiRecommendations.startTutorial")}
             </Button>
@@ -106,7 +156,7 @@ export function DashboardClient() {
         <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/70">
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>{t("recentHistory.title")}</CardTitle>
-            <Button variant="link" className="h-auto p-0">
+            <Button variant="link" className="h-auto p-0" onClick={() => router.push(`/${locale}/analytics`)}>
               {t("recentHistory.viewAll")}
             </Button>
           </CardHeader>
@@ -129,11 +179,15 @@ export function DashboardClient() {
                       <TableCell>{row.testName}</TableCell>
                       <TableCell className="text-muted-foreground">{row.date}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{row.module}</Badge>
+                        <Badge variant="secondary">{t(`skills.${row.module}`)}</Badge>
                       </TableCell>
                       <TableCell className="font-semibold">{row.score}</TableCell>
                       <TableCell>
-                        <Button variant="link" className="h-auto p-0 text-blue-400">
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-blue-400"
+                          onClick={() => pushNotice(t("feedback.reviewDetails.title"), t("feedback.reviewDetails.description"))}
+                        >
                           {t("recentHistory.review")}
                         </Button>
                       </TableCell>

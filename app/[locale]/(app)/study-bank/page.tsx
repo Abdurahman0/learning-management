@@ -3,8 +3,6 @@ import {redirect} from "next/navigation";
 
 import {AUTH_COOKIE_NAME, parseSessionRole} from "@/lib/auth/session";
 
-import {StudentStudyBankClient} from "./_components/StudentStudyBankClient";
-
 type StudyBankPageProps = {
   params: Promise<{
     locale: string;
@@ -28,6 +26,5 @@ export default async function StudyBankPage({params}: StudyBankPageProps) {
     redirect(`/${locale}/teacher`);
   }
 
-  return <StudentStudyBankClient />;
+  redirect(`/${locale}/review-center`);
 }
-

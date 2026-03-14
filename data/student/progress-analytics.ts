@@ -9,12 +9,30 @@ import type {
   StudentWeeklyStudyPoint
 } from "@/types/student";
 
+import {STUDENT_PROFILE, STUDENT_TEST_HISTORY} from "./performance";
+
+function getModuleAccuracy(module: "reading" | "listening") {
+  const tests = STUDENT_TEST_HISTORY.filter((item) => item.module === module && item.totalQuestions > 1);
+  const totalCorrect = tests.reduce((sum, item) => sum + item.correctAnswers, 0);
+  const totalQuestions = tests.reduce((sum, item) => sum + item.totalQuestions, 0);
+
+  if (!totalQuestions) {
+    return 0;
+  }
+
+  return Math.round((totalCorrect / totalQuestions) * 100);
+}
+
+const readingAccuracy = getModuleAccuracy("reading");
+const listeningAccuracy = getModuleAccuracy("listening");
+const latestBandEstimate = [...STUDENT_TEST_HISTORY].sort((left, right) => new Date(right.completedAt).getTime() - new Date(left.completedAt).getTime())[0]?.estimatedBand ?? 0;
+
 export const STUDENT_PROGRESS_SUMMARY: StudentProgressSummary = {
-  currentBandEstimate: 6.5,
-  currentBandDelta: 0.5,
-  targetBand: 7.5,
-  practiceSessions: 148,
-  averageAccuracy: 72,
+  currentBandEstimate: latestBandEstimate,
+  currentBandDelta: 0.3,
+  targetBand: STUDENT_PROFILE.targetBand,
+  practiceSessions: STUDENT_TEST_HISTORY.length,
+  averageAccuracy: Math.round((readingAccuracy + listeningAccuracy) / 2),
   accuracyDelta: 2
 };
 
@@ -49,8 +67,8 @@ export const STUDENT_BAND_PROGRESSION_BY_RANGE: Record<StudentProgressRangeKey, 
 };
 
 export const STUDENT_MODULE_PERFORMANCE: StudentModulePerformance[] = [
-  {module: "reading", percentage: 74},
-  {module: "listening", percentage: 81},
+  {module: "reading", percentage: readingAccuracy},
+  {module: "listening", percentage: listeningAccuracy},
   {module: "writing", percentage: 65},
   {module: "speaking", percentage: 68}
 ];
@@ -109,4 +127,3 @@ export const STUDENT_RECENT_PRACTICE_ACTIVITY: StudentPracticeActivity[] = [
     action: "toast"
   }
 ];
-

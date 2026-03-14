@@ -46,12 +46,12 @@ function toClock(totalSeconds: number) {
 
 function getStatusStyles(status: ListeningEvidenceStatus) {
   if (status === "correct") {
-    return "border-emerald-400/30 bg-emerald-500/[0.08] text-emerald-200";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/[0.08] dark:text-emerald-200";
   }
   if (status === "incorrect") {
-    return "border-rose-400/35 bg-rose-500/[0.12] text-rose-200";
+    return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/35 dark:bg-rose-500/[0.12] dark:text-rose-200";
   }
-  return "border-border/70 bg-background/55 text-muted-foreground";
+  return "border-slate-200 bg-white text-slate-600 dark:border-border/70 dark:bg-background/55 dark:text-muted-foreground";
 }
 
 export function ListeningTranscriptReviewPanel({
@@ -66,8 +66,8 @@ export function ListeningTranscriptReviewPanel({
   if (!activeSection) return null;
 
   return (
-    <Card className="flex h-[64vh] min-h-0 flex-col overflow-hidden rounded-3xl border-border/75 bg-card/75 py-0 shadow-none xl:h-[calc(100vh-14.5rem)]">
-      <div className="sticky top-0 z-20 border-b border-border/70 bg-card/95 px-3 py-3 backdrop-blur sm:px-4">
+    <Card className="flex h-[64vh] min-h-0 flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-[calc(100vh-14.5rem)]">
+      <div className="sticky top-0 z-20 border-b border-slate-200/90 bg-white/95 px-3 py-3 backdrop-blur dark:border-border/70 dark:bg-card/95 sm:px-4">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">{t("listeningReview")}</p>
@@ -84,7 +84,7 @@ export function ListeningTranscriptReviewPanel({
                     "h-8 shrink-0 rounded-xl px-3.5",
                     section.sectionId === activeSectionId
                       ? "bg-blue-500 text-blue-50 hover:bg-blue-500/90"
-                      : "border-border/70 bg-background/40 hover:bg-background/60"
+                      : "border-slate-200 bg-white hover:bg-slate-100 dark:border-border/70 dark:bg-background/40 dark:hover:bg-background/60"
                   )}
                   onClick={() => onSectionChange(section.sectionId)}
                 >
@@ -103,14 +103,14 @@ export function ListeningTranscriptReviewPanel({
             <p className="text-sm leading-relaxed text-muted-foreground">{activeSection.instructions}</p>
           </div>
 
-          <Card className="gap-1 rounded-2xl border-border/65 bg-background/45 p-3.5 shadow-none">
+          <Card className="gap-1 rounded-2xl border-slate-200 bg-slate-50/80 p-3.5 shadow-none dark:border-border/65 dark:bg-background/45">
             <p className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{activeSection.nowPlayingLabel}</p>
             <p className="text-sm font-medium">{activeSection.audioTitle}</p>
           </Card>
 
           {highlightedQuestionId ? (
-            <Card className="rounded-2xl border-blue-400/40 bg-blue-500/[0.12] p-3.5 shadow-none">
-              <p className="text-xs tracking-[0.12em] text-blue-200/90 uppercase">{t("selectedEvidence")}</p>
+            <Card className="rounded-2xl border-blue-300/70 bg-blue-100/70 p-3.5 shadow-none dark:border-blue-400/40 dark:bg-blue-500/[0.12]">
+              <p className="text-xs tracking-[0.12em] text-blue-700 dark:text-blue-200/90 uppercase">{t("selectedEvidence")}</p>
               <p className="mt-1 text-sm text-foreground/95">
                 {activeSection.evidenceItems.find((item) => item.questionId === highlightedQuestionId)?.quote ?? t("notAvailable")}
               </p>
@@ -123,13 +123,13 @@ export function ListeningTranscriptReviewPanel({
                 key={item.questionId}
                 id={`listening-evidence-${item.questionId}`}
                 className={cn(
-                  "gap-2 rounded-2xl border border-border/65 bg-background/35 p-3.5 shadow-none",
-                  highlightedQuestionId === item.questionId && "border-blue-400/60 bg-blue-500/[0.14] ring-1 ring-blue-400/45"
+                  "gap-2 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-none dark:border-border/65 dark:bg-background/35",
+                  highlightedQuestionId === item.questionId && "border-blue-300/80 bg-blue-100/65 ring-1 ring-blue-300/70 dark:border-blue-400/60 dark:bg-blue-500/[0.14] dark:ring-blue-400/45"
                 )}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="rounded-full border-blue-400/45 bg-blue-500/15 text-blue-100">
+                    <Badge variant="outline" className="rounded-full border-blue-300 bg-blue-100 text-blue-700 dark:border-blue-400/45 dark:bg-blue-500/15 dark:text-blue-100">
                       Q{item.questionNumber}
                     </Badge>
                     <Badge variant="outline" className={cn("rounded-full", getStatusStyles(item.status))}>

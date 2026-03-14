@@ -19,7 +19,7 @@ export function ReviewNextActions({ actions, onAction }: ReviewNextActionsProps)
   return (
     <section className="space-y-3 pb-2">
       <h2 className="text-xl font-semibold tracking-tight">{t("nextLearningActions")}</h2>
-      <Card className="border-border/80 bg-card/70 p-4">
+      <Card className="border-slate-200/85 bg-white/95 p-4 shadow-sm shadow-slate-200/50 dark:border-border/80 dark:bg-card/70 dark:shadow-none">
         <div className="flex flex-wrap gap-2">
           {actions.map((action) => {
             if (action.actionKey === "returnToDashboard") {
