@@ -244,7 +244,10 @@ export function ReviewPageClient() {
 
       <QuestionTypePerformance items={accuracyByType} />
 
-      <section id="review-main" className="grid min-h-0 items-start gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+      <section
+        id="review-main"
+        className="grid min-h-0 gap-4 xl:h-[calc(100vh-14.5rem)] xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)] xl:items-stretch"
+      >
         <ReviewPassagePanel
           passages={reviewPassages}
           activePassageId={activePassageId}

@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { flattenListeningQuestions } from "@/lib/listening-questions";
 import { loadAttemptResult, loadLatestAttemptResult, type PersistedAttempt } from "@/lib/test-attempt-storage";
+import { cn } from "@/lib/utils";
 import { ListeningQuestionAnalysisPanel } from "../result/_components/ListeningQuestionAnalysisPanel";
 import {
   ListeningTranscriptReviewPanel,
@@ -45,6 +46,7 @@ export default function ListeningReviewPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [activeSectionId, setActiveSectionId] = useState<ListeningSectionId>("s1");
   const [highlightedEvidenceQuestionId, setHighlightedEvidenceQuestionId] = useState<string | null>(null);
+  const [mobilePanel, setMobilePanel] = useState<"transcript" | "questions">("transcript");
 
   const flatQuestions = useMemo(() => {
     if (!test) return [];
@@ -109,6 +111,7 @@ export default function ListeningReviewPage() {
 
   const handleJumpEvidence = useCallback((questionId: string) => {
     const meta = getListeningAnswerMeta(questionId);
+    setMobilePanel("transcript");
     if (meta?.evidence.sectionId) {
       setActiveSectionId(meta.evidence.sectionId);
     }
@@ -116,6 +119,14 @@ export default function ListeningReviewPage() {
 
     window.setTimeout(() => {
       const node = document.getElementById(`listening-evidence-${questionId}`);
+      node?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+  }, []);
+
+  const handleGoToQuestion = useCallback((questionId: string) => {
+    setMobilePanel("questions");
+    window.setTimeout(() => {
+      const node = document.getElementById(`review-question-${questionId}`);
       node?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 120);
   }, []);
@@ -179,34 +190,62 @@ export default function ListeningReviewPage() {
         </div>
       </Card>
 
-      <section id="review-main" className="grid min-h-0 items-start gap-4 xl:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)]">
-        <ListeningTranscriptReviewPanel
-          sections={reviewSections}
-          activeSectionId={resolvedActiveSectionId}
-          highlightedQuestionId={highlightedEvidenceQuestionId}
-          onSectionChange={(sectionId) => setActiveSectionId(sectionId as ListeningSectionId)}
-        />
+      <div className="xl:hidden">
+        <div className="grid grid-cols-2 rounded-xl border border-border bg-card/70 p-1">
+          <Button
+            type="button"
+            variant={mobilePanel === "transcript" ? "secondary" : "ghost"}
+            className="h-8 rounded-lg"
+            onClick={() => setMobilePanel("transcript")}
+          >
+            {t("partLabel", { index: Number(resolvedActiveSectionId.slice(1)) })}
+          </Button>
+          <Button
+            type="button"
+            variant={mobilePanel === "questions" ? "secondary" : "ghost"}
+            className="h-8 rounded-lg"
+            onClick={() => setMobilePanel("questions")}
+          >
+            {t.has("questions") ? t("questions") : "Questions"}
+          </Button>
+        </div>
+      </div>
 
-        <ListeningQuestionAnalysisPanel
-          questions={flatQuestions}
-          answers={attempt.answers}
-          grading={grading}
-          expanded={expanded}
-          onToggleExplanation={(questionId) => {
-            setExpanded((previous) => {
-              const next = new Set(previous);
-              if (next.has(questionId)) {
-                next.delete(questionId);
-              } else {
-                next.add(questionId);
-              }
-              return next;
-            });
-          }}
-          onJumpEvidence={handleJumpEvidence}
-        />
+      <section
+        id="review-main"
+        className="grid min-h-0 gap-4 xl:h-[calc(100vh-14.5rem)] xl:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)] xl:items-stretch"
+      >
+        <div className={cn("min-h-0", mobilePanel !== "transcript" && "hidden xl:block")}>
+          <ListeningTranscriptReviewPanel
+            sections={reviewSections}
+            activeSectionId={resolvedActiveSectionId}
+            highlightedQuestionId={highlightedEvidenceQuestionId}
+            onSectionChange={(sectionId) => setActiveSectionId(sectionId as ListeningSectionId)}
+            onGoToQuestion={handleGoToQuestion}
+          />
+        </div>
+
+        <div className={cn("min-h-0", mobilePanel !== "questions" && "hidden xl:block")}>
+          <ListeningQuestionAnalysisPanel
+            questions={flatQuestions}
+            answers={attempt.answers}
+            grading={grading}
+            expanded={expanded}
+            onToggleExplanation={(questionId) => {
+              setExpanded((previous) => {
+                const next = new Set(previous);
+                if (next.has(questionId)) {
+                  next.delete(questionId);
+                } else {
+                  next.add(questionId);
+                }
+                return next;
+              });
+            }}
+            onJumpEvidence={handleJumpEvidence}
+          />
+        </div>
       </section>
     </section>
   );
 }
-

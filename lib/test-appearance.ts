@@ -40,21 +40,29 @@ function readInitialAppearance(scope: string): TestAppearanceState {
 }
 
 export function useTestAppearance(scope = "default") {
-  const [appearance, setAppearance] = useState<TestAppearanceState>(() =>
-    readInitialAppearance(scope),
-  );
+  const [appearance, setAppearance] = useState<TestAppearanceState>(DEFAULT_APPEARANCE);
+  const [initializedScope, setInitializedScope] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(() => {
     if (typeof document === "undefined") return false;
     return Boolean(document.fullscreenElement);
   });
 
   useEffect(() => {
+    setAppearance(readInitialAppearance(scope));
+    setInitializedScope(scope);
+  }, [scope]);
+
+  useEffect(() => {
+    if (initializedScope !== scope) {
+      return;
+    }
+
     try {
       window.localStorage.setItem(getStorageKey(scope), JSON.stringify(appearance));
     } catch {
       // Ignore storage failures.
     }
-  }, [appearance, scope]);
+  }, [appearance, initializedScope, scope]);
 
   useEffect(() => {
     const onFullscreenChange = () =>
@@ -92,4 +100,3 @@ export function useTestAppearance(scope = "default") {
     toggleFullscreen,
   };
 }
-

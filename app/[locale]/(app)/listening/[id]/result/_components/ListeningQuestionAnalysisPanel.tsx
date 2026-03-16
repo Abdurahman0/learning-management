@@ -1,6 +1,12 @@
 "use client";
 
-import { CheckCircle2, ChevronDown, ChevronUp, CircleDashed, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  CircleDashed,
+  XCircle,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +34,10 @@ function normalizeAnswerValue(value: string | string[] | null | undefined) {
   return "";
 }
 
-function getQuestionStatus(grading: GradeTestResult, questionId: string): QuestionStatus {
+function getQuestionStatus(
+  grading: GradeTestResult,
+  questionId: string,
+): QuestionStatus {
   const result = grading.byQuestion[questionId];
   if (!result?.normalizedUser) return "skipped";
   return result.isCorrect ? "correct" : "incorrect";
@@ -72,8 +81,8 @@ export function ListeningQuestionAnalysisPanel({
   const t = useTranslations("listeningResult");
 
   return (
-    <Card className="flex h-[64vh] min-h-0 flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-[calc(100vh-14.5rem)]">
-      <div className="sticky top-0 z-20 border-b border-slate-200/90 bg-white/95 px-3.5 py-3 backdrop-blur dark:border-border/70 dark:bg-card/95 sm:px-4">
+    <Card className="flex h-[80vh] min-h-0 w-full max-w-full flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-[85vh]">
+      <div className="sticky top-0 z-20 min-w-0 max-w-full border-b border-slate-200/90 bg-white/95 px-3.5 py-3 backdrop-blur dark:border-border/70 dark:bg-card/95 sm:px-4">
         <div className="space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <p className="text-base font-semibold">{t("questionAnalysis")}</p>
@@ -84,19 +93,23 @@ export function ListeningQuestionAnalysisPanel({
               })}
             </p>
           </div>
-          <p className="text-xs text-muted-foreground">{t("questionNavigator")}</p>
-          <div className="overflow-x-auto pb-1 [scrollbar-width:thin]">
+          <p className="text-xs text-muted-foreground">
+            {t("questionNavigator")}
+          </p>
+
+          <div className="overflow-x-scroll max-w-[calc(80vw)] pb-1 [scrollbar-width:thin]">
             <div className="inline-flex items-center gap-1 pr-2">
               {questions.map((question) => {
                 const status = getQuestionStatus(grading, question.id);
                 const styles = getStatusStyles(status);
+
                 return (
                   <a
                     key={`quick-${question.id}`}
                     href={`#review-question-${question.id}`}
                     className={cn(
-                      "inline-flex h-8 min-w-8 items-center justify-center rounded-full border px-1.5 text-xs font-semibold transition-colors",
-                      styles.nav
+                      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
+                      styles.nav,
                     )}
                   >
                     {question.number}
@@ -108,7 +121,7 @@ export function ListeningQuestionAnalysisPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3.5 pb-4 pt-3 [scrollbar-width:thin] sm:px-4">
+      <div className="min-h-0 min-w-0 max-w-full flex-1 space-y-3 overflow-y-auto px-3.5 pb-4 pt-3 [scrollbar-width:thin] sm:px-4">
         {questions.map((question) => {
           const status = getQuestionStatus(grading, question.id);
           const statusStyles = getStatusStyles(status);
@@ -117,24 +130,33 @@ export function ListeningQuestionAnalysisPanel({
           const userAnswer = normalizeAnswerValue(answers[question.id]);
           const correctAnswer = Array.isArray(answerMeta?.correctAnswer)
             ? answerMeta.correctAnswer.join(", ")
-            : answerMeta?.correctAnswer ?? "";
+            : (answerMeta?.correctAnswer ?? "");
 
           return (
             <Card
               id={`review-question-${question.id}`}
               key={question.id}
-              className={cn("gap-0 rounded-2xl p-4 shadow-none", statusStyles.card)}
+              className={cn(
+                "min-w-0 max-w-full gap-0 overflow-hidden rounded-2xl p-4 shadow-none",
+                statusStyles.card,
+              )}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 space-y-1.5">
-                  <p className="text-base font-semibold leading-snug">
+              <div className="flex min-w-0 max-w-full flex-col items-start gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                <div className="min-w-0 w-full max-w-full space-y-1.5">
+                  <p className="wrap-break-word text-base leading-snug font-semibold">
                     {question.number}. {question.prompt}
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <Badge variant="outline" className="rounded-full text-[11px] text-foreground/85">
+                  <div className="flex min-w-0 max-w-full flex-wrap gap-1.5">
+                    <Badge
+                      variant="outline"
+                      className="max-w-full rounded-full text-[11px] text-foreground/85"
+                    >
                       {question.sectionTitle}
                     </Badge>
-                    <Badge variant="outline" className="rounded-full text-[11px] text-foreground/85">
+                    <Badge
+                      variant="outline"
+                      className="max-w-full rounded-full text-[11px] text-foreground/85"
+                    >
                       {t(`questionTypes.${question.type}`)}
                     </Badge>
                   </div>
@@ -142,8 +164,8 @@ export function ListeningQuestionAnalysisPanel({
 
                 <div
                   className={cn(
-                    "mt-0.5 flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold",
-                    statusStyles.dot
+                    "mt-0.5 flex shrink-0 items-center gap-1 self-start rounded-full border px-2 py-1 text-[11px] font-semibold",
+                    statusStyles.dot,
                   )}
                 >
                   {status === "correct" ? (
@@ -167,12 +189,20 @@ export function ListeningQuestionAnalysisPanel({
 
               <div className="mt-3 grid gap-2 text-sm">
                 <p>
-                  <span className="font-medium text-muted-foreground">{t("yourAnswer")}:</span>{" "}
-                  <span className={statusStyles.answer}>{userAnswer || t("noAnswer")}</span>
+                  <span className="font-medium text-muted-foreground">
+                    {t("yourAnswer")}:
+                  </span>{" "}
+                  <span className={cn("wrap-break-word", statusStyles.answer)}>
+                    {userAnswer || t("noAnswer")}
+                  </span>
                 </p>
                 <p>
-                  <span className="font-medium text-muted-foreground">{t("correctAnswer")}:</span>{" "}
-                  <span className="text-emerald-700 dark:text-emerald-200">{correctAnswer || t("notAvailable")}</span>
+                  <span className="font-medium text-muted-foreground">
+                    {t("correctAnswer")}:
+                  </span>{" "}
+                  <span className="wrap-break-word text-emerald-700 dark:text-emerald-200">
+                    {correctAnswer || t("notAvailable")}
+                  </span>
                 </p>
               </div>
 
@@ -183,7 +213,11 @@ export function ListeningQuestionAnalysisPanel({
                   className="h-8 rounded-lg px-2.5 text-xs"
                   onClick={() => onToggleExplanation(question.id)}
                 >
-                  {isOpen ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                  {isOpen ? (
+                    <ChevronUp className="size-4" />
+                  ) : (
+                    <ChevronDown className="size-4" />
+                  )}
                   {isOpen ? t("hideExplanation") : t("explain")}
                 </Button>
                 <Button
@@ -198,9 +232,13 @@ export function ListeningQuestionAnalysisPanel({
 
               {isOpen ? (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/90 p-3 text-sm dark:border-border/70 dark:bg-background/50">
-                  <p>{answerMeta?.explanation ?? t("notAvailable")}</p>
+                  <p className="wrap-break-word">
+                    {answerMeta?.explanation ?? t("notAvailable")}
+                  </p>
                   {answerMeta?.evidence.transcriptQuote ? (
-                    <p className="mt-2 text-xs text-muted-foreground">{answerMeta.evidence.transcriptQuote}</p>
+                    <p className="mt-2 wrap-break-word text-xs text-muted-foreground">
+                      {answerMeta.evidence.transcriptQuote}
+                    </p>
                   ) : null}
                 </div>
               ) : null}

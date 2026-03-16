@@ -91,7 +91,7 @@ export function ReviewPassagePanel({
   if (!activePassage) return null;
 
   return (
-    <Card className="flex h-[64vh] min-h-0 flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-[calc(100vh-14.5rem)]">
+    <Card className="flex h-[64vh] min-h-0 flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-full">
       <div className="sticky top-0 z-20 border-b border-slate-200/90 bg-white/95 px-3 py-3 backdrop-blur dark:border-border/70 dark:bg-card/95 sm:px-4">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">

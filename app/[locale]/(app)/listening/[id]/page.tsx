@@ -191,6 +191,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
   const [reviewMode, setReviewMode] = useState(false);
   const [expandedReviewQuestions, setExpandedReviewQuestions] = useState<Set<string>>(new Set());
   const [highlightedEvidenceQuestionId, setHighlightedEvidenceQuestionId] = useState<string | null>(null);
+  const [reviewMobilePanel, setReviewMobilePanel] = useState<"transcript" | "questions">("transcript");
   const [activeQuestionNumber, setActiveQuestionNumber] = useState(1);
   const [answers, setAnswers] = useState<AnswersMap>({});
   const [marked, setMarked] = useState<Set<number>>(new Set());
@@ -262,6 +263,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
     setReviewMode(false);
     setExpandedReviewQuestions(new Set());
     setHighlightedEvidenceQuestionId(null);
+    setReviewMobilePanel("transcript");
     setActiveSectionId("s1");
     setActiveQuestionNumber(1);
     setAnswers({});
@@ -691,6 +693,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
   const handleJumpEvidenceFromReview = useCallback((questionId: string) => {
     const meta = getListeningAnswerMeta(questionId);
+    setReviewMobilePanel("transcript");
     if (meta?.evidence.sectionId) {
       setActiveSectionId(meta.evidence.sectionId);
     }
@@ -698,6 +701,14 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
     window.setTimeout(() => {
       const node = document.getElementById(`listening-evidence-${questionId}`);
+      node?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+  }, []);
+
+  const handleGoToQuestionFromReview = useCallback((questionId: string) => {
+    setReviewMobilePanel("questions");
+    window.setTimeout(() => {
+      const node = document.getElementById(`review-question-${questionId}`);
       node?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 120);
   }, []);
@@ -726,6 +737,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
     setPaletteOpen(false);
     setTimerRunning(false);
     setAudioPlaying(false);
+    setReviewMobilePanel("transcript");
     setReviewMode(true);
   }, [
     answers,
@@ -1409,34 +1421,65 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
       </div>
       ) : null}
 
-      <main className="test-scaleable grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-3 px-2 py-2 sm:px-3 sm:py-3 lg:gap-4 lg:px-5 lg:py-4">
+      <main className="test-scaleable grid min-h-0 min-w-0 w-full max-w-full flex-1 grid-cols-1 gap-3 px-2 py-2 sm:px-3 sm:py-3 lg:gap-4 lg:px-5 lg:py-4">
         {reviewMode ? (
-          <section id="review-main" className="grid min-h-0 items-start gap-4 xl:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)]">
-            <ListeningTranscriptReviewPanel
-              sections={reviewSections}
-              activeSectionId={resolvedActiveSectionId}
-              highlightedQuestionId={highlightedEvidenceQuestionId}
-              onSectionChange={(sectionId) => setActiveSectionId(sectionId as "s1" | "s2" | "s3" | "s4")}
-            />
+          <section className="min-h-0 min-w-0 w-full max-w-full space-y-3">
+            {isCompact ? (
+              <div className="grid grid-cols-2 rounded-xl border border-border bg-card/70 p-1">
+                <Button
+                  type="button"
+                  variant={reviewMobilePanel === "transcript" ? "secondary" : "ghost"}
+                  className="h-8 rounded-lg"
+                  onClick={() => setReviewMobilePanel("transcript")}
+                >
+                  {tListeningResult("partLabel", { index: Number(resolvedActiveSectionId.slice(1)) })}
+                </Button>
+                <Button
+                  type="button"
+                  variant={reviewMobilePanel === "questions" ? "secondary" : "ghost"}
+                  className="h-8 rounded-lg"
+                  onClick={() => setReviewMobilePanel("questions")}
+                >
+                  {t.has("questions") ? t("questions") : "Questions"}
+                </Button>
+              </div>
+            ) : null}
 
-            <ListeningQuestionAnalysisPanel
-              questions={flatQuestions}
-              answers={persistedAnswersByQuestionId}
-              grading={grading}
-              expanded={expandedReviewQuestions}
-              onToggleExplanation={(questionId) => {
-                setExpandedReviewQuestions((previous) => {
-                  const next = new Set(previous);
-                  if (next.has(questionId)) {
-                    next.delete(questionId);
-                  } else {
-                    next.add(questionId);
-                  }
-                  return next;
-                });
-              }}
-              onJumpEvidence={handleJumpEvidenceFromReview}
-            />
+            <section
+              id="review-main"
+              className="grid min-h-0 min-w-0 w-full max-w-full gap-4 xl:h-[calc(100vh-14.5rem)] xl:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)] xl:items-stretch"
+            >
+              <div className={cn("min-h-0 min-w-0", isCompact && reviewMobilePanel !== "transcript" && "hidden xl:block")}>
+                <ListeningTranscriptReviewPanel
+                  sections={reviewSections}
+                  activeSectionId={resolvedActiveSectionId}
+                  highlightedQuestionId={highlightedEvidenceQuestionId}
+                  onSectionChange={(sectionId) => setActiveSectionId(sectionId as "s1" | "s2" | "s3" | "s4")}
+                  onGoToQuestion={handleGoToQuestionFromReview}
+                />
+              </div>
+
+              <div className={cn("min-h-0 min-w-0", isCompact && reviewMobilePanel !== "questions" && "hidden xl:block")}>
+                <ListeningQuestionAnalysisPanel
+                  questions={flatQuestions}
+                  answers={persistedAnswersByQuestionId}
+                  grading={grading}
+                  expanded={expandedReviewQuestions}
+                  onToggleExplanation={(questionId) => {
+                    setExpandedReviewQuestions((previous) => {
+                      const next = new Set(previous);
+                      if (next.has(questionId)) {
+                        next.delete(questionId);
+                      } else {
+                        next.add(questionId);
+                      }
+                      return next;
+                    });
+                  }}
+                  onJumpEvidence={handleJumpEvidenceFromReview}
+                />
+              </div>
+            </section>
           </section>
         ) : (
         <section className="min-h-0 min-w-0">

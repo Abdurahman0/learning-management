@@ -33,6 +33,7 @@ type ListeningTranscriptReviewPanelProps = {
   activeSectionId: string;
   highlightedQuestionId: string | null;
   onSectionChange: (sectionId: string) => void;
+  onGoToQuestion?: (questionId: string) => void;
 };
 
 function toClock(totalSeconds: number) {
@@ -59,6 +60,7 @@ export function ListeningTranscriptReviewPanel({
   activeSectionId,
   highlightedQuestionId,
   onSectionChange,
+  onGoToQuestion,
 }: ListeningTranscriptReviewPanelProps) {
   const t = useTranslations("listeningResult");
   const activeSection = sections.find((section) => section.sectionId === activeSectionId) ?? sections[0];
@@ -66,14 +68,14 @@ export function ListeningTranscriptReviewPanel({
   if (!activeSection) return null;
 
   return (
-    <Card className="flex h-[64vh] min-h-0 flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-[calc(100vh-14.5rem)]">
-      <div className="sticky top-0 z-20 border-b border-slate-200/90 bg-white/95 px-3 py-3 backdrop-blur dark:border-border/70 dark:bg-card/95 sm:px-4">
-        <div className="space-y-3">
+    <Card className="flex h-[80vh] min-h-0 w-full max-w-full flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-[85vh]">
+      <div className="sticky top-0 z-20 min-w-0 max-w-full border-b border-slate-200/90 bg-white/95 px-3 py-3 backdrop-blur dark:border-border/70 dark:bg-card/95 sm:px-4">
+        <div className="min-w-0 max-w-full space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">{t("listeningReview")}</p>
             <p className="text-xs text-muted-foreground">{activeSection.label}</p>
           </div>
-          <div className="overflow-x-auto pb-1 [scrollbar-width:thin]">
+          <div className="min-w-0 w-full max-w-full overflow-x-auto overflow-y-hidden pb-1 [scrollbar-width:thin]">
             <div className="inline-flex gap-2 pr-2">
               {sections.map((section) => (
                 <Button
@@ -96,7 +98,7 @@ export function ListeningTranscriptReviewPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5 pt-4 [scrollbar-width:thin] sm:px-6">
+      <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-y-auto px-4 pb-5 pt-4 [scrollbar-width:thin] sm:px-6">
         <div className="space-y-4">
           <div className="space-y-2">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-[1.9rem]">{activeSection.title}</h2>
@@ -123,7 +125,7 @@ export function ListeningTranscriptReviewPanel({
                 key={item.questionId}
                 id={`listening-evidence-${item.questionId}`}
                 className={cn(
-                  "gap-2 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-none dark:border-border/65 dark:bg-background/35",
+                  "min-w-0 max-w-full gap-2 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-none dark:border-border/65 dark:bg-background/35",
                   highlightedQuestionId === item.questionId && "border-blue-300/80 bg-blue-100/65 ring-1 ring-blue-300/70 dark:border-blue-400/60 dark:bg-blue-500/[0.14] dark:ring-blue-400/45"
                 )}
               >
@@ -142,11 +144,23 @@ export function ListeningTranscriptReviewPanel({
                     </p>
                   ) : null}
                 </div>
-                <p className="text-sm font-medium text-foreground/95">{item.prompt}</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">{item.quote}</p>
+                <p className="break-words text-sm font-medium text-foreground/95">{item.prompt}</p>
+                <p className="break-words text-sm leading-relaxed text-muted-foreground">{item.quote}</p>
                 <div>
-                  <Button asChild variant="ghost" size="sm" className="h-8 rounded-lg px-2.5 text-xs">
-                    <a href={`#review-question-${item.questionId}`}>{t("goToQuestion")}</a>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-lg px-2.5 text-xs"
+                    onClick={() => {
+                      if (onGoToQuestion) {
+                        onGoToQuestion(item.questionId);
+                        return;
+                      }
+                      const node = document.getElementById(`review-question-${item.questionId}`);
+                      node?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }}
+                  >
+                    {t("goToQuestion")}
                   </Button>
                 </div>
               </Card>

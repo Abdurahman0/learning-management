@@ -923,7 +923,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
           <Card className="test-panel flex h-full min-h-0 flex-col justify-start overflow-hidden border-border/80 bg-card/80 py-0 shadow-sm dark:shadow-black/25">
             <Tabs value={activePassageId} onValueChange={handlePassageChange} className="shrink-0">
               <div className="test-panel sticky top-0 z-10 border-b border-border/80 bg-card/95 px-3 pt-1 backdrop-blur supports-backdrop-filter:bg-card/90">
-                <TabsList className="h-11 w-full justify-start overflow-x-auto">
+                <TabsList className="h-11 w-full justify-start overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {test.passages.map((passage, index) => (
                     <TabsTrigger key={passage.id} value={passage.id} className="h-11 shrink-0 px-4 text-sm" aria-label={`Passage ${index + 1}`}>
                       {t("passageLabel", { index: index + 1 })}
