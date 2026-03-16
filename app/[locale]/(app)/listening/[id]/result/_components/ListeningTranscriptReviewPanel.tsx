@@ -144,8 +144,8 @@ export function ListeningTranscriptReviewPanel({
                     </p>
                   ) : null}
                 </div>
-                <p className="break-words text-sm font-medium text-foreground/95">{item.prompt}</p>
-                <p className="break-words text-sm leading-relaxed text-muted-foreground">{item.quote}</p>
+                <p className="wrap-break-word text-sm font-medium text-foreground/95">{item.prompt}</p>
+                <p className="wrap-break-word text-sm leading-relaxed text-muted-foreground">{item.quote}</p>
                 <div>
                   <Button
                     variant="ghost"
