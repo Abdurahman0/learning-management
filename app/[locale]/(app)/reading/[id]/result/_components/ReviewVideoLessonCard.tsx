@@ -27,7 +27,7 @@ export function ReviewVideoLessonCard({ lesson, onAction }: ReviewVideoLessonCar
 
       <Card className="overflow-hidden border-slate-200/85 bg-white/95 p-0 shadow-sm shadow-slate-200/50 dark:border-border/80 dark:bg-card/70 dark:shadow-none">
         <div className="grid gap-0 lg:grid-cols-[300px_minmax(0,1fr)]">
-          <div className="relative flex min-h-[180px] items-center justify-center border-b border-slate-200 bg-gradient-to-br from-blue-100 via-indigo-100/40 to-white dark:border-border/70 dark:from-blue-700/35 dark:via-indigo-700/20 dark:to-background lg:border-r lg:border-b-0">
+          <div className="relative flex min-h-45 items-center justify-center border-b border-slate-200 bg-linear-to-br from-blue-100 via-indigo-100/40 to-white dark:border-border/70 dark:from-blue-700/35 dark:via-indigo-700/20 dark:to-background lg:border-r lg:border-b-0">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(59,130,246,0.2),transparent_55%)] dark:bg-[radial-gradient(circle_at_20%_10%,rgba(59,130,246,0.25),transparent_55%)]" />
             <div className="relative text-center">
               <Button

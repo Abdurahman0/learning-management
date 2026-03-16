@@ -29,7 +29,7 @@ export function TeacherStudentAttemptsTable({attempts, onViewAttempt}: TeacherSt
 
       <CardContent className="border-t border-border/65 p-0">
         <div className="overflow-x-auto">
-          <Table className="min-w-[780px]">
+          <Table className="min-w-195">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("columns.testName")}</TableHead>

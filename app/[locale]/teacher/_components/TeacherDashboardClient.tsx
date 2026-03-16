@@ -22,7 +22,7 @@ export function TeacherDashboardClient() {
         <div className="flex min-w-0 flex-1 flex-col">
           <TeacherTopbar />
 
-          <main className="mx-auto min-w-0 w-full max-w-[1480px] space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
+          <main className="mx-auto min-w-0 w-full max-w-370 space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
             <section className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">{t("title")}</h1>

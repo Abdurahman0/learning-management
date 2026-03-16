@@ -39,7 +39,7 @@ export function TeacherStudentBandProgressChart({points}: TeacherStudentBandProg
       </CardHeader>
 
       <CardContent className="pb-5">
-        <div className="relative h-[250px] rounded-xl border border-border/60 bg-background/35 p-4">
+        <div className="relative h-62.5 rounded-xl border border-border/60 bg-background/35 p-4">
           {[0, 1, 2, 3].map((step) => (
             <div
               key={step}
@@ -48,15 +48,15 @@ export function TeacherStudentBandProgressChart({points}: TeacherStudentBandProg
             />
           ))}
 
-          <div className="relative z-[1] flex h-full items-end justify-around gap-3">
+          <div className="relative z-1 flex h-full items-end justify-around gap-3">
             {bars.map((point, index) => (
-              <div key={point.id} className="flex h-full w-[22%] max-w-[110px] flex-col items-center justify-end">
+              <div key={point.id} className="flex h-full w-[22%] max-w-27.5 flex-col items-center justify-end">
                 <div className="flex h-[72%] w-full items-end justify-center">
                   <div
                     className={`w-11 rounded-t-xl shadow-[0_0_18px_rgba(59,130,246,0.25)] ${
                       index === bars.length - 1
-                        ? "bg-gradient-to-t from-blue-700 to-blue-500"
-                        : "bg-gradient-to-t from-indigo-800/85 to-indigo-500/90"
+                        ? "bg-linear-to-t from-blue-700 to-blue-500"
+                        : "bg-linear-to-t from-indigo-800/85 to-indigo-500/90"
                     }`}
                     style={{height: `${point.heightPercent}%`}}
                   />

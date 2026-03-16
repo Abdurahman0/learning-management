@@ -187,7 +187,7 @@ export function TeacherSidebarMobileNav() {
           <span className="sr-only">{t("sidebar.openMenu")}</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-[304px] gap-0 border-l border-border/70 bg-background/95 p-0">
+      <SheetContent side="right" className="w-76 gap-0 border-l border-border/70 bg-background/95 p-0">
         <SheetHeader className="border-b border-border/70">
           <SheetTitle className="flex items-center gap-2 text-left text-sm">
             <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary/18 text-primary">

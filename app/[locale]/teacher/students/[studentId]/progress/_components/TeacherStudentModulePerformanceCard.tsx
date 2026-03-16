@@ -16,7 +16,7 @@ export function TeacherStudentModulePerformanceCard({modules}: TeacherStudentMod
     <Card className="rounded-2xl border-border/70 bg-card/75 py-0">
       <CardHeader className="flex flex-row items-center justify-between gap-2 pt-7 pb-3">
         <CardTitle className="text-xl">{t("modulePerformance")}</CardTitle>
-        <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/12 px-2.5 py-1 text-xs text-emerald-300">
+        <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-600/72 px-2.5 py-1 text-xs text-white dark:bg-emerald-500/12 dark:text-emerald-300">
           {t("updatedToday")}
         </span>
       </CardHeader>
@@ -30,7 +30,7 @@ export function TeacherStudentModulePerformanceCard({modules}: TeacherStudentMod
             </div>
             <div className="h-2 rounded-full bg-muted/70">
               <div
-                className="h-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-500"
+                className="h-2 rounded-full bg-linear-to-r from-blue-600 to-indigo-500"
                 style={{width: `${Math.min(100, (item.score / 9) * 100)}%`}}
                 aria-hidden="true"
               />

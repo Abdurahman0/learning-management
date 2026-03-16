@@ -785,7 +785,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
         <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-4 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
               <BookOpen className="size-4.5" aria-hidden="true" />
             </span>
             <p className="truncate text-base font-semibold sm:text-lg">IELTS MASTER</p>
@@ -916,13 +916,13 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
 
       <main
         ref={splitContainerRef}
-        className="test-scaleable grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden px-2 py-2 sm:px-3 sm:py-3 lg:[grid-template-columns:var(--reading-grid)] lg:gap-0 lg:px-0 lg:py-0"
+        className="test-scaleable grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden px-2 py-2 sm:px-3 sm:py-3 lg:grid-cols-(--reading-grid) lg:gap-0 lg:px-0 lg:py-0"
         style={{ "--reading-grid": `${gridPct}% 8px minmax(0, 1fr)` } as CSSProperties}
       >
         <div className={cn("min-h-0 min-w-0 px-1 sm:px-0 lg:px-5 lg:py-4", isCompact && mobilePanel !== "passage" && "hidden")}>
           <Card className="test-panel flex h-full min-h-0 flex-col justify-start overflow-hidden border-border/80 bg-card/80 py-0 shadow-sm dark:shadow-black/25">
             <Tabs value={activePassageId} onValueChange={handlePassageChange} className="shrink-0">
-              <div className="test-panel sticky top-0 z-10 border-b border-border/80 bg-card/95 px-3 pt-1 backdrop-blur supports-[backdrop-filter]:bg-card/90">
+              <div className="test-panel sticky top-0 z-10 border-b border-border/80 bg-card/95 px-3 pt-1 backdrop-blur supports-backdrop-filter:bg-card/90">
                 <TabsList className="h-11 w-full justify-start overflow-x-auto">
                   {test.passages.map((passage, index) => (
                     <TabsTrigger key={passage.id} value={passage.id} className="h-11 shrink-0 px-4 text-sm" aria-label={`Passage ${index + 1}`}>
@@ -939,7 +939,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
             >
               <div className="mx-auto flex max-w-[72ch] min-w-0 flex-col items-stretch justify-start space-y-5 pb-8">
                 <p className="text-xs font-semibold tracking-[0.18em] text-blue-600 uppercase dark:text-blue-400">{activePassageId.toUpperCase()}</p>
-                <h2 className="break-words text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                <h2 className="wrap-break-word text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                   <HighlightableText
                     text={activePassage?.title ?? ""}
                     userHighlights={getPassageTitleLocalHighlights(activePassageId, (activePassage?.title ?? "").length)}
@@ -972,7 +972,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                   }));
 
                   return (
-                    <p id={paragraphId} key={paragraphId} className="test-body-copy break-words text-foreground/90">
+                    <p id={paragraphId} key={paragraphId} className="test-body-copy wrap-break-word text-foreground/90">
                       <HighlightableText
                         text={paragraph}
                         userHighlights={getPassageLocalHighlights(paragraphStart, paragraph.length)}
@@ -1013,7 +1013,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
           tabIndex={isCompact ? -1 : 0}
           className={cn(
             "relative hidden w-2 cursor-col-resize items-center justify-center bg-transparent outline-none lg:flex",
-            "after:h-16 after:w-[3px] after:rounded-full after:bg-border/80 hover:after:bg-blue-500/70 focus-visible:ring-2 focus-visible:ring-blue-500"
+            "after:h-16 after:w-0.75 after:rounded-full after:bg-border/80 hover:after:bg-blue-500/70 focus-visible:ring-2 focus-visible:ring-blue-500"
           )}
           onPointerDown={handleDividerPointerDown}
           onDoubleClick={() => setSplitPct(DEFAULT_SPLIT)}
@@ -1075,7 +1075,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                     <section key={group.title} className="space-y-4">
                       <div>
                         <h3 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{group.title}</h3>
-                        {group.instruction ? <p className="test-muted-copy mt-1 break-words text-sm text-muted-foreground">{group.instruction}</p> : null}
+                        {group.instruction ? <p className="test-muted-copy mt-1 wrap-break-word text-sm text-muted-foreground">{group.instruction}</p> : null}
                       </div>
 
                       {headings ? (
@@ -1086,7 +1086,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                               const optionBase = headingOptionStarts[headingIndex] ?? 0;
 
                               return (
-                                <li key={heading} className="break-words text-foreground/90">
+                                <li key={heading} className="wrap-break-word text-foreground/90">
                                   <HighlightableText
                                     text={heading}
                                     userHighlights={
@@ -1170,7 +1170,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                               onClick={() => setActiveQuestionNumber(question.number)}
                             >
                               <div className="mb-2 flex items-start justify-between gap-2">
-                                <p className="min-w-0 break-words text-base font-medium leading-relaxed text-foreground">
+                                <p className="min-w-0 wrap-break-word text-base font-medium leading-relaxed text-foreground">
                                   {question.number}.{" "}
                                   <HighlightableText
                                     text={question.prompt}
@@ -1264,7 +1264,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                                         onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
                                         className="mt-0.5 size-4 accent-blue-600"
                                       />
-                                      <span className="break-words">
+                                      <span className="wrap-break-word">
                                         <HighlightableText
                                           text={option}
                                           userHighlights={getQuestionLocalHighlights(
@@ -1299,7 +1299,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                                   disabled={reviewMode}
                                   onValueChange={(nextValue) => setAnswers((prev) => ({ ...prev, [question.id]: nextValue }))}
                                 >
-                                  <SelectTrigger className="test-input-surface max-w-[280px] bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
+                                  <SelectTrigger className="test-input-surface max-w-70 bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
                                     <SelectValue placeholder={t("selectHeading")} />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -1316,7 +1316,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                                   disabled={reviewMode}
                                   onValueChange={(nextValue) => setAnswers((prev) => ({ ...prev, [question.id]: nextValue }))}
                                 >
-                                  <SelectTrigger className="test-input-surface max-w-[220px] bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
+                                  <SelectTrigger className="test-input-surface max-w-55 bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
                                     <SelectValue placeholder={t("selectParagraph")} />
                                   </SelectTrigger>
                                   <SelectContent>

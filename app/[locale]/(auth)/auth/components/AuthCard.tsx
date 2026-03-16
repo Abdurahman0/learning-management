@@ -145,7 +145,7 @@ export function AuthCard({ mode }: AuthCardProps) {
   };
 
   return (
-    <Card className="w-full max-w-[620px] rounded-3xl border-border/80 bg-card/95 px-5 py-6 shadow-xl shadow-slate-950/5 sm:px-8 sm:py-8">
+    <Card className="w-full max-w-155 rounded-3xl border-border/80 bg-card/95 px-5 py-6 shadow-xl shadow-slate-950/5 sm:px-8 sm:py-8">
       <div className="space-y-1">
         <h2 className="text-3xl font-semibold tracking-tight text-foreground">{isSignup ? t("signup.title") : t("signin.title")}</h2>
         <p className="text-lg text-muted-foreground">{isSignup ? t("signup.subtitle") : t("signin.subtitle")}</p>

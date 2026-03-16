@@ -52,7 +52,7 @@ export function DashboardClient() {
   };
 
   return (
-    <main className="mx-auto min-w-0 w-full max-w-[1780px] overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
+    <main className="mx-auto min-w-0 w-full max-w-445 overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
       <section className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("title")}</h1>
@@ -163,7 +163,7 @@ export function DashboardClient() {
           <Separator />
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <Table className="min-w-[720px]">
+              <Table className="min-w-180">
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("recentHistory.columns.testName")}</TableHead>

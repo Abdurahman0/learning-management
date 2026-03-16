@@ -30,14 +30,14 @@ export function TeacherConversationList({
 
   if (conversations.length === 0) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-border/65 bg-background/35 p-4 text-center text-sm text-muted-foreground">
+      <div className="flex min-h-105 items-center justify-center rounded-xl border border-border/65 bg-background/35 p-4 text-center text-sm text-muted-foreground">
         {t("emptyConversations")}
       </div>
     );
   }
 
   return (
-    <ScrollArea className="h-[540px] rounded-xl border border-border/65 bg-background/25">
+    <ScrollArea className="h-135 rounded-xl border border-border/65 bg-background/25">
       <div className="divide-y divide-border/55">
         {conversations.map((conversation) => {
           const active = conversation.id === selectedConversationId;

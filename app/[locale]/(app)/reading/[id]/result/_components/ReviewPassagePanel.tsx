@@ -137,7 +137,7 @@ export function ReviewPassagePanel({
                   "rounded-2xl border border-slate-200 bg-white px-3.5 py-3.5 transition-all duration-300 dark:border-border/55 dark:bg-background/35 sm:px-4 sm:py-4",
                   evidenceQs.length > 0 && "border-blue-300 bg-blue-50/70 dark:border-blue-500/25 dark:bg-blue-500/[0.07]",
                   highlightedParagraphId === paragraph.id &&
-                    "border-blue-300 bg-blue-100/70 ring-1 ring-blue-300/70 dark:border-blue-400/60 dark:bg-blue-500/[0.15] dark:ring-blue-400/45"
+                    "border-blue-300 bg-blue-100/70 ring-1 ring-blue-300/70 dark:border-blue-400/60 dark:bg-blue-500/15 dark:ring-blue-400/45"
                 )}
               >
                 <div className="mb-2.5 flex flex-wrap items-center gap-2">

@@ -109,7 +109,7 @@ export function ListeningTranscriptReviewPanel({
           </Card>
 
           {highlightedQuestionId ? (
-            <Card className="rounded-2xl border-blue-300/70 bg-blue-100/70 p-3.5 shadow-none dark:border-blue-400/40 dark:bg-blue-500/[0.12]">
+            <Card className="rounded-2xl border-blue-300/70 bg-blue-100/70 p-3.5 shadow-none dark:border-blue-400/40 dark:bg-blue-500/12">
               <p className="text-xs tracking-[0.12em] text-blue-700 dark:text-blue-200/90 uppercase">{t("selectedEvidence")}</p>
               <p className="mt-1 text-sm text-foreground/95">
                 {activeSection.evidenceItems.find((item) => item.questionId === highlightedQuestionId)?.quote ?? t("notAvailable")}

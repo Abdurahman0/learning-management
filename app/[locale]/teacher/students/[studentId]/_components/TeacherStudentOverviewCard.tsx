@@ -52,7 +52,7 @@ export function TeacherStudentOverviewCard({
                 <Trophy className="size-3.5" />
                 {t("targetBand")}: {targetBand.toFixed(1)}
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/25 bg-emerald-600/72 px-2.5 py-1 text-white dark:bg-emerald-500/10 dark:text-emerald-300">
                 <TrendingUp className="size-3.5" />
                 {t("currentBand")}: {currentBand.toFixed(1)}
               </span>

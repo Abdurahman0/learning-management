@@ -30,7 +30,7 @@ export function TeacherProfileHeroCard({
   const t = useTranslations("teacherProfile");
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/70 bg-gradient-to-br from-card/95 via-card/85 to-primary/10 py-0 shadow-[0_16px_48px_-28px_rgba(59,130,246,0.65)]">
+    <Card className="overflow-hidden rounded-2xl border-border/70 bg-linear-to-br from-card/95 via-card/85 to-primary/10 py-0 shadow-[0_16px_48px_-28px_rgba(59,130,246,0.65)]">
       <CardContent className="space-y-5 p-5 sm:p-6">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div className="flex min-w-0 items-center gap-4">
@@ -45,7 +45,7 @@ export function TeacherProfileHeroCard({
                   {profile.title}
                 </span>
                 {profile.verified ? (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/35 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-300">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/35 bg-emerald-600/72 px-2 py-0.5 text-xs text-white dark:bg-emerald-500/10 dark:text-emerald-300">
                     <Sparkles className="size-3.5" />
                     {t("verified")}
                   </span>

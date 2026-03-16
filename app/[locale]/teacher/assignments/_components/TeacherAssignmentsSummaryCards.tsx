@@ -26,15 +26,15 @@ const summaryCards: SummaryCard[] = [
 
 function toneClass(tone: SummaryCard["tone"]) {
   if (tone === "amber") {
-    return "bg-amber-500/12 text-amber-300 border-amber-500/25";
+    return "bg-amber-600/72 text-white dark:bg-amber-500/12 dark:text-amber-300 border-amber-500/25";
   }
 
   if (tone === "emerald") {
-    return "bg-emerald-500/12 text-emerald-300 border-emerald-500/25";
+    return "bg-emerald-600/72 text-white dark:bg-emerald-500/12 dark:text-emerald-300 border-emerald-500/25";
   }
 
   if (tone === "rose") {
-    return "bg-rose-500/12 text-rose-300 border-rose-500/25";
+    return "bg-rose-600/72 text-white dark:bg-rose-500/12 dark:text-rose-300 border-rose-500/25";
   }
 
   return "bg-primary/12 text-primary border-primary/25";

@@ -13,7 +13,7 @@ export function TeacherProfileStatusCard({verified, profileCompletion}: TeacherP
   const t = useTranslations("teacherProfile");
 
   return (
-    <Card className="rounded-2xl border-border/70 bg-gradient-to-br from-primary/25 via-card/88 to-card/78 py-0 shadow-[0_14px_40px_-24px_rgba(59,130,246,0.75)]">
+    <Card className="rounded-2xl border-border/70 bg-linear-to-br from-primary/25 via-card/88 to-card/78 py-0 shadow-[0_14px_40px_-24px_rgba(59,130,246,0.75)]">
       <CardContent className="space-y-3 p-5">
         <p className="text-xl font-semibold">
           {t("teacherStatus")}: {verified ? t("verified") : t("notVerified")}

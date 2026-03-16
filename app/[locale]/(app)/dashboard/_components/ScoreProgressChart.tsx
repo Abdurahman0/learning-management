@@ -97,7 +97,7 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
     safeHoveredIndex === null ? 50 : clamp((chart.mapX(safeHoveredIndex) / chart.width) * 100, 10, 90);
 
   return (
-    <Card className="min-w-0 rounded-2xl border-border/70 bg-gradient-to-b from-card/85 to-blue-500/[0.03] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+    <Card className="min-w-0 rounded-2xl border-border/70 bg-linear-to-b from-card/85 to-blue-500/3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <div className="min-w-0">
           <CardTitle>{t("scoreProgress.title")}</CardTitle>
@@ -108,7 +108,7 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
           </div>
         </div>
         <Select value={period} onValueChange={(value) => setPeriod(value as "1m" | "3m" | "6m")}>
-          <SelectTrigger className="w-[160px] rounded-xl border-border/70 bg-background/45">
+          <SelectTrigger className="w-40 rounded-xl border-border/70 bg-background/45">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -119,7 +119,7 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
         </Select>
       </CardHeader>
       <CardContent>
-        <ChartContainer className="relative overflow-x-hidden rounded-xl border border-border/50 bg-gradient-to-b from-blue-500/[0.04] to-transparent p-2 sm:p-3">
+        <ChartContainer className="relative overflow-x-hidden rounded-xl border border-border/50 bg-linear-to-b from-blue-500/4 to-transparent p-2 sm:p-3">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_65%_at_50%_-10%,rgba(59,130,246,0.18),transparent_62%)]" />
           <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="h-auto w-full">
             <defs>

@@ -41,7 +41,7 @@ export function TeacherReviewsFilters({
     <Card className="rounded-2xl border-border/70 bg-card/75 py-0">
       <CardContent className="p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2.5">
-          <label className="relative min-w-[240px] flex-1">
+          <label className="relative min-w-60 flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={search}
@@ -52,7 +52,7 @@ export function TeacherReviewsFilters({
           </label>
 
           <Select value={typeFilter} onValueChange={(value) => onTypeChange(value as TeacherReviewsTypeFilter)}>
-            <SelectTrigger className="h-11 w-[170px] rounded-xl border-border/70 bg-background/45">
+            <SelectTrigger className="h-11 w-42.5 rounded-xl border-border/70 bg-background/45">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -65,7 +65,7 @@ export function TeacherReviewsFilters({
           </Select>
 
           <Select value={statusFilter} onValueChange={(value) => onStatusChange(value as TeacherReviewsStatusFilter)}>
-            <SelectTrigger className="h-11 w-[150px] rounded-xl border-border/70 bg-background/45">
+            <SelectTrigger className="h-11 w-37.5 rounded-xl border-border/70 bg-background/45">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

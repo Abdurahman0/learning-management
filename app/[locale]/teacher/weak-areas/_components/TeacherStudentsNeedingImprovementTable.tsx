@@ -18,18 +18,18 @@ type TeacherStudentsNeedingImprovementTableProps = {
 
 function typeToneClass(type: TeacherWeakAreasStudentRow["weakestType"]) {
   if (type === "matchingHeadings" || type === "trueFalseNotGiven") {
-    return "border-rose-500/30 bg-rose-500/14 text-rose-300";
+    return "border-rose-500/30 bg-rose-600/72 text-white dark:bg-rose-500/14 dark:text-rose-300";
   }
 
   if (type === "writingTask2" || type === "sentenceCompletion") {
-    return "border-amber-500/30 bg-amber-500/14 text-amber-300";
+    return "border-amber-500/30 bg-amber-600/72 text-white dark:bg-amber-500/14 dark:text-amber-300";
   }
 
   if (type === "listeningPart4") {
-    return "border-sky-500/30 bg-sky-500/14 text-sky-300";
+    return "border-sky-500/30 bg-sky-600/72 text-white dark:bg-sky-500/14 dark:text-sky-300";
   }
 
-  return "border-indigo-500/30 bg-indigo-500/14 text-indigo-300";
+  return "border-indigo-500/30 bg-indigo-600/72 text-white dark:bg-indigo-500/14 dark:text-indigo-300";
 }
 
 function formatLastActivity(t: ReturnType<typeof useTranslations>, value: TeacherStudentsLastActivity) {
@@ -62,7 +62,7 @@ export function TeacherStudentsNeedingImprovementTable({
 
       <CardContent className="border-t border-border/65 p-0">
         <div className="hidden overflow-x-auto md:block">
-          <Table className="min-w-[960px]">
+          <Table className="min-w-240">
             <TableHeader>
               <TableRow>
                 <TableHead className="h-12">{t("studentName")}</TableHead>
@@ -75,7 +75,7 @@ export function TeacherStudentsNeedingImprovementTable({
             </TableHeader>
             <TableBody>
               {rows.map((student) => (
-                <TableRow key={student.id} className="h-[72px] hover:bg-muted/20">
+                <TableRow key={student.id} className="h-18 hover:bg-muted/20">
                   <TableCell className="py-3.5">
                     <div className="flex items-center gap-2.5">
                       <Avatar size="sm">

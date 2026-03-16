@@ -20,9 +20,9 @@ const eventIcons: Record<TeacherRecentActivityEventKey, LucideIcon> = {
 };
 
 const toneClass: Record<TeacherActivityTone, string> = {
-  blue: "bg-blue-500/20 text-blue-300",
-  emerald: "bg-emerald-500/20 text-emerald-300",
-  violet: "bg-violet-500/20 text-violet-300"
+  blue: "bg-blue-600/72 text-white dark:bg-blue-500/20 dark:text-blue-300",
+  emerald: "bg-emerald-600/72 text-white dark:bg-emerald-500/20 dark:text-emerald-300",
+  violet: "bg-violet-600/72 text-white dark:bg-violet-500/20 dark:text-violet-300"
 };
 
 export function TeacherRecentActivityCard() {

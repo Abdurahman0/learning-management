@@ -28,28 +28,28 @@ export function TeacherStudentsSummaryCards({summary}: TeacherStudentsSummaryCar
       value: summary.totalStudents,
       icon: Users,
       indicatorKey: "growthPositive",
-      indicatorClass: "border-emerald-500/25 bg-emerald-500/14 text-emerald-300"
+      indicatorClass: "border-emerald-500/25 bg-emerald-600/72 text-white dark:bg-emerald-500/14 dark:text-emerald-300"
     },
     {
       key: "studentsImproving",
       value: summary.studentsImproving,
       icon: TrendingUp,
       indicatorKey: "improvingShare",
-      indicatorClass: "border-blue-500/25 bg-blue-500/14 text-blue-300"
+      indicatorClass: "border-blue-500/25 bg-blue-600/72 text-white dark:bg-blue-500/14 dark:text-blue-300"
     },
     {
       key: "needingHelp",
       value: summary.needingHelp,
       icon: AlertTriangle,
       indicatorKey: "needsAttention",
-      indicatorClass: "border-amber-500/25 bg-amber-500/14 text-amber-300"
+      indicatorClass: "border-amber-500/25 bg-amber-600/72 text-white dark:bg-amber-500/14 dark:text-amber-300"
     },
     {
       key: "inactiveStudents",
       value: summary.inactiveStudents,
       icon: UserMinus,
       indicatorKey: "inactiveShare",
-      indicatorClass: "border-slate-500/25 bg-slate-500/14 text-slate-300"
+      indicatorClass: "border-slate-500/25 bg-slate-600/72 text-white dark:bg-slate-500/14 dark:text-slate-300"
     }
   ];
 

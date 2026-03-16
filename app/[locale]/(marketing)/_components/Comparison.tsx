@@ -22,7 +22,7 @@ export function Comparison() {
         </div>
 
         <div className="mx-auto mt-10 grid w-full max-w-6xl gap-6 lg:grid-cols-2">
-          <Card className="min-h-[420px] hover:scale-103 transition duration-300 border-border bg-card py-0 shadow-sm">
+          <Card className="min-h-105 hover:scale-103 transition duration-300 border-border bg-card py-0 shadow-sm">
             <CardContent className="h-full px-7 py-8">
               <p className="text-sm font-semibold tracking-[0.16em] text-muted-foreground uppercase">{t("comparison.withoutLabel")}</p>
               <ul className="mt-6 space-y-4" aria-label={t("comparison.withoutLabel")}>
@@ -36,7 +36,7 @@ export function Comparison() {
             </CardContent>
           </Card>
 
-          <Card className="relative min-h-[420px] hover:scale-103 transition duration-300 border-blue-600 bg-card py-0 shadow-md">
+          <Card className="relative min-h-105 hover:scale-103 transition duration-300 border-blue-600 bg-card py-0 shadow-md">
             <Badge className="absolute top-3 right-3 rounded-full bg-blue-600 px-2.5 py-1 text-[10px] tracking-wide uppercase">
               {t("comparison.recommended")}
             </Badge>

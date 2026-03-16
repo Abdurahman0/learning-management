@@ -109,7 +109,7 @@ export function StudentOneToOneSessionsClient() {
   };
 
   return (
-    <main className="mx-auto min-w-0 w-full max-w-[1780px] overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
+    <main className="mx-auto min-w-0 w-full max-w-445 overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
       <section className="space-y-5 sm:space-y-6">
         <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0">
@@ -149,7 +149,7 @@ export function StudentOneToOneSessionsClient() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm font-semibold text-foreground">{t("filters.teacher")}</p>
             <Select value={teacherFilter} onValueChange={(value) => setTeacherFilter(value as "all" | keyof typeof STUDENT_ASSIGNMENT_TEACHERS)}>
-              <SelectTrigger className="h-10 w-full rounded-xl border-border/70 bg-background/70 sm:w-[220px]">
+              <SelectTrigger className="h-10 w-full rounded-xl border-border/70 bg-background/70 sm:w-55">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

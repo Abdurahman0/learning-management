@@ -112,7 +112,7 @@ export function TeacherReviewDetailsPanel({
 
         <section className="space-y-2">
           <p className="text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase">{t("submissionContent")}</p>
-          <div className="max-h-[220px] overflow-y-auto rounded-xl border border-border/70 bg-background/45 p-3 text-sm leading-relaxed whitespace-pre-line">
+          <div className="max-h-55 overflow-y-auto rounded-xl border border-border/70 bg-background/45 p-3 text-sm leading-relaxed whitespace-pre-line">
             {submission.content}
           </div>
         </section>

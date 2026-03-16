@@ -20,10 +20,10 @@ const iconMap: Record<TeacherDashboardStatKey, LucideIcon> = {
 };
 
 const toneClasses: Record<TeacherStatTone, string> = {
-  success: "border-emerald-500/25 bg-emerald-500/14 text-emerald-300",
-  warning: "border-amber-500/25 bg-amber-500/14 text-amber-300",
-  info: "border-blue-500/25 bg-blue-500/14 text-blue-300",
-  danger: "border-rose-500/30 bg-rose-500/14 text-rose-300"
+  success: "border-emerald-500/25 bg-emerald-600/72 text-white dark:bg-emerald-500/14 dark:text-emerald-300",
+  warning: "border-amber-500/25 bg-amber-600/72 text-white dark:bg-amber-500/14 dark:text-amber-300",
+  info: "border-blue-500/25 bg-blue-600/72 text-white dark:bg-blue-500/14 dark:text-blue-300",
+  danger: "border-rose-500/30 bg-rose-600/72 text-white dark:bg-rose-500/14 dark:text-rose-300"
 };
 
 export function TeacherOverviewCards() {

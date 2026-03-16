@@ -125,7 +125,7 @@ export function TeacherStudentProfilePageClient({profile}: TeacherStudentProfile
         <div className="flex min-w-0 flex-1 flex-col">
           <TeacherTopbar title={profile.student.name} />
 
-          <main className="mx-auto min-w-0 w-full max-w-[1480px] space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
+          <main className="mx-auto min-w-0 w-full max-w-370 space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
             <TeacherStudentProfileHeader
               studentName={profile.student.name}
               progressHref={`/${locale}/teacher/students/${profile.student.id}/progress`}
@@ -167,11 +167,11 @@ export function TeacherStudentProfilePageClient({profile}: TeacherStudentProfile
         </div>
       </div>
 
-      <div aria-live="polite" className="pointer-events-none fixed top-20 right-4 z-[60]">
+      <div aria-live="polite" className="pointer-events-none fixed top-20 right-4 z-60">
         {actionMessage ? (
-          <div className="min-w-[280px] rounded-xl border border-emerald-500/35 bg-background/95 px-4 py-3 shadow-lg backdrop-blur-md">
+          <div className="min-w-70 rounded-xl border border-emerald-500/35 bg-background/95 px-4 py-3 shadow-lg backdrop-blur-md">
             <div className="flex items-start gap-2.5">
-              <span className="mt-0.5 inline-flex size-5 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
+              <span className="mt-0.5 inline-flex size-5 items-center justify-center rounded-full bg-emerald-600/72 text-white dark:bg-emerald-500/15 dark:text-emerald-400">
                 <CheckCircle2 className="size-3.5" />
               </span>
               <p className="text-sm font-medium">{actionMessage}</p>

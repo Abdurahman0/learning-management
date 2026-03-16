@@ -102,7 +102,7 @@ export function StudentMistakeAnalysisPageClient() {
   };
 
   return (
-    <main className="mx-auto min-w-0 w-full max-w-[1780px] overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
+    <main className="mx-auto min-w-0 w-full max-w-445 overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
       <section className="space-y-5 sm:space-y-6">
         <header className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t("title")}</h1>
@@ -184,7 +184,7 @@ export function StudentMistakeAnalysisPageClient() {
                 <p className="mt-1 text-sm text-muted-foreground">{t("charts.questionType.subtitle")}</p>
               </div>
               <Select value={selectedRange} onValueChange={(value) => setSelectedRange(value as StudentMistakeRangeKey)}>
-                <SelectTrigger className="w-full max-w-[170px] rounded-xl border-border/70 bg-background/80 text-foreground dark:border-slate-600/70 dark:bg-slate-900/65 dark:text-slate-100">
+                <SelectTrigger className="w-full max-w-42.5 rounded-xl border-border/70 bg-background/80 text-foreground dark:border-slate-600/70 dark:bg-slate-900/65 dark:text-slate-100">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -198,7 +198,7 @@ export function StudentMistakeAnalysisPageClient() {
             </CardHeader>
             <CardContent className="pt-1">
               <ChartContainer className="w-full rounded-xl border border-border/70 bg-background/80 p-2 sm:p-3 dark:border-slate-700/45 dark:bg-slate-950/35">
-                <div className="h-[360px] sm:hidden">
+                <div className="h-90 sm:hidden">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={questionTypeSeries} layout="vertical" margin={{top: 6, right: 6, left: 8, bottom: 6}} barCategoryGap={10}>
                       <defs>
@@ -239,7 +239,7 @@ export function StudentMistakeAnalysisPageClient() {
                   </ResponsiveContainer>
                 </div>
 
-                <div className="hidden h-[320px] sm:block">
+                <div className="hidden h-80 sm:block">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={questionTypeSeries} margin={{top: 8, right: 8, left: -20, bottom: 0}} barCategoryGap={16}>
                       <defs>
@@ -289,7 +289,7 @@ export function StudentMistakeAnalysisPageClient() {
               <p className="mt-1 text-sm text-muted-foreground">{t("charts.module.subtitle")}</p>
             </CardHeader>
             <CardContent className="space-y-4 pt-0">
-              <ChartContainer className="relative h-[260px]">
+              <ChartContainer className="relative h-65">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie

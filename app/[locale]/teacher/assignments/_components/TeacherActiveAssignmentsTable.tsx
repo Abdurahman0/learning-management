@@ -16,18 +16,18 @@ type TeacherActiveAssignmentsTableProps = {
 
 function statusClass(status: TeacherAssignmentRow["status"]) {
   if (status === "draft") {
-    return "border-slate-500/35 bg-slate-500/15 text-slate-200";
+    return "border-slate-500/35 bg-slate-600/72 text-white dark:bg-slate-500/15 dark:text-slate-200";
   }
 
   if (status === "completed") {
-    return "border-emerald-500/35 bg-emerald-500/15 text-emerald-300";
+    return "border-emerald-500/35 bg-emerald-600/72 text-white dark:bg-emerald-500/15 dark:text-emerald-300";
   }
 
   if (status === "overdue") {
-    return "border-rose-500/35 bg-rose-500/15 text-rose-300";
+    return "border-rose-500/35 bg-rose-600/72 text-white dark:bg-rose-500/15 dark:text-rose-300";
   }
 
-  return "border-blue-500/35 bg-blue-500/15 text-blue-200";
+  return "border-blue-500/35 bg-blue-600/72 text-white dark:bg-blue-500/15 dark:text-blue-200";
 }
 
 function formatDate(locale: string, isoDate: string) {
@@ -60,7 +60,7 @@ export function TeacherActiveAssignmentsTable({rows, onAction}: TeacherActiveAss
 
       <CardContent className="border-t border-border/65 p-0">
         <div className="overflow-x-auto">
-          <Table className="min-w-[1040px]">
+          <Table className="min-w-260">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("columns.title")}</TableHead>
@@ -96,7 +96,7 @@ export function TeacherActiveAssignmentsTable({rows, onAction}: TeacherActiveAss
                     <TableCell>
                       <Badge className={`border ${statusClass(row.status)}`}>{t(`statusOptions.${row.status}`)}</Badge>
                     </TableCell>
-                    <TableCell className="w-[220px]">
+                    <TableCell className="w-55">
                       <div className="group relative">
                         <div className="h-2 rounded-full bg-muted/70">
                           <div className={`h-2 rounded-full ${progressTone(row.progressPercent)}`} style={{width: `${row.progressPercent}%`}} />

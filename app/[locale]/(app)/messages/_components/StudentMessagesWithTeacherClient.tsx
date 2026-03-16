@@ -381,7 +381,7 @@ export function StudentMessagesWithTeacherClient() {
   };
 
   return (
-    <main className="mx-auto min-w-0 w-full max-w-[1780px] overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
+    <main className="mx-auto min-w-0 w-full max-w-445 overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
       <section className="space-y-5 sm:space-y-6">
         <header className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t("title")}</h1>
@@ -454,7 +454,7 @@ export function StudentMessagesWithTeacherClient() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="h-[380px] sm:h-[460px] xl:h-[660px]">
+              <ScrollArea className="h-95 sm:h-115 xl:h-165">
                 <div className="space-y-2 p-3">
                   {filteredConversations.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-border/70 bg-background/60 p-4 text-sm text-muted-foreground">
@@ -489,7 +489,7 @@ export function StudentMessagesWithTeacherClient() {
                             </Badge>
                           ) : null}
                         </div>
-                        <p className="line-clamp-2 min-w-0 break-words text-sm text-muted-foreground">{getConversationPreview(conversation)}</p>
+                        <p className="line-clamp-2 min-w-0 wrap-break-word text-sm text-muted-foreground">{getConversationPreview(conversation)}</p>
                         <Badge variant="outline" className="w-fit border-border/70 bg-background/75 text-xs text-muted-foreground">
                           {t(conversation.topicKey)}
                         </Badge>
@@ -541,7 +541,7 @@ export function StudentMessagesWithTeacherClient() {
                 </CardHeader>
 
                 <CardContent className="flex min-h-0 flex-1 flex-col gap-3 p-3 sm:p-4">
-                  <ScrollArea className="h-[320px] rounded-xl border border-border/70 bg-background/65 p-3 sm:h-[420px] xl:h-[520px]">
+                  <ScrollArea className="h-80 rounded-xl border border-border/70 bg-background/65 p-3 sm:h-105 xl:h-130">
                     <div className="space-y-3">
                       {activeMessages.length === 0 ? (
                         <div className="rounded-xl border border-dashed border-border/70 bg-background/50 px-4 py-5 text-sm text-muted-foreground">
@@ -575,7 +575,7 @@ export function StudentMessagesWithTeacherClient() {
                                   : "border-indigo-400/40 bg-indigo-500/14"
                               )}
                             >
-                              <p className="break-words text-sm leading-relaxed text-foreground/95">{messageText}</p>
+                              <p className="wrap-break-word text-sm leading-relaxed text-foreground/95">{messageText}</p>
 
                               {message.attachments?.length ? (
                                 <div className="mt-2 space-y-1.5">
@@ -709,10 +709,10 @@ export function StudentMessagesWithTeacherClient() {
                         </Avatar>
                         <div className="min-w-0">
                           <p className="truncate text-base font-semibold text-foreground">{activeTeacher.name}</p>
-                          <p className="break-words text-sm text-muted-foreground">{t(activeTeacherProfile.roleKey)}</p>
+                          <p className="wrap-break-word text-sm text-muted-foreground">{t(activeTeacherProfile.roleKey)}</p>
                         </div>
                       </div>
-                      <p className="mt-3 break-words text-sm text-muted-foreground">{t(activeTeacherProfile.expertiseKey)}</p>
+                      <p className="mt-3 wrap-break-word text-sm text-muted-foreground">{t(activeTeacherProfile.expertiseKey)}</p>
                       <div className="mt-3 grid grid-cols-2 gap-2">
                         <div className="rounded-lg border border-border/70 bg-background/70 p-2">
                           <p className="text-xs text-muted-foreground">{t("teacherInfo.students")}</p>
@@ -762,7 +762,7 @@ export function StudentMessagesWithTeacherClient() {
                     className="flex w-full min-w-0 flex-col gap-1 rounded-xl border border-border/70 bg-background/65 px-3 py-2 text-left transition-colors hover:border-primary/35"
                     onClick={() => openAssignment(assignment.id, assignment.status)}
                   >
-                    <p className="line-clamp-2 break-words text-sm font-medium text-foreground">{assignment.title}</p>
+                    <p className="line-clamp-2 wrap-break-word text-sm font-medium text-foreground">{assignment.title}</p>
                     <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       <Badge className={cn("border", moduleBadgeTone[assignment.module])}>{t(`modules.${assignment.module}`)}</Badge>
                       <span className="inline-flex items-center gap-1">

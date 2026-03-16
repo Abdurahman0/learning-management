@@ -103,7 +103,7 @@ export function ReadingAnalysisPageClient() {
 
   if (!isClient) {
     return (
-      <section className="mx-auto w-full max-w-[1780px] space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
+      <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
         <Card className="rounded-2xl border-border/70 bg-card/70 p-6">
           <p className="text-sm text-muted-foreground">{tResults("title")}</p>
         </Card>
@@ -126,7 +126,7 @@ export function ReadingAnalysisPageClient() {
   }
 
   return (
-    <section className="mx-auto w-full max-w-[1780px] space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
+    <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
       <Card className="rounded-3xl border-slate-200/85 bg-white/95 p-4 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">

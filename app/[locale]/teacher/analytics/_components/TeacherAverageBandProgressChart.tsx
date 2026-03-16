@@ -68,7 +68,7 @@ type TooltipProps = {
 function ChartTooltip({style, label, value}: TooltipProps) {
   return (
     <div
-      className="pointer-events-none absolute z-20 w-[152px] rounded-xl border border-[rgba(148,163,184,0.18)] bg-background/95 px-3.5 py-2.5 shadow-lg backdrop-blur-md max-md:w-[108px] max-md:rounded-lg max-md:px-2 max-md:py-1"
+      className="pointer-events-none absolute z-20 w-38 rounded-xl border border-[rgba(148,163,184,0.18)] bg-background/95 px-3.5 py-2.5 shadow-lg backdrop-blur-md max-md:w-27 max-md:rounded-lg max-md:px-2 max-md:py-1"
       style={style}
     >
       <p className="text-xs text-muted-foreground max-md:text-[9px]">{label}</p>

@@ -39,14 +39,14 @@ export function TeacherChatPanel({
 
   if (!conversationData) {
     return (
-      <Card className="flex min-h-[540px] items-center justify-center rounded-2xl border-border/70 bg-card/75 p-6 text-center text-sm text-muted-foreground">
+      <Card className="flex min-h-135 items-center justify-center rounded-2xl border-border/70 bg-card/75 p-6 text-center text-sm text-muted-foreground">
         {t("selectConversation")}
       </Card>
     );
   }
 
   return (
-    <Card className="flex min-h-[540px] flex-col rounded-2xl border-border/70 bg-card/75 py-0">
+    <Card className="flex min-h-135 flex-col rounded-2xl border-border/70 bg-card/75 py-0">
       <TeacherChatHeader conversation={conversationData.conversation} onBackToList={onBackToList} />
 
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">

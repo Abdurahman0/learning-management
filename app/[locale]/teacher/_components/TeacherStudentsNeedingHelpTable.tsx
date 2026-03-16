@@ -15,10 +15,10 @@ import {
 
 function getBandClass(band: number) {
   if (band <= 5.5) {
-    return "border-rose-500/30 bg-rose-500/15 text-rose-300";
+    return "border-rose-500/30 bg-rose-600/72 text-white dark:bg-rose-500/15 dark:text-rose-300";
   }
 
-  return "border-amber-500/30 bg-amber-500/15 text-amber-300";
+  return "border-amber-500/30 bg-amber-600/72 text-white dark:bg-amber-500/15 dark:text-amber-300";
 }
 
 export function TeacherStudentsNeedingHelpTable() {
@@ -33,7 +33,7 @@ export function TeacherStudentsNeedingHelpTable() {
 
       <CardContent className="border-t border-border/65 p-0">
         <div className="overflow-x-auto">
-          <Table className="min-w-[820px]">
+          <Table className="min-w-205">
             <TableHeader>
               <TableRow>
                 <TableHead className="h-12">{t("columns.studentName")}</TableHead>
@@ -45,7 +45,7 @@ export function TeacherStudentsNeedingHelpTable() {
             </TableHeader>
             <TableBody>
               {teacherStudentsNeedingHelp.map((item) => (
-                <TableRow key={item.id} className="h-[70px]">
+                <TableRow key={item.id} className="h-17.5">
                   <TableCell className="py-3.5">
                     <div className="flex items-center gap-2.5">
                       <Avatar size="sm">

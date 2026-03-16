@@ -29,7 +29,7 @@ export function TeacherAnalyticsPageClient({data}: TeacherAnalyticsPageClientPro
         <div className="flex min-w-0 flex-1 flex-col">
           <TeacherTopbar title={t("title")} />
 
-          <main className="mx-auto min-w-0 w-full max-w-[1480px] space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
+          <main className="mx-auto min-w-0 w-full max-w-370 space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
             <section>
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("title")}</h1>
               <p className="mt-1.5 text-sm text-muted-foreground">{t("subtitle")}</p>

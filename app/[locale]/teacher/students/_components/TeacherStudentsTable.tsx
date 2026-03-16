@@ -24,18 +24,18 @@ function formatLastActivity(t: ReturnType<typeof useTranslations>, value: Teache
 
 function getWeakSkillClass(skill: TeacherStudentListItem["weakestSkill"]) {
   if (skill === "writingTask2") {
-    return "border-rose-500/30 bg-rose-500/14 text-rose-300";
+    return "border-rose-500/30 bg-rose-600/72 text-white dark:bg-rose-500/14 dark:text-rose-300";
   }
 
   if (skill === "speakingFluency") {
-    return "border-amber-500/30 bg-amber-500/14 text-amber-300";
+    return "border-amber-500/30 bg-amber-600/72 text-white dark:bg-amber-500/14 dark:text-amber-300";
   }
 
   if (skill === "listeningPart4" || skill === "sentenceCompletion") {
-    return "border-sky-500/30 bg-sky-500/14 text-sky-300";
+    return "border-sky-500/30 bg-sky-600/72 text-white dark:bg-sky-500/14 dark:text-sky-300";
   }
 
-  return "border-indigo-500/30 bg-indigo-500/14 text-indigo-300";
+  return "border-indigo-500/30 bg-indigo-600/72 text-white dark:bg-indigo-500/14 dark:text-indigo-300";
 }
 
 function getBandStateLabel(t: ReturnType<typeof useTranslations>, student: TeacherStudentListItem) {
@@ -62,7 +62,7 @@ export function TeacherStudentsTable({students, totalStudents}: TeacherStudentsT
     <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/75 py-0">
       <CardContent className="p-0">
         <div className="hidden overflow-x-auto md:block">
-          <Table className="min-w-[1000px]">
+          <Table className="min-w-250">
             <TableHeader>
               <TableRow>
                 <TableHead className="h-12">{t("studentName")}</TableHead>
@@ -80,7 +80,7 @@ export function TeacherStudentsTable({students, totalStudents}: TeacherStudentsT
                 const state = getBandStateLabel(t, student);
 
                 return (
-                  <TableRow key={student.id} className="h-[76px] hover:bg-muted/20">
+                  <TableRow key={student.id} className="h-19 hover:bg-muted/20">
                     <TableCell className="py-3.5">
                       <div className="flex items-center gap-2.5">
                         <Avatar size="sm">

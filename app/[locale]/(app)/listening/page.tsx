@@ -70,7 +70,7 @@ export default function ListeningPage() {
 
   return (
     <div>
-      <div className="mx-auto w-full max-w-[980px] pb-8 pt-4 lg:pt-0">
+      <div className="mx-auto w-full max-w-245 pb-8 pt-4 lg:pt-0">
         {isGuest ? <GuestCallout /> : null}
 
         <section className="mt-6">

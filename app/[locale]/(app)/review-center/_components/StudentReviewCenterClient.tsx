@@ -163,7 +163,7 @@ export function StudentReviewCenterClient() {
   const maxMistakes = Math.max(1, ...STUDENT_REVIEW_CENTER_QUESTION_TYPE_MISTAKES.map((item) => item.mistakes));
 
   return (
-    <main className="mx-auto min-w-0 w-full max-w-[1780px] overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
+    <main className="mx-auto min-w-0 w-full max-w-445 overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
       <section className="space-y-5 sm:space-y-6">
         <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0">
@@ -226,7 +226,7 @@ export function StudentReviewCenterClient() {
               <CardTitle>{t("insights.mistakesByType")}</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <ChartContainer className="h-[300px] w-full rounded-xl border border-border/70 bg-background/80 p-2 sm:p-3 dark:border-slate-700/45 dark:bg-slate-950/35">
+              <ChartContainer className="h-75 w-full rounded-xl border border-border/70 bg-background/80 p-2 sm:p-3 dark:border-slate-700/45 dark:bg-slate-950/35">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={STUDENT_REVIEW_CENTER_QUESTION_TYPE_MISTAKES} margin={{top: 8, right: 8, left: -16, bottom: 0}} barCategoryGap={14}>
                     <defs>
@@ -278,7 +278,7 @@ export function StudentReviewCenterClient() {
               <CardTitle>{t("insights.mistakesByModule")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 pt-0">
-              <ChartContainer className="relative h-[220px]">
+              <ChartContainer className="relative h-55">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={STUDENT_REVIEW_CENTER_MODULE_DISTRIBUTION} dataKey="share" nameKey="module" innerRadius={54} outerRadius={86} paddingAngle={2}>

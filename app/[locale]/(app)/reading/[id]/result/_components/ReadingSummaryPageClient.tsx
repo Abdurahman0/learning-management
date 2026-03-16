@@ -148,7 +148,7 @@ export function ReadingSummaryPageClient() {
 
   if (!isClient) {
     return (
-      <section className="mx-auto w-full max-w-[1780px] space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
+      <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
         <Card className="rounded-2xl border-border/70 bg-card/70 p-6">
           <p className="text-sm text-muted-foreground">{tResults("title")}</p>
         </Card>
@@ -215,7 +215,7 @@ export function ReadingSummaryPageClient() {
   };
 
   return (
-    <section className="mx-auto w-full max-w-[1780px] space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
+    <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
       <ReviewHeader
         testId={test.id}
         testTitle={test.title}

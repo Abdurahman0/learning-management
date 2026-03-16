@@ -52,15 +52,15 @@ const summaryCards: SummaryCard[] = [
 
 function toneClass(tone: SummaryCard["tone"]) {
   if (tone === "violet") {
-    return "border-violet-500/30 bg-violet-500/15 text-violet-300";
+    return "border-violet-500/30 bg-violet-600/72 text-white dark:bg-violet-500/15 dark:text-violet-300";
   }
 
   if (tone === "rose") {
-    return "border-rose-500/30 bg-rose-500/15 text-rose-300";
+    return "border-rose-500/30 bg-rose-600/72 text-white dark:bg-rose-500/15 dark:text-rose-300";
   }
 
   if (tone === "amber") {
-    return "border-amber-500/30 bg-amber-500/15 text-amber-300";
+    return "border-amber-500/30 bg-amber-600/72 text-white dark:bg-amber-500/15 dark:text-amber-300";
   }
 
   return "border-primary/30 bg-primary/15 text-primary";

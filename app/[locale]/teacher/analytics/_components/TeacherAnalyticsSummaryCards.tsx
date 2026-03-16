@@ -30,15 +30,15 @@ const summaryCards: SummaryCard[] = [
 
 function toneClass(tone: SummaryCard["tone"]) {
   if (tone === "violet") {
-    return "border-violet-500/30 bg-violet-500/15 text-violet-300";
+    return "border-violet-500/30 bg-violet-600/72 text-white dark:bg-violet-500/15 dark:text-violet-300";
   }
 
   if (tone === "amber") {
-    return "border-amber-500/30 bg-amber-500/15 text-amber-300";
+    return "border-amber-500/30 bg-amber-600/72 text-white dark:bg-amber-500/15 dark:text-amber-300";
   }
 
   if (tone === "emerald") {
-    return "border-emerald-500/30 bg-emerald-500/15 text-emerald-300";
+    return "border-emerald-500/30 bg-emerald-600/72 text-white dark:bg-emerald-500/15 dark:text-emerald-300";
   }
 
   return "border-primary/30 bg-primary/15 text-primary";
@@ -60,7 +60,7 @@ export function TeacherAnalyticsSummaryCards({summary}: TeacherAnalyticsSummaryC
                 <span className={`inline-flex size-10 items-center justify-center rounded-xl border ${toneClass(card.tone)}`}>
                   <Icon className="size-4.5" />
                 </span>
-                <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-500/12 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                <span className="inline-flex rounded-full border border-emerald-500/30 bg-emerald-600/72 px-2 py-0.5 text-xs font-semibold text-white dark:bg-emerald-500/12 dark:text-emerald-300">
                   {t(`indicators.${card.trendKey}`)}
                 </span>
               </div>

@@ -17,30 +17,30 @@ type TeacherReviewsSubmissionsTableProps = {
 
 function statusClass(status: TeacherReviewSubmission["status"]) {
   if (status === "reviewed") {
-    return "border-emerald-500/35 bg-emerald-500/15 text-emerald-300";
+    return "border-emerald-500/35 bg-emerald-600/72 text-white dark:bg-emerald-500/15 dark:text-emerald-300";
   }
 
   if (status === "overdue") {
-    return "border-rose-500/35 bg-rose-500/15 text-rose-300";
+    return "border-rose-500/35 bg-rose-600/72 text-white dark:bg-rose-500/15 dark:text-rose-300";
   }
 
-  return "border-amber-500/35 bg-amber-500/15 text-amber-300";
+  return "border-amber-500/35 bg-amber-600/72 text-white dark:bg-amber-500/15 dark:text-amber-300";
 }
 
 function moduleClass(type: TeacherReviewSubmission["type"]) {
   if (type === "writing") {
-    return "border-indigo-500/35 bg-indigo-500/15 text-indigo-200";
+    return "border-indigo-500/35 bg-indigo-600/72 text-white dark:bg-indigo-500/15 dark:text-indigo-200";
   }
 
   if (type === "speaking") {
-    return "border-violet-500/35 bg-violet-500/15 text-violet-200";
+    return "border-violet-500/35 bg-violet-600/72 text-white dark:bg-violet-500/15 dark:text-violet-200";
   }
 
   if (type === "listening_practice") {
-    return "border-sky-500/35 bg-sky-500/15 text-sky-200";
+    return "border-sky-500/35 bg-sky-600/72 text-white dark:bg-sky-500/15 dark:text-sky-200";
   }
 
-  return "border-blue-500/35 bg-blue-500/15 text-blue-200";
+  return "border-blue-500/35 bg-blue-600/72 text-white dark:bg-blue-500/15 dark:text-blue-200";
 }
 
 function formatRelativeTime(t: ReturnType<typeof useTranslations>, isoDate: string) {
@@ -70,7 +70,7 @@ export function TeacherReviewsSubmissionsTable({
   const t = useTranslations("teacherReviews");
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/75 py-0">
+    <Card className="overflow-hidden max-w-[calc(100vw-30px)] rounded-2xl border-border/70 bg-card/75 py-0">
       <CardHeader className="flex flex-row items-center justify-between gap-2 pt-7 pb-3">
         <CardTitle className="text-2xl">{t("studentSubmissions")}</CardTitle>
         <p className="text-xs text-muted-foreground">{t("showingSubmissions", {count: submissions.length})}</p>
@@ -78,7 +78,7 @@ export function TeacherReviewsSubmissionsTable({
 
       <CardContent className="border-t border-border/65 p-0">
         <div className="hidden overflow-x-auto md:block">
-          <Table className="min-w-[980px]">
+          <Table className="min-w-245">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("student")}</TableHead>

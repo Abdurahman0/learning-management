@@ -29,7 +29,7 @@ export function TeacherStudentInfoSidebar({conversationData}: TeacherStudentInfo
   if (!conversationData) {
     return (
       <Card className="rounded-2xl border-border/70 bg-card/75 py-0">
-        <CardContent className="flex min-h-[300px] items-center justify-center p-5 text-center text-sm text-muted-foreground">
+        <CardContent className="flex min-h-75 items-center justify-center p-5 text-center text-sm text-muted-foreground">
           {t("selectConversation")}
         </CardContent>
       </Card>

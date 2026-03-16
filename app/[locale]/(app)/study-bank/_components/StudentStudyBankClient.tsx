@@ -188,7 +188,7 @@ export function StudentStudyBankClient() {
   const speakingCovered = coveredModules.includes("speaking");
 
   return (
-    <main className="mx-auto min-w-0 w-full max-w-[1780px] overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
+    <main className="mx-auto min-w-0 w-full max-w-445 overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
       <section className="space-y-5 sm:space-y-6">
         <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0">
@@ -360,7 +360,7 @@ export function StudentStudyBankClient() {
                     cardClassName,
                     "cursor-pointer p-5 transition-colors",
                     isSelected
-                      ? "border-indigo-400/60 bg-indigo-500/[0.08] dark:bg-indigo-500/[0.12]"
+                      ? "border-indigo-400/60 bg-indigo-500/8 dark:bg-indigo-500/12"
                       : "border-border/70 dark:border-slate-600/70 hover:border-primary/35"
                   )}
                   onClick={() => setSelectedId(item.id)}

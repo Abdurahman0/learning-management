@@ -14,11 +14,11 @@ type TeacherRecommendedPracticeCardProps = {
 
 function deliveryBadgeClass(delivery: TeacherPracticeRecommendation["delivery"]) {
   if (delivery === "video_quiz") {
-    return "border-violet-500/30 bg-violet-500/14 text-violet-300";
+    return "border-violet-500/30 bg-violet-600/72 text-white dark:bg-violet-500/14 dark:text-violet-300";
   }
 
   if (delivery === "timed_drill") {
-    return "border-amber-500/30 bg-amber-500/14 text-amber-300";
+    return "border-amber-500/30 bg-amber-600/72 text-white dark:bg-amber-500/14 dark:text-amber-300";
   }
 
   return "border-primary/30 bg-primary/14 text-primary";

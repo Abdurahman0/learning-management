@@ -39,7 +39,7 @@ export function AuthMarketing({ mode }: AuthMarketingProps) {
             {["A", "S", "M"].map((letter, index) => (
               <span
                 key={letter}
-                className="flex size-9 items-center justify-center rounded-full border-2 border-background bg-gradient-to-br from-amber-100 to-orange-200 text-xs font-semibold text-amber-800"
+                className="flex size-9 items-center justify-center rounded-full border-2 border-background bg-linear-to-br from-amber-100 to-orange-200 text-xs font-semibold text-amber-800"
                 style={{ zIndex: 10 - index }}
               >
                 {letter}
@@ -74,7 +74,7 @@ export function AuthMarketing({ mode }: AuthMarketingProps) {
             </span>
             <div className="min-w-0">
               <p className="text-xl font-semibold leading-tight text-foreground">{bullet.title}</p>
-              <p className="mt-1 break-words text-base text-muted-foreground">{bullet.desc}</p>
+              <p className="mt-1 wrap-break-word text-base text-muted-foreground">{bullet.desc}</p>
             </div>
           </div>
         ))}

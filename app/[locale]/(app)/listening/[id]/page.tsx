@@ -810,7 +810,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
               >
                 <p
                   className={cn(
-                    "col-span-2 break-words text-sm text-foreground sm:col-span-1",
+                    "col-span-2 wrap-break-word text-sm text-foreground sm:col-span-1",
                     isSmallLandscape && "col-span-2 sm:col-span-2",
                   )}
                 >
@@ -847,7 +847,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
             {block.title}
           </h4>
           <div className="max-w-full overflow-x-auto">
-            <table className="w-full min-w-[460px] text-sm">
+            <table className="w-full min-w-115 text-sm">
               <thead className="bg-muted/30">
                 <tr>
                   {block.columns.map((col) => (
@@ -874,10 +874,10 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                     }}
                     className={cn("scroll-mt-24", markedQuestionClass(row.questionNumber))}
                   >
-                    <td className="border-b border-border px-3 py-2 break-words">
+                    <td className="border-b border-border px-3 py-2 wrap-break-word">
                       {row.values[0]}
                     </td>
-                    <td className="border-b border-border px-3 py-2 break-words">
+                    <td className="border-b border-border px-3 py-2 wrap-break-word">
                       {row.values[1]}
                     </td>
                     <td className="border-b border-border px-3 py-2">
@@ -934,7 +934,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
               className={cn("test-panel min-w-0 rounded-lg border border-border bg-card p-4 scroll-mt-24 overflow-hidden", markedQuestionClass(question.questionNumber))}
               onClick={() => setActiveQuestionNumber(question.questionNumber)}
             >
-              <p className="break-words text-sm font-medium">
+              <p className="wrap-break-word text-sm font-medium">
                 <span className="mr-2 inline-flex align-middle">
                   <QuestionChip
                     number={question.questionNumber}
@@ -962,7 +962,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                       }
                       className="mt-0.5"
                     />
-                    <span className="break-words">{option}</span>
+                    <span className="wrap-break-word">{option}</span>
                   </label>
                 ))}
               </div>
@@ -980,7 +980,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
             <p className="font-medium">{t("options")}</p>
             <ul className="mt-1 space-y-1">
               {block.options.map((option) => (
-                <li key={option} className="break-words">
+                <li key={option} className="wrap-break-word">
                   {option}
                 </li>
               ))}
@@ -1012,7 +1012,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                     number={item.questionNumber}
                     active={activeQuestionNumber === item.questionNumber}
                   />
-                  <p className="break-words text-sm">{item.prompt}</p>
+                  <p className="wrap-break-word text-sm">{item.prompt}</p>
                 </div>
                 <Select
                   value={answers[item.questionNumber] ?? ""}
@@ -1026,7 +1026,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                     className={cn(
                       "test-input-surface w-full h-10",
                       isSmallLandscape && "h-11",
-                      !isSmallLandscape && "md:max-w-[220px]",
+                      !isSmallLandscape && "md:max-w-55",
                     )}
                   >
                     <SelectValue placeholder={t("selectOption")} />
@@ -1059,7 +1059,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
               !isSmallLandscape && "md:grid-cols-[minmax(0,1fr)_240px]",
             )}
           >
-            <div className="test-soft-surface relative min-h-[220px] min-w-0 overflow-hidden rounded-lg border border-dashed border-border bg-muted/30 p-3">
+            <div className="test-soft-surface relative min-h-55 min-w-0 overflow-hidden rounded-lg border border-dashed border-border bg-muted/30 p-3">
               <p className="test-muted-copy text-[10px] tracking-wider text-muted-foreground uppercase">
                 Diagram Placeholder
               </p>
@@ -1092,7 +1092,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                 <p className="font-medium">{t("options")}</p>
                 <ul className="mt-1 space-y-1">
                   {block.options.map((option) => (
-                    <li key={option} className="break-words">
+                    <li key={option} className="wrap-break-word">
                       {option}
                     </li>
                   ))}
@@ -1163,7 +1163,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
               className={cn("flex flex-wrap items-center gap-2 scroll-mt-24", markedQuestionClass(line.questionNumber))}
               onClick={() => setActiveQuestionNumber(line.questionNumber)}
             >
-              <span className="break-words">{line.before}</span>
+              <span className="wrap-break-word">{line.before}</span>
               <QuestionChip
                 number={line.questionNumber}
                 active={activeQuestionNumber === line.questionNumber}
@@ -1179,7 +1179,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                   isSmallLandscape && "h-11",
                 )}
               />
-              <span className="break-words">{line.after}</span>
+              <span className="wrap-break-word">{line.after}</span>
             </div>
           ))}
         </div>
@@ -1203,7 +1203,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
           <div className="flex flex-1 min-w-0 items-center gap-1.5 sm:gap-3">
             <span
               className={cn(
-                "flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm",
+                "flex shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-sm",
                 isSmallLandscape ? "size-7" : "size-8",
               )}
             >
@@ -1234,7 +1234,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
             <Badge
               variant="secondary"
               className={cn(
-                "h-9 max-w-[120px] shrink-0 rounded-xl px-2 sm:px-3 text-sm font-semibold text-blue-700",
+                "h-9 max-w-30 shrink-0 rounded-xl px-2 sm:px-3 text-sm font-semibold text-blue-700",
                 isSmallLandscape && "h-8 px-1.5 text-xs",
               )}
             >
@@ -1505,14 +1505,14 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                 )}
               >
                 <div>
-                  <h2 className="break-words text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+                  <h2 className="wrap-break-word text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                     {activeSection.title}
                   </h2>
-                  <p className="mt-1 break-words text-sm font-medium text-muted-foreground">
+                  <p className="mt-1 wrap-break-word text-sm font-medium text-muted-foreground">
                     {activeSection.questionRangeLabel}
                   </p>
                 </div>
-                <div className="test-soft-surface rounded-lg border border-border bg-muted/20 p-3 text-sm break-words">
+                <div className="test-soft-surface rounded-lg border border-border bg-muted/20 p-3 text-sm wrap-break-word">
                   {activeSection.instructions}
                 </div>
 
@@ -1854,7 +1854,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
       {showModePicker ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg border-border/80 bg-gradient-to-br from-card via-card to-blue-500/5 p-5 shadow-xl sm:p-6">
+          <Card className="w-full max-w-lg border-border/80 bg-linear-to-br from-card via-card to-blue-500/5 p-5 shadow-xl sm:p-6">
             <h3 className="text-lg font-semibold">{t.has("modePickerTitle") ? t("modePickerTitle") : "Choose test mode"}</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               {t.has("modePickerDescription")
@@ -1885,7 +1885,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
       {realModeConfirmOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg border-border/80 bg-gradient-to-br from-card via-card to-blue-500/10 p-5 shadow-xl sm:p-6">
+          <Card className="w-full max-w-lg border-border/80 bg-linear-to-br from-card via-card to-blue-500/10 p-5 shadow-xl sm:p-6">
             <div className="space-y-2">
               <h3 className="text-xl font-semibold tracking-tight">
                 {t.has("realModeStartTitle") ? t("realModeStartTitle") : "Start Listening Test?"}

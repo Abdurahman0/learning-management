@@ -23,7 +23,7 @@ export function ContinueCard({test, onReviewDetails}: ContinueCardProps) {
   return (
     <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/70">
       <CardContent className="grid min-w-0 p-0 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <div className="relative min-h-[170px] overflow-hidden border-b border-border/60 bg-gradient-to-br from-blue-600/30 via-indigo-600/20 to-cyan-500/20 p-5 lg:border-r lg:border-b-0">
+        <div className="relative min-h-42.5 overflow-hidden border-b border-border/60 bg-linear-to-br from-blue-600/30 via-indigo-600/20 to-cyan-500/20 p-5 lg:border-r lg:border-b-0">
           <div className="flex h-full flex-col justify-between rounded-xl border border-blue-400/20 bg-background/40 p-4">
             <BookOpenText className="size-6 text-blue-300" />
             <Badge className="w-fit rounded-full bg-blue-600 text-[10px]">{t("resumePractice")}</Badge>

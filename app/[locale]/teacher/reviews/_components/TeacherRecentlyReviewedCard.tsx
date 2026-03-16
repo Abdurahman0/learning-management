@@ -34,7 +34,7 @@ export function TeacherRecentlyReviewedCard({items}: TeacherRecentlyReviewedCard
   const t = useTranslations("teacherReviews");
 
   return (
-    <Card className="rounded-2xl border-border/70 bg-card/75 py-0">
+    <Card className="rounded-2xl border-border/70 bg-card/75 py-0 max-w-[calc(100vw-30px)]">
       <CardHeader className="pt-7 pb-3">
         <CardTitle className="text-2xl">{t("recentlyReviewedActivity")}</CardTitle>
       </CardHeader>
@@ -56,7 +56,7 @@ export function TeacherRecentlyReviewedCard({items}: TeacherRecentlyReviewedCard
             </div>
 
             <div className="flex shrink-0 items-center gap-1.5">
-              <span className="inline-flex size-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
+              <span className="inline-flex size-7 items-center justify-center rounded-full bg-emerald-600/72 text-white dark:bg-emerald-500/15 dark:text-emerald-300">
                 <CheckCircle2 className="size-4" />
               </span>
               <Button type="button" variant="ghost" size="icon" className="size-8 rounded-lg">
