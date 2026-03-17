@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { BookOpen, Bookmark, BookmarkCheck, Clock3, Grid2x2, HelpCircle, MoveLeft, MoveRight, Play, RotateCcw, SlidersHorizontal, Square, User } from "lucide-react";
+import { BookOpen, Bookmark, BookmarkCheck, Clock3, Grid2x2, HelpCircle, Maximize2, Menu, Minimize2, MoveLeft, MoveRight, Play, RotateCcw, Square, User } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { getReadingTestById, type ReadingQuestion } from "@/data/reading-tests";
@@ -155,6 +155,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
   const tReadingResult = useTranslations("readingResult");
   const tOptions = useTranslations("testOptions");
   const locale = useLocale();
+  type RealModeInterruptionReason = "fullscreen" | "visibility";
   const [attemptId, setAttemptId] = useState<string>("");
   const [startedAt, setStartedAt] = useState<number>(0);
   const [finishOpen, setFinishOpen] = useState(false);
@@ -170,6 +171,13 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
   const [remainingSeconds, setRemainingSeconds] = useState(test.durationMinutes * 60);
   const [timerRunning, setTimerRunning] = useState(false);
   const [attemptMode, setAttemptMode] = useState<AttemptMode | null>(null);
+  const [modePickerStep, setModePickerStep] = useState<"choose" | "realConfirm">("choose");
+  const [realModeStartPending, setRealModeStartPending] = useState(false);
+  const [realModeInterruption, setRealModeInterruption] = useState<RealModeInterruptionReason | null>(null);
+  const [realModeInterruptionCount, setRealModeInterruptionCount] = useState({
+    fullscreen: 0,
+    visibility: 0,
+  });
   const splitStorageKey = "readingSplitPct";
   const [splitPct, setSplitPct] = useState(() => {
     if (typeof window === "undefined") return DEFAULT_SPLIT;
@@ -203,6 +211,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
   const pendingParagraphRef = useRef<string | null>(null);
   const shouldAutoScrollQuestionRef = useRef(false);
   const realModeAutoFinishedRef = useRef(false);
+  const fullscreenRequestInFlightRef = useRef(false);
   const initDoneRef = useRef(false);
   const leaveWarningMessage = t.has("leaveWarning")
     ? t("leaveWarning")
@@ -218,6 +227,10 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
     setAttemptId(freshAttemptId);
     setStartedAt(Date.now());
     setAttemptMode(nextMode);
+    setModePickerStep("choose");
+    setRealModeStartPending(false);
+    setRealModeInterruption(null);
+    setRealModeInterruptionCount({ fullscreen: 0, visibility: 0 });
     setFinishOpen(false);
     setReviewMode(false);
     setExpandedExplanations(new Set());
@@ -464,6 +477,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
   const unansweredCount = test.totalQuestions - answeredCount;
   const timeSpent = test.durationMinutes * 60 - remainingSeconds;
   const isRealMode = attemptMode === "real";
+  const realModeLocked = isRealMode && !reviewMode && realModeInterruption !== null;
   const showModePicker = attemptMode === null && !reviewMode;
   const gridPct = splitPct;
   const passagePaletteSections = useMemo(() => {
@@ -487,11 +501,6 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
       };
     });
   }, [answers, questionsByNumber, test.passages, test.questions]);
-  const activePassagePalette = useMemo(
-    () => passagePaletteSections.find((item) => item.passageId === activePassageId),
-    [activePassageId, passagePaletteSections]
-  );
-
   const activePassage = useMemo(
     () => test.passages.find((passage) => passage.id === activePassageId),
     [activePassageId, test.passages]
@@ -715,6 +724,79 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
     timerRunning,
   ]);
 
+  const requestRealModeFullscreen = useCallback(async () => {
+    if (typeof document === "undefined") {
+      return false;
+    }
+    if (document.fullscreenElement) {
+      return true;
+    }
+
+    try {
+      fullscreenRequestInFlightRef.current = true;
+      await document.documentElement.requestFullscreen();
+      return Boolean(document.fullscreenElement);
+    } catch {
+      return Boolean(document.fullscreenElement);
+    } finally {
+      window.setTimeout(() => {
+        fullscreenRequestInFlightRef.current = false;
+      }, 120);
+    }
+  }, []);
+
+  const triggerRealModeInterruption = useCallback(
+    (reason: RealModeInterruptionReason) => {
+      if (!isRealMode || reviewMode) {
+        return;
+      }
+      setRealModeInterruptionCount((prev) => ({
+        ...prev,
+        [reason]: prev[reason] + 1,
+      }));
+      setRealModeInterruption((prev) => prev ?? reason);
+    },
+    [isRealMode, reviewMode]
+  );
+
+  const leaveRealMode = useCallback(() => {
+    setAttemptMode("practice");
+    setTimerRunning(false);
+    setRealModeInterruption(null);
+    setModePickerStep("choose");
+    if (typeof document !== "undefined" && document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    }
+  }, []);
+
+  const returnToRealMode = useCallback(async () => {
+    const enteredFullscreen = await requestRealModeFullscreen();
+    if (!enteredFullscreen) {
+      setRealModeInterruption("fullscreen");
+      return;
+    }
+    setRealModeInterruption(null);
+  }, [requestRealModeFullscreen]);
+
+  const startRealMode = useCallback(async () => {
+    setRealModeStartPending(true);
+    const enteredFullscreen = await requestRealModeFullscreen();
+    setAttemptMode("real");
+    setTimerRunning(true);
+    setModePickerStep("choose");
+    setRealModeStartPending(false);
+
+    if (!enteredFullscreen) {
+      setRealModeInterruptionCount((prev) => ({
+        ...prev,
+        fullscreen: prev.fullscreen + 1,
+      }));
+      setRealModeInterruption("fullscreen");
+    } else {
+      setRealModeInterruption(null);
+    }
+  }, [requestRealModeFullscreen]);
+
   const chooseAttemptMode = (mode: AttemptMode) => {
     realModeAutoFinishedRef.current = false;
     setAttemptMode(mode);
@@ -726,6 +808,104 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
 
     setTimerRunning(false);
   };
+
+  useEffect(() => {
+    if (!isRealMode || reviewMode || isFullscreen || realModeInterruption !== null) {
+      return;
+    }
+    void requestRealModeFullscreen().then((enteredFullscreen) => {
+      if (!enteredFullscreen) {
+        triggerRealModeInterruption("fullscreen");
+      }
+    });
+  }, [isFullscreen, isRealMode, realModeInterruption, requestRealModeFullscreen, reviewMode, triggerRealModeInterruption]);
+
+  useEffect(() => {
+    if (!isRealMode || reviewMode || realModeInterruption !== null) {
+      return;
+    }
+    if (isFullscreen || fullscreenRequestInFlightRef.current) {
+      return;
+    }
+    triggerRealModeInterruption("fullscreen");
+  }, [isFullscreen, isRealMode, realModeInterruption, reviewMode, triggerRealModeInterruption]);
+
+  useEffect(() => {
+    if (!isRealMode || reviewMode) {
+      return;
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        triggerRealModeInterruption("visibility");
+      }
+    };
+    const onWindowBlur = () => {
+      triggerRealModeInterruption("visibility");
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("blur", onWindowBlur);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("blur", onWindowBlur);
+    };
+  }, [isRealMode, reviewMode, triggerRealModeInterruption]);
+
+  useEffect(() => {
+    if (!isRealMode || reviewMode) {
+      return;
+    }
+
+    const isEditableTarget = (target: EventTarget | null) =>
+      target instanceof Element &&
+      Boolean(
+        target.closest(
+          "input, textarea, select, [contenteditable='true'], [role='textbox']"
+        )
+      );
+
+    const onCopy = (event: ClipboardEvent) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+    };
+
+    const onSelectStart = (event: Event) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+    };
+
+    const onContextMenu = (event: MouseEvent) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c") {
+        if (isEditableTarget(event.target)) {
+          return;
+        }
+        event.preventDefault();
+      }
+    };
+
+    document.addEventListener("copy", onCopy);
+    document.addEventListener("selectstart", onSelectStart);
+    document.addEventListener("contextmenu", onContextMenu);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("copy", onCopy);
+      document.removeEventListener("selectstart", onSelectStart);
+      document.removeEventListener("contextmenu", onContextMenu);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isRealMode, reviewMode]);
 
   useEffect(() => {
     if (!isRealMode || reviewMode || remainingSeconds > 0 || realModeAutoFinishedRef.current) {
@@ -783,7 +963,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
       className="test-appearance-root -mx-4 -my-4 flex h-[calc(100vh-2rem)] flex-col overflow-x-hidden overflow-y-hidden bg-background text-foreground sm:-mx-5 lg:-mx-10 lg:-my-8"
     >
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
-        <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-4 lg:px-8">
+        <div className="relative flex min-h-16 flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-4 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
               <BookOpen className="size-4.5" aria-hidden="true" />
@@ -794,7 +974,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
           </div>
 
           {!reviewMode ? (
-            <div className="order-3 flex w-full items-center justify-between gap-2 sm:order-2 sm:w-auto">
+            <div className="order-3 flex w-full items-center justify-center gap-2 sm:order-none sm:absolute sm:left-1/2 sm:top-1/2 sm:w-auto sm:-translate-x-1/2 sm:-translate-y-1/2">
               <Badge variant="secondary" className="h-9 rounded-xl border border-border/60 bg-card px-3 text-sm font-semibold text-foreground sm:h-10 sm:text-base">
                 <Clock3 className="size-4" aria-hidden="true" />
                 {formatTime(remainingSeconds)}
@@ -827,20 +1007,24 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
             </div>
           ) : null}
 
-          <div className="order-2 flex min-w-0 items-center gap-2 sm:order-3 sm:gap-3">
-            <p className="hidden text-right text-sm font-semibold text-foreground lg:block">
-              <span className="test-muted-copy block text-xs tracking-[0.14em] text-muted-foreground uppercase">{t("progress")}</span>
-              {answeredCount} / {test.totalQuestions} {t("questions")}
-            </p>
+          <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={toggleFullscreen}
+              className="h-9 w-9 rounded-xl border-border/70 bg-background/60 p-0 sm:h-10 sm:w-10"
+              aria-label={isFullscreen ? tOptions("exitFullscreen") : tOptions("enterFullscreen")}
+            >
+              {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => setOptionsOpen(true)}
-              className="h-9 rounded-xl border-border/70 bg-background/60 px-2 text-xs sm:h-10 sm:px-3 sm:text-sm"
+              className="h-9 w-9 rounded-xl border-border/70 bg-background/60 p-0 sm:h-10 sm:w-10"
               aria-label={tOptions("title")}
             >
-              <SlidersHorizontal className="size-4" />
-              <span className="hidden sm:inline">{tOptions("title")}</span>
+              <Menu className="size-4" />
             </Button>
             <Button
               type="button"
@@ -916,13 +1100,16 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
 
       <main
         ref={splitContainerRef}
-        className="test-scaleable grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-hidden px-2 py-2 sm:px-3 sm:py-3 lg:grid-cols-(--reading-grid) lg:gap-0 lg:px-0 lg:py-0"
+        className={cn(
+          "test-scaleable grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-(--reading-grid)",
+          isRealMode && !reviewMode && "reading-real-mode-content"
+        )}
         style={{ "--reading-grid": `${gridPct}% 8px minmax(0, 1fr)` } as CSSProperties}
       >
-        <div className={cn("min-h-0 min-w-0 px-1 sm:px-0 lg:px-5 lg:py-4", isCompact && mobilePanel !== "passage" && "hidden")}>
-          <Card className="test-panel flex h-full min-h-0 flex-col justify-start overflow-hidden border-border/80 bg-card/80 py-0 shadow-sm dark:shadow-black/25">
+        <div className={cn("min-h-0 min-w-0", isCompact && mobilePanel !== "passage" && "hidden")}>
+          <div className="flex h-full min-h-0 flex-col overflow-hidden border-b border-border/70 bg-background/45 lg:border-b-0">
             <Tabs value={activePassageId} onValueChange={handlePassageChange} className="shrink-0">
-              <div className="test-panel sticky top-0 z-10 border-b border-border/80 bg-card/95 px-3 pt-1 backdrop-blur supports-backdrop-filter:bg-card/90">
+              <div className="sticky top-0 z-10 border-b border-border/75 bg-background/92 px-3 pt-1 backdrop-blur supports-backdrop-filter:bg-background/90">
                 <TabsList className="h-11 w-full justify-start overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {test.passages.map((passage, index) => (
                     <TabsTrigger key={passage.id} value={passage.id} className="h-11 shrink-0 px-4 text-sm" aria-label={`Passage ${index + 1}`}>
@@ -935,7 +1122,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
 
             <div
               ref={passageScrollRef}
-              className="h-[calc(100vh-16.3rem)] overflow-y-auto px-4 py-4 sm:h-[calc(100vh-16.9rem)] sm:px-6 sm:py-5 lg:h-[calc(100vh-14.6rem)] [scrollbar-color:hsl(var(--border))_transparent]"
+              className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 lg:px-6 lg:py-6 [scrollbar-color:hsl(var(--border))_transparent]"
             >
               <div className="mx-auto flex max-w-[72ch] min-w-0 flex-col items-stretch justify-start space-y-5 pb-8">
                 <p className="text-xs font-semibold tracking-[0.18em] text-blue-600 uppercase dark:text-blue-400">{activePassageId.toUpperCase()}</p>
@@ -999,8 +1186,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                 })}
               </div>
             </div>
-
-          </Card>
+          </div>
         </div>
 
         <div
@@ -1031,7 +1217,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
           }}
         />
 
-        <div className={cn("min-h-0 min-w-0 px-1 sm:px-0 lg:px-5 lg:py-4", isCompact && mobilePanel !== "questions" && "hidden")}>
+        <div className={cn("min-h-0 min-w-0", isCompact && mobilePanel !== "questions" && "hidden")}>
           {reviewMode ? (
             <ReviewQuestionsPanel
               questions={test.questions}
@@ -1052,9 +1238,9 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
               onJumpEvidence={jumpToEvidenceFromReview}
             />
           ) : (
-          <Card className="test-panel h-full min-h-0 gap-0 overflow-hidden border-border/80 bg-card/80 py-0 shadow-sm dark:shadow-black/25">
-            <div ref={questionsScrollRef} className="h-[calc(100vh-16.3rem)] min-w-0 overflow-y-auto px-3 py-4 sm:h-[calc(100vh-16.9rem)] sm:px-4 lg:h-[calc(100vh-18rem)] lg:px-5 lg:py-5 [scrollbar-color:hsl(var(--border))_transparent]">
-              <div className="space-y-7 pb-20">
+          <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background/45">
+            <div ref={questionsScrollRef} className="min-h-0 flex-1 min-w-0 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5 lg:py-6 [scrollbar-color:hsl(var(--border))_transparent]">
+              <div className="space-y-7 pb-8">
                 {groupedQuestions.map((group) => {
                   const headings = group.questions.find((q) => q.type === "matchingHeadings") as Extract<ReadingQuestion, { type: "matchingHeadings" }> | undefined;
                   const headingsHighlightKey = headings ? `matching-headings:${headings.id}` : null;
@@ -1365,126 +1551,145 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
               </div>
             </div>
 
-            <div className="test-panel sticky bottom-0 z-20 border-t border-border/80 bg-card/95 px-3 py-3 backdrop-blur sm:px-4">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    aria-label={t("previous")}
-                    disabled={activeQuestionNumber <= 1}
-                    onClick={() => goToQuestion(Math.max(1, activeQuestionNumber - 1))}
-                    className="px-2 sm:px-3"
-                  >
-                    <MoveLeft className="size-4" />
-                    {t("previous")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    aria-label={t("next")}
-                    disabled={activeQuestionNumber >= test.totalQuestions}
-                    onClick={() => goToQuestion(Math.min(test.totalQuestions, activeQuestionNumber + 1))}
-                    className="px-2 text-blue-600 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-400 sm:px-3"
-                  >
-                    {t("next")}
-                    <MoveRight className="size-4" />
-                  </Button>
-                </div>
-
-                <div className="ml-auto flex items-center gap-2">
-                  <Toggle
-                    aria-label={t("markForReview")}
-                    variant="outline"
-                    pressed={currentQuestion ? marked.has(currentQuestion.id) : false}
-                    onPressedChange={(next) => {
-                      if (!currentQuestion) return;
-                      setMarked((prev) => {
-                        const copy = new Set(prev);
-                        if (next) {
-                          copy.add(currentQuestion.id);
-                        } else {
-                          copy.delete(currentQuestion.id);
-                        }
-                        return copy;
-                      });
-                    }}
-                  >
-                    {currentQuestion && marked.has(currentQuestion.id) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
-                    {currentQuestion && marked.has(currentQuestion.id)
-                      ? (t.has("unmark") ? t("unmark") : "Unmark")
-                      : t("markForReview")}
-                  </Toggle>
-
-                  <Button type="button" variant="secondary" aria-label={t("questionPalette")} onClick={() => setPaletteOpen(true)} className="bg-muted/70 lg:hidden">
-                    <Grid2x2 className="size-4" />
-                    {t("questionPalette")}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="mt-2 hidden border-t border-border/70 pt-2.5 lg:block">
-                <div className="flex min-w-0 items-center gap-4">
-                  <div className="flex shrink-0 items-center gap-2">
-                    {passagePaletteSections.map((section) => {
-                      const isActivePassage = section.passageId === activePassageId;
-                      return (
-                        <button
-                          key={section.passageId}
-                          type="button"
-                          className={cn(
-                            "inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-semibold transition-colors",
-                            isActivePassage
-                              ? "border-blue-400/60 bg-blue-500/10 text-foreground"
-                              : "border-border/70 bg-background/70 text-muted-foreground hover:text-foreground"
-                          )}
-                          onClick={() => handlePassageChange(section.passageId)}
-                        >
-                          <span>{t("passageLabel", { index: section.index })}</span>
-                          <span className="text-[11px] opacity-85">
-                            {section.answered}/{section.numbers.length}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
-                    <div className="inline-flex min-w-full items-center gap-1.5 pr-1">
-                      {(activePassagePalette?.numbers ?? []).map((number) => {
-                        const question = questionsByNumber.get(number);
-                        const answered = question ? isAnswered(answers[question.id]) : false;
-                        const isMarked = question ? marked.has(question.id) : false;
-                        const isCurrent = number === activeQuestionNumber;
-                        return (
-                          <Button
-                            key={`${activePassageId}-${number}`}
-                            type="button"
-                            variant="outline"
-                            aria-label={t("goToQuestion", { number })}
-                            className={cn(
-                              "relative h-7 min-w-7 rounded-md border px-1 text-xs font-semibold shadow-none",
-                              isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
-                              !isCurrent && answered && "border-blue-300 bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
-                              !isCurrent && !answered && "border-border bg-background text-foreground/85",
-                              isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
-                            )}
-                            onClick={() => goToQuestion(number)}
-                          >
-                            {number}
-                            {isMarked ? <span className="absolute right-1 top-1 size-1 rounded-full bg-amber-500" aria-hidden="true" /> : null}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
+          </div>
           )}
         </div>
       </main>
+
+      {!reviewMode ? (
+        <div className="border-t border-border/75 bg-background/95 px-3 backdrop-blur sm:px-4 lg:px-5">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label={t("previous")}
+              disabled={activeQuestionNumber <= 1}
+              onClick={() => goToQuestion(Math.max(1, activeQuestionNumber - 1))}
+              className="h-8 rounded-lg px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+            >
+              <MoveLeft className="size-4" />
+              {t("previous")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label={t("next")}
+              disabled={activeQuestionNumber >= test.totalQuestions}
+              onClick={() => goToQuestion(Math.min(test.totalQuestions, activeQuestionNumber + 1))}
+              className="h-8 rounded-lg px-2.5 text-xs text-blue-700 hover:text-blue-700 dark:text-blue-300 sm:h-9 sm:px-3 sm:text-sm"
+            >
+              {t("next")}
+              <MoveRight className="size-4" />
+            </Button>
+
+            <p className="ml-auto text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase sm:text-xs">
+              Question {activeQuestionNumber} / {test.totalQuestions}
+            </p>
+
+            <Toggle
+              aria-label={t("markForReview")}
+              variant="outline"
+              pressed={currentQuestion ? marked.has(currentQuestion.id) : false}
+              onPressedChange={(next) => {
+                if (!currentQuestion) return;
+                setMarked((prev) => {
+                  const copy = new Set(prev);
+                  if (next) {
+                    copy.add(currentQuestion.id);
+                  } else {
+                    copy.delete(currentQuestion.id);
+                  }
+                  return copy;
+                });
+              }}
+              className="h-8 rounded-lg px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+            >
+              {currentQuestion && marked.has(currentQuestion.id) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
+              {currentQuestion && marked.has(currentQuestion.id)
+                ? (t.has("unmark") ? t("unmark") : "Unmark")
+                : t("markForReview")}
+            </Toggle>
+
+            <Button
+              type="button"
+              variant="secondary"
+              aria-label={t("questionPalette")}
+              onClick={() => setPaletteOpen(true)}
+              className="h-8 rounded-lg px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm lg:hidden"
+            >
+              <Grid2x2 className="size-4" />
+              {t("questionPalette")}
+            </Button>
+          </div>
+
+          <div className="mt-2 min-w-0 overflow-x-auto [scrollbar-width:thin]">
+            <div className="inline-grid min-w-max grid-flow-col auto-cols-[minmax(220px,1fr)] gap-2 pr-1 lg:grid-flow-row lg:auto-cols-auto lg:grid-cols-3 lg:min-w-0 lg:w-full">
+              {passagePaletteSections.map((section) => {
+                const isActivePassage = section.passageId === activePassageId;
+                return (
+                  <div
+                    key={`palette-${section.passageId}`}
+                    className={cn(
+                      "rounded-xl border p-2 transition-colors",
+                      isActivePassage
+                        ? "border-blue-400/60 bg-blue-500/10"
+                        : "cursor-pointer border-border/70 bg-background/70 hover:border-blue-300/50 hover:bg-muted/40"
+                    )}
+                    onClick={() => {
+                      if (!isActivePassage) {
+                        handlePassageChange(section.passageId);
+                      }
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+                      onClick={() => handlePassageChange(section.passageId)}
+                    >
+                      <span className="text-sm font-semibold">
+                        {t("passageLabel", { index: section.index })}
+                      </span>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {section.answered}/{section.numbers.length}
+                      </span>
+                    </button>
+
+                    {isActivePassage ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {section.numbers.map((number) => {
+                          const question = questionsByNumber.get(number);
+                          const answered = question ? isAnswered(answers[question.id]) : false;
+                          const isMarked = question ? marked.has(question.id) : false;
+                          const isCurrent = number === activeQuestionNumber;
+                          return (
+                            <Button
+                              key={`${activePassageId}-${number}`}
+                              type="button"
+                              variant="outline"
+                              aria-label={t("goToQuestion", { number })}
+                              className={cn(
+                                "relative h-6 min-w-6 rounded-md border px-1 text-[11px] font-semibold shadow-none",
+                                isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                                !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
+                                !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                                isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                              )}
+                              onClick={() => goToQuestion(number)}
+                            >
+                              {number}
+                              {isMarked ? <span className="absolute right-1 top-1 size-1 rounded-full bg-amber-500" aria-hidden="true" /> : null}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <Sheet open={paletteOpen} onOpenChange={setPaletteOpen}>
         <SheetContent side={isCompact ? "bottom" : "right"} className="p-0 sm:max-w-md">
@@ -1494,49 +1699,75 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
           </SheetHeader>
 
           <ScrollArea className="h-[calc(100vh-9rem)] px-6 pb-6 md:h-[calc(100vh-8rem)]">
-            <div className="space-y-6 py-4">
-              {[
-                { label: t("passageRange", { passage: 1, from: 1, to: 13 }), from: 1, to: 13 },
-                { label: t("passageRange", { passage: 2, from: 14, to: 26 }), from: 14, to: 26 },
-                { label: t("passageRange", { passage: 3, from: 27, to: 40 }), from: 27, to: 40 }
-              ].map((range) => (
-                <section key={range.label}>
-                  <p className="mb-3 text-sm font-semibold">{range.label}</p>
-                  <div className="grid grid-cols-5 gap-2">
-                    {Array.from({ length: range.to - range.from + 1 }, (_, index) => range.from + index).map((num) => {
-                      const q = questionsByNumber.get(num);
-                      const answered = q ? isAnswered(answers[q.id]) : false;
-                      const isMarked = q ? marked.has(q.id) : false;
-                      const isCurrent = num === activeQuestionNumber;
+            <div className="space-y-3 py-4">
+              {passagePaletteSections.map((section) => {
+                const isActivePassage = section.passageId === activePassageId;
+                return (
+                  <div
+                    key={`sheet-palette-${section.passageId}`}
+                    className={cn(
+                      "rounded-xl border p-2.5 transition-colors",
+                      isActivePassage
+                        ? "border-blue-400/60 bg-blue-500/10"
+                        : "cursor-pointer border-border/70 bg-background/70 hover:border-blue-300/50 hover:bg-muted/40"
+                    )}
+                    onClick={() => {
+                      if (!isActivePassage) {
+                        handlePassageChange(section.passageId);
+                      }
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+                      onClick={() => handlePassageChange(section.passageId)}
+                    >
+                      <span className="text-sm font-semibold">
+                        {t("passageLabel", { index: section.index })}
+                      </span>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {section.answered}/{section.numbers.length}
+                      </span>
+                    </button>
 
-                      return (
-                        <Button
-                          key={num}
-                          type="button"
-                          variant="outline"
-                          aria-label={t("goToQuestion", { number: num })}
-                          className={cn(
-                            "relative h-10 rounded-md border text-sm",
-                            isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
-                            !isCurrent && answered && "border-blue-300 bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
-                            !isCurrent && !answered && "border-border bg-card",
-                            isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-400 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
-                          )}
-                          onClick={() => {
-                            goToQuestion(num);
-                            if (isCompact) {
-                              setPaletteOpen(false);
-                            }
-                          }}
-                        >
-                          {num}
-                          {isMarked ? <span className="absolute right-1 top-1 size-1.5 rounded-full bg-amber-500" aria-hidden="true" /> : null}
-                        </Button>
-                      );
-                    })}
+                    {isActivePassage ? (
+                      <div className="mt-2 grid grid-cols-5 gap-2">
+                        {section.numbers.map((num) => {
+                          const q = questionsByNumber.get(num);
+                          const answered = q ? isAnswered(answers[q.id]) : false;
+                          const isMarked = q ? marked.has(q.id) : false;
+                          const isCurrent = num === activeQuestionNumber;
+
+                          return (
+                            <Button
+                              key={num}
+                              type="button"
+                              variant="outline"
+                              aria-label={t("goToQuestion", { number: num })}
+                              className={cn(
+                                "relative h-9 rounded-md border text-sm",
+                                isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                                !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
+                                !isCurrent && !answered && "border-border bg-card",
+                                isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-400 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                              )}
+                              onClick={() => {
+                                goToQuestion(num);
+                                if (isCompact) {
+                                  setPaletteOpen(false);
+                                }
+                              }}
+                            >
+                              {num}
+                              {isMarked ? <span className="absolute right-1 top-1 size-1.5 rounded-full bg-amber-500" aria-hidden="true" /> : null}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                   </div>
-                </section>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
         </SheetContent>
@@ -1549,27 +1780,137 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
         appearance={appearance}
         onContrastChange={setContrast}
         onTextSizeChange={setTextSize}
-        isFullscreen={isFullscreen}
-        onToggleFullscreen={toggleFullscreen}
       />
 
       {showModePicker ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg p-5">
-            <h3 className="text-lg font-semibold">Choose test mode</h3>
+          <Card className="w-full max-w-lg border-border/80 bg-linear-to-br from-card via-card to-blue-500/5 p-5 shadow-xl sm:p-6">
+            {modePickerStep === "choose" ? (
+              <>
+                <h3 className="text-lg font-semibold">
+                  {t.has("modePickerTitle") ? t("modePickerTitle") : "Choose test mode"}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t.has("modePickerDescription")
+                    ? t("modePickerDescription")
+                    : "Choose how you want to take this reading test."}
+                </p>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <Button type="button" onClick={() => setModePickerStep("realConfirm")}>
+                    {t.has("modeReal") ? t("modeReal") : "Real mode"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => chooseAttemptMode("practice")}>
+                    {t.has("modePractice") ? t("modePractice") : "Practice mode"}
+                  </Button>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {t.has("realModeRule")
+                    ? t("realModeRule")
+                    : "Real mode: timer auto-starts, cannot be stopped, and test ends when time reaches zero."}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t.has("practiceModeRule")
+                    ? t("practiceModeRule")
+                    : "Practice mode: you can start, pause, and continue the timer anytime."}
+                </p>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold">
+                  {t.has("realModeStartTitle")
+                    ? t("realModeStartTitle")
+                    : "Start Reading Real Mode?"}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t.has("realModeStartDescription")
+                    ? t("realModeStartDescription")
+                    : "Real Mode will run in fullscreen and enforce strict exam guards."}
+                </p>
+                <ul className="mt-4 space-y-2 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm text-foreground/90">
+                  <li>
+                    {t.has("realModeFullscreenRequired")
+                      ? t("realModeFullscreenRequired")
+                      : "Fullscreen is required to continue the session."}
+                  </li>
+                  <li>
+                    {t.has("realModeNoCopySelect")
+                      ? t("realModeNoCopySelect")
+                      : "Copy and text selection are disabled during Real Mode."}
+                  </li>
+                  <li>
+                    {t.has("realModeNoTabSwitch")
+                      ? t("realModeNoTabSwitch")
+                      : "Switching tabs or windows will interrupt the session."}
+                  </li>
+                </ul>
+                <div className="mt-4 flex items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setModePickerStep("choose")}
+                    disabled={realModeStartPending}
+                  >
+                    {t.has("realModeCancelCta") ? t("realModeCancelCta") : "Back"}
+                  </Button>
+                  <Button type="button" onClick={() => void startRealMode()} disabled={realModeStartPending}>
+                    {realModeStartPending
+                      ? t.has("realModeStarting")
+                        ? t("realModeStarting")
+                        : "Starting..."
+                      : t.has("realModeStartCta")
+                        ? t("realModeStartCta")
+                        : "Start Real Mode"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </Card>
+        </div>
+      ) : null}
+
+      {realModeLocked ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md border-border/80 bg-card/95 p-5 shadow-2xl sm:p-6">
+            <h3 className="text-lg font-semibold">
+              {realModeInterruption === "fullscreen"
+                ? t.has("realModeFullscreenExitedTitle")
+                  ? t("realModeFullscreenExitedTitle")
+                  : "Fullscreen exited"
+                : t.has("realModeInterruptedTitle")
+                  ? t("realModeInterruptedTitle")
+                  : "Exam session interrupted"}
+            </h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Real mode starts immediately and cannot be paused. Practice mode lets you pause and continue the timer.
+              {realModeInterruption === "fullscreen"
+                ? t.has("realModeFullscreenExitedDescription")
+                  ? t("realModeFullscreenExitedDescription")
+                  : "Real Mode requires fullscreen to continue. Return to fullscreen to keep your exam session active."
+                : t.has("realModeInterruptedDescription")
+                  ? t("realModeInterruptedDescription")
+                  : "Real Mode requires you to stay in the active fullscreen test window. Return to continue or exit Real Mode."}
             </p>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              <Button type="button" onClick={() => chooseAttemptMode("real")}>Real mode</Button>
-              <Button type="button" variant="outline" onClick={() => chooseAttemptMode("practice")}>
-                Practice mode
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t.has("realModeInterruptionCount")
+                ? t("realModeInterruptionCount", {
+                    fullscreen: realModeInterruptionCount.fullscreen,
+                    visibility: realModeInterruptionCount.visibility,
+                  })
+                : `Interruptions — fullscreen: ${realModeInterruptionCount.fullscreen}, tab/window: ${realModeInterruptionCount.visibility}`}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="outline" onClick={leaveRealMode}>
+                {t.has("realModeExitButton") ? t("realModeExitButton") : "Exit Real Mode"}
+              </Button>
+              <Button type="button" onClick={() => void returnToRealMode()}>
+                {realModeInterruption === "fullscreen"
+                  ? t.has("realModeReturnFullscreenButton")
+                    ? t("realModeReturnFullscreenButton")
+                    : "Return to Fullscreen"
+                  : t.has("realModeReturnTestButton")
+                    ? t("realModeReturnTestButton")
+                    : "Return to Test"}
               </Button>
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">Real: timer auto-starts, cannot be stopped, and test ends when time reaches zero.</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Practice: you can start, pause, and resume the timer anytime.
-            </p>
           </Card>
         </div>
       ) : null}

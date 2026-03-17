@@ -9,11 +9,13 @@ import {
   BookmarkCheck,
   Clock3,
   Grid2x2,
+  Maximize2,
+  Menu,
+  Minimize2,
   MoveLeft,
   MoveRight,
   Pause,
   Play,
-  SlidersHorizontal,
   User,
   Volume2,
 } from "lucide-react";
@@ -401,11 +403,6 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
       };
     });
   }, [answers, sectionQuestionNumbers, test.sections]);
-
-  const activeSectionPalette = useMemo(
-    () => sectionPaletteSections.find((section) => section.sectionId === activeSectionId),
-    [activeSectionId, sectionPaletteSections]
-  );
 
   const activeSection = useMemo(
     () =>
@@ -1203,13 +1200,13 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
     <section
       data-test-contrast={appearance.contrast}
       data-test-size={appearance.textSize}
-      className="test-appearance-root mx-0 my-0 flex h-[calc(100dvh-2rem)] w-full max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-background lg:-mx-10 lg:-my-8"
+      className="test-appearance-root mx-0 my-0 flex h-[calc(100dvh-2rem)] w-screen flex-col overflow-x-hidden overflow-y-hidden bg-background lg:-mx-10 lg:-my-8"
     >
       <header className="sticky top-0 z-40 w-full max-w-full overflow-x-hidden border-b border-border bg-background/95 backdrop-blur">
         <div
           className={cn(
-            "flex h-14 w-full min-w-0 max-w-full items-center justify-between gap-2 px-3 sm:h-16 sm:gap-3 sm:px-4 lg:px-8",
-            isSmallLandscape && "h-12 gap-1 px-2",
+            "relative flex min-h-14 w-full min-w-0 max-w-full flex-wrap items-center justify-between gap-2 px-3 py-2 sm:min-h-16 sm:gap-3 sm:px-4 lg:px-8",
+            isSmallLandscape && "min-h-12 gap-1 px-2 py-1",
           )}
         >
           <div className="flex flex-1 min-w-0 items-center gap-1.5 sm:gap-3">
@@ -1242,7 +1239,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
           </div>
 
           {!reviewMode ? (
-          <div className="shrink-0 min-w-0 flex items-center gap-2">
+          <div className="order-3 flex w-full items-center justify-center gap-2 sm:order-0 sm:absolute sm:left-1/2 sm:top-1/2 sm:w-auto sm:-translate-x-1/2 sm:-translate-y-1/2">
             <Badge
               variant="secondary"
               className={cn(
@@ -1286,22 +1283,24 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
           </div>
           ) : null}
 
-          <div className="shrink-0 min-w-0 flex items-center gap-1 sm:gap-3">
-            <p className="hidden text-right text-sm font-semibold text-foreground lg:block">
-              <span className="test-muted-copy block text-[11px] tracking-[0.14em] text-muted-foreground uppercase">
-                {t("progress")}
-              </span>
-              {answeredCount} / {test.totalQuestions} {t("questions")}
-            </p>
+          <div className="ml-auto shrink-0 min-w-0 flex items-center gap-1 sm:gap-3">
             <Button
               type="button"
               variant="outline"
-              className="h-9 shrink-0 rounded-xl border-border/70 bg-background/60 px-2 text-xs sm:px-3 sm:text-sm"
+              className="h-9 w-9 shrink-0 rounded-xl border-border/70 bg-background/60 p-0"
+              aria-label={isFullscreen ? tOptions("exitFullscreen") : tOptions("enterFullscreen")}
+              onClick={toggleFullscreen}
+            >
+              {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 w-9 shrink-0 rounded-xl border-border/70 bg-background/60 p-0"
               aria-label={tOptions("title")}
               onClick={() => setOptionsOpen(true)}
             >
-              <SlidersHorizontal className="size-4" />
-              <span className="hidden sm:inline">{tOptions("title")}</span>
+              <Menu className="size-4" />
             </Button>
             {reviewMode ? (
               <Button
@@ -1483,8 +1482,8 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
           </section>
         ) : (
         <section className="min-h-0 min-w-0">
-          <Card className="test-panel h-full min-h-0 gap-0 overflow-hidden py-0">
-            <div className="border-b border-border px-3 py-2">
+          <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border border-border/70 bg-background/45">
+            <div className="border-b border-border/70 px-3 py-2 sm:px-4">
               {isSmallLandscape ? (
                 <Select
                   value={activeSectionId}
@@ -1512,12 +1511,12 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                   onValueChange={handleSectionChange}
                 >
                   <div className="w-full min-w-0 overflow-x-auto [scrollbar-width:none]">
-                    <TabsList className="inline-flex h-11 w-max min-w-full flex-nowrap whitespace-nowrap">
+                    <TabsList className="inline-flex h-10 w-max min-w-full flex-nowrap whitespace-nowrap bg-transparent p-0">
                       {test.sections.map((section, index) => (
                         <TabsTrigger
                           key={section.id}
                           value={section.id}
-                          className="inline-flex h-11 shrink-0 px-4"
+                          className="inline-flex h-9 shrink-0 rounded-lg px-3"
                           aria-label={section.title}
                         >
                           {t("sectionTab", { index: index + 1 })}
@@ -1527,13 +1526,35 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                   </div>
                 </Tabs>
               )}
+
+              <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                <div className="min-w-0">
+                  <p className="text-[11px] tracking-[0.16em] text-blue-700 uppercase dark:text-blue-300">
+                    {t("sectionTab", { index: Number(activeSectionId.slice(1)) })}
+                  </p>
+                  <h2 className="mt-1 wrap-break-word text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+                    {activeSection.title}
+                  </h2>
+                  <p className="mt-1 wrap-break-word text-sm font-medium text-muted-foreground">
+                    {activeSection.questionRangeLabel}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border/70 bg-background/75 px-3 py-2 text-xs text-muted-foreground sm:max-w-85">
+                  <p className="font-semibold tracking-[0.12em] uppercase">{activeSection.audioMeta.nowPlayingLabel}</p>
+                  <p className="mt-1 wrap-break-word text-sm text-foreground">{activeSection.audioMeta.currentTrackTitle}</p>
+                </div>
+              </div>
+
+              <p className="mt-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-sm wrap-break-word">
+                {activeSection.instructions}
+              </p>
             </div>
 
             <div
               ref={questionsScrollRef}
               className={cn(
-                "h-[calc(100dvh-11.4rem)] min-w-0 overflow-y-auto px-3 py-3 sm:h-[calc(100dvh-12rem)] sm:px-4 sm:py-4 lg:h-[calc(100dvh-12.8rem)] lg:px-5",
-                isSmallLandscape && "h-[calc(100dvh-9.8rem)] py-2",
+                "min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5 lg:py-5",
+                isSmallLandscape && "py-2",
               )}
             >
               <Highlightable
@@ -1543,22 +1564,10 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                 noteScopeKey={`section:${activeSection.id}`}
                 contentVersion={`${activeSection.id}:${isSmallLandscape ? "compact" : "full"}`}
                 className={cn(
-                  "space-y-4 pb-14 lg:pb-3",
-                  isSmallLandscape && "pb-12",
+                  "space-y-4 pb-8",
+                  isSmallLandscape && "pb-6",
                 )}
               >
-                <div>
-                  <h2 className="wrap-break-word text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                    {activeSection.title}
-                  </h2>
-                  <p className="mt-1 wrap-break-word text-sm font-medium text-muted-foreground">
-                    {activeSection.questionRangeLabel}
-                  </p>
-                </div>
-                <div className="test-soft-surface rounded-lg border border-border bg-muted/20 p-3 text-sm wrap-break-word">
-                  {activeSection.instructions}
-                </div>
-
                 {activeSection.blocks.map((block, index) => (
                   <div key={`${activeSection.id}-${block.type}-${index}`}>
                     {renderBlock(block)}
@@ -1566,229 +1575,150 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                 ))}
               </Highlightable>
             </div>
-
-            <div
-              className={cn(
-                "test-panel sticky bottom-0 z-20 border-t border-border bg-background/95 px-2.5 py-1.5 backdrop-blur sm:px-3 sm:py-2",
-                isSmallLandscape && "py-1",
-              )}
-            >
-              <div className="flex min-w-0 flex-wrap items-center gap-2 lg:hidden">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  aria-label={t("previousSection")}
-                  disabled={activeSection.id === "s1"}
-                  onClick={() => {
-                    const current = Number(activeSection.id.slice(1));
-                    const next = Math.max(1, current - 1) as 1 | 2 | 3 | 4;
-                    handleSectionChange(`s${next}`);
-                  }}
-                  className="h-8 rounded-lg px-2.5 text-xs"
-                >
-                  <MoveLeft className="size-4" />
-                  {t("previousSection")}
-                </Button>
-
-                <Toggle
-                  aria-label={t("markForReview")}
-                  variant="outline"
-                  pressed={marked.has(activeQuestionNumber)}
-                  onPressedChange={(next) => {
-                    setMarked((prev) => {
-                      const copy = new Set(prev);
-                      if (next) {
-                        copy.add(activeQuestionNumber);
-                      } else {
-                        copy.delete(activeQuestionNumber);
-                      }
-                      return copy;
-                    });
-                  }}
-                  className="h-8 rounded-lg px-2.5 text-xs"
-                >
-                  {marked.has(activeQuestionNumber) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
-                  {marked.has(activeQuestionNumber)
-                    ? (t.has("unmark") ? t("unmark") : "Unmark")
-                    : t("markForReview")}
-                </Toggle>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  aria-label={t("nextSection")}
-                  disabled={activeSection.id === "s4"}
-                  onClick={() => {
-                    const current = Number(activeSection.id.slice(1));
-                    const next = Math.min(4, current + 1) as 1 | 2 | 3 | 4;
-                    handleSectionChange(`s${next}`);
-                  }}
-                  className="h-8 rounded-lg px-2.5 text-xs text-blue-700 hover:text-blue-700 dark:text-blue-300"
-                >
-                  {t("nextSection")}
-                  <MoveRight className="size-4" />
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="secondary"
-                  aria-label={paletteTitle}
-                  className="h-8 rounded-lg px-2.5 text-xs"
-                  onClick={() => setPaletteOpen(true)}
-                >
-                  <Grid2x2 className="size-4" />
-                  {paletteTitle}
-                </Button>
-              </div>
-
-              <div className="mt-1.5 min-w-0 overflow-x-auto [scrollbar-width:thin] lg:hidden">
-                <div className="inline-flex min-w-full items-center gap-1.5 pr-1">
-                  {sectionPaletteSections.map((section) => {
-                    const isActiveSection = section.sectionId === activeSectionId;
-                    return (
-                      <button
-                        key={section.sectionId}
-                        type="button"
-                        className={cn(
-                          "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-[11px] font-semibold transition-colors",
-                          isActiveSection
-                            ? "border-blue-400/60 bg-blue-500/10 text-foreground"
-                            : "border-border/70 bg-background/70 text-muted-foreground hover:text-foreground"
-                        )}
-                        onClick={() => handleSectionChange(section.sectionId)}
-                      >
-                        <span>{t("sectionTab", { index: section.index })}</span>
-                        <span className="text-[10px] opacity-85">
-                          {section.answered}/{section.numbers.length}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="hidden min-w-0 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-5">
-                <div className="min-w-0 overflow-x-auto [scrollbar-width:thin]">
-                  <div className="inline-flex min-w-full items-center gap-2 pr-1">
-                    {sectionPaletteSections.map((section) => {
-                      const isActiveSection = section.sectionId === activeSectionId;
-                      return (
-                        <button
-                          key={section.sectionId}
-                          type="button"
-                          className={cn(
-                            "inline-flex h-8 shrink-0 items-center gap-2 rounded-md border px-3 text-xs font-semibold transition-colors",
-                            isActiveSection
-                              ? "border-blue-400/60 bg-blue-500/10 text-foreground"
-                              : "border-border/70 bg-background/70 text-muted-foreground hover:text-foreground"
-                          )}
-                          onClick={() => handleSectionChange(section.sectionId)}
-                        >
-                          <span>{t("sectionTab", { index: section.index })}</span>
-                          <span className="text-[11px] opacity-85">
-                            {section.answered}/{section.numbers.length}
-                          </span>
-                        </button>
-                      );
-                    })}
-
-                    <Separator orientation="vertical" className="mx-1 h-5" />
-
-                    {(activeSectionPalette?.numbers ?? []).map((number) => {
-                      const answered = isAnswered(answers[number]);
-                      const isMarked = marked.has(number);
-                      const isCurrent = activeQuestionNumber === number;
-
-                      return (
-                        <Button
-                          key={number}
-                          type="button"
-                          variant="outline"
-                          aria-label={getJumpToQuestionLabel(number)}
-                          onClick={() => jumpToQuestion(number)}
-                          className={cn(
-                            "relative h-8 min-w-8 rounded-md border px-1.5 text-xs font-semibold shadow-none",
-                            isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
-                            !isCurrent && answered && "border-blue-300 bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-200",
-                            !isCurrent && !answered && "border-border bg-background text-foreground/85",
-                            isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
-                          )}
-                        >
-                          {number}
-                          {isMarked ? (
-                            <span
-                              className="absolute right-1 top-1 size-1 rounded-full bg-amber-500"
-                              aria-hidden="true"
-                            />
-                          ) : null}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2.5">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    aria-label={t("previousSection")}
-                    disabled={activeSection.id === "s1"}
-                    onClick={() => {
-                      const current = Number(activeSection.id.slice(1));
-                      const next = Math.max(1, current - 1) as 1 | 2 | 3 | 4;
-                      handleSectionChange(`s${next}`);
-                    }}
-                    className="h-9 rounded-lg px-3.5 text-sm"
-                  >
-                    <MoveLeft className="size-4" />
-                    {t("previousSection")}
-                  </Button>
-
-                  <Toggle
-                    aria-label={t("markForReview")}
-                    variant="outline"
-                    pressed={marked.has(activeQuestionNumber)}
-                    onPressedChange={(next) => {
-                      setMarked((prev) => {
-                        const copy = new Set(prev);
-                        if (next) {
-                          copy.add(activeQuestionNumber);
-                        } else {
-                          copy.delete(activeQuestionNumber);
-                        }
-                        return copy;
-                      });
-                    }}
-                    className="h-9 rounded-lg px-3.5 text-sm"
-                  >
-                    {marked.has(activeQuestionNumber) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
-                    {marked.has(activeQuestionNumber)
-                      ? (t.has("unmark") ? t("unmark") : "Unmark")
-                      : t("markForReview")}
-                  </Toggle>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    aria-label={t("nextSection")}
-                    disabled={activeSection.id === "s4"}
-                    onClick={() => {
-                      const current = Number(activeSection.id.slice(1));
-                      const next = Math.min(4, current + 1) as 1 | 2 | 3 | 4;
-                      handleSectionChange(`s${next}`);
-                    }}
-                    className="h-9 rounded-lg px-3.5 text-sm text-blue-700 hover:text-blue-700 dark:text-blue-300"
-                  >
-                    {t("nextSection")}
-                    <MoveRight className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </Card>
+          </div>
         </section>
         )}
       </main>
+
+      {!reviewMode ? (
+        <div className="border-t border-border/75 bg-background/95 px-3 backdrop-blur sm:px-4 lg:px-5">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 py-2">
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label={t.has("previous") ? t("previous") : t("previousSection")}
+              disabled={activeQuestionNumber <= 1}
+              onClick={() => jumpToQuestion(Math.max(1, activeQuestionNumber - 1))}
+              className="h-8 rounded-lg px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+            >
+              <MoveLeft className="size-4" />
+              {t.has("previous") ? t("previous") : t("previousSection")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label={t.has("next") ? t("next") : t("nextSection")}
+              disabled={activeQuestionNumber >= test.totalQuestions}
+              onClick={() => jumpToQuestion(Math.min(test.totalQuestions, activeQuestionNumber + 1))}
+              className="h-8 rounded-lg px-2.5 text-xs text-blue-700 hover:text-blue-700 dark:text-blue-300 sm:h-9 sm:px-3 sm:text-sm"
+            >
+              {t.has("next") ? t("next") : t("nextSection")}
+              <MoveRight className="size-4" />
+            </Button>
+
+            <p className="ml-auto text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase sm:text-xs">
+              {t.has("questionPosition")
+                ? t("questionPosition", { current: activeQuestionNumber, total: test.totalQuestions })
+                : `Question ${activeQuestionNumber} / ${test.totalQuestions}`}
+            </p>
+
+            <Toggle
+              aria-label={t("markForReview")}
+              variant="outline"
+              pressed={marked.has(activeQuestionNumber)}
+              onPressedChange={(next) => {
+                setMarked((prev) => {
+                  const copy = new Set(prev);
+                  if (next) {
+                    copy.add(activeQuestionNumber);
+                  } else {
+                    copy.delete(activeQuestionNumber);
+                  }
+                  return copy;
+                });
+              }}
+              className="h-8 rounded-lg px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+            >
+              {marked.has(activeQuestionNumber) ? <BookmarkCheck className="size-4" /> : <Bookmark className="size-4" />}
+              {marked.has(activeQuestionNumber)
+                ? (t.has("unmark") ? t("unmark") : "Unmark")
+                : t("markForReview")}
+            </Toggle>
+
+            <Button
+              type="button"
+              variant="secondary"
+              aria-label={paletteTitle}
+              onClick={() => setPaletteOpen(true)}
+              className="h-8 rounded-lg px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm lg:hidden"
+            >
+              <Grid2x2 className="size-4" />
+              {paletteTitle}
+            </Button>
+          </div>
+
+          <div className="mt-2 min-w-0 overflow-x-auto [scrollbar-width:thin]">
+            <div className="inline-grid min-w-max grid-flow-col auto-cols-[minmax(220px,1fr)] gap-2 pr-1 lg:grid-flow-row lg:auto-cols-auto lg:grid-cols-4 lg:min-w-0 lg:w-full">
+              {sectionPaletteSections.map((section) => {
+                const isActiveSection = section.sectionId === activeSectionId;
+                return (
+                  <div
+                    key={`palette-${section.sectionId}`}
+                    className={cn(
+                      "rounded-xl border p-2 transition-colors",
+                      isActiveSection
+                        ? "border-blue-400/60 bg-blue-500/10"
+                        : "cursor-pointer border-border/70 bg-background/70 hover:border-blue-300/50 hover:bg-muted/40"
+                    )}
+                    onClick={() => {
+                      if (!isActiveSection) {
+                        handleSectionChange(section.sectionId);
+                      }
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+                      onClick={() => handleSectionChange(section.sectionId)}
+                    >
+                      <span className="text-sm font-semibold">
+                        {t("sectionTab", { index: section.index })}
+                      </span>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {section.answered}/{section.numbers.length}
+                      </span>
+                    </button>
+
+                    {isActiveSection ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {section.numbers.map((number) => {
+                          const answered = isAnswered(answers[number]);
+                          const isMarked = marked.has(number);
+                          const isCurrent = activeQuestionNumber === number;
+                          return (
+                            <Button
+                              key={number}
+                              type="button"
+                              variant="outline"
+                              aria-label={getJumpToQuestionLabel(number)}
+                              onClick={() => jumpToQuestion(number)}
+                              className={cn(
+                                "relative h-6 min-w-6 rounded-md border px-1 text-[11px] font-semibold shadow-none",
+                                isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                                !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
+                                !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                                isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                              )}
+                            >
+                              {number}
+                              {isMarked ? (
+                                <span
+                                  className="absolute right-1 top-1 size-1 rounded-full bg-amber-500"
+                                  aria-hidden="true"
+                                />
+                              ) : null}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <Sheet open={paletteOpen} onOpenChange={setPaletteOpen}>
         <SheetContent
@@ -1807,46 +1737,78 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
           <ScrollArea className="h-[calc(100vh-9rem)] px-5 pb-6 md:h-[calc(100vh-8rem)]">
             <div className="space-y-4 py-4">
-              <div className="grid grid-cols-5 gap-2">
-                {Array.from({ length: 40 }, (_, i) => i + 1).map((number) => {
-                  const sectionId = sectionByQuestion.get(number);
-                  const answered = isAnswered(answers[number]);
-                  const isMarked = marked.has(number);
-                  const isCurrentSection = sectionId === activeSectionId;
-
-                  return (
-                    <Button
-                      key={number}
-                      type="button"
-                      variant="outline"
-                      aria-label={getJumpToQuestionLabel(number)}
-                      onClick={() => jumpToQuestion(number)}
-                      className={cn(
-                        "relative h-9 rounded-xl px-0 text-xs font-semibold shadow-none",
-                        activeQuestionNumber === number &&
-                          "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
-                        activeQuestionNumber !== number &&
-                          answered &&
-                          "border-blue-300 bg-blue-50 text-blue-700",
-                      activeQuestionNumber !== number &&
-                        !answered &&
-                        "border-slate-200 bg-slate-50 text-slate-700",
-                      isMarked &&
-                          "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100",
-                      isCurrentSection && "shadow-sm",
+              {sectionPaletteSections.map((section) => {
+                const isActiveSection = section.sectionId === activeSectionId;
+                return (
+                  <div
+                    key={`sheet-palette-${section.sectionId}`}
+                    className={cn(
+                      "rounded-xl border p-2.5 transition-colors",
+                      isActiveSection
+                        ? "border-blue-400/60 bg-blue-500/10"
+                        : "cursor-pointer border-border/70 bg-background/70 hover:border-blue-300/50 hover:bg-muted/40"
                     )}
+                    onClick={() => {
+                      if (!isActiveSection) {
+                        handleSectionChange(section.sectionId);
+                      }
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+                      onClick={() => handleSectionChange(section.sectionId)}
                     >
-                      {number}
-                      {isMarked ? (
-                        <span
-                          className="absolute right-1 top-1 size-1.5 rounded-full bg-amber-500"
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                    </Button>
-                  );
-                })}
-              </div>
+                      <span className="text-sm font-semibold">
+                        {t("sectionTab", { index: section.index })}
+                      </span>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {section.answered}/{section.numbers.length}
+                      </span>
+                    </button>
+
+                    {isActiveSection ? (
+                      <div className="mt-2 grid grid-cols-5 gap-2">
+                        {section.numbers.map((number) => {
+                          const answered = isAnswered(answers[number]);
+                          const isMarked = marked.has(number);
+                          const isCurrent = activeQuestionNumber === number;
+
+                          return (
+                            <Button
+                              key={number}
+                              type="button"
+                              variant="outline"
+                              aria-label={getJumpToQuestionLabel(number)}
+                              onClick={() => {
+                                jumpToQuestion(number);
+                                if (isCompact) {
+                                  setPaletteOpen(false);
+                                }
+                              }}
+                              className={cn(
+                                "relative h-8 rounded-xl px-0 text-xs font-semibold shadow-none",
+                                isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                                !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
+                                !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                                isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                              )}
+                            >
+                              {number}
+                              {isMarked ? (
+                                <span
+                                  className="absolute right-1 top-1 size-1.5 rounded-full bg-amber-500"
+                                  aria-hidden="true"
+                                />
+                              ) : null}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
 
               <Separator className="my-2" />
 
@@ -1891,8 +1853,6 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
         appearance={appearance}
         onContrastChange={setContrast}
         onTextSizeChange={setTextSize}
-        isFullscreen={isFullscreen}
-        onToggleFullscreen={toggleFullscreen}
       />
 
       {showModePicker ? (

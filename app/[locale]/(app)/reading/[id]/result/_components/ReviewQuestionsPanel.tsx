@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { CheckCircle2, ChevronDown, ChevronUp, CircleDashed, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -73,6 +74,7 @@ export function ReviewQuestionsPanel({
   onJumpEvidence,
 }: ReviewQuestionsPanelProps) {
   const t = useTranslations("readingResult");
+  const [answersVisible, setAnswersVisible] = useState(false);
 
   return (
     <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none">
@@ -80,12 +82,23 @@ export function ReviewQuestionsPanel({
         <div className="space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <p className="text-base font-semibold">{t("questionAnalysis")}</p>
-            <p className="text-xs tracking-[0.14em] text-muted-foreground uppercase">
-              {t("scoreSummary", {
-                correct: grading.correctCount,
-                total: grading.total,
-              })}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs tracking-[0.14em] text-muted-foreground uppercase">
+                {t("scoreSummary", {
+                  correct: grading.correctCount,
+                  total: grading.total,
+                })}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-lg border-slate-200 bg-white px-2.5 text-xs hover:bg-slate-100 dark:border-border/70 dark:bg-background/45 dark:hover:bg-background/60"
+                onClick={() => setAnswersVisible((previous) => !previous)}
+              >
+                {answersVisible ? t("hideAnswers") : t("showAnswers")}
+              </Button>
+            </div>
           </div>
           <p className="text-xs text-muted-foreground">{t("questionNavigator")}</p>
           <div className="overflow-x-auto pb-1 [scrollbar-width:thin]">
@@ -158,16 +171,18 @@ export function ReviewQuestionsPanel({
                 </div>
               </div>
 
-              <div className="mt-3 grid gap-2 text-sm">
-                <p>
-                  <span className="font-medium text-muted-foreground">{t("yourAnswer")}:</span>{" "}
-                  <span className={statusStyles.answer}>{userAnswer || t("noAnswer")}</span>
-                </p>
-                <p>
-                  <span className="font-medium text-muted-foreground">{t("correctAnswer")}:</span>{" "}
-                  <span className="text-emerald-700 dark:text-emerald-200">{correctAnswer || t("notAvailable")}</span>
-                </p>
-              </div>
+              {answersVisible ? (
+                <div className="mt-3 grid gap-2 text-sm">
+                  <p>
+                    <span className="font-medium text-muted-foreground">{t("yourAnswer")}:</span>{" "}
+                    <span className={statusStyles.answer}>{userAnswer || t("noAnswer")}</span>
+                  </p>
+                  <p>
+                    <span className="font-medium text-muted-foreground">{t("correctAnswer")}:</span>{" "}
+                    <span className="text-emerald-700 dark:text-emerald-200">{correctAnswer || t("notAvailable")}</span>
+                  </p>
+                </div>
+              ) : null}
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button

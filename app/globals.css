@@ -233,27 +233,49 @@
     line-height: 1.7rem;
   }
 
-  .test-appearance-root[data-test-contrast="high"] .test-panel {
-    border-color: hsl(var(--foreground) / 0.42);
-    background: hsl(var(--background) / 0.98);
+  .reading-real-mode-content {
+    user-select: none;
+    -webkit-user-select: none;
   }
 
-  .test-appearance-root[data-test-contrast="high"] .test-soft-surface {
-    border-color: hsl(var(--foreground) / 0.36);
-    background: hsl(var(--muted) / 0.55);
+  .reading-real-mode-content input,
+  .reading-real-mode-content textarea,
+  .reading-real-mode-content [contenteditable="true"] {
+    user-select: text;
+    -webkit-user-select: text;
   }
 
-  .test-appearance-root[data-test-contrast="high"] .test-input-surface {
-    border-color: hsl(var(--foreground) / 0.52);
-    background: hsl(var(--background));
+  .test-appearance-root[data-test-contrast="yellow-on-black"] {
+    --background: oklch(0.11 0.01 95);
+    --foreground: oklch(0.9 0.15 100);
+    --card: oklch(0.15 0.01 95);
+    --card-foreground: oklch(0.9 0.15 100);
+    --popover: oklch(0.14 0.01 95);
+    --popover-foreground: oklch(0.9 0.15 100);
+    --primary: oklch(0.9 0.15 100);
+    --primary-foreground: oklch(0.16 0.01 95);
+    --secondary: oklch(0.2 0.015 95);
+    --secondary-foreground: oklch(0.9 0.1 100);
+    --muted: oklch(0.21 0.01 95);
+    --muted-foreground: oklch(0.88 0.09 100);
+    --accent: oklch(0.26 0.05 100);
+    --accent-foreground: oklch(0.92 0.12 100);
+    --destructive: oklch(0.66 0.2 24);
+    --destructive-foreground: oklch(0.98 0 0);
+    --border: oklch(0.72 0.13 100);
+    --input: oklch(0.72 0.13 100);
+    --ring: oklch(0.9 0.15 100);
   }
 
-  .test-appearance-root[data-test-contrast="high"] .test-chip {
-    border-color: hsl(var(--foreground) / 0.46);
+  .test-appearance-root[data-test-contrast="yellow-on-black"] .test-panel,
+  .test-appearance-root[data-test-contrast="yellow-on-black"] .test-soft-surface,
+  .test-appearance-root[data-test-contrast="yellow-on-black"] .test-input-surface,
+  .test-appearance-root[data-test-contrast="yellow-on-black"] .test-chip {
+    border-color: oklch(0.9 0.15 100 / 0.6);
   }
 
-  .test-appearance-root[data-test-contrast="high"] .test-muted-copy {
-    color: hsl(var(--foreground) / 0.9);
+  .test-appearance-root[data-test-contrast="yellow-on-black"] .test-muted-copy {
+    color: oklch(0.9 0.1 100 / 0.95);
   }
 }
 

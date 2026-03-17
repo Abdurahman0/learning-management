@@ -1,16 +1,13 @@
 "use client";
 
-import { Check, Maximize, Minimize } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
-  SheetDescription,
-  SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
 import type {
@@ -27,8 +24,6 @@ type TestOptionsSheetProps = {
   appearance: TestAppearanceState;
   onContrastChange: (contrast: TestContrastMode) => void;
   onTextSizeChange: (size: TestTextSize) => void;
-  isFullscreen: boolean;
-  onToggleFullscreen: () => void;
 };
 
 export function TestOptionsSheet({
@@ -38,14 +33,14 @@ export function TestOptionsSheet({
   appearance,
   onContrastChange,
   onTextSizeChange,
-  isFullscreen,
-  onToggleFullscreen,
 }: TestOptionsSheetProps) {
   const t = useTranslations("testOptions");
+  const [view, setView] = useState<"root" | "contrast" | "textSize">("root");
 
   const contrastOptions: Array<{ value: TestContrastMode; label: string }> = [
-    { value: "default", label: t("contrastDefault") },
-    { value: "high", label: t("contrastHigh") },
+    { value: "black-on-white", label: t("contrastBlackOnWhite") },
+    { value: "white-on-black", label: t("contrastWhiteOnBlack") },
+    { value: "yellow-on-black", label: t("contrastYellowOnBlack") },
   ];
 
   const textSizeOptions: Array<{ value: TestTextSize; label: string }> = [
@@ -54,8 +49,26 @@ export function TestOptionsSheet({
     { value: "large", label: t("textSizeLarge") },
   ];
 
+  const panelTitle = useMemo(() => {
+    if (view === "contrast") {
+      return t("contrast");
+    }
+    if (view === "textSize") {
+      return t("textSize");
+    }
+    return t("title");
+  }, [t, view]);
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          setView("root");
+        }
+        onOpenChange(nextOpen);
+      }}
+    >
       <SheetContent
         side={isCompact ? "bottom" : "right"}
         className={cn(
@@ -63,23 +76,70 @@ export function TestOptionsSheet({
           isCompact ? "max-h-[88vh] rounded-t-2xl" : "sm:max-w-md",
         )}
       >
-        <SheetHeader className="border-b border-border/80 px-5 pb-4 pt-5">
-          <SheetTitle className="text-lg">{t("title")}</SheetTitle>
-          <SheetDescription className="text-sm">
-            {t("description")}
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="space-y-4 px-5 pb-5 pt-4">
-          <Card className="test-panel gap-3 rounded-2xl border-border/70 bg-card p-3 shadow-none">
-            <div>
-              <p className="text-sm font-semibold">{t("contrast")}</p>
-              <p className="test-muted-copy mt-0.5 text-xs text-muted-foreground">
-                {t("contrastHint")}
-              </p>
+        <SheetTitle className="sr-only">{panelTitle}</SheetTitle>
+        <div className="border-b border-border/80 px-4 py-3 sm:px-5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              {view !== "root" ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setView("root")}
+                  className="size-8 rounded-lg"
+                  aria-label={t("back")}
+                >
+                  <ArrowLeft className="size-4" />
+                </Button>
+              ) : null}
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold">{panelTitle}</p>
+                {view === "root" ? (
+                  <p className="test-muted-copy mt-0.5 text-xs text-muted-foreground">
+                    {t("description")}
+                  </p>
+                ) : null}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {contrastOptions.map((option) => {
+          </div>
+        </div>
+
+        <div className="space-y-3 px-4 pb-4 pt-3 sm:px-5 sm:pb-5 sm:pt-4">
+          {view === "root" ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="test-panel h-auto w-full justify-between rounded-xl border-border/70 bg-background p-3 text-left"
+                onClick={() => setView("contrast")}
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">{t("contrast")}</span>
+                  <span className="test-muted-copy mt-0.5 block truncate text-xs text-muted-foreground">
+                    {t("contrastHint")}
+                  </span>
+                </span>
+                <ChevronRight className="size-4 shrink-0" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="test-panel h-auto w-full justify-between rounded-xl border-border/70 bg-background p-3 text-left"
+                onClick={() => setView("textSize")}
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">{t("textSize")}</span>
+                  <span className="test-muted-copy mt-0.5 block truncate text-xs text-muted-foreground">
+                    {t("textSizeHint")}
+                  </span>
+                </span>
+                <ChevronRight className="size-4 shrink-0" />
+              </Button>
+            </>
+          ) : null}
+
+          {view === "contrast"
+            ? contrastOptions.map((option) => {
                 const active = appearance.contrast === option.value;
                 return (
                   <Button
@@ -88,7 +148,7 @@ export function TestOptionsSheet({
                     variant={active ? "default" : "outline"}
                     onClick={() => onContrastChange(option.value)}
                     className={cn(
-                      "h-9 justify-between rounded-xl px-3 text-sm",
+                      "h-10 w-full justify-between rounded-xl px-3 text-sm",
                       !active && "bg-background",
                     )}
                     aria-pressed={active}
@@ -97,19 +157,11 @@ export function TestOptionsSheet({
                     {active ? <Check className="size-4" /> : null}
                   </Button>
                 );
-              })}
-            </div>
-          </Card>
+              })
+            : null}
 
-          <Card className="test-panel gap-3 rounded-2xl border-border/70 bg-card p-3 shadow-none">
-            <div>
-              <p className="text-sm font-semibold">{t("textSize")}</p>
-              <p className="test-muted-copy mt-0.5 text-xs text-muted-foreground">
-                {t("textSizeHint")}
-              </p>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {textSizeOptions.map((option) => {
+          {view === "textSize"
+            ? textSizeOptions.map((option) => {
                 const active = appearance.textSize === option.value;
                 return (
                   <Button
@@ -118,47 +170,18 @@ export function TestOptionsSheet({
                     variant={active ? "default" : "outline"}
                     onClick={() => onTextSizeChange(option.value)}
                     className={cn(
-                      "h-9 rounded-xl px-3 text-sm",
+                      "h-10 w-full justify-between rounded-xl px-3 text-sm",
                       !active && "bg-background",
                     )}
                     aria-pressed={active}
                   >
-                    {option.label}
+                    <span>{option.label}</span>
+                    {active ? <Check className="size-4" /> : null}
                   </Button>
                 );
-              })}
-            </div>
-          </Card>
+              })
+            : null}
 
-          <Card className="test-panel gap-3 rounded-2xl border-border/70 bg-card p-3 shadow-none">
-            <div>
-              <p className="text-sm font-semibold">{t("fullscreen")}</p>
-              <p className="test-muted-copy mt-0.5 text-xs text-muted-foreground">
-                {t("fullscreenHint")}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onToggleFullscreen}
-              className="h-9 justify-start rounded-xl border-border/70 bg-background px-3 text-sm"
-            >
-              {isFullscreen ? (
-                <Minimize className="size-4" />
-              ) : (
-                <Maximize className="size-4" />
-              )}
-              {isFullscreen ? t("exitFullscreen") : t("enterFullscreen")}
-            </Button>
-          </Card>
-
-          <div className="flex justify-end">
-            <SheetClose asChild>
-              <Button type="button" variant="ghost" className="h-9 rounded-xl">
-                {t("close")}
-              </Button>
-            </SheetClose>
-          </div>
         </div>
       </SheetContent>
     </Sheet>
