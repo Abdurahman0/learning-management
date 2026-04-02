@@ -1,0 +1,819 @@
+{
+  "info": {
+    "name": "IELTS Master — Admin API",
+    "description": "Complete admin API collection for managing IELTS practice tests. Covers authentication, practice tests, listening parts, reading passages, question groups, and questions.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "test_id", "value": "", "type": "string" },
+    { "key": "listening_test_id", "value": "", "type": "string" },
+    { "key": "reading_test_id", "value": "", "type": "string" },
+    { "key": "user_id", "value": "", "type": "string" },
+    { "key": "part_id", "value": "", "type": "string" },
+    { "key": "passage_id", "value": "", "type": "string" },
+    { "key": "content_bank_passage_id", "value": "", "type": "string" },
+    { "key": "variant_set_id", "value": "", "type": "string" },
+    { "key": "group_id", "value": "", "type": "string" },
+    { "key": "question_id", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login (get tokens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.access) {",
+                  "  pm.collectionVariables.set('access_token', json.access);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"SecurePass123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/auth/login/", "host": ["{{base_url}}"], "path": ["api", "auth", "login", ""] }
+          }
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"<paste_refresh_token_here>\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/auth/token/refresh/", "host": ["{{base_url}}"], "path": ["api", "auth", "token", "refresh", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Practice Tests",
+      "item": [
+        {
+          "name": "List practice tests",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/practice-tests/?ordering=-created_at",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "practice-tests", ""],
+              "query": [
+                { "key": "ordering", "value": "-created_at" },
+                { "key": "test_type", "value": "LISTENING", "disabled": true },
+                { "key": "difficulty_level", "value": "INTERMEDIATE", "disabled": true },
+                { "key": "test_format", "value": "FULL_TEST", "disabled": true },
+                { "key": "is_active", "value": "true", "disabled": true },
+                { "key": "search", "value": "Cambridge", "disabled": true },
+                { "key": "page", "value": "1", "disabled": true },
+                { "key": "page_size", "value": "20", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create listening practice test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.collectionVariables.set('test_id', json.id);",
+                  "  pm.collectionVariables.set('listening_test_id', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cambridge IELTS 18 — Listening Test 1\",\n  \"description\": \"Full listening test with 4 parts and 40 questions.\",\n  \"test_type\": \"LISTENING\",\n  \"difficulty_level\": \"INTERMEDIATE\",\n  \"test_format\": \"FULL_TEST\",\n  \"total_questions\": 40,\n  \"time_limit_seconds\": 1800,\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", ""] }
+          }
+        },
+        {
+          "name": "Create reading practice test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.collectionVariables.set('test_id', json.id);",
+                  "  pm.collectionVariables.set('reading_test_id', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cambridge IELTS 18 — Reading Test 1\",\n  \"description\": \"Full reading test with 3 passages and 40 questions.\",\n  \"test_type\": \"READING\",\n  \"difficulty_level\": \"INTERMEDIATE\",\n  \"test_format\": \"FULL_TEST\",\n  \"total_questions\": 40,\n  \"time_limit_seconds\": 3600,\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", ""] }
+          }
+        },
+        {
+          "name": "Get practice test (full nested)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/{{test_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", "{{test_id}}", ""] }
+          }
+        },
+        {
+          "name": "Update practice test (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cambridge IELTS 18 — Listening Test 1 (Updated)\",\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/{{test_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", "{{test_id}}", ""] }
+          }
+        },
+        {
+          "name": "Soft delete practice test",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/{{test_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", "{{test_id}}", ""] }
+          }
+        },
+        {
+          "name": "Hard delete practice test",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/practice-tests/{{test_id}}/?hard=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "practice-tests", "{{test_id}}", ""],
+              "query": [{ "key": "hard", "value": "true" }]
+            }
+          }
+        },
+        {
+          "name": "Bulk import — full Listening test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.collectionVariables.set('test_id', json.id);",
+                  "  pm.collectionVariables.set('listening_test_id', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cambridge IELTS 18 — Listening Test 1\",\n  \"test_type\": \"LISTENING\",\n  \"difficulty_level\": \"INTERMEDIATE\",\n  \"test_format\": \"FULL_TEST\",\n  \"total_questions\": 40,\n  \"time_limit_seconds\": 1800,\n  \"is_active\": true,\n  \"listening_parts\": [\n    {\n      \"part_number\": \"PART_1\",\n      \"title\": \"Accommodation enquiry\",\n      \"max_questions\": 10,\n      \"time_limit_seconds\": 0,\n      \"question_groups\": [\n        {\n          \"question_type\": \"FORM_COMPLETION\",\n          \"instructions\": \"Complete the form below. Write NO MORE THAN ONE WORD AND/OR A NUMBER for each answer.\",\n          \"question_number_start\": 1,\n          \"question_number_end\": 6,\n          \"word_limit\": 1,\n          \"number_allowed\": true,\n          \"group_content_json\": {\n            \"template_text\": \"Name: {1}\\nPhone: {2}\\nAddress: {3}\\nEmail: {4}\\nBudget per week: £{5}\\nAvailable from: {6}\"\n          },\n          \"questions\": [\n            { \"question_number\": 1, \"question_text\": \"Name\", \"correct_answer_json\": { \"answer\": \"Sharma\", \"alternative_answers\": [\"sharma\"] } },\n            { \"question_number\": 2, \"question_text\": \"Phone\", \"correct_answer_json\": { \"answer\": \"07791 463 195\", \"alternative_answers\": [] } },\n            { \"question_number\": 3, \"question_text\": \"Address\", \"correct_answer_json\": { \"answer\": \"14 Radstock Way\", \"alternative_answers\": [] } },\n            { \"question_number\": 4, \"question_text\": \"Email\", \"correct_answer_json\": { \"answer\": \"sharma@cup.ac.uk\", \"alternative_answers\": [] } },\n            { \"question_number\": 5, \"question_text\": \"Budget per week\", \"correct_answer_json\": { \"answer\": \"90\", \"alternative_answers\": [\"ninety\"] } },\n            { \"question_number\": 6, \"question_text\": \"Available from\", \"correct_answer_json\": { \"answer\": \"4th September\", \"alternative_answers\": [\"4 September\", \"September 4th\"] } }\n          ]\n        },\n        {\n          \"question_type\": \"MCQ_SINGLE\",\n          \"instructions\": \"Choose the correct letter, A, B or C.\",\n          \"question_number_start\": 7,\n          \"question_number_end\": 10,\n          \"group_content_json\": null,\n          \"questions\": [\n            {\n              \"question_number\": 7,\n              \"question_text\": \"The student wants a room\",\n              \"options_json\": { \"options\": [ {\"key\": \"A\", \"text\": \"in a shared house.\"}, {\"key\": \"B\", \"text\": \"in a hall of residence.\"}, {\"key\": \"C\", \"text\": \"with a local family.\"} ] },\n              \"correct_answer_json\": { \"answer\": \"A\" }\n            },\n            {\n              \"question_number\": 8,\n              \"question_text\": \"How does the student prefer to travel to university?\",\n              \"options_json\": { \"options\": [ {\"key\": \"A\", \"text\": \"By bus\"}, {\"key\": \"B\", \"text\": \"By bicycle\"}, {\"key\": \"C\", \"text\": \"On foot\"} ] },\n              \"correct_answer_json\": { \"answer\": \"B\" }\n            },\n            {\n              \"question_number\": 9,\n              \"question_text\": \"The student needs a room by\",\n              \"options_json\": { \"options\": [ {\"key\": \"A\", \"text\": \"the beginning of August.\"}, {\"key\": \"B\", \"text\": \"the end of August.\"}, {\"key\": \"C\", \"text\": \"the first week of September.\"} ] },\n              \"correct_answer_json\": { \"answer\": \"C\" }\n            },\n            {\n              \"question_number\": 10,\n              \"question_text\": \"The student is interested in\",\n              \"options_json\": { \"options\": [ {\"key\": \"A\", \"text\": \"a double room.\"}, {\"key\": \"B\", \"text\": \"a single room.\"}, {\"key\": \"C\", \"text\": \"a studio flat.\"} ] },\n              \"correct_answer_json\": { \"answer\": \"B\" }\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/import/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", "import", ""] }
+          }
+        },
+        {
+          "name": "Bulk import — full Reading test",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cambridge IELTS 18 — Reading Test 1\",\n  \"test_type\": \"READING\",\n  \"difficulty_level\": \"ADVANCED\",\n  \"test_format\": \"FULL_TEST\",\n  \"total_questions\": 40,\n  \"time_limit_seconds\": 3600,\n  \"is_active\": true,\n  \"reading_passages\": [\n    {\n      \"passage_number\": \"PASSAGE_1\",\n      \"title\": \"The History of Solar Energy\",\n      \"passage_text\": \"Solar energy has been harnessed by humans since ancient times. The photovoltaic effect was first observed by Edmond Becquerel in 1839, when he discovered that certain materials produce small amounts of electric current when exposed to light. This discovery laid the foundation for modern solar panels...\",\n      \"max_questions\": 13,\n      \"question_groups\": [\n        {\n          \"question_type\": \"TFNG\",\n          \"instructions\": \"Do the following statements agree with the information given in the reading passage? Choose TRUE, FALSE or NOT GIVEN.\",\n          \"question_number_start\": 1,\n          \"question_number_end\": 5,\n          \"group_content_json\": null,\n          \"questions\": [\n            { \"question_number\": 1, \"options_json\": { \"statement\": \"Edmond Becquerel discovered the photovoltaic effect in the nineteenth century.\" }, \"correct_answer_json\": { \"answer\": \"TRUE\" }, \"explanation\": \"Paragraph 1 states 1839, which is the 19th century.\" },\n            { \"question_number\": 2, \"options_json\": { \"statement\": \"The first practical solar cell was invented before 1950.\" }, \"correct_answer_json\": { \"answer\": \"FALSE\" }, \"explanation\": \"The first practical cell was developed in 1954.\" },\n            { \"question_number\": 3, \"options_json\": { \"statement\": \"Solar panels are currently used in more than 100 countries.\" }, \"correct_answer_json\": { \"answer\": \"NOT_GIVEN\" } },\n            { \"question_number\": 4, \"options_json\": { \"statement\": \"The efficiency of commercial solar panels has improved significantly since 1954.\" }, \"correct_answer_json\": { \"answer\": \"TRUE\" } },\n            { \"question_number\": 5, \"options_json\": { \"statement\": \"Solar energy is now cheaper than coal in most regions.\" }, \"correct_answer_json\": { \"answer\": \"NOT_GIVEN\" } }\n          ]\n        },\n        {\n          \"question_type\": \"MATCHING_HEADINGS\",\n          \"instructions\": \"The reading passage has several sections A–F. Choose the correct heading for each section from the list of headings below.\",\n          \"question_number_start\": 6,\n          \"question_number_end\": 10,\n          \"group_content_json\": {\n            \"headings\": [\n              { \"key\": \"i\", \"text\": \"Early attempts at harnessing sunlight\" },\n              { \"key\": \"ii\", \"text\": \"The commercial breakthrough\" },\n              { \"key\": \"iii\", \"text\": \"Opposition from fossil fuel industries\" },\n              { \"key\": \"iv\", \"text\": \"Government incentives and policy\" },\n              { \"key\": \"v\", \"text\": \"Environmental advantages\" },\n              { \"key\": \"vi\", \"text\": \"Limitations of current technology\" },\n              { \"key\": \"vii\", \"text\": \"Future projections\" }\n            ]\n          },\n          \"questions\": [\n            { \"question_number\": 6, \"question_text\": \"Section A\", \"correct_answer_json\": { \"answer\": \"i\" } },\n            { \"question_number\": 7, \"question_text\": \"Section B\", \"correct_answer_json\": { \"answer\": \"ii\" } },\n            { \"question_number\": 8, \"question_text\": \"Section C\", \"correct_answer_json\": { \"answer\": \"v\" } },\n            { \"question_number\": 9, \"question_text\": \"Section D\", \"correct_answer_json\": { \"answer\": \"vi\" } },\n            { \"question_number\": 10, \"question_text\": \"Section E\", \"correct_answer_json\": { \"answer\": \"iv\" } }\n          ]\n        },\n        {\n          \"question_type\": \"SUMMARY_COMPLETION\",\n          \"instructions\": \"Complete the summary below. Choose NO MORE THAN TWO WORDS from the passage for each answer.\",\n          \"question_number_start\": 11,\n          \"question_number_end\": 13,\n          \"word_limit\": 2,\n          \"group_content_json\": {\n            \"summary_text\": \"The {11} effect, first observed in 1839, is the basis of solar technology. Modern solar panels convert {12} into electricity. The cost of solar power has fallen dramatically due to advances in {13}.\",\n            \"word_bank\": null\n          },\n          \"questions\": [\n            { \"question_number\": 11, \"correct_answer_json\": { \"answer\": \"photovoltaic\", \"alternative_answers\": [] } },\n            { \"question_number\": 12, \"correct_answer_json\": { \"answer\": \"sunlight\", \"alternative_answers\": [\"light\", \"solar energy\"] } },\n            { \"question_number\": 13, \"correct_answer_json\": { \"answer\": \"manufacturing\", \"alternative_answers\": [\"production\", \"technology\"] } }\n          ]\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/import/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", "import", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Listening Parts",
+      "item": [
+        {
+          "name": "List listening parts for a test",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/{{listening_test_id}}/listening-parts/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", "{{listening_test_id}}", "listening-parts", ""] }
+          }
+        },
+        {
+          "name": "Create listening part",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('part_id', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"part_number\": \"PART_1\",\n  \"title\": \"Accommodation enquiry\",\n  \"transcript_text\": \"Agent: Good morning, Campus Accommodations. How can I help you?\\nStudent: Hi, I'm looking for a room near the university...\",\n  \"max_questions\": 10,\n  \"time_limit_seconds\": 0,\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/{{listening_test_id}}/listening-parts/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", "{{listening_test_id}}", "listening-parts", ""] }
+          }
+        },
+        {
+          "name": "Create listening part with audio (multipart)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "part_number", "value": "PART_2", "type": "text" },
+                { "key": "title", "value": "City tour information", "type": "text" },
+                { "key": "max_questions", "value": "10", "type": "text" },
+                { "key": "time_limit_seconds", "value": "0", "type": "text" },
+                { "key": "is_active", "value": "true", "type": "text" },
+                { "key": "audio_file", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/{{listening_test_id}}/listening-parts/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", "{{listening_test_id}}", "listening-parts", ""] }
+          }
+        },
+        {
+          "name": "Get listening part (with groups)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/listening-parts/{{part_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "listening-parts", "{{part_id}}", ""] }
+          }
+        },
+        {
+          "name": "Update listening part (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated part title\",\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/listening-parts/{{part_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "listening-parts", "{{part_id}}", ""] }
+          }
+        },
+        {
+          "name": "Delete listening part",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/admin/listening-parts/{{part_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "listening-parts", "{{part_id}}", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reading Passages",
+      "item": [
+        {
+          "name": "List reading passages for a test",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/{{reading_test_id}}/reading-passages/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", "{{reading_test_id}}", "reading-passages", ""] }
+          }
+        },
+        {
+          "name": "Create reading passage",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('passage_id', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"passage_number\": \"PASSAGE_1\",\n  \"title\": \"The History of Solar Energy\",\n  \"passage_text\": \"Solar energy has been harnessed by humans since ancient times. The photovoltaic effect was first observed by Edmond Becquerel in 1839, when he discovered that certain materials produce small amounts of electric current when exposed to light...\",\n  \"max_questions\": 13,\n  \"time_limit_seconds\": 1200,\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/practice-tests/{{reading_test_id}}/reading-passages/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "practice-tests", "{{reading_test_id}}", "reading-passages", ""] }
+          }
+        },
+        {
+          "name": "Get reading passage (with groups)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/reading-passages/{{passage_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "reading-passages", "{{passage_id}}", ""] }
+          }
+        },
+        {
+          "name": "Update reading passage (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated passage title\",\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/reading-passages/{{passage_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "reading-passages", "{{passage_id}}", ""] }
+          }
+        },
+        {
+          "name": "Delete reading passage",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/admin/reading-passages/{{passage_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "reading-passages", "{{passage_id}}", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Question Groups",
+      "item": [
+        {
+          "name": "List question groups",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/question-groups/?listening_part={{part_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "question-groups", ""],
+              "query": [
+                { "key": "listening_part", "value": "{{part_id}}" },
+                { "key": "reading_passage", "value": "{{passage_id}}", "disabled": true },
+                { "key": "question_type", "value": "TFNG", "disabled": true },
+                { "key": "is_active", "value": "true", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create group — FORM_COMPLETION (Listening)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('group_id', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listening_part\": \"{{part_id}}\",\n  \"reading_passage\": null,\n  \"variant_set\": \"{{variant_set_id}}\",\n  \"question_type\": \"FORM_COMPLETION\",\n  \"group_order\": 1,\n  \"instructions\": \"Complete the form below. Write NO MORE THAN ONE WORD AND/OR A NUMBER for each answer.\",\n  \"question_number_start\": 1,\n  \"question_number_end\": 6,\n  \"word_limit\": 1,\n  \"number_allowed\": true,\n  \"group_content_json\": {\n    \"template_text\": \"Name: {1}\\nPhone: {2}\\nAddress: {3}\\nEmail: {4}\\nBudget: £{5}\\nAvailable from: {6}\"\n  },\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/question-groups/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "question-groups", ""] }
+          }
+        },
+        {
+          "name": "Create group — MCQ_SINGLE (Listening)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listening_part\": \"{{part_id}}\",\n  \"reading_passage\": null,\n  \"variant_set\": \"{{variant_set_id}}\",\n  \"question_type\": \"MCQ_SINGLE\",\n  \"group_order\": 2,\n  \"instructions\": \"Choose the correct letter, A, B or C.\",\n  \"question_number_start\": 7,\n  \"question_number_end\": 10,\n  \"word_limit\": null,\n  \"number_allowed\": false,\n  \"group_content_json\": null,\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/question-groups/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "question-groups", ""] }
+          }
+        },
+        {
+          "name": "Create group — TFNG (Reading)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listening_part\": null,\n  \"reading_passage\": \"{{passage_id}}\",\n  \"variant_set\": \"{{variant_set_id}}\",\n  \"question_type\": \"TFNG\",\n  \"group_order\": 1,\n  \"instructions\": \"Do the following statements agree with the information given in the reading passage? Choose TRUE, FALSE or NOT GIVEN.\",\n  \"question_number_start\": 1,\n  \"question_number_end\": 5,\n  \"word_limit\": null,\n  \"number_allowed\": false,\n  \"group_content_json\": null,\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/question-groups/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "question-groups", ""] }
+          }
+        },
+        {
+          "name": "Create group — MATCHING_HEADINGS (Reading)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listening_part\": null,\n  \"reading_passage\": \"{{passage_id}}\",\n  \"variant_set\": \"{{variant_set_id}}\",\n  \"question_type\": \"MATCHING_HEADINGS\",\n  \"group_order\": 2,\n  \"instructions\": \"Choose the correct heading for each section from the list of headings below.\",\n  \"question_number_start\": 6,\n  \"question_number_end\": 10,\n  \"word_limit\": null,\n  \"number_allowed\": false,\n  \"group_content_json\": {\n    \"headings\": [\n      { \"key\": \"i\", \"text\": \"Early attempts at harnessing sunlight\" },\n      { \"key\": \"ii\", \"text\": \"The commercial breakthrough\" },\n      { \"key\": \"iii\", \"text\": \"Opposition from fossil fuel industries\" },\n      { \"key\": \"iv\", \"text\": \"Government incentives and policy\" },\n      { \"key\": \"v\", \"text\": \"Environmental advantages\" },\n      { \"key\": \"vi\", \"text\": \"Limitations of current technology\" },\n      { \"key\": \"vii\", \"text\": \"Future projections\" }\n    ]\n  },\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/question-groups/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "question-groups", ""] }
+          }
+        },
+        {
+          "name": "Create group — SUMMARY_COMPLETION (Reading)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listening_part\": null,\n  \"reading_passage\": \"{{passage_id}}\",\n  \"variant_set\": \"{{variant_set_id}}\",\n  \"question_type\": \"SUMMARY_COMPLETION\",\n  \"group_order\": 3,\n  \"instructions\": \"Complete the summary below. Choose NO MORE THAN TWO WORDS from the passage for each answer.\",\n  \"question_number_start\": 11,\n  \"question_number_end\": 13,\n  \"word_limit\": 2,\n  \"number_allowed\": false,\n  \"group_content_json\": {\n    \"summary_text\": \"The {11} effect forms the basis of solar technology. Modern panels convert {12} into electricity. Costs have fallen due to improvements in {13}.\",\n    \"word_bank\": null\n  },\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/question-groups/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "question-groups", ""] }
+          }
+        },
+        {
+          "name": "Get question group (with questions)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/question-groups/{{group_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "question-groups", "{{group_id}}", ""] }
+          }
+        },
+        {
+          "name": "Update question group (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"instructions\": \"Updated instructions text.\",\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/question-groups/{{group_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "question-groups", "{{group_id}}", ""] }
+          }
+        },
+        {
+          "name": "Delete question group",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/admin/question-groups/{{group_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "question-groups", "{{group_id}}", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Questions",
+      "item": [
+        {
+          "name": "List questions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/questions/?question_group={{group_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "questions", ""],
+              "query": [
+                { "key": "question_group", "value": "{{group_id}}" },
+                { "key": "is_active", "value": "true", "disabled": true },
+                { "key": "question_number__gte", "value": "1", "disabled": true },
+                { "key": "question_number__lte", "value": "10", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create question — FORM_COMPLETION answer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) pm.collectionVariables.set('question_id', json.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_group\": \"{{group_id}}\",\n  \"question_number\": 1,\n  \"question_text\": \"Name\",\n  \"options_json\": null,\n  \"correct_answer_json\": {\n    \"answer\": \"Sharma\",\n    \"alternative_answers\": [\"sharma\", \"SHARMA\"]\n  },\n  \"explanation\": \"The caller spells out S-H-A-R-M-A clearly in the recording.\",\n  \"answer_evidence_json\": { \"timestamp\": \"0:32\" },\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/questions/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "questions", ""] }
+          }
+        },
+        {
+          "name": "Create question — MCQ_SINGLE answer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_group\": \"{{group_id}}\",\n  \"question_number\": 7,\n  \"question_text\": \"The student wants a room\",\n  \"options_json\": {\n    \"options\": [\n      { \"key\": \"A\", \"text\": \"in a shared house.\" },\n      { \"key\": \"B\", \"text\": \"in a hall of residence.\" },\n      { \"key\": \"C\", \"text\": \"with a local family.\" }\n    ]\n  },\n  \"correct_answer_json\": { \"answer\": \"A\" },\n  \"explanation\": \"The student explicitly says she prefers a shared house with other students.\",\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/questions/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "questions", ""] }
+          }
+        },
+        {
+          "name": "Create question — TFNG answer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_group\": \"{{group_id}}\",\n  \"question_number\": 1,\n  \"question_text\": null,\n  \"options_json\": {\n    \"statement\": \"Edmond Becquerel discovered the photovoltaic effect in the nineteenth century.\"\n  },\n  \"correct_answer_json\": { \"answer\": \"TRUE\" },\n  \"explanation\": \"Paragraph 1 states the discovery was made in 1839, which is the 19th century.\",\n  \"answer_evidence_json\": { \"paragraph\": 1, \"sentence\": 2 },\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/questions/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "questions", ""] }
+          }
+        },
+        {
+          "name": "Create question — MATCHING_HEADINGS answer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_group\": \"{{group_id}}\",\n  \"question_number\": 6,\n  \"question_text\": \"Section A\",\n  \"options_json\": null,\n  \"correct_answer_json\": { \"answer\": \"i\" },\n  \"explanation\": \"Section A discusses early attempts at capturing sunlight.\",\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/questions/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "questions", ""] }
+          }
+        },
+        {
+          "name": "Get question",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/questions/{{question_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "questions", "{{question_id}}", ""] }
+          }
+        },
+        {
+          "name": "Update question (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"explanation\": \"Updated explanation text.\",\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/questions/{{question_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "questions", "{{question_id}}", ""] }
+          }
+        },
+        {
+          "name": "Delete question",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/admin/questions/{{question_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "questions", "{{question_id}}", ""] }
+          }
+        },
+        {
+          "name": "Bulk create questions for a group",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questions\": [\n    {\n      \"question_number\": 1,\n      \"question_text\": \"Name\",\n      \"options_json\": null,\n      \"correct_answer_json\": { \"answer\": \"Sharma\", \"alternative_answers\": [\"sharma\"] },\n      \"explanation\": \"Caller spells S-H-A-R-M-A.\",\n      \"is_active\": true\n    },\n    {\n      \"question_number\": 2,\n      \"question_text\": \"Phone\",\n      \"options_json\": null,\n      \"correct_answer_json\": { \"answer\": \"07791 463 195\", \"alternative_answers\": [] },\n      \"is_active\": true\n    },\n    {\n      \"question_number\": 3,\n      \"question_text\": \"Address\",\n      \"options_json\": null,\n      \"correct_answer_json\": { \"answer\": \"14 Radstock Way\", \"alternative_answers\": [] },\n      \"is_active\": true\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/question-groups/{{group_id}}/questions/bulk/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "question-groups", "{{group_id}}", "questions", "bulk", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get admin dashboard",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/dashboard/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "dashboard", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List admin users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users/?role=STUDENT&ordering=-date_joined",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users", ""],
+              "query": [
+                { "key": "role", "value": "STUDENT" },
+                { "key": "ordering", "value": "-date_joined" },
+                { "key": "status", "value": "ACTIVE", "disabled": true },
+                { "key": "search", "value": "ali", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get admin user detail",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}", ""] }
+          }
+        },
+        {
+          "name": "Reset user password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_password\": \"BetterPass123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/reset-password/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}", "reset-password", ""] }
+          }
+        },
+        {
+          "name": "Send user message",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Progress Update\",\n  \"message\": \"Keep going with your Reading and Listening practice.\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/send-message/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}", "send-message", ""] }
+          }
+        },
+        {
+          "name": "Deactivate user",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}", ""] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get admin analytics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/analytics/?module=READING",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "analytics", ""],
+              "query": [
+                { "key": "module", "value": "READING" },
+                { "key": "date_from", "value": "2026-03-01", "disabled": true },
+                { "key": "date_to", "value": "2026-03-31", "disabled": true },
+                { "key": "difficulty", "value": "INTERMEDIATE", "disabled": true },
+                { "key": "source", "value": "CAMBRIDGE", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Content Bank",
+      "item": [
+        {
+          "name": "List content-bank passages",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/content-bank/passages/?module=READING",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "content-bank", "passages", ""],
+              "query": [
+                { "key": "module", "value": "READING" },
+                { "key": "difficulty", "value": "INTERMEDIATE", "disabled": true },
+                { "key": "source", "value": "CAMBRIDGE", "disabled": true },
+                { "key": "topic", "value": "Architecture", "disabled": true },
+                { "key": "status", "value": "ACTIVE", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create content-bank reading passage",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.collectionVariables.set('content_bank_passage_id', json.id);",
+                  "  pm.collectionVariables.set('passage_id', json.id);",
+                  "}",
+                  ""
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"module\": \"READING\",\n  \"title\": \"The Future of Solar Design\",\n  \"difficulty_level\": \"INTERMEDIATE\",\n  \"topic\": \"Architecture\",\n  \"source\": \"CAMBRIDGE\",\n  \"full_text\": \"Solar architecture combines passive design with modern materials and careful energy planning.\",\n  \"estimated_time_minutes\": 18,\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/content-bank/passages/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "content-bank", "passages", ""] }
+          }
+        },
+        {
+          "name": "Get content-bank passage detail",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/content-bank/passages/READING/{{content_bank_passage_id}}/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "content-bank", "passages", "READING", "{{content_bank_passage_id}}", ""] }
+          }
+        },
+        {
+          "name": "Create content-bank variant set",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.collectionVariables.set('variant_set_id', json.id);",
+                  "}",
+                  ""
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reading_passage\": \"{{content_bank_passage_id}}\",\n  \"name\": \"Variant Set A\",\n  \"status\": \"PUBLISHED\",\n  \"is_active\": true\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/content-bank/variant-sets/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "content-bank", "variant-sets", ""] }
+          }
+        },
+        {
+          "name": "List content-bank variant sets",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/content-bank/variant-sets/?module=READING",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "content-bank", "variant-sets", ""],
+              "query": [
+                { "key": "module", "value": "READING" },
+                { "key": "status", "value": "PUBLISHED", "disabled": true },
+                { "key": "search", "value": "Variant Set A", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Attach bank passage to reading test",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"practice_test\": \"{{reading_test_id}}\",\n  \"variant_set\": \"{{variant_set_id}}\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/content-bank/passages/READING/{{content_bank_passage_id}}/attach/", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "content-bank", "passages", "READING", "{{content_bank_passage_id}}", "attach", ""] }
+          }
+        }
+      ]
+    }
+  ]
+}

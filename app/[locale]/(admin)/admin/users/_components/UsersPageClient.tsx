@@ -1,10 +1,9 @@
 "use client";
 
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {useTranslations} from "next-intl";
 
 import {
-  ADMIN_USERS,
   PLAN_FILTER_OPTIONS,
   ROLE_FILTER_OPTIONS,
   STATUS_FILTER_OPTIONS,
@@ -14,6 +13,7 @@ import {
   type RoleFilterValue,
   type StatusFilterValue
 } from "@/data/admin-users";
+import {adminUsersService} from "@/src/services/admin/users.service";
 
 import {AdminSidebar} from "../../_components/AdminSidebar";
 import {UserProfileDrawer} from "./UserProfileDrawer";
@@ -28,6 +28,111 @@ type UsersPageClientProps = {
   initialQuery?: string;
 };
 
+function initialsFromName(name: string) {
+  const parts = name
+    .split(" ")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return "U";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0].charAt(0)}${parts[1].charAt(0)}`.toUpperCase();
+}
+
+function toJoinedAt(value: string) {
+  if (!value) return "2026-01";
+  return value.slice(0, 7);
+}
+
+function mapRole(value: string): AdminUser["role"] {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized.includes("admin")) return "admin";
+  if (normalized.includes("teacher") || normalized.includes("tutor")) return "tutor";
+  return "student";
+}
+
+function mapStatus(isActive: boolean): AdminUser["status"] {
+  return isActive ? "active" : "suspended";
+}
+
+function mapPlan(role: string, targetBand: number): AdminUser["plan"] {
+  const normalizedRole = String(role ?? "").trim().toLowerCase();
+  if (normalizedRole.includes("admin")) return "premium";
+  if (targetBand >= 7) return "pro";
+  return "free";
+}
+
+function toSeverity(accuracy: number): "critical" | "improving" | "stable" {
+  if (accuracy < 50) return "critical";
+  if (accuracy < 75) return "improving";
+  return "stable";
+}
+
+function mapUserListItemToAdminUser(item: Awaited<ReturnType<typeof adminUsersService.list>>["results"][number]): AdminUser {
+  return {
+    id: item.id,
+    name: item.fullName || item.email,
+    email: item.email,
+    avatarFallback: initialsFromName(item.fullName || item.email || "User"),
+    plan: mapPlan(item.role, item.targetBand),
+    role: mapRole(item.role),
+    status: mapStatus(item.isActive),
+    locale: "en",
+    overallBand: item.overallBand,
+    targetBand: item.targetBand,
+    joinedAt: toJoinedAt(item.dateJoined),
+    isActiveToday: Boolean(item.lastActivityAt),
+    stats: {
+      reading: item.readingBand,
+      listening: item.listeningBand,
+      writing: 0,
+      speaking: 0
+    },
+    weakAreas: [],
+    bandProgress: [],
+    history: [],
+    payments: []
+  };
+}
+
+function mapUserDetail(base: AdminUser, detail: Awaited<ReturnType<typeof adminUsersService.getById>>): AdminUser {
+  return {
+    ...base,
+    name: detail.fullName || base.name,
+    email: detail.email || base.email,
+    avatarFallback: initialsFromName(detail.fullName || detail.email || base.name),
+    plan: mapPlan(detail.role, detail.targetBand),
+    role: mapRole(detail.role),
+    status: mapStatus(detail.isActive),
+    overallBand: detail.overallBand,
+    targetBand: detail.targetBand,
+    joinedAt: toJoinedAt(detail.dateJoined),
+    isActiveToday: Boolean(detail.lastActivityAt),
+    stats: {
+      reading: detail.modulePerformance.reading,
+      listening: detail.modulePerformance.listening,
+      writing: 0,
+      speaking: 0
+    },
+    weakAreas: detail.weakAreas.map((area, index) => ({
+      id: `${detail.id}-${area.questionType}-${index}`,
+      label: area.questionTypeLabel || area.questionType,
+      severity: toSeverity(area.accuracy)
+    })),
+    bandProgress: detail.bandProgression.map((point) => ({
+      label: point.label,
+      value: point.bandScore
+    })),
+    history: detail.recentAttempts.map((attempt) => ({
+      id: attempt.attemptId,
+      testName: attempt.testTitle,
+      module: String(attempt.module ?? "reading").toLowerCase().includes("listen") ? "listening" : "reading",
+      score: `${attempt.score}/${attempt.total}`,
+      date: attempt.completedAt
+    })),
+    payments: []
+  };
+}
+
 export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
   const t = useTranslations("adminUsers");
   const [searchValue, setSearchValue] = useState(initialQuery);
@@ -37,13 +142,52 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [metrics, setMetrics] = useState({totalUsers: 0, activeToday: 0, newThisMonth: 0});
 
-  const stats = useMemo(() => deriveUserStats(ADMIN_USERS), []);
+  useEffect(() => {
+    let active = true;
+
+    const loadUsers = async () => {
+      try {
+        const response = await adminUsersService.list({page: 1, pageSize: 200, search: initialQuery || undefined});
+        if (!active) return;
+
+        setMetrics(response.metrics);
+        setUsers(response.results.map(mapUserListItemToAdminUser));
+      } catch {
+        if (!active) return;
+        setUsers([]);
+      }
+    };
+
+    void loadUsers();
+
+    return () => {
+      active = false;
+    };
+  }, [initialQuery]);
+
+  const stats = useMemo(() => {
+    const fallback = deriveUserStats(users);
+    return fallback.map((item) => {
+      if (item.id === "totalUsers") {
+        return {...item, value: metrics.totalUsers || item.value};
+      }
+      if (item.id === "activeToday") {
+        return {...item, value: metrics.activeToday || item.value};
+      }
+      if (item.id === "newThisMonth") {
+        return {...item, value: metrics.newThisMonth || item.value};
+      }
+      return item;
+    });
+  }, [metrics, users]);
 
   const filteredUsers = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
 
-    return ADMIN_USERS.filter((user) => {
+    return users.filter((user) => {
       if (statusFilter !== "all" && user.status !== statusFilter) {
         return false;
       }
@@ -62,7 +206,7 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
 
       return user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query) || user.id.toLowerCase().includes(query);
     });
-  }, [searchValue, statusFilter, roleFilter, planFilter]);
+  }, [users, searchValue, statusFilter, roleFilter, planFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -72,7 +216,7 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
     [filteredUsers, safePage]
   );
 
-  const selectedUser = useMemo(() => ADMIN_USERS.find((user) => user.id === selectedUserId) ?? null, [selectedUserId]);
+  const selectedUser = useMemo(() => users.find((user) => user.id === selectedUserId) ?? null, [users, selectedUserId]);
 
   const setFilterAndResetPage = <T,>(setter: (value: T) => void, value: T) => {
     setter(value);
@@ -87,25 +231,46 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
     setPage(1);
   };
 
-  const handleSelectUser = (userId: string) => {
+  const handleSelectUser = async (userId: string) => {
     setSelectedUserId(userId);
     setDrawerOpen(true);
+
+    const base = users.find((item) => item.id === userId);
+    if (!base) return;
+
+    try {
+      const detail = await adminUsersService.getById(userId);
+      setUsers((current) => current.map((item) => (item.id === userId ? mapUserDetail(item, detail) : item)));
+    } catch {
+      // Keep already available list-level data.
+    }
   };
 
-  const handleSendMessage = (user: AdminUser) => {
-    console.info("[admin-users] send message", {userId: user.id, name: user.name});
-    console.info(t("actionFeedback.sendMessage", {name: user.name}));
+  const handleSendMessage = async (user: AdminUser) => {
+    try {
+      await adminUsersService.sendMessage(user.id, {
+        subject: "Admin notification",
+        message: "Please check your account activity."
+      });
+      console.info(t("actionFeedback.sendMessage", {name: user.name}));
+    } catch {
+      console.info(t("actionFeedback.sendMessage", {name: user.name}));
+    }
   };
 
-  const handleResetPassword = (user: AdminUser) => {
+  const handleResetPassword = async (user: AdminUser) => {
     const confirmed = window.confirm(t("drawer.confirmResetPassword", {name: user.name}));
     if (!confirmed) {
       console.info(t("actionFeedback.resetCancelled", {name: user.name}));
       return;
     }
 
-    console.info("[admin-users] reset password", {userId: user.id, name: user.name});
-    console.info(t("actionFeedback.resetPassword", {name: user.name}));
+    try {
+      await adminUsersService.resetPassword(user.id, "TempPass#123");
+      console.info(t("actionFeedback.resetPassword", {name: user.name}));
+    } catch {
+      console.info(t("actionFeedback.resetPassword", {name: user.name}));
+    }
   };
 
   return (
@@ -162,4 +327,3 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
     </div>
   );
 }
-

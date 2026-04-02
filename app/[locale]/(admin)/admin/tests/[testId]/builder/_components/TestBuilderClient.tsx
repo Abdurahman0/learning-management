@@ -1,9 +1,9 @@
 "use client";
 
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {useTranslations} from "next-intl";
 
-import type {BuilderQuestion, QuestionGroup, QuestionType} from "@/data/admin-test-builder";
+import type {AdminBuilderTest, BuilderQuestion, BuilderStructureItem, QuestionGroup, QuestionType} from "@/data/admin-test-builder";
 import {
   createDefaultQuestion,
   createQuestionGroup,
@@ -15,12 +15,17 @@ import {
 import {
   generateQuestionGroupsFromVariant,
   getAllowedQuestionCount,
-  getCompatibleVariantsForSlot,
-  getContentBankData,
-  getPassageVariantSets,
   type ContentBankPassage,
   type ContentBankVariantSet
 } from "@/data/admin/selectors";
+import {AdminApiError} from "@/src/services/admin/types";
+import {adminContentBankService} from "@/src/services/admin/contentBank.service";
+import {listeningPartsService} from "@/src/services/admin/listeningParts.service";
+import {practiceTestsService} from "@/src/services/admin/practiceTests.service";
+import {questionGroupsService} from "@/src/services/admin/questionGroups.service";
+import {readingPassagesService} from "@/src/services/admin/readingPassages.service";
+import {variantSetsService} from "@/src/services/admin/variantSets.service";
+import type {ListeningPartRecord, PracticeTestDetailRecord, QuestionGroupRecord, QuestionRecord, ReadingPassageRecord} from "@/src/services/admin/types";
 
 import {AdminSidebar, AdminSidebarMobileNav} from "../../../../_components/AdminSidebar";
 import {BuilderTopbar} from "./BuilderTopbar";
@@ -132,6 +137,313 @@ function getBoundaryInsertNumber(group: QuestionGroup, range: SlotRange, occupie
   return null;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function toStringSafe(value: unknown, fallback = "") {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return fallback;
+}
+
+function toNumberSafe(value: unknown, fallback = 0) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function parseStructureIndex(label: string, fallback: number) {
+  const match = String(label ?? "").match(/\d+/);
+  const parsed = match ? Number(match[0]) : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function mapApiQuestionTypeToBuilder(value: string): QuestionType {
+  const normalized = String(value ?? "").trim().toUpperCase();
+
+  if (normalized === "TFNG") return "tfng";
+  if (normalized === "YNNG") return "yes_no_not_given";
+  if (normalized === "MCQ_SINGLE" || normalized === "MCQ_MULTIPLE") return "multiple_choice";
+  if (normalized === "MATCHING_HEADINGS") return "matching_headings";
+  if (normalized === "MATCH_PARA_INFO" || normalized === "MATCHING_INFORMATION") return "matching_information";
+  if (normalized === "CLASSIFICATION" || normalized === "MATCHING_FEATURES") return "matching_features";
+  if (normalized === "LIST_SELECTION" || normalized === "SELECTING_FROM_A_LIST") return "selecting_from_a_list";
+  if (normalized === "PLAN_MAP_DIAGRAM") return "map";
+  if (normalized === "SENTENCE_COMPLETION") return "sentence_completion";
+  if (normalized === "SUMMARY_COMPLETION") return "summary_completion";
+  if (normalized === "TABLE_COMPLETION") return "table_completion";
+  if (normalized === "FLOW_CHART_COMPLETION" || normalized === "FLOW_CHART") return "flow_chart";
+  if (normalized === "DIAGRAM_COMPLETION" || normalized === "DIAGRAM_LABELING") return "diagram_labeling";
+  if (normalized === "FORM_COMPLETION") return "form_completion";
+  if (normalized === "NOTE_COMPLETION") return "note_completion";
+  if (normalized === "SHORT_ANSWER") return "short_answer";
+  return "multiple_choice";
+}
+
+function toVariantStatus(value: unknown): ContentBankVariantSet["status"] {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "PUBLISHED") return "published";
+  if (normalized === "USED") return "used";
+  return "draft";
+}
+
+function buildVariantSummary(groups: Array<{type: QuestionType; count: number}>) {
+  return groups.map((group) => `${group.type} x${group.count}`).join(" • ");
+}
+
+function isVariantCompatibleWithSlot(variant: ContentBankVariantSet, module: "reading" | "listening", slotIndex: number) {
+  if (variant.module !== module) {
+    return false;
+  }
+  const total = variant.groups.reduce((sum, group) => sum + Math.max(0, Number(group.count) || 0), 0);
+  return total === getAllowedQuestionCount(module, slotIndex);
+}
+
+function extractOptions(raw: unknown): string[] {
+  const record = asRecord(raw);
+  const options = Array.isArray(record.options) ? record.options : [];
+  const mapped = options
+    .map((item) => {
+      if (typeof item === "string") return item;
+      const optionRecord = asRecord(item);
+      return toStringSafe(optionRecord.text ?? optionRecord.label ?? optionRecord.value);
+    })
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (mapped.length) {
+    return mapped.slice(0, 4);
+  }
+
+  const direct = toStringSafe(record.statement).trim();
+  return direct ? [direct] : [];
+}
+
+function extractAnswerValue(raw: unknown) {
+  const record = asRecord(raw);
+  const answer = record.answer;
+  const answers = Array.isArray(record.answers) ? record.answers : [];
+  const alternatives = Array.isArray(record.alternative_answers) ? record.alternative_answers : [];
+
+  return {
+    answer: toStringSafe(answer),
+    answers: answers.map((item) => toStringSafe(item)).filter(Boolean),
+    alternatives: alternatives.map((item) => toStringSafe(item)).filter(Boolean)
+  };
+}
+
+function mapApiQuestionToBuilderQuestion(
+  type: QuestionType,
+  question: QuestionRecord,
+  group: QuestionGroupRecord,
+  fallbackNumber: number
+): BuilderQuestion {
+  const questionNumber = toNumberSafe(question.question_number, fallbackNumber);
+  const basePrompt =
+    toStringSafe(question.prompt).trim()
+    || toStringSafe(question.question_text).trim()
+    || toStringSafe(asRecord(question.options_json).statement).trim();
+  const evidenceFromJson = toStringSafe(asRecord(question.answer_evidence_json).text_snippet).trim();
+  const evidence = toStringSafe(question.evidence_text).trim() || evidenceFromJson;
+  const answer = extractAnswerValue(question.correct_answer_json);
+
+  const builderQuestion = createDefaultQuestion(type, questionNumber);
+  builderQuestion.prompt = basePrompt;
+  builderQuestion.explanation = toStringSafe(question.explanation).trim();
+  builderQuestion.evidence = evidence;
+  builderQuestion.evidenceText = evidence;
+
+  if (builderQuestion.type === "tfng") {
+    const normalized = answer.answer.toUpperCase().replace(/_/g, " ");
+    builderQuestion.correctAnswer = normalized === "TRUE" || normalized === "FALSE" || normalized === "NOT GIVEN" ? normalized : "";
+    return builderQuestion;
+  }
+
+  if (builderQuestion.type === "yes_no_not_given") {
+    const normalized = answer.answer.toUpperCase().replace(/_/g, " ");
+    builderQuestion.correctAnswer = normalized === "YES" || normalized === "NO" || normalized === "NOT GIVEN" ? normalized : "";
+    return builderQuestion;
+  }
+
+  if (builderQuestion.type === "multiple_choice") {
+    const options = extractOptions(question.options_json);
+    if (options.length) {
+      builderQuestion.options = [...options, ...Array.from({length: Math.max(0, 4 - options.length)}, () => "")].slice(0, 4);
+    }
+    const normalizedAnswer = answer.answer.toUpperCase();
+    builderQuestion.correctAnswer = normalizedAnswer === "A" || normalizedAnswer === "B" || normalizedAnswer === "C" || normalizedAnswer === "D" ? normalizedAnswer : "";
+    return builderQuestion;
+  }
+
+  if (builderQuestion.type === "matching_headings") {
+    const groupContent = asRecord(group.group_content_json);
+    const headings = Array.isArray(groupContent.headings) ? groupContent.headings : [];
+    builderQuestion.headings = headings
+      .map((item) => {
+        if (typeof item === "string") return item;
+        return toStringSafe(asRecord(item).text ?? asRecord(item).label);
+      })
+      .map((item) => item.trim())
+      .filter(Boolean);
+    builderQuestion.correctAnswer = answer.answer;
+    return builderQuestion;
+  }
+
+  if (
+    builderQuestion.type === "matching_information"
+    || builderQuestion.type === "matching_features"
+    || builderQuestion.type === "selecting_from_a_list"
+    || builderQuestion.type === "map"
+  ) {
+    const prompt = basePrompt || `Item ${questionNumber}`;
+    builderQuestion.items = [prompt];
+    const groupContent = asRecord(group.group_content_json);
+    const optionRows = Array.isArray(groupContent.options)
+      ? groupContent.options
+      : Array.isArray(groupContent.labels)
+        ? groupContent.labels
+        : Array.isArray(groupContent.categories)
+          ? groupContent.categories
+          : [];
+    builderQuestion.choices = optionRows
+      .map((item) => {
+        if (typeof item === "string") return item;
+        const itemRecord = asRecord(item);
+        return toStringSafe(itemRecord.key ?? itemRecord.label ?? itemRecord.text);
+      })
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const initialChoice = answer.answer.trim();
+    builderQuestion.correctAnswer = {[prompt]: initialChoice};
+    return builderQuestion;
+  }
+
+  if (
+    builderQuestion.type === "sentence_completion"
+    || builderQuestion.type === "summary_completion"
+    || builderQuestion.type === "table_completion"
+    || builderQuestion.type === "flow_chart"
+    || builderQuestion.type === "diagram_labeling"
+    || builderQuestion.type === "form_completion"
+    || builderQuestion.type === "note_completion"
+    || builderQuestion.type === "short_answer"
+  ) {
+    const values = [answer.answer, ...answer.answers, ...answer.alternatives].filter(Boolean);
+    builderQuestion.correctAnswer = values.length > 1 ? values : values[0] ?? "";
+    builderQuestion.acceptableAnswers = answer.alternatives;
+    return builderQuestion;
+  }
+
+  return builderQuestion;
+}
+
+function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackIndex: number): QuestionGroup {
+  const from = toNumberSafe(group.question_number_start, fallbackIndex);
+  const to = toNumberSafe(group.question_number_end, from);
+  const type = mapApiQuestionTypeToBuilder(toStringSafe(group.question_type));
+  const sourceQuestions = Array.isArray(group.questions) ? group.questions : [];
+
+  const questions = sourceQuestions.length
+    ? sourceQuestions.map((question, index) => mapApiQuestionToBuilderQuestion(type, question, group, from + index))
+    : Array.from({length: Math.max(0, to - from + 1)}, (_, index) => createDefaultQuestion(type, from + index));
+
+  return normalizeGroup({
+    id: toStringSafe(group.id, `${type}-${from}-${to}`),
+    title: buildGroupTitle(from, to),
+    type,
+    from,
+    to,
+    questions,
+    variantSetId: toStringSafe(group.variant_set ?? "")
+  });
+}
+
+function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDetailRecord): AdminBuilderTest {
+  const module: "reading" | "listening" = String(detail.test_type ?? "").toUpperCase().includes("LISTENING") ? "listening" : "reading";
+
+  const structures: BuilderStructureItem[] = [];
+  const questionGroupsByStructure: Record<string, QuestionGroup[]> = {};
+
+  let cursor = 1;
+
+  if (module === "reading") {
+    const passages = [...(detail.reading_passages ?? [])].sort(
+      (left, right) => parseStructureIndex(String(left.passage_number ?? ""), 0) - parseStructureIndex(String(right.passage_number ?? ""), 0)
+    );
+
+    passages.forEach((passage, index) => {
+      const count = Math.max(1, toNumberSafe(passage.max_questions, 13));
+      const from = cursor;
+      const to = cursor + count - 1;
+      cursor = to + 1;
+
+      const structureId = toStringSafe(passage.id, `passage-${index + 1}`);
+      structures.push({
+        id: structureId,
+        index: index + 1,
+        kind: "passage",
+        title: toStringSafe(passage.title, `Passage ${index + 1}`),
+        questionRangeLabel: `Q${from}-${to}`,
+        content: [toStringSafe(passage.passage_text).trim() || " "],
+        linkedPassageId: undefined,
+        linkedVariantSetId: undefined
+      });
+
+      const groups = Array.isArray(passage.question_groups)
+        ? passage.question_groups.map((group, groupIndex) => mapApiQuestionGroupToBuilderGroup(group, from + groupIndex))
+        : [];
+      questionGroupsByStructure[structureId] = groups;
+    });
+  } else {
+    const parts = [...(detail.listening_parts ?? [])].sort(
+      (left, right) => parseStructureIndex(String(left.part_number ?? ""), 0) - parseStructureIndex(String(right.part_number ?? ""), 0)
+    );
+
+    parts.forEach((part, index) => {
+      const count = Math.max(1, toNumberSafe(part.max_questions, 10));
+      const from = cursor;
+      const to = cursor + count - 1;
+      cursor = to + 1;
+
+      const structureId = toStringSafe(part.id, `part-${index + 1}`);
+      structures.push({
+        id: structureId,
+        index: index + 1,
+        kind: "section",
+        title: toStringSafe(part.title, `Section ${index + 1}`),
+        questionRangeLabel: `Q${from}-${to}`,
+        content: [toStringSafe(part.transcript_text).trim() || " "],
+        audioLabel: toStringSafe(part.audio_url ?? part.audio_file ?? ""),
+        linkedPassageId: undefined,
+        linkedVariantSetId: undefined
+      });
+
+      const groups = Array.isArray(part.question_groups)
+        ? part.question_groups.map((group, groupIndex) => mapApiQuestionGroupToBuilderGroup(group, from + groupIndex))
+        : [];
+      questionGroupsByStructure[structureId] = groups;
+    });
+  }
+
+  if (!structures.length) {
+    return getInitialBuilderTest(testId);
+  }
+
+  return {
+    id: toStringSafe(detail.id, testId),
+    name: toStringSafe(detail.title, "Practice Test"),
+    book: toStringSafe(detail.title, "Practice Test"),
+    module,
+    status: detail.is_active ? "published" : "draft",
+    structures,
+    questionGroupsByStructure
+  };
+}
+
 export function TestBuilderClient({testId, initialStructureId, initialMode}: TestBuilderClientProps) {
   const t = useTranslations("adminTestBuilder");
   const [test, setTest] = useState(() => getInitialBuilderTest(testId));
@@ -146,7 +458,157 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   const [selectedQuestion, setSelectedQuestion] = useState<SelectedQuestionRef | null>(null);
   const [questionEditorOpen, setQuestionEditorOpen] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
-  const [contentBankData] = useState(() => getContentBankData());
+  const [contentBankPassages, setContentBankPassages] = useState<ContentBankPassage[]>([]);
+  const [contentBankVariants, setContentBankVariants] = useState<ContentBankVariantSet[]>([]);
+  const [isPersisting, setIsPersisting] = useState(false);
+  const [apiNotice, setApiNotice] = useState<string | null>(null);
+  const [isBackendLoaded, setIsBackendLoaded] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadTest = async () => {
+      try {
+        const response = await practiceTestsService.getById(testId);
+        if (!active) return;
+
+        const mapped = mapPracticeTestDetailToBuilder(testId, response);
+        setTest(mapped);
+        setActiveStructureId(() => {
+          if (initialStructureId && mapped.structures.some((item) => item.id === initialStructureId)) {
+            return initialStructureId;
+          }
+          return mapped.structures[0]?.id ?? "";
+        });
+
+        try {
+          const [passageRows, variantRows] = await Promise.all([
+            adminContentBankService.listPassages(),
+            variantSetsService.listAll({
+              module: mapped.module === "listening" ? "LISTENING" : "READING",
+              is_active: true,
+              ordering: "-created_at"
+            })
+          ]);
+          if (!active) return;
+
+          const passages: ContentBankPassage[] = passageRows
+            .filter((row) => row.module === mapped.module)
+            .map((row) => ({
+              id: row.id,
+              title: row.title,
+              module: row.module,
+              wordCount: row.wordCount,
+              durationMinutes: row.durationMinutes,
+              difficulty: row.difficulty,
+              topic: row.topic,
+              source: row.source,
+              previewText: row.previewText,
+              fullText: row.fullText,
+              estimatedTimeLabel: row.estimatedTimeLabel,
+              createdAt: row.createdAt,
+              linkedStructureIds: [...(row.linkedStructureIds ?? [])],
+              linkedTestIds: [...(row.linkedTestIds ?? [])],
+              usedInTestIds: [...(row.usedInTestIds ?? [])],
+              variantIds: [...(row.variantIds ?? [])],
+              variantCount: row.variantCount ?? 0,
+              usageAttempts: row.usageAttempts ?? 0,
+              difficultyAccuracy: row.difficultyAccuracy,
+              averageBandScore: row.averageBandScore
+            }));
+
+          const passagesById = new Map(passages.map((row) => [row.id, row]));
+
+          const variantsResolved = await Promise.all(
+            variantRows.map(async (row) => {
+              const variantId = toStringSafe(row.id);
+              const ownerId = toStringSafe(row.reading_passage ?? row.listening_part);
+              if (!variantId || !ownerId) {
+                return null;
+              }
+
+              const passage = passagesById.get(ownerId);
+              if (!passage) {
+                return null;
+              }
+
+              let groupRows: QuestionGroupRecord[] = [];
+              try {
+                const listed = await questionGroupsService.list({
+                  variant_set: row.id,
+                  page: 1,
+                  pageSize: 200,
+                  ordering: "group_order"
+                });
+                groupRows = listed.results;
+              } catch {
+                groupRows = [];
+              }
+
+              const groups = groupRows.map((group, index) => ({
+                id: `${variantId}-group-${index + 1}`,
+                type: mapApiQuestionTypeToBuilder(toStringSafe(group.question_type)),
+                count: Math.max(1, toNumberSafe(group.question_number_end) - toNumberSafe(group.question_number_start) + 1)
+              }));
+
+              const questionTypeKeys = [...new Set(groups.map((group) => group.type))];
+              const usedInTestIds = Array.isArray(row.used_in_tests)
+                ? row.used_in_tests.map((item) => toStringSafe(item)).filter(Boolean)
+                : [];
+
+              return {
+                id: variantId,
+                passageId: ownerId,
+                passageTitle: passage.title,
+                module: passage.module,
+                name: toStringSafe(row.name, "Variant Set A"),
+                status: toVariantStatus(row.status),
+                maxQuestionTypes: 6,
+                groups,
+                questionTypesSummary: groups.length ? buildVariantSummary(groups) : "",
+                questionTypeKeys,
+                questionSignature: groups.map((group) => `${group.type}:${group.count}`).join("|"),
+                usedInTestIds,
+                usedInTests: [],
+                createdAt: toStringSafe(row.created_at, new Date().toISOString())
+              } satisfies ContentBankVariantSet;
+            })
+          );
+          if (!active) return;
+
+          const normalizedVariants: ContentBankVariantSet[] = [];
+          for (const row of variantsResolved) {
+            if (row) {
+              normalizedVariants.push(row);
+            }
+          }
+
+          setContentBankPassages(passages);
+          setContentBankVariants(normalizedVariants);
+        } catch {
+          if (!active) return;
+          setContentBankPassages([]);
+          setContentBankVariants([]);
+        }
+
+        setApiNotice(null);
+        setIsBackendLoaded(true);
+      } catch (error) {
+        if (!active) return;
+        const message = error instanceof AdminApiError ? error.message : t("validation.genericError");
+        setApiNotice(message);
+        setIsBackendLoaded(false);
+        setContentBankPassages([]);
+        setContentBankVariants([]);
+      }
+    };
+
+    void loadTest();
+
+    return () => {
+      active = false;
+    };
+  }, [initialStructureId, t, testId]);
 
   const activeStructure = useMemo(() => {
     return test.structures.find((item) => item.id === activeStructureId) ?? test.structures[0];
@@ -180,7 +642,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         .filter((passageId): passageId is string => Boolean(passageId))
     );
 
-    return contentBankData.passages
+    return contentBankPassages
       .filter((passage) => passage.module === test.module)
       .filter((passage) => {
         if (passage.id === activeStructure.linkedPassageId) {
@@ -188,17 +650,23 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         }
         return !assignedInOtherSlots.has(passage.id);
       });
-  }, [activeStructure, contentBankData.passages, test.module, test.structures]);
+  }, [activeStructure, contentBankPassages, test.module, test.structures]);
 
   const passageVariantSets = useMemo<ContentBankVariantSet[]>(() => {
     if (!activeStructure?.linkedPassageId) return [];
-    return getPassageVariantSets(activeStructure.linkedPassageId).filter((variant) => variant.module === test.module);
-  }, [activeStructure, test.module]);
+    return contentBankVariants.filter(
+      (variant) => variant.passageId === activeStructure.linkedPassageId && variant.module === test.module
+    );
+  }, [activeStructure, contentBankVariants, test.module]);
 
   const availableVariantSets = useMemo<ContentBankVariantSet[]>(() => {
     if (!activeStructure?.linkedPassageId) return [];
-    return getCompatibleVariantsForSlot(activeStructure.linkedPassageId, test.module, activeStructure.index);
-  }, [activeStructure, test.module]);
+    return contentBankVariants.filter(
+      (variant) =>
+        variant.passageId === activeStructure.linkedPassageId
+        && isVariantCompatibleWithSlot(variant, test.module, activeStructure.index)
+    );
+  }, [activeStructure, contentBankVariants, test.module]);
 
   const selectedVariantSet = useMemo(() => {
     if (!activeStructure?.linkedVariantSetId) return null;
@@ -648,9 +1116,57 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     setQuestionEditorOpen(false);
   };
 
+  const syncTestToBackend = async (nextStatus: "draft" | "published") => {
+    if (isPersisting || !isBackendLoaded) {
+      setTest((current) => ({...current, status: nextStatus}));
+      return;
+    }
+
+    setIsPersisting(true);
+    setApiNotice(null);
+
+    try {
+      await practiceTestsService.patch(test.id, {
+        is_active: nextStatus === "published"
+      });
+
+      for (const structure of test.structures) {
+        const range = getStructureRange(structure);
+        const maxQuestions = Math.max(1, range.to - range.from + 1);
+        const fullText = structure.content.join("\n\n").trim();
+
+        if (test.module === "reading") {
+          await readingPassagesService.patch(structure.id, {
+            passage_number: `PASSAGE_${structure.index}`,
+            title: structure.title,
+            passage_text: fullText || " ",
+            max_questions: maxQuestions,
+            is_active: true
+          });
+          continue;
+        }
+
+        await listeningPartsService.patch(structure.id, {
+          part_number: `PART_${structure.index}`,
+          title: structure.title,
+          transcript_text: fullText || " ",
+          max_questions: maxQuestions,
+          is_active: true
+        });
+      }
+
+      setTest((current) => ({...current, status: nextStatus}));
+      setApiNotice("Saved.");
+    } catch (error) {
+      const message = error instanceof AdminApiError ? error.message : "Failed to save changes.";
+      setApiNotice(message);
+    } finally {
+      setIsPersisting(false);
+    }
+  };
+
   const handleSaveDraft = () => {
-    setTest((current) => ({...current, status: "draft"}));
-    console.info("[builder] saved as draft", test.id);
+    void syncTestToBackend("draft");
   };
 
   const handlePublish = () => {
@@ -674,8 +1190,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       return;
     }
 
-    setTest((current) => ({...current, status: "published"}));
-    console.info("[builder] published", test.id);
+    void syncTestToBackend("published");
   };
 
   const openQuestionEditor = (groupId: string, questionId: string) => {
@@ -707,6 +1222,11 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           />
 
           <main className="mx-auto min-w-0 w-full max-w-[1760px] overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
+            {apiNotice ? (
+              <div className="mb-4 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
+                {apiNotice}
+              </div>
+            ) : null}
             <section className="grid min-w-0 gap-4 xl:grid-cols-[280px_minmax(0,1fr)_460px]">
               <TestStructurePanel
                 module={test.module}

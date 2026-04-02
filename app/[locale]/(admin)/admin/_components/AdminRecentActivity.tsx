@@ -22,7 +22,11 @@ const statusClass: Record<ActivityStatus, string> = {
   pendingReview: "border-amber-500/30 bg-amber-500/15 text-amber-300"
 };
 
-export function AdminRecentActivity() {
+type AdminRecentActivityProps = {
+  activity?: typeof recentActivity;
+};
+
+export function AdminRecentActivity({activity = recentActivity}: AdminRecentActivityProps) {
   const t = useTranslations("adminDashboard");
 
   return (
@@ -46,7 +50,7 @@ export function AdminRecentActivity() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recentActivity.map((item) => (
+              {activity.map((item) => (
                 <TableRow key={item.id} className="h-[68px]">
                   <TableCell className="py-3.5">
                     <div className="flex items-center gap-2.5">

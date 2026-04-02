@@ -118,10 +118,17 @@ function AdminChartTooltip({month, label, value, dotColor, style}: AdminChartToo
   );
 }
 
-export function AdminCharts() {
+type AdminChartsProps = {
+  growthPoints?: typeof growthStats;
+  completionPoints?: typeof testCompletionStats;
+};
+
+export function AdminCharts({growthPoints, completionPoints}: AdminChartsProps) {
   const t = useTranslations("adminDashboard");
-  const [activeGrowthIndex, setActiveGrowthIndex] = useState<number | null>(growthStats.length - 1);
-  const [activeAcademicIndex, setActiveAcademicIndex] = useState<number | null>(testCompletionStats.length - 1);
+  const growthSeries = growthPoints?.length ? growthPoints : growthStats;
+  const completionSeries = completionPoints?.length ? completionPoints : testCompletionStats;
+  const [activeGrowthIndex, setActiveGrowthIndex] = useState<number | null>(growthSeries.length ? growthSeries.length - 1 : null);
+  const [activeAcademicIndex, setActiveAcademicIndex] = useState<number | null>(completionSeries.length ? completionSeries.length - 1 : null);
 
   const palette = {
     lineStroke: "var(--chart-line-stroke)",
@@ -145,29 +152,38 @@ export function AdminCharts() {
     const plotHeight = height - top - bottom;
     const baseline = top + plotHeight;
 
-    const values = growthStats.map((point) => point.users);
-    const minRaw = Math.min(...values);
-    const maxRaw = Math.max(...values);
+    const values = growthSeries.map((point) => point.users);
+    const minRaw = values.length ? Math.min(...values) : 0;
+    const maxRaw = values.length ? Math.max(...values) : 0;
     const range = Math.max(1, maxRaw - minRaw);
     const min = Math.max(0, minRaw - range * 0.2);
     const max = maxRaw + range * 0.16;
 
     const mapX = (index: number) => {
-      if (growthStats.length <= 1) {
+      if (growthSeries.length <= 1) {
         return left;
       }
 
-      return left + (index * plotWidth) / (growthStats.length - 1);
+      return left + (index * plotWidth) / (growthSeries.length - 1);
     };
 
-    const mapY = (value: number) => top + ((max - value) / (max - min)) * plotHeight;
-    const points = growthStats.map((item, index) => ({x: mapX(index), y: mapY(item.users)}));
+    const mapY = (value: number) => {
+      const denominator = max - min;
+      if (!Number.isFinite(denominator) || denominator <= 0) {
+        return top + plotHeight;
+      }
+      return top + ((max - value) / denominator) * plotHeight;
+    };
+    const points = growthSeries.map((item, index) => ({x: mapX(index), y: mapY(item.users)}));
     const linePath = createSmoothLine(points);
-    const areaPath = `${linePath} L ${points[points.length - 1].x} ${baseline} L ${points[0].x} ${baseline} Z`;
+    const areaPath =
+      points.length > 0
+        ? `${linePath} L ${points[points.length - 1].x} ${baseline} L ${points[0].x} ${baseline} Z`
+        : "";
     const yTicks = [0, 1, 2, 3].map((step) => min + ((max - min) * step) / 3).reverse();
 
-    return {width, height, left, right, top, plotWidth, plotHeight, baseline, points, yTicks, linePath, areaPath};
-  }, []);
+    return {width, height, left, right, top, plotWidth, plotHeight, baseline, points, yTicks, linePath, areaPath, mapY};
+  }, [growthSeries]);
 
   const academicChart = useMemo(() => {
     const width = 650;
@@ -179,21 +195,21 @@ export function AdminCharts() {
     const plotWidth = width - left - right;
     const plotHeight = height - top - bottom;
     const baseline = top + plotHeight;
-    const maxValue = Math.max(...testCompletionStats.map((item) => item.academic));
-    const paddedMax = maxValue * 1.08;
+    const maxValue = completionSeries.length ? Math.max(...completionSeries.map((item) => item.academic)) : 0;
+    const paddedMax = Math.max(1, maxValue * 1.08);
 
-    const groupWidth = plotWidth / testCompletionStats.length;
+    const groupWidth = completionSeries.length > 0 ? plotWidth / completionSeries.length : plotWidth;
     const barWidth = Math.min(30, groupWidth * 0.42);
     const mapY = (value: number) => top + (1 - value / paddedMax) * plotHeight;
     const yTicks = [0.25, 0.5, 0.75, 1].map((step) => paddedMax * step);
 
     return {width, height, left, right, top, plotHeight, baseline, groupWidth, barWidth, mapY, yTicks};
-  }, []);
+  }, [completionSeries]);
 
   const activeGrowthPoint = activeGrowthIndex === null ? null : lineChart.points[activeGrowthIndex];
-  const activeGrowthData = activeGrowthIndex === null ? null : growthStats[activeGrowthIndex];
+  const activeGrowthData = activeGrowthIndex === null ? null : growthSeries[activeGrowthIndex];
 
-  const activeAcademicData = activeAcademicIndex === null ? null : testCompletionStats[activeAcademicIndex];
+  const activeAcademicData = activeAcademicIndex === null ? null : completionSeries[activeAcademicIndex];
   const activeAcademicCenter =
     activeAcademicIndex === null ? null : academicChart.left + activeAcademicIndex * academicChart.groupWidth + academicChart.groupWidth / 2;
 
@@ -223,10 +239,13 @@ export function AdminCharts() {
                 </linearGradient>
               </defs>
 
-              {lineChart.yTicks.map((tick) => {
-                const y = lineChart.top + ((lineChart.yTicks[0] - tick) / (lineChart.yTicks[0] - lineChart.yTicks[lineChart.yTicks.length - 1])) * lineChart.plotHeight;
+              {lineChart.yTicks.map((tick, index) => {
+                const y = lineChart.mapY(tick);
+                if (!Number.isFinite(y)) {
+                  return null;
+                }
                 return (
-                  <g key={`line-grid-${tick}`}>
+                  <g key={`line-grid-${tick}-${index}`}>
                     <line x1={lineChart.left} y1={y} x2={lineChart.width - lineChart.right} y2={y} stroke={palette.grid} strokeDasharray="4 5" />
                     <text x={4} y={y + 3} fontSize={10} fill={palette.axis}>
                       {formatCompact(Math.round(tick))}
@@ -245,18 +264,18 @@ export function AdminCharts() {
               {lineChart.points.map((point, index) => {
                 const active = activeGrowthIndex === index;
                 return (
-                  <g key={`line-point-${growthStats[index].month}`} onMouseEnter={() => setActiveGrowthIndex(index)} className="cursor-pointer">
+                  <g key={`line-point-${growthSeries[index]?.month ?? index}-${index}`} onMouseEnter={() => setActiveGrowthIndex(index)} className="cursor-pointer">
                     <rect
-                      x={point.x - lineChart.plotWidth / (growthStats.length * 1.2)}
+                      x={point.x - lineChart.plotWidth / (Math.max(1, growthSeries.length) * 1.2)}
                       y={lineChart.top}
-                      width={lineChart.plotWidth / growthStats.length}
+                      width={lineChart.plotWidth / Math.max(1, growthSeries.length)}
                       height={lineChart.plotHeight + 12}
                       fill="transparent"
                     />
                     {active ? <circle cx={point.x} cy={point.y} r="11" fill={palette.activeDot} opacity="0.22" /> : null}
                     <circle cx={point.x} cy={point.y} r={active ? 5.8 : 3.6} fill={active ? palette.activeDot : palette.lineStroke} className="transition-all duration-200" />
                     <text x={point.x} y={lineChart.baseline + 23} fontSize={11} fill={active ? palette.activeDot : palette.axis} textAnchor="middle">
-                      {t(`charts.months.${growthStats[index].month as AdminMonthKey}`)}
+                      {t(`charts.months.${growthSeries[index].month as AdminMonthKey}`)}
                     </text>
                   </g>
                 );
@@ -298,10 +317,13 @@ export function AdminCharts() {
               className="h-auto w-full"
               onMouseLeave={() => setActiveAcademicIndex(null)}
             >
-              {academicChart.yTicks.map((tick) => {
+              {academicChart.yTicks.map((tick, index) => {
                 const y = academicChart.mapY(tick);
+                if (!Number.isFinite(y)) {
+                  return null;
+                }
                 return (
-                  <g key={`bar-grid-${tick}`}>
+                  <g key={`bar-grid-${tick}-${index}`}>
                     <line x1={academicChart.left} y1={y} x2={academicChart.width - academicChart.right} y2={y} stroke={palette.grid} strokeDasharray="4 5" />
                     <text x={4} y={y + 3} fontSize={10} fill={palette.axis}>
                       {formatCompact(Math.round(tick))}
@@ -310,7 +332,7 @@ export function AdminCharts() {
                 );
               })}
 
-              {testCompletionStats.map((item, index) => {
+              {completionSeries.map((item, index) => {
                 const groupStart = academicChart.left + index * academicChart.groupWidth;
                 const centerX = groupStart + academicChart.groupWidth / 2;
                 const topY = academicChart.mapY(item.academic);
@@ -320,7 +342,7 @@ export function AdminCharts() {
                 const fillColor = active ? palette.barHover : palette.bar;
 
                 return (
-                  <g key={`bar-${item.month}`} onMouseEnter={() => setActiveAcademicIndex(index)} className="cursor-pointer">
+                  <g key={`bar-${item.month}-${index}`} onMouseEnter={() => setActiveAcademicIndex(index)} className="cursor-pointer">
                     <path
                       d={createTopRoundedBarPath(barX, topY, academicChart.barWidth, barHeight, 8)}
                       fill={fillColor}

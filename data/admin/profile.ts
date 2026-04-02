@@ -27,10 +27,10 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {key: "contentBank", segment: "content-bank"},
   {key: "users", segment: "users"},
   {key: "analytics", segment: "analytics"},
-  {key: "mistakesAnalysis", segment: "mistakes-analysis"},
-  {key: "subscriptions", segment: "subscriptions"},
-  {key: "achievements", segment: "achievements"},
-  {key: "reports", segment: "reports"},
+  // {key: "mistakesAnalysis", segment: "mistakes-analysis"},
+  // {key: "subscriptions", segment: "subscriptions"},
+  // {key: "achievements", segment: "achievements"},
+  // {key: "reports", segment: "reports"},
   {key: "settings", segment: "settings"}
 ];
 

@@ -114,6 +114,10 @@ export function PassagesTable({
                             {test.name}
                           </Badge>
                         ))
+                      ) : passage.usedInTestIds.length ? (
+                        <Badge variant="outline" className="border-border/80 bg-background/45 text-[11px]">
+                          {t("labels.usedInCount", {count: passage.usedInTestIds.length})}
+                        </Badge>
                       ) : (
                         <span className="text-xs text-muted-foreground">{t("labels.notUsed")}</span>
                       )}

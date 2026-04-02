@@ -7,7 +7,11 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {platformInsights} from "@/data/admin-dashboard";
 
-export function AdminInsights() {
+type AdminInsightsProps = {
+  insights?: typeof platformInsights;
+};
+
+export function AdminInsights({insights = platformInsights}: AdminInsightsProps) {
   const t = useTranslations("adminDashboard");
 
   return (
@@ -21,8 +25,8 @@ export function AdminInsights() {
           </span>
           <div className="min-w-0 space-y-1">
             <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">{t("insights.mostDifficult.label")}</p>
-            <p className="text-xl font-semibold leading-tight">{platformInsights.mostDifficult.topic}</p>
-            <p className="text-sm text-muted-foreground">{t("insights.mostDifficult.score", {score: platformInsights.mostDifficult.averageScore})}</p>
+            <p className="text-xl font-semibold leading-tight">{insights.mostDifficult.topic}</p>
+            <p className="text-sm text-muted-foreground">{t("insights.mostDifficult.score", {score: insights.mostDifficult.averageScore})}</p>
           </div>
         </CardContent>
       </Card>
@@ -35,9 +39,9 @@ export function AdminInsights() {
           <div className="min-w-0 space-y-1">
             <p className="text-[11px] font-medium tracking-[0.16em] text-muted-foreground uppercase">{t("insights.averageScore.label")}</p>
             <p className="text-xl font-semibold leading-tight">
-              {platformInsights.averageScore.band.toFixed(1)} {t("insights.averageScore.bandSuffix")}
+              {insights.averageScore.band.toFixed(1)} {t("insights.averageScore.bandSuffix")}
             </p>
-            <p className="text-sm text-muted-foreground">{t("insights.averageScore.basedOn", {count: platformInsights.averageScore.sampleSize.toLocaleString()})}</p>
+            <p className="text-sm text-muted-foreground">{t("insights.averageScore.basedOn", {count: insights.averageScore.sampleSize.toLocaleString()})}</p>
           </div>
         </CardContent>
       </Card>

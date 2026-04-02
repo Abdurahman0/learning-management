@@ -1,6 +1,6 @@
 "use client"
 
-import {useEffect, useMemo, useState} from "react"
+import {useCallback, useEffect, useMemo, useState} from "react"
 import {useTranslations} from "next-intl"
 
 import {AdminSidebar} from "../../_components/AdminSidebar"
@@ -8,19 +8,15 @@ import {
   CONTENT_DIFFICULTY_OPTIONS,
   CONTENT_MODULE_OPTIONS,
   CONTENT_SOURCE_OPTIONS,
-  CONTENT_TOPIC_OPTIONS,
-  createContentBankPassage,
-  createContentBankVariantSet,
-  getContentBankSnapshot,
-  updateContentBankVariantSet,
   type ContentBankPassage,
   type ContentBankTab,
   type ContentBankVariantSet,
-  type CreateContentBankPassagePayload,
   type ContentDifficultyFilterValue,
   type ContentModuleFilterValue,
   type ContentSourceFilterValue,
-  type ContentTopicFilterValue
+  type ContentTopicFilterValue,
+  type CreateContentBankPassagePayload,
+  type Option
 } from "@/data/admin-content-bank"
 import {Card} from "@/components/ui/card"
 import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle} from "@/components/ui/sheet"
@@ -31,19 +27,111 @@ import {ContentFilters} from "./ContentFilters"
 import {AddPassageDialog} from "./AddPassageDialog"
 import {CreateVariantSetDialog, type CreateVariantSetInput, type UpdateVariantSetInput} from "./CreateVariantSetDialog"
 import {PassagesTable} from "./PassagesTable"
-import {PlatformRuleBanner} from "./PlatformRuleBanner"
 import {QuestionVariantsTable} from "./QuestionVariantsTable"
 import {SelectedPassagePanel} from "./SelectedPassagePanel"
+import {adminContentBankService} from "@/src/services/admin/contentBank.service"
+import {practiceTestsService} from "@/src/services/admin/practiceTests.service"
+import {variantSetsService, type VariantSetRecord} from "@/src/services/admin/variantSets.service"
+import {AdminApiError} from "@/src/services/admin/types"
 
 const ACTION_NOTE_TIMEOUT_MS = 2600
+
+type AdminTestSummary = {
+  id: string
+  name: string
+  module: "reading" | "listening"
+}
 
 function matchesSearch(value: string, query: string) {
   return value.toLowerCase().includes(query)
 }
 
+function asString(value: unknown, fallback = "") {
+  if (typeof value === "string") return value
+  if (typeof value === "number" || typeof value === "boolean") return String(value)
+  return fallback
+}
+
+function asNumber(value: unknown, fallback = 0) {
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return fallback
+}
+
+function normalizeVariantStatus(value: unknown): ContentBankVariantSet["status"] {
+  const normalized = String(value ?? "").trim().toUpperCase()
+  if (normalized === "PUBLISHED") return "published"
+  if (normalized === "USED") return "used"
+  return "draft"
+}
+
+function toVariantStatusApi(value: ContentBankVariantSet["status"]): "DRAFT" | "PUBLISHED" | "USED" {
+  if (value === "published") return "PUBLISHED"
+  if (value === "used") return "USED"
+  return "DRAFT"
+}
+
+function mapPracticeTestSummary(item: {id?: unknown; title?: unknown; test_type?: unknown}): AdminTestSummary {
+  const module = String(item.test_type ?? "").toUpperCase().includes("LISTENING") ? "listening" : "reading"
+  return {
+    id: asString(item.id),
+    name: asString(item.title) || "Untitled Test",
+    module
+  }
+}
+
+function buildTopicOptions(passages: ContentBankPassage[]): Option<ContentTopicFilterValue>[] {
+  const uniqueTopics = [...new Set(passages.map((item) => item.topic).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right))
+
+  return [
+    {value: "all", labelKey: "filters.topic.allTopics"},
+    ...uniqueTopics.map((topic) => ({value: topic, labelKey: `topics.${topic.toLowerCase().replace(/\s+/g, "_")}`}))
+  ]
+}
+
+function mapVariantRecordToUi(payload: {
+  row: VariantSetRecord
+  passagesById: Map<string, ContentBankPassage>
+  testsById: Map<string, AdminTestSummary>
+  summaryFallback: string
+}): ContentBankVariantSet | null {
+  const {row, passagesById, testsById, summaryFallback} = payload
+
+  const rawPassageId = row.reading_passage ?? row.listening_part
+  const passageId = asString(rawPassageId)
+  if (!passageId) return null
+
+  const passage = passagesById.get(passageId)
+  const module = passage?.module
+    ?? (String(row.module ?? "").toUpperCase().includes("LISTENING") ? "listening" : "reading")
+  const usedInTestIds = Array.isArray(row.used_in_tests)
+    ? row.used_in_tests.map((item) => asString(item)).filter(Boolean)
+    : []
+
+  return {
+    id: asString(row.id),
+    passageId,
+    passageTitle: passage?.title ?? "Untitled Passage",
+    module,
+    name: asString(row.name) || "Variant Set",
+    status: normalizeVariantStatus(row.status),
+    maxQuestionTypes: 6,
+    groups: [],
+    questionTypesSummary: summaryFallback,
+    questionTypeKeys: [],
+    questionSignature: asString(row.id),
+    usedInTestIds,
+    usedInTests: usedInTestIds.map((testId) => testsById.get(testId)).filter((item): item is AdminTestSummary => Boolean(item)),
+    createdAt: asString(row.created_at) || new Date().toISOString()
+  }
+}
+
 export function ContentBankPageClient() {
   const t = useTranslations("adminContentBank")
-  const initialContentData = useMemo(() => getContentBankSnapshot(), [])
   const [activeTab, setActiveTab] = useState<ContentBankTab>("passages")
   const [searchValue, setSearchValue] = useState("")
   const [moduleFilter, setModuleFilter] = useState<ContentModuleFilterValue>("all")
@@ -52,10 +140,10 @@ export function ContentBankPageClient() {
   const [sourceFilter, setSourceFilter] = useState<ContentSourceFilterValue>("all")
   const [onlyUnused, setOnlyUnused] = useState(false)
   const [onlyPublishedVariants, setOnlyPublishedVariants] = useState(false)
-  const [passagesState, setPassagesState] = useState<ContentBankPassage[]>(initialContentData.passages)
-  const [variants, setVariants] = useState<ContentBankVariantSet[]>(initialContentData.variants)
-  const [archivedVariantIds, setArchivedVariantIds] = useState<Set<string>>(new Set())
-  const [selectedPassageId, setSelectedPassageId] = useState<string | null>(initialContentData.passages[0]?.id ?? null)
+  const [passagesState, setPassagesState] = useState<ContentBankPassage[]>([])
+  const [variants, setVariants] = useState<ContentBankVariantSet[]>([])
+  const [tests, setTests] = useState<AdminTestSummary[]>([])
+  const [selectedPassageId, setSelectedPassageId] = useState<string | null>(null)
   const [addPassageDialogOpen, setAddPassageDialogOpen] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createDialogPassageId, setCreateDialogPassageId] = useState<string | undefined>(undefined)
@@ -64,49 +152,91 @@ export function ContentBankPageClient() {
   const [guidelinesOpen, setGuidelinesOpen] = useState(false)
   const [fullPassageId, setFullPassageId] = useState<string | null>(null)
   const [actionNote, setActionNote] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   const testsById = useMemo(
-    () => new Map(initialContentData.tests.map((test) => [test.id, test])),
-    [initialContentData.tests]
-  )
-  const basePassagesById = useMemo(
-    () => new Map(passagesState.map((passage) => [passage.id, passage])),
-    [passagesState]
+    () => new Map(tests.map((test) => [test.id, test])),
+    [tests]
   )
 
-  const activeVariants = useMemo(
-    () => variants.filter((variant) => !archivedVariantIds.has(variant.id)),
-    [archivedVariantIds, variants]
-  )
+  const topicOptions = useMemo(() => buildTopicOptions(passagesState), [passagesState])
 
-  const passages = useMemo<ContentBankPassage[]>(() => {
-    return passagesState.map((passage) => {
-      const attachedVariants = activeVariants.filter((variant) => variant.passageId === passage.id)
-      const usedInTestIds = [...new Set([...passage.usedInTestIds, ...attachedVariants.flatMap((variant) => variant.usedInTestIds)])]
+  const loadContentBank = useCallback(async () => {
+    setIsLoading(true)
 
-      return {
-        ...passage,
-        variantIds: attachedVariants.map((variant) => variant.id),
-        variantCount: attachedVariants.length,
-        usedInTestIds
-      }
-    })
-  }, [activeVariants, passagesState])
+    try {
+      const [passages, variantRows, practiceTests] = await Promise.all([
+        adminContentBankService.listPassages(),
+        variantSetsService.listAll({is_active: true, ordering: "-created_at"}),
+        practiceTestsService.list({page: 1, pageSize: 200, ordering: "-created_at"})
+      ])
+
+      const testRows = practiceTests.results.map((item) =>
+        mapPracticeTestSummary({
+          id: item.id,
+          title: item.title,
+          test_type: item.test_type
+        })
+      )
+      const passageMap = new Map(passages.map((item) => [item.id, item]))
+      const testsMap = new Map(testRows.map((item) => [item.id, item]))
+      const summaryFallback = t("createVariantDialog.summaryEmpty")
+      const normalizedVariants = variantRows
+        .map((row) =>
+          mapVariantRecordToUi({
+            row,
+            passagesById: passageMap,
+            testsById: testsMap,
+            summaryFallback
+          })
+        )
+        .filter((item): item is ContentBankVariantSet => Boolean(item))
+
+      setPassagesState(passages)
+      setVariants(normalizedVariants)
+      setTests(testRows)
+      setSelectedPassageId((current) => {
+        if (current && passages.some((passage) => passage.id === current)) {
+          return current
+        }
+        return passages[0]?.id ?? null
+      })
+    } catch (cause) {
+      const message = cause instanceof AdminApiError ? cause.message : t("feedback.genericError")
+      setActionNote(message)
+      setPassagesState([])
+      setVariants([])
+      setTests([])
+      setSelectedPassageId(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [t])
+
+  useEffect(() => {
+    void loadContentBank()
+  }, [loadContentBank])
+
+  useEffect(() => {
+    if (!actionNote) return
+    const timeout = window.setTimeout(() => setActionNote(null), ACTION_NOTE_TIMEOUT_MS)
+    return () => window.clearTimeout(timeout)
+  }, [actionNote])
 
   const query = searchValue.trim().toLowerCase()
 
   const filteredPassages = useMemo(() => {
-    return passages.filter((passage) => {
+    return passagesState.filter((passage) => {
       if (moduleFilter !== "all" && passage.module !== moduleFilter) return false
       if (difficultyFilter !== "all" && passage.difficulty !== difficultyFilter) return false
       if (topicFilter !== "all" && passage.topic !== topicFilter) return false
       if (sourceFilter !== "all" && passage.source !== sourceFilter) return false
       if (onlyUnused && passage.usedInTestIds.length > 0) return false
-      if (onlyPublishedVariants && !activeVariants.some((variant) => variant.passageId === passage.id && variant.status !== "draft")) return false
+      if (onlyPublishedVariants && !variants.some((variant) => variant.passageId === passage.id && variant.status !== "draft")) return false
 
       if (!query) return true
 
-      const variantMatches = activeVariants.some(
+      const variantMatches = variants.some(
         (variant) =>
           variant.passageId === passage.id &&
           (matchesSearch(variant.name, query) || matchesSearch(variant.questionTypesSummary, query))
@@ -120,20 +250,22 @@ export function ContentBankPageClient() {
       )
     })
   }, [
-    activeVariants,
     difficultyFilter,
     moduleFilter,
     onlyPublishedVariants,
     onlyUnused,
-    passages,
+    passagesState,
     query,
     sourceFilter,
-    topicFilter
+    topicFilter,
+    variants
   ])
 
   const filteredVariants = useMemo(() => {
-    return activeVariants.filter((variant) => {
-      const passage = basePassagesById.get(variant.passageId)
+    const passagesById = new Map(passagesState.map((passage) => [passage.id, passage]))
+
+    return variants.filter((variant) => {
+      const passage = passagesById.get(variant.passageId)
       if (!passage) return false
       if (moduleFilter !== "all" && passage.module !== moduleFilter) return false
       if (difficultyFilter !== "all" && passage.difficulty !== difficultyFilter) return false
@@ -151,22 +283,16 @@ export function ContentBankPageClient() {
       )
     })
   }, [
-    activeVariants,
-    basePassagesById,
     difficultyFilter,
     moduleFilter,
     onlyPublishedVariants,
     onlyUnused,
+    passagesState,
     query,
     sourceFilter,
-    topicFilter
+    topicFilter,
+    variants
   ])
-
-  useEffect(() => {
-    if (!actionNote) return
-    const timeout = window.setTimeout(() => setActionNote(null), ACTION_NOTE_TIMEOUT_MS)
-    return () => window.clearTimeout(timeout)
-  }, [actionNote])
 
   const resolvedSelectedPassageId = useMemo(() => {
     if (!filteredPassages.length) return null
@@ -177,20 +303,20 @@ export function ContentBankPageClient() {
   }, [filteredPassages, selectedPassageId])
 
   const selectedPassage = useMemo(
-    () => passages.find((passage) => passage.id === resolvedSelectedPassageId) ?? null,
-    [passages, resolvedSelectedPassageId]
+    () => passagesState.find((passage) => passage.id === resolvedSelectedPassageId) ?? null,
+    [passagesState, resolvedSelectedPassageId]
   )
   const selectedPassageVariants = useMemo(
-    () => activeVariants.filter((variant) => variant.passageId === resolvedSelectedPassageId),
-    [activeVariants, resolvedSelectedPassageId]
+    () => variants.filter((variant) => variant.passageId === resolvedSelectedPassageId),
+    [resolvedSelectedPassageId, variants]
   )
   const fullPassage = useMemo(
-    () => passages.find((passage) => passage.id === fullPassageId) ?? null,
-    [fullPassageId, passages]
+    () => passagesState.find((passage) => passage.id === fullPassageId) ?? null,
+    [fullPassageId, passagesState]
   )
   const editingVariant = useMemo(
-    () => activeVariants.find((variant) => variant.id === editingVariantId) ?? null,
-    [activeVariants, editingVariantId]
+    () => variants.find((variant) => variant.id === editingVariantId) ?? null,
+    [editingVariantId, variants]
   )
 
   const postAction = (message: string) => {
@@ -202,48 +328,93 @@ export function ContentBankPageClient() {
     setCreateDialogOpen(true)
   }
 
-  const handleCreatePassage = (payload: CreateContentBankPassagePayload) => {
-    createContentBankPassage(payload)
-    const snapshot = getContentBankSnapshot()
-    setPassagesState(snapshot.passages)
-    const created = snapshot.passages[0]
-    if (created) {
-      setSelectedPassageId(created.id)
-      postAction(t("feedback.passageCreated", {name: created.title}))
+  const handleCreatePassage = async (payload: CreateContentBankPassagePayload) => {
+    try {
+      await adminContentBankService.createPassage({
+        title: payload.title,
+        module: payload.module,
+        difficulty: payload.difficulty,
+        topic: payload.topic,
+        source: payload.source,
+        contentType: payload.module === "reading" ? "passage" : "transcript",
+        tags: [],
+        notes: undefined,
+        previewText: payload.previewText,
+        fullText: payload.fullText && payload.fullText.length > 0 ? payload.fullText : [payload.previewText],
+        estimatedTimeLabel: payload.estimatedTimeLabel,
+        durationMinutes: payload.durationMinutes,
+        status: "draft",
+        questionCount: 0
+      })
+      await loadContentBank()
+      postAction(t("feedback.passageCreated", {name: payload.title}))
+    } catch (cause) {
+      const message = cause instanceof AdminApiError ? cause.message : t("feedback.genericError")
+      postAction(message)
     }
   }
 
-  const handleCreateVariant = (payload: CreateVariantSetInput) => {
-    createContentBankVariantSet(payload)
-    const snapshot = getContentBankSnapshot()
-    setVariants(snapshot.variants)
-    setPassagesState(snapshot.passages)
-    setSelectedPassageId(payload.passageId)
-    postAction(t("feedback.variantCreated", {name: payload.name}))
+  const handleCreateVariant = async (payload: CreateVariantSetInput) => {
+    try {
+      const selected = passagesState.find((item) => item.id === payload.passageId)
+      if (!selected) return
+
+      await variantSetsService.create({
+        module: selected.module,
+        ownerId: selected.id,
+        name: payload.name,
+        status: toVariantStatusApi(payload.status),
+        is_active: true
+      })
+
+      await loadContentBank()
+      setSelectedPassageId(payload.passageId)
+      postAction(t("feedback.variantCreated", {name: payload.name}))
+    } catch (cause) {
+      const message = cause instanceof AdminApiError ? cause.message : t("feedback.genericError")
+      postAction(message)
+    }
   }
 
-  const handleArchiveVariant = (variantId: string) => {
-    const source = activeVariants.find((variant) => variant.id === variantId)
-    if (!source) return
-    setArchivedVariantIds((current) => new Set([...current, variantId]))
-    postAction(t("feedback.variantArchived", {name: source.name}))
+  const handleArchiveVariant = async (variantId: string) => {
+    try {
+      const source = variants.find((variant) => variant.id === variantId)
+      if (!source) return
+      await variantSetsService.remove(variantId)
+      await loadContentBank()
+      postAction(t("feedback.variantArchived", {name: source.name}))
+    } catch (cause) {
+      const message = cause instanceof AdminApiError ? cause.message : t("feedback.genericError")
+      postAction(message)
+    }
   }
 
   const handleEditVariant = (variantId: string) => {
-    const source = activeVariants.find((variant) => variant.id === variantId)
+    const source = variants.find((variant) => variant.id === variantId)
     if (!source) return
     setEditingVariantId(source.id)
     setEditVariantDialogOpen(true)
   }
 
-  const handleSaveVariant = (payload: UpdateVariantSetInput) => {
-    const updated = updateContentBankVariantSet(payload)
-    if (!updated) return
-    const snapshot = getContentBankSnapshot()
-    setVariants(snapshot.variants)
-    setPassagesState(snapshot.passages)
-    setSelectedPassageId(payload.passageId)
-    postAction(t("feedback.variantUpdated", {name: payload.name}))
+  const handleSaveVariant = async (payload: UpdateVariantSetInput) => {
+    try {
+      const passage = passagesState.find((item) => item.id === payload.passageId)
+      if (!passage) return
+
+      await variantSetsService.patch(payload.id, {
+        name: payload.name,
+        status: toVariantStatusApi(payload.status),
+        is_active: true,
+        ...(passage.module === "reading" ? {reading_passage: passage.id} : {listening_part: passage.id})
+      })
+
+      await loadContentBank()
+      setSelectedPassageId(payload.passageId)
+      postAction(t("feedback.variantUpdated", {name: payload.name}))
+    } catch (cause) {
+      const message = cause instanceof AdminApiError ? cause.message : t("feedback.genericError")
+      postAction(message)
+    }
   }
 
   return (
@@ -266,8 +437,6 @@ export function ContentBankPageClient() {
               </Card>
             ) : null}
 
-            <PlatformRuleBanner meta={initialContentData.meta} onViewGuidelines={() => setGuidelinesOpen(true)} />
-
             <ContentBankTabs
               activeTab={activeTab}
               onTabChange={setActiveTab}
@@ -282,7 +451,7 @@ export function ContentBankPageClient() {
               sourceValue={sourceFilter}
               moduleOptions={[...CONTENT_MODULE_OPTIONS]}
               difficultyOptions={[...CONTENT_DIFFICULTY_OPTIONS]}
-              topicOptions={CONTENT_TOPIC_OPTIONS}
+              topicOptions={topicOptions}
               sourceOptions={[...CONTENT_SOURCE_OPTIONS]}
               onlyUnused={onlyUnused}
               onlyPublishedVariants={onlyPublishedVariants}
@@ -294,7 +463,11 @@ export function ContentBankPageClient() {
               onOnlyPublishedVariantsChange={setOnlyPublishedVariants}
             />
 
-            {activeTab === "passages" ? (
+            {isLoading ? (
+              <Card className="rounded-2xl border-border/70 bg-card/70 p-6">
+                <p className="text-sm text-muted-foreground">Loading...</p>
+              </Card>
+            ) : activeTab === "passages" ? (
               <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(320px,0.9fr)]">
                 <div className="min-w-0 space-y-2">
                   <PassagesTable
@@ -306,7 +479,7 @@ export function ContentBankPageClient() {
                     onOpenCreateVariant={openCreateVariant}
                   />
                   <p className="text-xs text-muted-foreground">
-                    {t("table.showingResults", {visible: filteredPassages.length, total: passages.length})}
+                    {t("table.showingResults", {visible: filteredPassages.length, total: passagesState.length})}
                   </p>
                 </div>
 
@@ -317,7 +490,7 @@ export function ContentBankPageClient() {
                     onReadFullPassage={setFullPassageId}
                     onCreateNewVariant={openCreateVariant}
                     onPreviewVariant={(variantId) => {
-                      const variant = activeVariants.find((item) => item.id === variantId)
+                      const variant = variants.find((item) => item.id === variantId)
                       if (!variant) return
                       postAction(t("feedback.previewQuestionsRequested", {name: variant.name}))
                     }}
@@ -333,7 +506,7 @@ export function ContentBankPageClient() {
                   onArchive={handleArchiveVariant}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {t("variantsTable.showingResults", {visible: filteredVariants.length, total: activeVariants.length})}
+                  {t("variantsTable.showingResults", {visible: filteredVariants.length, total: variants.length})}
                 </p>
               </section>
             )}
@@ -345,10 +518,10 @@ export function ContentBankPageClient() {
         mode="create"
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        passages={passages}
-        tests={initialContentData.tests}
+        passages={passagesState}
+        tests={tests}
         defaultPassageId={createDialogPassageId}
-        onCreate={handleCreateVariant}
+        onCreate={(payload) => void handleCreateVariant(payload)}
       />
 
       <CreateVariantSetDialog
@@ -358,16 +531,16 @@ export function ContentBankPageClient() {
           setEditVariantDialogOpen(open)
           if (!open) setEditingVariantId(null)
         }}
-        passages={passages}
-        tests={initialContentData.tests}
+        passages={passagesState}
+        tests={tests}
         variant={editingVariant}
-        onSave={handleSaveVariant}
+        onSave={(payload) => void handleSaveVariant(payload)}
       />
 
       <AddPassageDialog
         open={addPassageDialogOpen}
         onOpenChange={setAddPassageDialogOpen}
-        onCreate={handleCreatePassage}
+        onCreate={(payload) => void handleCreatePassage(payload)}
       />
 
       <Sheet open={guidelinesOpen} onOpenChange={setGuidelinesOpen}>

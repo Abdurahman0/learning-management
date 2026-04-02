@@ -11,7 +11,9 @@ import {Progress} from "@/components/ui/progress";
 import type {ContinueTest} from "@/data/student/dashboard";
 
 type ContinueCardProps = {
-  test: ContinueTest;
+  test: ContinueTest & {
+    href?: string;
+  };
   onReviewDetails?: () => void;
 };
 
@@ -19,6 +21,8 @@ export function ContinueCard({test, onReviewDetails}: ContinueCardProps) {
   const t = useTranslations("dashboard");
   const locale = useLocale();
   const progressPct = Math.round((test.progressQuestions / test.totalQuestions) * 100);
+  const modulePath = String(test.module).toLowerCase().includes("listen") ? "listening" : "reading";
+  const continueHref = test.href?.trim() || `/${locale}/${modulePath}`;
 
   return (
     <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/70">
@@ -45,7 +49,7 @@ export function ContinueCard({test, onReviewDetails}: ContinueCardProps) {
           <Progress className="mt-2" value={progressPct} />
           <div className="mt-4 flex flex-wrap gap-2">
             <Button asChild>
-              <Link href={`/${locale}/reading`}>{t("continueTest")}</Link>
+              <Link href={continueHref}>{t("continueTest")}</Link>
             </Button>
             <Button variant="outline" onClick={onReviewDetails}>
               {t("reviewDetails")}

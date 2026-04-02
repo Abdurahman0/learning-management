@@ -1,5 +1,12 @@
-import {ReportsPageClient} from "./_components/ReportsPageClient";
+import {redirect} from "next/navigation";
 
-export default function AdminReportsPage() {
-  return <ReportsPageClient />;
+type AdminReportsPageProps = {
+  params: Promise<{
+    locale: string;
+  }>;
+};
+
+export default async function AdminReportsPage({params}: AdminReportsPageProps) {
+  const {locale} = await params;
+  redirect(`/${locale}/admin`);
 }

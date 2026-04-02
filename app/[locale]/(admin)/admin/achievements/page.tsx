@@ -1,5 +1,12 @@
-import {AchievementsPageClient} from "./_components/AchievementsPageClient";
+import {redirect} from "next/navigation";
 
-export default function AdminAchievementsPage() {
-  return <AchievementsPageClient />;
+type AdminAchievementsPageProps = {
+  params: Promise<{
+    locale: string;
+  }>;
+};
+
+export default async function AdminAchievementsPage({params}: AdminAchievementsPageProps) {
+  const {locale} = await params;
+  redirect(`/${locale}/admin`);
 }

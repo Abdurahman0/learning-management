@@ -17,17 +17,115 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Separator} from "@/components/ui/separator";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {DASHBOARD_DATA} from "@/data/student/dashboard";
+import {studentDashboardService} from "@/src/services/student/dashboard.service";
+import type {StudentDashboardResponse} from "@/src/services/student/types";
 
 type Notice = {
   title: string;
   description: string;
 };
 
+type DashboardViewModel = {
+  userSummary: typeof DASHBOARD_DATA.userSummary;
+  continueTest: (typeof DASHBOARD_DATA.continueTest & {href?: string}) | null;
+  scoreProgress: typeof DASHBOARD_DATA.scoreProgress;
+  skillsSnapshot: typeof DASHBOARD_DATA.skillsSnapshot;
+  overallJourneyPct: number;
+  weakAreas: Array<{
+    id: string;
+    title: string;
+    module: "reading" | "listening" | "writing" | "speaking";
+    accuracy: string;
+    actionLabel: string;
+  }>;
+  aiRecommendation: typeof DASHBOARD_DATA.aiRecommendation | null;
+  recentHistory: typeof DASHBOARD_DATA.recentHistory;
+  achievements: typeof DASHBOARD_DATA.achievements;
+};
+
+function formatDateLabel(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric"
+  }).format(date);
+}
+
+function buildDashboardViewModel(payload: StudentDashboardResponse): DashboardViewModel {
+  const safeGoalBand = payload.summary.goalBand > 0 ? payload.summary.goalBand : DASHBOARD_DATA.userSummary.goalBand;
+  const safeCurrentBand = payload.summary.currentBand >= 0 ? payload.summary.currentBand : 0;
+  const journeyPercentRaw =
+    payload.overallJourneyPct ??
+    (safeGoalBand > 0 ? Math.round((safeCurrentBand / safeGoalBand) * 100) : DASHBOARD_DATA.overallJourneyPct);
+  const overallJourneyPct = Math.max(0, Math.min(100, Number.isFinite(journeyPercentRaw) ? journeyPercentRaw : 0));
+
+  return {
+    userSummary: {
+      name: payload.summary.name || DASHBOARD_DATA.userSummary.name,
+      currentBand: safeCurrentBand,
+      goalBand: safeGoalBand,
+      testsTaken: payload.summary.testsTaken,
+      readingAccuracy: payload.summary.readingAccuracy,
+      listeningAccuracy: payload.summary.listeningAccuracy,
+      streakDays: payload.summary.streakDays,
+      streakIncreasedToday: payload.summary.streakIncreasedToday,
+      bandsAway: payload.summary.bandsAway
+    },
+    continueTest: payload.continueTest
+      ? {
+          id: payload.continueTest.id,
+          module: payload.continueTest.module,
+          title: payload.continueTest.title,
+          level: payload.continueTest.level,
+          lastActiveLabel: payload.continueTest.lastActiveLabel,
+          progressQuestions: payload.continueTest.progressQuestions,
+          totalQuestions: payload.continueTest.totalQuestions,
+          href: payload.continueTest.href
+        }
+      : null,
+    scoreProgress: payload.scoreProgress.map((item) => ({
+      label: item.label,
+      band: item.band
+    })),
+    skillsSnapshot: payload.skillsSnapshot,
+    overallJourneyPct,
+    weakAreas: payload.weakAreas.map((item) => ({
+      id: item.id,
+      title: item.questionTypeLabel || item.title,
+      module: item.module,
+      accuracy: item.accuracy,
+      actionLabel: item.actionLabel
+    })),
+    aiRecommendation: payload.aiRecommendation ?? null,
+    recentHistory: payload.recentHistory.map((item) => ({
+      id: item.id,
+      testName: item.testName,
+      date: formatDateLabel(item.date),
+      module: item.module,
+      score: item.score
+    })),
+    achievements:
+      payload.achievements.length > 0
+        ? payload.achievements
+        : DASHBOARD_DATA.achievements
+  };
+}
+
 export function DashboardClient() {
   const t = useTranslations("dashboard");
   const locale = useLocale();
   const router = useRouter();
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardViewModel>({
+    ...DASHBOARD_DATA,
+    continueTest: {...DASHBOARD_DATA.continueTest},
+    aiRecommendation: DASHBOARD_DATA.aiRecommendation
+  });
 
   useEffect(() => {
     if (!notice) {
@@ -41,6 +139,26 @@ export function DashboardClient() {
   const pushNotice = (title: string, description: string) => {
     setNotice({title, description});
   };
+
+  useEffect(() => {
+    let active = true;
+
+    const loadDashboard = async () => {
+      try {
+        const response = await studentDashboardService.getDashboard();
+        if (!active) return;
+        setDashboardData(buildDashboardViewModel(response));
+      } catch {
+        if (!active) return;
+      }
+    };
+
+    void loadDashboard();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleWeakAreaAction = (module: "reading" | "listening" | "writing" | "speaking") => {
     if (module === "reading" || module === "listening") {
@@ -57,7 +175,7 @@ export function DashboardClient() {
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("title")}</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            {t("welcome", {name: DASHBOARD_DATA.userSummary.name, bandsAway: DASHBOARD_DATA.userSummary.bandsAway})}
+            {t("welcome", {name: dashboardData.userSummary.name, bandsAway: dashboardData.userSummary.bandsAway})}
           </p>
         </div>
 
@@ -68,11 +186,11 @@ export function DashboardClient() {
           <Button asChild>
             <Link href={`/${locale}/reading`}>{t("startNewTest")}</Link>
           </Button>
-          <Button asChild variant="secondary">
-            <Link href={`/${locale}/sessions`}>
+          <Button variant="secondary" onClick={() => pushNotice(t("feedback.placeholder.title"), t("feedback.placeholder.description"))}>
+            <span>
               <CalendarClock className="size-4" />
               {t("actions.bookSession")}
-            </Link>
+            </span>
           </Button>
         </div>
       </section>
@@ -88,26 +206,28 @@ export function DashboardClient() {
 
       <div className="mt-5">
         <DashboardKpis
-          summary={DASHBOARD_DATA.userSummary}
+          summary={dashboardData.userSummary}
           onCurrentBandClick={() => document.getElementById("skills-snapshot")?.scrollIntoView({behavior: "smooth", block: "start"})}
         />
         <p className="mt-2 text-xs text-muted-foreground">{t("kpis.streakRule")}</p>
       </div>
 
-      <section className="mt-4">
-        <ContinueCard
-          test={DASHBOARD_DATA.continueTest}
-          onReviewDetails={() => pushNotice(t("feedback.reviewDetails.title"), t("feedback.reviewDetails.description"))}
-        />
-      </section>
+      {dashboardData.continueTest ? (
+        <section className="mt-4">
+          <ContinueCard
+            test={dashboardData.continueTest}
+            onReviewDetails={() => pushNotice(t("feedback.reviewDetails.title"), t("feedback.reviewDetails.description"))}
+          />
+        </section>
+      ) : null}
 
       <section className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <ScoreProgressChart points={DASHBOARD_DATA.scoreProgress} />
+        <ScoreProgressChart points={dashboardData.scoreProgress} />
         <SkillsSnapshot
           id="skills-snapshot"
-          skills={DASHBOARD_DATA.skillsSnapshot}
-          summary={DASHBOARD_DATA.userSummary}
-          overallJourneyPct={DASHBOARD_DATA.overallJourneyPct}
+          skills={dashboardData.skillsSnapshot}
+          summary={dashboardData.userSummary}
+          overallJourneyPct={dashboardData.overallJourneyPct}
         />
       </section>
 
@@ -117,7 +237,7 @@ export function DashboardClient() {
             <CardTitle>{t("weakAreas.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {DASHBOARD_DATA.weakAreas.map((item) => (
+            {dashboardData.weakAreas.map((item) => (
               <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{item.title}</p>
@@ -142,9 +262,11 @@ export function DashboardClient() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Badge className="mb-3">{DASHBOARD_DATA.aiRecommendation.tag}</Badge>
-            <p className="rounded-xl bg-muted/60 p-4 text-sm leading-relaxed text-muted-foreground">{DASHBOARD_DATA.aiRecommendation.message}</p>
-            <Button className="mt-4" onClick={() => router.push(`/${locale}/ai-coach`)}>
+            <Badge className="mb-3">{dashboardData.aiRecommendation?.tag ?? "Tutor insight"}</Badge>
+            <p className="rounded-xl bg-muted/60 p-4 text-sm leading-relaxed text-muted-foreground">
+              {dashboardData.aiRecommendation?.message ?? "Keep practicing daily to build consistency."}
+            </p>
+            <Button className="mt-4" onClick={() => pushNotice(t("feedback.placeholder.title"), t("feedback.placeholder.description"))}>
               <Sparkles className="size-4" />
               {t("aiRecommendations.startTutorial")}
             </Button>
@@ -156,7 +278,7 @@ export function DashboardClient() {
         <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/70">
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>{t("recentHistory.title")}</CardTitle>
-            <Button variant="link" className="h-auto p-0" onClick={() => router.push(`/${locale}/analytics`)}>
+            <Button variant="link" className="h-auto p-0" onClick={() => pushNotice(t("feedback.placeholder.title"), t("feedback.placeholder.description"))}>
               {t("recentHistory.viewAll")}
             </Button>
           </CardHeader>
@@ -174,7 +296,7 @@ export function DashboardClient() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {DASHBOARD_DATA.recentHistory.map((row) => (
+                  {dashboardData.recentHistory.map((row) => (
                     <TableRow key={row.id}>
                       <TableCell>{row.testName}</TableCell>
                       <TableCell className="text-muted-foreground">{row.date}</TableCell>
@@ -201,7 +323,7 @@ export function DashboardClient() {
       </section>
 
       <section className="mt-4">
-        <AchievementsGrid achievements={DASHBOARD_DATA.achievements} />
+        <AchievementsGrid achievements={dashboardData.achievements} />
       </section>
     </main>
   );

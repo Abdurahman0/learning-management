@@ -1,0 +1,529 @@
+{
+  "info": {
+    "name": "IELTS Master — Student API",
+    "description": "Complete Postman collection for the IELTS Master student-facing API.\n\n## Setup\n1. Import this collection.\n2. Import the `IELTS Master - Student Env` environment (or create one with the variables listed below).\n3. Run **Auth / Login** first — the access and refresh tokens are captured automatically.\n4. All other requests use `{{access_token}}` automatically.\n\n## Environment Variables Required\n| Variable | Initial Value |\n|---|---|\n| `base_url` | `http://localhost:8000` |\n| `access_token` | *(auto-set after Login)* |\n| `refresh_token` | *(auto-set after Login)* |\n| `attempt_id` | *(auto-set after Start Attempt)* |\n| `review_item_id` | *(auto-set after Get Review Center)* |\n| `test_id` | *(paste a test UUID here)* |\n| `question_id` | *(paste a question UUID here)* |",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "refresh_token", "value": "", "type": "string" },
+    { "key": "attempt_id", "value": "", "type": "string" },
+    { "key": "review_item_id", "value": "", "type": "string" },
+    { "key": "test_id", "value": "", "type": "string" },
+    { "key": "question_id", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{access_token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Login and token refresh. Run Login first — tokens are saved automatically to collection variables.",
+      "item": [
+        {
+          "name": "Login (Student)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('access_token', json.access);",
+                  "  pm.collectionVariables.set('refresh_token', json.refresh);",
+                  "  pm.test('Login successful — tokens saved', () => pm.expect(json.access).to.be.a('string'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"string@gmail.com\",\n  \"password\": \"student123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login", ""]
+            },
+            "description": "Returns `access` and `refresh` JWT tokens. The test script automatically saves them to `{{access_token}}` and `{{refresh_token}}`."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('access_token', json.access);",
+                  "  pm.test('Token refreshed', () => pm.expect(json.access).to.be.a('string'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/token/refresh/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "token", "refresh", ""]
+            },
+            "description": "Exchange a refresh token for a new access token. The new access token is saved automatically."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "description": "Get and update the student profile. Only `target_band` is writable.",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/profile/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "profile", ""]
+            },
+            "description": "Returns the student's profile including target band, study streak, and last activity date.\n\n**Response fields:**\n- `target_band` — e.g. `\"7.0\"`\n- `study_streak` — number of consecutive study days\n- `last_activity_date` — ISO date string"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"id\": \"uuid\",\n  \"email\": \"string@gmail.com\",\n  \"full_name\": \"String User\",\n  \"target_band\": \"7.0\",\n  \"study_streak\": 5,\n  \"last_activity_date\": \"2026-03-27\",\n  \"updated_at\": \"2026-03-27T10:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Profile (target_band)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"target_band\": \"7.5\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/profile/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "profile", ""]
+            },
+            "description": "Only `target_band` is currently writable. Accepts values like `\"5.0\"`, `\"6.5\"`, `\"7.0\"`, `\"8.0\"`, `\"9.0\"`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "description": "Single endpoint that powers the entire student dashboard screen.",
+      "item": [
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/dashboard/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "dashboard", ""]
+            },
+            "description": "Returns everything needed for the dashboard in one call:\n- `current_band` — current estimated band (avg of last 5 tests)\n- `tests_taken` — total completed tests\n- `reading_accuracy` / `listening_accuracy` — percentage\n- `study_streak` — consecutive days\n- `overall_journey_percent` — progress toward target band (capped at 100)\n- `in_progress_test` — `null` if no active test\n- `score_progress` — last 10 completed attempts (oldest → newest)\n- `skills_snapshot` — reading/listening band averages (writing/speaking are 0.0 for now)\n- `weak_areas` — top 3 weakest question types by accuracy\n- `recent_test_history` — last 10 completed attempts\n- `achievements` — list of earned badges"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"current_band\": 6.5,\n  \"tests_taken\": 15,\n  \"reading_accuracy\": 78,\n  \"listening_accuracy\": 75,\n  \"study_streak\": 5,\n  \"target_band\": 7.0,\n  \"overall_journey_percent\": 93,\n  \"in_progress_test\": {\n    \"attempt_id\": \"uuid\",\n    \"test_title\": \"Cambridge IELTS 18 Test 2\",\n    \"test_type\": \"READING\",\n    \"started_at\": \"2026-03-27T09:00:00Z\",\n    \"progress_answered\": 18,\n    \"progress_total\": 40,\n    \"progress_percent\": 45,\n    \"mode\": \"REAL\"\n  },\n  \"score_progress\": [\n    { \"label\": \"Test 1\", \"band_score\": 5.5, \"test_title\": \"...\", \"completed_at\": \"...\" },\n    { \"label\": \"Latest\", \"band_score\": 6.5, \"test_title\": \"...\", \"completed_at\": \"...\" }\n  ],\n  \"skills_snapshot\": {\n    \"reading\": 6.5,\n    \"listening\": 7.0,\n    \"writing\": 0.0,\n    \"speaking\": 0.0\n  },\n  \"weak_areas\": [\n    { \"question_type\": \"MATCHING_HEADINGS\", \"accuracy\": 62, \"module\": \"Reading\" }\n  ],\n  \"recent_test_history\": [\n    {\n      \"attempt_id\": \"uuid\",\n      \"test_name\": \"Cambridge IELTS 18 Test 2\",\n      \"test_type\": \"READING\",\n      \"completed_at\": \"2026-03-27T10:00:00Z\",\n      \"score\": 31,\n      \"total\": 40,\n      \"band_score\": 7.0\n    }\n  ],\n  \"achievements\": [\n    { \"id\": \"uuid\", \"badge_type\": \"FIRST_TEST\", \"badge_display\": \"First Test\", \"earned_at\": \"...\" }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Test Listing",
+      "description": "Browse available practice tests. All endpoints support filtering, search, and pagination.",
+      "item": [
+        {
+          "name": "List Reading Tests",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/tests/reading/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "tests", "reading", ""],
+              "query": [
+                { "key": "page", "value": "1", "disabled": true },
+                { "key": "page_size", "value": "20", "disabled": true },
+                { "key": "premium", "value": "false", "disabled": true, "description": "true or false" },
+                { "key": "difficulty", "value": "INTERMEDIATE", "disabled": true, "description": "BEGINNER | INTERMEDIATE | ADVANCED" },
+                { "key": "search", "value": "Cambridge", "disabled": true },
+                { "key": "ordering", "value": "-created_at", "disabled": true, "description": "created_at | -created_at | title | -title" }
+              ]
+            },
+            "description": "Paginated list of reading tests. `user_attempt_status` shows the student's best attempt on each test, or `null` if never attempted.\n\nUncomment query params to filter."
+          }
+        },
+        {
+          "name": "List Listening Tests",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/tests/listening/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "tests", "listening", ""],
+              "query": [
+                { "key": "page", "value": "1", "disabled": true },
+                { "key": "page_size", "value": "20", "disabled": true },
+                { "key": "premium", "value": "false", "disabled": true },
+                { "key": "difficulty", "value": "BEGINNER", "disabled": true },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "ordering", "value": "-created_at", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List All Tests",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/tests/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "tests", ""],
+              "query": [
+                { "key": "page", "value": "1", "disabled": true },
+                { "key": "page_size", "value": "20", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Reading Tests — FREE only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/tests/reading/?premium=false",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "tests", "reading", ""],
+              "query": [
+                { "key": "premium", "value": "false" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Reading Tests — Search",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/tests/reading/?search=Cambridge",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "tests", "reading", ""],
+              "query": [
+                { "key": "search", "value": "Cambridge" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test Attempt",
+      "description": "Full test-taking flow: Start → Save answers periodically → Submit → Review.\n\nThe `attempt_id` variable is captured automatically when you run 'Start Attempt'.",
+      "item": [
+        {
+          "name": "Start Attempt (REAL mode)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "if (code === 200 || code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('attempt_id', json.id);",
+                  "  pm.test('attempt_id saved: ' + json.id, () => pm.expect(json.id).to.be.a('string'));",
+                  "  if (code === 200) pm.test('Resumed existing in-progress attempt', () => true);",
+                  "  if (code === 201) pm.test('New attempt created', () => true);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"practice_test\": \"{{test_id}}\",\n  \"mode\": \"REAL\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/attempts/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "attempts", ""]
+            },
+            "description": "Starts a new test attempt or resumes an existing `IN_PROGRESS` attempt.\n\n**Set `{{test_id}}`** to a valid test UUID before running.\n\n`mode` values:\n- `REAL` — timed exam mode (respects `time_limit_seconds`)\n- `PRACTICE` — untimed study mode\n\n**201** = new attempt created  \n**200** = existing in-progress attempt returned (already started this test)\n\nThe `attempt_id` is auto-saved to the collection variable."
+          }
+        },
+        {
+          "name": "Start Attempt (PRACTICE mode)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const code = pm.response.code;",
+                  "if (code === 200 || code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('attempt_id', json.id);",
+                  "  pm.test('attempt_id saved: ' + json.id, () => pm.expect(json.id).to.be.a('string'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"practice_test\": \"{{test_id}}\",\n  \"mode\": \"PRACTICE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/attempts/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "attempts", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Attempt Detail (Resume)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/attempts/{{attempt_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "attempts", "{{attempt_id}}", ""]
+            },
+            "description": "Returns the full test structure with the student's current saved answers and flag states. Use this to restore state when a student navigates back to an in-progress test.\n\nPreviously saved answers appear in `question.student_answer`.\nFlagged questions have `question.is_flagged = true`.\n\n**Note:** `correct_answer_json` is NOT returned here — only after submission."
+          }
+        },
+        {
+          "name": "Save Answers (Auto-save)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"time_used_seconds\": 245,\n  \"answers\": [\n    {\n      \"question_id\": \"{{question_id}}\",\n      \"answer\": { \"answer\": \"TRUE\" },\n      \"is_flagged\": false\n    },\n    {\n      \"question_id\": \"REPLACE_WITH_ANOTHER_QUESTION_UUID\",\n      \"answer\": null,\n      \"is_flagged\": true\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/attempts/{{attempt_id}}/save/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "attempts", "{{attempt_id}}", "save", ""]
+            },
+            "description": "Saves answers mid-test without submitting. Call this every 30 seconds or on each answer change.\n\n**Rules:**\n- Only questions included in `answers[]` are updated. Others are untouched.\n- `\"answer\": null` marks the question as skipped/unanswered.\n- `time_used_seconds` updates the elapsed timer on the attempt.\n\n**Answer shapes by question type:**\n\n| Type | Answer JSON |\n|---|---|\n| TFNG / YNNG | `{\"answer\": \"TRUE\"}` |\n| MCQ_SINGLE | `{\"answer\": \"A\"}` |\n| MCQ_MULTIPLE | `{\"answers\": [\"A\", \"C\"]}` |\n| MATCHING_HEADINGS | `{\"answer\": \"iv\"}` |\n| SENTENCE_COMPLETION | `{\"answer\": \"photosynthesis\"}` |\n| SHORT_ANSWER | `{\"answer\": \"photosynthesis\"}` |\n| MATCHING_FEATURES | `{\"answer\": \"B\"}` |\n| MATCH_PARA_INFO | `{\"answer\": \"C\"}` |\n\n**Response:**\n```json\n{\"answered\": 12, \"total\": 40, \"time_used_seconds\": 245}\n```"
+          }
+        },
+        {
+          "name": "Submit Test (final)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"time_used_seconds\": 3540,\n  \"answers\": [\n    {\n      \"question_id\": \"{{question_id}}\",\n      \"answer\": { \"answer\": \"FALSE\" },\n      \"is_flagged\": false\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/attempts/{{attempt_id}}/submit/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "attempts", "{{attempt_id}}", "submit", ""]
+            },
+            "description": "Finalises the attempt. The server:\n1. Saves any answers included in the body.\n2. Scores all answers.\n3. Calculates band score.\n4. Marks attempt as `COMPLETED`.\n5. Awards badges if earned.\n6. Auto-adds wrong answers to Review Center.\n\nIf the attempt is already `COMPLETED`, returns existing results without re-scoring.\n\n**You can pass an empty `answers` array** if all answers were already saved via auto-save:\n```json\n{\"time_used_seconds\": 3540, \"answers\": []}\n```\n\n**Response fields:**\n- `score` — raw correct count (e.g. 31)\n- `band_score` — IELTS band string (e.g. `\"7.0\"`)\n- `correct_count` / `incorrect_count` / `unanswered_count`\n- `question_type_stats_json` — accuracy per question type\n- `passage_stats_json` — correct/total per passage or part"
+          }
+        },
+        {
+          "name": "Review Answers (after submission)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/attempts/{{attempt_id}}/review/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "attempts", "{{attempt_id}}", "review", ""]
+            },
+            "description": "Returns the full test with correct answers, explanations, and evidence for text highlighting.\n\n**Only works on `COMPLETED` attempts.** Returns 404 for in-progress attempts.\n\n**Reading response shape:**\n```\npassages[] → question_groups[] → questions[]\n```\n\n**Listening response shape:**\n```\nparts[] → question_groups[] → questions[]\n```\n\nEach question includes:\n- `correct_answer_json` — the correct answer\n- `student_answer` — what the student answered\n- `is_correct` / `is_skipped` / `is_flagged`\n- `explanation` — text explanation of why the answer is correct\n- `answer_evidence_json` — for text highlighting (see below)\n\n**answer_evidence_json (Reading):**\n```json\n{\n  \"text_snippet\": \"treated as part of public-health infrastructure\",\n  \"paragraph\": \"A\"\n}\n```\n\n**answer_evidence_json (Listening):**\n```json\n{\n  \"text_snippet\": \"The passenger surname is Henderson\",\n  \"timestamp\": \"00:45\"\n}\n```\n\n**performance_label per passage/part:** `GOOD` (≥80%) | `AVERAGE` (60-79%) | `CRITICAL` (<60%)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "description": "Progress analytics page data.",
+      "item": [
+        {
+          "name": "Get Analytics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/analytics/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "analytics", ""]
+            },
+            "description": "Returns all data for the Progress Analytics screen in one call.\n\n**Response fields:**\n- `current_band` — estimated current band (avg of last 5 tests)\n- `target_band` — from profile\n- `practice_sessions` — total completed tests\n- `average_accuracy` — overall accuracy %\n- `band_progression` — array of up to 10 attempts, oldest first — use for a line chart\n- `module_performance` — reading/listening accuracy %, writing/speaking are static placeholders\n- `weekly_activity` — sessions per week for last 6 weeks — use for a bar chart\n- `accuracy_improvement` — accuracy per week for last 6 weeks — use for a trend line\n- `recent_activity` — last 20 completed attempts with accuracy, time, top question type\n- `learning_insights` — array of rule-based insight strings"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Review Center",
+      "description": "Manage the student's review/mistake collection. Wrong answers are auto-added after each test submission.",
+      "item": [
+        {
+          "name": "Get Review Center",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.review_items && json.review_items.length > 0) {",
+                  "    pm.collectionVariables.set('review_item_id', json.review_items[0].id);",
+                  "    pm.test('review_item_id saved: ' + json.review_items[0].id, () => true);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/review-center/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "review-center", ""],
+              "query": [
+                { "key": "module", "value": "READING", "disabled": true, "description": "READING | LISTENING" },
+                { "key": "reason", "value": "wrong", "disabled": true, "description": "wrong | saved | weak_area | flagged" },
+                { "key": "search", "value": "heading", "disabled": true }
+              ]
+            },
+            "description": "Returns the review center dashboard with stats, type breakdown, and review items.\n\n**Query filters (all optional):**\n- `module=READING` or `module=LISTENING`\n- `reason=wrong` / `reason=saved` / `reason=weak_area` / `reason=flagged`\n- `search=heading` — searches question text and explanation\n\n**Response:**\n- `stats.total_to_review` — total items matching filter\n- `stats.most_difficult_type` — question type with most mistakes\n- `mistakes_by_type` — sorted list of question types by mistake count\n- `mistakes_by_module` — reading vs listening mistake counts\n- `review_items` — up to 50 items (apply filters to narrow down)\n\nEach review item includes:\n- `reasons[]` — `\"wrong\"`, `\"saved\"`, `\"weak_area\"`, `\"flagged\"`\n- `correct_answer` — the correct answer JSON\n- `student_answer` — what the student answered\n- `source_label` — e.g. `\"Cambridge IELTS 18 Test 2 / Passage 1\"`\n- `difficulty` — `\"Easy\"` / `\"Intermediate\"` / `\"Advanced\"`\n\nThe first `review_item_id` is auto-saved for use in update/delete requests."
+          }
+        },
+        {
+          "name": "Get Review Center — Wrong only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/review-center/?reason=wrong",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "review-center", ""],
+              "query": [{ "key": "reason", "value": "wrong" }]
+            }
+          }
+        },
+        {
+          "name": "Get Review Center — Saved only",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/review-center/?reason=saved",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "review-center", ""],
+              "query": [{ "key": "reason", "value": "saved" }]
+            }
+          }
+        },
+        {
+          "name": "Get Review Center — Reading mistakes",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/review-center/?module=READING&reason=wrong",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "review-center", ""],
+              "query": [
+                { "key": "module", "value": "READING" },
+                { "key": "reason", "value": "wrong" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add to Review Center (manual save)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_id\": \"{{question_id}}\",\n  \"attempt_id\": \"{{attempt_id}}\",\n  \"is_wrong\": false,\n  \"is_saved\": true,\n  \"is_weak_area\": false,\n  \"is_flagged\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/review-center/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "review-center", ""]
+            },
+            "description": "Manually add a question to the review center or update its tags (upsert — safe to call multiple times).\n\n**Note:** You don't need to call this for wrong answers — they are automatically added when a test is submitted.\n\nUse this to let the student **bookmark/save** a question for later review.\n\n`attempt_id` is optional — omit it if not coming from a specific attempt.\n\n**201** = new review item created  \n**200** = existing item updated"
+          }
+        },
+        {
+          "name": "Update Review Item",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_saved\": true,\n  \"is_weak_area\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/review-center/{{review_item_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "review-center", "{{review_item_id}}", ""]
+            },
+            "description": "Update one or more boolean flags on a review item. Send only the fields you want to change.\n\nWritable fields: `is_wrong`, `is_saved`, `is_weak_area`, `is_flagged`"
+          }
+        },
+        {
+          "name": "Remove from Review Center",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/v1/student/review-center/{{review_item_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "student", "review-center", "{{review_item_id}}", ""]
+            },
+            "description": "Permanently removes the review item. Returns `204 No Content`."
+          }
+        }
+      ]
+    }
+  ]
+}

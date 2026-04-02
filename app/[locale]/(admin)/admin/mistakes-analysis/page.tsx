@@ -1,6 +1,13 @@
-import {MistakesAnalysisClient} from "./_components/MistakesAnalysisClient";
+import {redirect} from "next/navigation";
 
-export default function AdminMistakesAnalysisPage() {
-  return <MistakesAnalysisClient />;
+type AdminMistakesAnalysisPageProps = {
+  params: Promise<{
+    locale: string;
+  }>;
+};
+
+export default async function AdminMistakesAnalysisPage({params}: AdminMistakesAnalysisPageProps) {
+  const {locale} = await params;
+  redirect(`/${locale}/admin`);
 }
 

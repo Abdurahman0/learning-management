@@ -3,7 +3,7 @@
 import {useState} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
-import {BarChart3, BookCheck, BookOpen, CalendarClock, ChevronDown, ClipboardList, Headphones, Home, Lock, Mic, PenLine, Sparkles} from "lucide-react";
+import {BookOpen, ChevronDown, Headphones, Home, Lock, Mic, PenLine} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
@@ -44,11 +44,6 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
   const profile = role === "guest" ? null : getStaticProfile(role);
 
   const dashboardHref = role === "admin" ? `/${locale}/admin` : role === "teacher" ? `/${locale}/teacher` : `/${locale}/dashboard`;
-  const aiCoachHref = `/${locale}/ai-coach`;
-  const assignmentsHref = `/${locale}/assignments`;
-  const reviewCenterHref = `/${locale}/review-center`;
-  const sessionsHref = `/${locale}/sessions`;
-  const analyticsHref = `/${locale}/analytics`;
   const readingHref = `/${locale}/reading`;
   const listeningHref = `/${locale}/listening`;
 
@@ -65,18 +60,6 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
 
   const secondaryNavItems: NavItem[] = isStudent
     ? [
-        {
-          key: "assignments",
-          label: t("sidebar.assignments"),
-          href: assignmentsHref,
-          icon: ClipboardList
-        },
-        {
-          key: "sessions",
-          label: t("sidebar.sessions"),
-          href: sessionsHref,
-          icon: CalendarClock
-        },
         // Temporarily disabled while the product shifts from chat to 1-to-1 sessions.
         // {
         //   key: "messages",
@@ -84,24 +67,36 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
         //   href: messagesHref,
         //   icon: MessageSquare
         // },
-        {
-          key: "aiCoach",
-          label: t("sidebar.aiCoach"),
-          href: aiCoachHref,
-          icon: Sparkles
-        },
-        {
-          key: "analytics",
-          label: t("sidebar.analytics"),
-          href: analyticsHref,
-          icon: BarChart3
-        },
-        {
-          key: "reviewCenter",
-          label: t("sidebar.reviewCenter"),
-          href: reviewCenterHref,
-          icon: BookCheck
-        }
+        // {
+        //   key: "assignments",
+        //   label: t("sidebar.assignments"),
+        //   href: `/${locale}/assignments`,
+        //   icon: ClipboardList
+        // },
+        // {
+        //   key: "sessions",
+        //   label: t("sidebar.sessions"),
+        //   href: `/${locale}/sessions`,
+        //   icon: CalendarClock
+        // },
+        // {
+        //   key: "aiCoach",
+        //   label: t("sidebar.aiCoach"),
+        //   href: `/${locale}/ai-coach`,
+        //   icon: Sparkles
+        // },
+        // {
+        //   key: "analytics",
+        //   label: t("sidebar.analytics"),
+        //   href: `/${locale}/analytics`,
+        //   icon: BarChart3
+        // },
+        // {
+        //   key: "reviewCenter",
+        //   label: t("sidebar.reviewCenter"),
+        //   href: `/${locale}/review-center`,
+        //   icon: BookCheck
+        // }
       ]
     : [];
 

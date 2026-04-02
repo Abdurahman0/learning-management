@@ -40,6 +40,17 @@ type ContentFiltersProps = {
   onOnlyPublishedVariantsChange: (value: boolean) => void
 }
 
+function resolveLabel<Value extends string>(
+  translate: ReturnType<typeof useTranslations<"adminContentBank">>,
+  option: Option<Value>
+) {
+  try {
+    return translate(option.labelKey)
+  } catch {
+    return option.value
+  }
+}
+
 function FilterSelect<Value extends string>({
   value,
   options,
@@ -59,7 +70,7 @@ function FilterSelect<Value extends string>({
       <SelectContent>
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
-            {t(option.labelKey)}
+            {resolveLabel(t, option)}
           </SelectItem>
         ))}
       </SelectContent>

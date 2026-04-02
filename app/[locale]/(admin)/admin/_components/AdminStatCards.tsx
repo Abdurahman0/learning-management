@@ -19,12 +19,16 @@ function formatGrowth(value: number) {
   return `${value > 0 ? "+" : ""}${value.toFixed(1)}%`;
 }
 
-export function AdminStatCards() {
+type AdminStatCardsProps = {
+  summary?: typeof adminSummary;
+};
+
+export function AdminStatCards({summary = adminSummary}: AdminStatCardsProps) {
   const t = useTranslations("adminDashboard");
 
   return (
     <section className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
-      {adminSummary.map((item) => {
+      {summary.map((item) => {
         const Icon = iconMap[item.icon];
 
         return (
