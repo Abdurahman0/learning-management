@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { BookOpen, Bookmark, BookmarkCheck, Clock3, Grid2x2, HelpCircle, Maximize2, Menu, Minimize2, MoveLeft, MoveRight, Play, RotateCcw, Square, User } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { getReadingTestById, type ReadingQuestion } from "@/data/reading-tests";
+import { getStaticReadingTestById, saveRuntimeReadingTest, type ReadingFullTest, type ReadingQuestion } from "@/data/reading-tests";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import {
 } from "@/lib/test-attempt-storage";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { HighlightableText } from "@/components/test/HighlightableText";
+import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
 import {
   clampSplitPct,
   mergeRanges,
@@ -42,6 +43,10 @@ import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
 import { useTestAppearance } from "@/lib/test-appearance";
 import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
 import { ReviewQuestionsPanel } from "./result/_components/ReviewQuestionsPanel";
+import { studentAttemptsService } from "@/src/services/student/attempts.service";
+import { studentTestsService } from "@/src/services/student/tests.service";
+import { StudentApiError } from "@/src/services/student/types";
+import type { StudentAttemptDetail, StudentAttemptQuestion, StudentAttemptQuestionGroup, StudentAttemptReadingPassage, StudentTestRecord } from "@/src/services/student/types";
 
 const DEFAULT_SPLIT = 50;
 
@@ -64,6 +69,18 @@ function isAnswered(value: AnswerValue | undefined) {
     return value.length > 0;
   }
   return false;
+}
+
+function toSubmitAnswer(value: AnswerValue | undefined): string | string[] | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length ? value : null;
+  }
+  if (Array.isArray(value)) {
+    const cleaned = value.map((item) => item.trim()).filter(Boolean);
+    return cleaned.length ? cleaned : null;
+  }
+  return null;
 }
 
 type HighlightItem = {
@@ -107,6 +124,216 @@ function findParagraphMatches(paragraph: string, spans: HighlightItem[]): Paragr
   return filtered;
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function toStringSafe(value: unknown, fallback = "") {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return fallback;
+}
+
+function toNumberSafe(value: unknown, fallback = 0) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function extractQuestionPrompt(question: StudentAttemptQuestion) {
+  const options = asRecord(question.options_json);
+  const fromStatement = toStringSafe(options?.statement);
+  const fromStem = toStringSafe(options?.sentence_stem);
+  const direct = toStringSafe(question.question_text);
+  return fromStatement || fromStem || direct || "";
+}
+
+function extractMcqOptions(question: StudentAttemptQuestion): string[] {
+  const options = asRecord(question.options_json);
+  const list = asArray<unknown>(options?.options).map((item) => {
+    if (typeof item === "string") return item;
+    const row = asRecord(item);
+    const text = toStringSafe(row?.text);
+    const key = toStringSafe(row?.key);
+    if (text) return text;
+    if (key) return key;
+    return "";
+  });
+
+  const cleaned = list.map((item) => item.trim()).filter(Boolean);
+  return cleaned.length ? cleaned : ["A", "B", "C"];
+}
+
+function extractHeadingOptions(group: StudentAttemptQuestionGroup): string[] {
+  const content = asRecord(group.group_content_json);
+  const headings = asArray<unknown>(content?.headings)
+    .map((item) => {
+      const row = asRecord(item);
+      const key = toStringSafe(row?.key);
+      const text = toStringSafe(row?.text);
+      if (key && text) return `${key}. ${text}`;
+      return text || key;
+    })
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return headings.length ? headings : ["i. Heading 1", "ii. Heading 2", "iii. Heading 3", "iv. Heading 4", "v. Heading 5"];
+}
+
+function buildGroupTitle(group: StudentAttemptQuestionGroup) {
+  const from = toNumberSafe(group.question_number_start, 0);
+  const to = toNumberSafe(group.question_number_end, 0);
+  if (from > 0 && to >= from) {
+    return `Questions ${from}-${to}`;
+  }
+  return `Group ${toNumberSafe(group.group_order, 1)}`;
+}
+
+function buildEvidencePhrase(prompt: string, fallbackNumber: number) {
+  const compact = prompt.replace(/\s+/g, " ").trim();
+  if (compact) return compact.slice(0, 80);
+  return `Question ${fallbackNumber}`;
+}
+
+function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord, attempt: StudentAttemptDetail): ReadingFullTest {
+  const passages: ReadingFullTest["passages"] = attempt.reading_passages.map((passage, index) => ({
+    id: (`p${index + 1}` as ReadingFullTest["passages"][number]["id"]),
+    title: toStringSafe(passage.title, `Passage ${index + 1}`),
+    text: toStringSafe(passage.passage_text)
+  }));
+
+  const passageIdByBackendId = new Map<string, ReadingFullTest["passages"][number]["id"]>();
+  attempt.reading_passages.forEach((passage, index) => {
+    passageIdByBackendId.set(toStringSafe(passage.id), (`p${index + 1}` as ReadingFullTest["passages"][number]["id"]));
+  });
+
+  const questions: ReadingQuestion[] = [];
+  for (const passage of attempt.reading_passages as StudentAttemptReadingPassage[]) {
+    const passageId = passageIdByBackendId.get(toStringSafe(passage.id)) ?? "p1";
+    for (const group of passage.question_groups as StudentAttemptQuestionGroup[]) {
+      const groupTitle = buildGroupTitle(group);
+      const instruction = toStringSafe(group.instructions);
+      const headingOptions = extractHeadingOptions(group);
+      const paragraphOptions = ["A", "B", "C", "D", "E", "F"];
+
+      for (const question of group.questions as StudentAttemptQuestion[]) {
+        const number = toNumberSafe(question.question_number, questions.length + 1);
+        const questionId = toStringSafe(question.id, `${passageId}-q-${number}`);
+        const prompt = extractQuestionPrompt(question);
+        const qType = toStringSafe(question.question_type).toUpperCase();
+        const evidenceSpans = [{ passageId, paragraphIndex: 0, phrase: buildEvidencePhrase(prompt, number) }];
+
+        if (qType === "TFNG") {
+          questions.push({
+            id: questionId,
+            number,
+            passageId,
+            type: "tfng",
+            groupTitle,
+            groupInstruction: instruction,
+            prompt,
+            options: ["TRUE", "FALSE", "NOT GIVEN"],
+            correctAnswer: "",
+            explanation: "",
+            evidenceSpans
+          });
+          continue;
+        }
+
+        if (qType === "MATCHING_HEADINGS") {
+          questions.push({
+            id: questionId,
+            number,
+            passageId,
+            type: "matchingHeadings",
+            groupTitle,
+            groupInstruction: instruction,
+            prompt: prompt || `Question ${number}`,
+            target: prompt || `Question ${number}`,
+            headingOptions,
+            correctAnswer: "",
+            explanation: "",
+            evidenceSpans
+          });
+          continue;
+        }
+
+        if (qType === "MATCH_PARA_INFO") {
+          questions.push({
+            id: questionId,
+            number,
+            passageId,
+            type: "matchingInfo",
+            groupTitle,
+            groupInstruction: instruction,
+            prompt,
+            paragraphOptions,
+            correctAnswer: "",
+            explanation: "",
+            evidenceSpans
+          });
+          continue;
+        }
+
+        if (qType === "MCQ_SINGLE" || qType === "MCQ_MULTIPLE") {
+          questions.push({
+            id: questionId,
+            number,
+            passageId,
+            type: "mcq",
+            groupTitle,
+            groupInstruction: instruction,
+            prompt,
+            options: extractMcqOptions(question),
+            correctAnswer: "",
+            explanation: "",
+            evidenceSpans
+          });
+          continue;
+        }
+
+        questions.push({
+          id: questionId,
+          number,
+          passageId,
+          type: "sentenceCompletion",
+          groupTitle,
+          groupInstruction: instruction,
+          prompt: prompt || toStringSafe(question.question_text, `Question ${number}`),
+          blanks: 1,
+          correctAnswer: "",
+          acceptableAnswers: [],
+          explanation: "",
+          evidenceSpans
+        });
+      }
+    }
+  }
+
+  questions.sort((left, right) => left.number - right.number);
+
+  const durationSeconds = attempt.time_limit_seconds ?? meta.time_limit_seconds ?? 3600;
+
+  return {
+    id: toStringSafe(meta.id, testId),
+    title: toStringSafe(meta.title, toStringSafe(attempt.practice_test_title, "Reading Test")),
+    durationMinutes: Math.max(1, Math.ceil(toNumberSafe(durationSeconds, 3600) / 60)),
+    totalQuestions: toNumberSafe(attempt.total_questions, questions.length),
+    passages,
+    questions
+  };
+}
+
+function hasAttemptQuestionData(attempt: StudentAttemptDetail) {
+  return attempt.reading_passages.some((passage) =>
+    passage.question_groups.some((group) => Array.isArray(group.questions) && group.questions.length > 0)
+  );
+}
+
 export default function ReadingTestPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -118,14 +345,130 @@ export default function ReadingTestPage() {
   const modeParam = searchParams.get("mode");
   const requestedMode: AttemptMode | null =
     modeParam === "real" || modeParam === "practice" ? modeParam : null;
-  const test = getReadingTestById(testId);
+  const demoTest = getStaticReadingTestById(testId);
+  const shouldLoadFromBackend =
+    Boolean(testId)
+    && (
+      requestedMode !== null
+      || restartRequested
+      || !demoTest
+      || demoTest.questions.length === 0
+    );
+  const [test, setTest] = useState<ReadingFullTest | null>(shouldLoadFromBackend ? null : (demoTest ?? null));
+  const [backendAttemptId, setBackendAttemptId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(shouldLoadFromBackend);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!shouldLoadFromBackend || !testId) return;
+
+    let active = true;
+
+    const loadBackendTest = async () => {
+      setIsLoading(true);
+      setLoadError(null);
+      try {
+        const listed = await studentTestsService.listReadingAllPages({ pageSize: 100 });
+        if (!active) return;
+
+        const matched = listed.results.find((item) => String(item.id) === testId);
+        if (!matched) {
+          setTest(null);
+          setBackendAttemptId(null);
+          setLoadError(t("notFoundDesc"));
+          return;
+        }
+
+        const attempt = await studentAttemptsService.create({
+          practice_test: testId,
+          mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+        });
+        if (!active) return;
+
+        const hydratedAttempt =
+          hasAttemptQuestionData(attempt)
+            ? attempt
+            : await studentAttemptsService.getById(String(attempt.id));
+        if (!active) return;
+
+        let finalAttempt = hydratedAttempt;
+        if (
+          !hasAttemptQuestionData(finalAttempt)
+          && toStringSafe(finalAttempt.status).toUpperCase() === "IN_PROGRESS"
+          && toNumberSafe(finalAttempt.answered_count, 0) === 0
+        ) {
+          try {
+            await studentAttemptsService.submit(String(finalAttempt.id), {
+              time_used_seconds: 0,
+              answers: []
+            });
+            if (!active) return;
+
+            const freshAttempt = await studentAttemptsService.create({
+              practice_test: testId,
+              mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+            });
+            if (!active) return;
+            finalAttempt = hasAttemptQuestionData(freshAttempt)
+              ? freshAttempt
+              : await studentAttemptsService.getById(String(freshAttempt.id));
+            if (!active) return;
+          } catch {
+            // Keep original attempt and surface generic empty-data error below.
+          }
+        }
+
+        const mappedTest = mapBackendAttemptToReadingTest(testId, matched, finalAttempt);
+        if (!mappedTest.questions.length) {
+          throw new Error("No questions returned for this reading attempt.");
+        }
+        setBackendAttemptId(String(finalAttempt.id));
+        saveRuntimeReadingTest(mappedTest);
+        setTest(mappedTest);
+      } catch (error) {
+        if (!active) return;
+        const message =
+          error instanceof StudentApiError
+            ? error.message
+            : t.has("loadFailed")
+              ? t("loadFailed")
+              : "Failed to load this reading test from backend.";
+        setLoadError(message);
+        setBackendAttemptId(null);
+        setTest(null);
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadBackendTest();
+
+    return () => {
+      active = false;
+    };
+  }, [requestedMode, restartRequested, shouldLoadFromBackend, t, testId]);
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto mt-8 max-w-xl px-4">
+        <Card className="gap-3 p-6">
+          <h1 className="text-xl font-semibold">{t.has("loadingTitle") ? t("loadingTitle") : "Loading test..."}</h1>
+          <p className="text-sm text-muted-foreground">
+            {t.has("loadingDesc") ? t("loadingDesc") : "Fetching test content from backend."}
+          </p>
+        </Card>
+      </div>
+    );
+  }
 
   if (!test) {
     return (
       <div className="mx-auto mt-8 max-w-xl px-4">
         <Card className="gap-3 p-6">
           <h1 className="text-xl font-semibold">{t("notFoundTitle")}</h1>
-          <p className="text-sm text-muted-foreground">{t("notFoundDesc")}</p>
+          <p className="text-sm text-muted-foreground">{loadError ?? t("notFoundDesc")}</p>
           <Button asChild className="mt-2 w-fit">
             <Link href={`/${locale}/reading`}>{t("backToReading")}</Link>
           </Button>
@@ -138,6 +481,7 @@ export default function ReadingTestPage() {
     <ReadingTestClient
       key={test.id}
       test={test}
+      backendAttemptId={backendAttemptId}
       restartRequested={restartRequested}
       requestedMode={requestedMode}
     />
@@ -145,12 +489,18 @@ export default function ReadingTestPage() {
 }
 
 type ReadingTestClientProps = {
-  test: NonNullable<ReturnType<typeof getReadingTestById>>;
+  test: ReadingFullTest;
+  backendAttemptId?: string | null;
   restartRequested?: boolean;
   requestedMode?: AttemptMode | null;
 };
 
-function ReadingTestClient({ test, restartRequested = false, requestedMode = null }: ReadingTestClientProps) {
+function ReadingTestClient({
+  test,
+  backendAttemptId = null,
+  restartRequested = false,
+  requestedMode = null
+}: ReadingTestClientProps) {
   const t = useTranslations("readingTest");
   const tReadingResult = useTranslations("readingResult");
   const tOptions = useTranslations("testOptions");
@@ -178,6 +528,7 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
     fullscreen: 0,
     visibility: 0,
   });
+  const [isSubmittingResult, setIsSubmittingResult] = useState(false);
   const splitStorageKey = "readingSplitPct";
   const [splitPct, setSplitPct] = useState(() => {
     if (typeof window === "undefined") return DEFAULT_SPLIT;
@@ -692,35 +1043,71 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
     [activePassageId, test.questions]
   );
 
-  const finishTest = useCallback(() => {
-    if (!attemptId) return;
+  const finishTest = useCallback(async () => {
+    if (!attemptId || isSubmittingResult) return;
+    setIsSubmittingResult(true);
 
     const finishedAt = Date.now();
-    saveAttemptResult({
-      attemptId,
-      module: "reading",
-      testId: test.id,
-      mode: attemptMode ?? "practice",
-      answers,
-      markedQuestionIds: [...marked],
-      startedAt,
-      finishedAt,
-      timeRemainingSec: remainingSeconds,
-      timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
-    });
+    const timerUsed = timerRunning || remainingSeconds !== test.durationMinutes * 60;
+    const timerSpentSeconds = Math.max(0, test.durationMinutes * 60 - remainingSeconds);
+    const elapsedSeconds = Math.max(0, Math.floor((finishedAt - startedAt) / 1000));
+    const timeUsedSeconds = timerUsed ? timerSpentSeconds : elapsedSeconds;
 
-    setReviewMode(true);
-    setFinishOpen(false);
-    setTimerRunning(false);
+    try {
+      if (backendAttemptId) {
+        const submitAnswers = test.questions
+          .map((question) => {
+            const answer = toSubmitAnswer(answers[question.id]);
+            const isFlagged = marked.has(question.id);
+            if (answer === null && !isFlagged) {
+              return null;
+            }
+            return {
+              question_id: question.id,
+              answer,
+              is_flagged: isFlagged
+            };
+          })
+          .filter((item): item is { question_id: string; answer: string | string[] | null; is_flagged: boolean } => item !== null);
+
+        await studentAttemptsService.submit(backendAttemptId, {
+          time_used_seconds: timeUsedSeconds,
+          answers: submitAnswers
+        });
+      }
+    } catch (error) {
+      console.error("Reading submit failed", error);
+    } finally {
+      saveAttemptResult({
+        attemptId,
+        module: "reading",
+        testId: test.id,
+        mode: attemptMode ?? "practice",
+        answers,
+        markedQuestionIds: [...marked],
+        startedAt,
+        finishedAt,
+        timeRemainingSec: remainingSeconds,
+        timerUsed,
+      });
+
+      setReviewMode(true);
+      setFinishOpen(false);
+      setTimerRunning(false);
+      setIsSubmittingResult(false);
+    }
   }, [
     answers,
     attemptId,
     attemptMode,
+    backendAttemptId,
+    isSubmittingResult,
     marked,
     remainingSeconds,
     startedAt,
     test.durationMinutes,
     test.id,
+    test.questions,
     timerRunning,
   ]);
 
@@ -1261,7 +1648,11 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
                     <section key={group.title} className="space-y-4">
                       <div>
                         <h3 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{group.title}</h3>
-                        {group.instruction ? <p className="test-muted-copy mt-1 wrap-break-word text-sm text-muted-foreground">{group.instruction}</p> : null}
+                        {group.instruction ? (
+                          <p className="test-muted-copy mt-1 wrap-break-word text-sm text-muted-foreground">
+                            <FormattedInstructionText text={group.instruction} />
+                          </p>
+                        ) : null}
                       </div>
 
                       {headings ? (
@@ -1925,7 +2316,9 @@ function ReadingTestClient({ test, restartRequested = false, requestedMode = nul
             <p className="mt-1 text-xs text-muted-foreground">{t("timeSpent", { seconds: timeSpent })}</p>
             <div className="mt-4 flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setFinishOpen(false)}>{t("cancel")}</Button>
-              <Button onClick={finishTest}>{t("confirmFinish")}</Button>
+              <Button onClick={finishTest} disabled={isSubmittingResult}>
+                {t("confirmFinish")}
+              </Button>
             </div>
           </Card>
         </div>

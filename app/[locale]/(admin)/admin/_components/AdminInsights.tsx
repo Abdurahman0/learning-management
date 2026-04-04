@@ -5,13 +5,13 @@ import {useTranslations} from "next-intl";
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
-import {platformInsights} from "@/data/admin-dashboard";
+import type {PlatformInsights} from "@/data/admin-dashboard";
 
 type AdminInsightsProps = {
-  insights?: typeof platformInsights;
+  insights: PlatformInsights;
 };
 
-export function AdminInsights({insights = platformInsights}: AdminInsightsProps) {
+export function AdminInsights({insights}: AdminInsightsProps) {
   const t = useTranslations("adminDashboard");
 
   return (

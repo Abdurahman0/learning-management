@@ -59,6 +59,7 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
 
   const safeHoveredIndex =
     hoveredIndex !== null && hoveredIndex < visiblePoints.length ? hoveredIndex : null;
+  const hasPoints = visiblePoints.length > 0;
 
   const chart = useMemo(() => {
     const width = 760;
@@ -69,9 +70,9 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
     const bottomPad = 38;
     const plotW = width - leftPad - rightPad;
     const plotH = height - topPad - bottomPad;
-    const step = visiblePoints.length > 1 ? plotW / (visiblePoints.length - 1) : plotW;
+    const step = hasPoints && visiblePoints.length > 1 ? plotW / (visiblePoints.length - 1) : plotW;
     const mapX = (i: number) => leftPad + i * step;
-    const values = visiblePoints.map((point) => point.band);
+    const values = hasPoints ? visiblePoints.map((point) => point.band) : [0];
     const minRaw = Math.min(...values);
     const maxRaw = Math.max(...values);
     const range = Math.max(0.35, maxRaw - minRaw);
@@ -89,7 +90,7 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
     const yTicks = [0, 1, 2, 3, 4].map((stepIndex) => safeMax - ((safeMax - min) * stepIndex) / 4);
 
     return {width, height, leftPad, rightPad, topPad, plotH, yTicks, mapX, mapY, linePath, areaPath, cartesian};
-  }, [visiblePoints]);
+  }, [hasPoints, visiblePoints]);
 
   const active = safeHoveredIndex !== null ? visiblePoints[safeHoveredIndex] : null;
   const trendDelta = visiblePoints.length > 1 ? visiblePoints[visiblePoints.length - 1].band - visiblePoints[0].band : 0;
@@ -119,9 +120,10 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
         </Select>
       </CardHeader>
       <CardContent>
-        <ChartContainer className="relative overflow-x-hidden rounded-xl border border-border/50 bg-linear-to-b from-blue-500/4 to-transparent p-2 sm:p-3">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_65%_at_50%_-10%,rgba(59,130,246,0.18),transparent_62%)]" />
-          <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="h-auto w-full">
+        {hasPoints ? (
+          <ChartContainer className="relative overflow-x-hidden rounded-xl border border-border/50 bg-linear-to-b from-blue-500/4 to-transparent p-2 sm:p-3">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_65%_at_50%_-10%,rgba(59,130,246,0.18),transparent_62%)]" />
+            <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="h-auto w-full">
             <defs>
               <linearGradient id={`score-area-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="rgb(59 130 246 / 0.28)" />
@@ -166,13 +168,13 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
             <path d={chart.areaPath} fill={`url(#score-area-${gradientId})`} />
             <path d={chart.linePath} fill="none" stroke={`url(#score-line-${gradientId})`} strokeWidth="3" strokeLinecap="round" />
 
-            {visiblePoints.map((point, i) => {
-              const x = chart.mapX(i);
-              const y = chart.mapY(point.band);
-              const isActive = safeHoveredIndex === i;
-              const showXLabel = visiblePoints.length <= 7 || i % 2 === 0 || i === visiblePoints.length - 1;
-              return (
-                <g key={point.label} onMouseEnter={() => setHoveredIndex(i)} onMouseLeave={() => setHoveredIndex(null)} className="cursor-pointer">
+              {visiblePoints.map((point, i) => {
+                const x = chart.mapX(i);
+                const y = chart.mapY(point.band);
+                const isActive = safeHoveredIndex === i;
+                const showXLabel = visiblePoints.length <= 7 || i % 2 === 0 || i === visiblePoints.length - 1;
+                return (
+                  <g key={`${point.label}-${i}`} onMouseEnter={() => setHoveredIndex(i)} onMouseLeave={() => setHoveredIndex(null)} className="cursor-pointer">
                   <rect x={x - 16} y={chart.topPad} width={32} height={chart.plotH + 12} fill="transparent" />
                   {isActive ? <circle cx={x} cy={y} r={11} fill="rgb(59 130 246 / 0.2)" /> : null}
                   <circle cx={x} cy={y} r={isActive ? 5.2 : 3.8} fill="rgb(59 130 246)" />
@@ -189,21 +191,24 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
                     </text>
                   ) : null}
                   <title>{`${point.label}: ${point.band.toFixed(1)}`}</title>
-                </g>
-              );
-            })}
-          </svg>
+                  </g>
+                );
+              })}
+            </svg>
 
-          {active ? (
-            <div
-              className="pointer-events-none absolute top-2 -translate-x-1/2 rounded-xl border border-blue-300/25 bg-[#0B1528]/95 px-3 py-2 text-xs shadow-[0_10px_30px_rgba(2,6,23,0.45)]"
-              style={{left: `${tooltipLeftPct}%`}}
-            >
-              <p className="font-semibold text-blue-100">{active.label}</p>
-              <p className="text-blue-200/80">Band {active.band.toFixed(1)}</p>
-            </div>
-          ) : null}
-        </ChartContainer>
+            {active ? (
+              <div
+                className="pointer-events-none absolute top-2 -translate-x-1/2 rounded-xl border border-blue-300/25 bg-[#0B1528]/95 px-3 py-2 text-xs shadow-[0_10px_30px_rgba(2,6,23,0.45)]"
+                style={{left: `${tooltipLeftPct}%`}}
+              >
+                <p className="font-semibold text-blue-100">{active.label}</p>
+                <p className="text-blue-200/80">Band {active.band.toFixed(1)}</p>
+              </div>
+            ) : null}
+          </ChartContainer>
+        ) : (
+          <p className="rounded-xl border border-dashed border-border/70 bg-background/60 p-4 text-sm text-muted-foreground">{t("scoreProgress.empty")}</p>
+        )}
       </CardContent>
     </Card>
   );

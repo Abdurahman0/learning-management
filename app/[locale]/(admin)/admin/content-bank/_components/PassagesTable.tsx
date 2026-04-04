@@ -23,6 +23,7 @@ type PassagesTableProps = {
   onSelectPassage: (passageId: string) => void
   onReadFullPassage: (passageId: string) => void
   onOpenCreateVariant: (passageId: string) => void
+  onDeletePassage: (passageId: string) => void
 }
 
 function moduleBadgeClass(module: ContentBankPassage["module"]) {
@@ -43,7 +44,8 @@ export function PassagesTable({
   selectedPassageId,
   onSelectPassage,
   onReadFullPassage,
-  onOpenCreateVariant
+  onOpenCreateVariant,
+  onDeletePassage
 }: PassagesTableProps) {
   const t = useTranslations("adminContentBank")
 
@@ -139,6 +141,9 @@ export function PassagesTable({
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onSelect={() => onReadFullPassage(passage.id)}>{t("actions.readFullPassage")}</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => onOpenCreateVariant(passage.id)}>{t("actions.createVariantSet")}</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => onDeletePassage(passage.id)}>
+                          {t("actions.deletePassage")}
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -185,6 +190,13 @@ export function PassagesTable({
               </Button>
               <Button variant="outline" className="h-8 rounded-lg border-border/70 bg-background/45 text-xs" onClick={() => onOpenCreateVariant(passage.id)}>
                 {t("actions.createVariantSet")}
+              </Button>
+              <Button
+                variant="outline"
+                className="h-8 rounded-lg border-border/70 bg-background/45 text-xs text-destructive"
+                onClick={() => onDeletePassage(passage.id)}
+              >
+                {t("actions.deletePassage")}
               </Button>
             </div>
           </Card>

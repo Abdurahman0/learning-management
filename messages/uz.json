@@ -744,7 +744,8 @@
     },
     "scoreProgress": {
       "title": "Score Progress",
-      "subtitle": "Your band trend over the last 10 tests"
+      "subtitle": "Your band trend over the last 10 tests",
+      "empty": "Hozircha band progress ma'lumoti yo'q."
     },
     "skillsSnapshot": {
       "title": "Skills Snapshot"
@@ -781,7 +782,13 @@
     },
     "achievements": {
       "title": "Your Achievements",
-      "subtitle": "Collect badges as you progress towards your goal"
+      "subtitle": "Collect badges as you progress towards your goal",
+      "empty": "Hozircha yutuqlar yo'q."
+    },
+    "empty": {
+      "skillsSnapshot": "Hozircha ko'nikmalar bo'yicha ma'lumot yo'q.",
+      "weakAreas": "Hozircha zaif yo'nalishlar topilmadi.",
+      "recentHistory": "Hozircha test tarixi yo'q."
     },
     "copyright": "All rights reserved.",
     "actions": {
@@ -962,6 +969,7 @@
         "open": "Amallar menyusini ochish",
         "edit": "Testni tahrirlash",
         "preview": "Testni ko'rish",
+        "activate": "Testni faollashtirish",
         "delete": "Testni o'chirish"
       }
     },
@@ -1087,7 +1095,9 @@
       "fields": {
         "type": "Savol turi",
         "from": "Dan",
-        "to": "Gacha"
+        "to": "Gacha",
+        "instructions": "Ko'rsatmalar",
+        "instructionsPlaceholder": "Savol guruhi uchun ko'rsatmalarni kiriting"
       },
       "validationRange": "Faol passage/qism ichida togri diapazon tanlang.",
       "validationOverlap": "Bu diapazon mavjud savol raqamlari bilan kesishmoqda. Faqat bo'sh raqamlarni tanlang.",
@@ -1907,6 +1917,7 @@
       "selectPassage": "Passageni tanlash",
       "readFullPassage": "To'liq passageni o'qish",
       "createVariantSet": "Variant to'plam yaratish",
+      "deletePassage": "Passageni o'chirish",
       "previewQuestions": "Savollar preview",
       "edit": "Tahrirlash",
       "duplicateAsNewVariant": "Yangi variant sifatida nusxalash",
@@ -2009,6 +2020,8 @@
       "addPassageRequested": "Yangi passage qo'shish amali ishga tushdi.",
       "quickPublishRequested": "Tez nashr qilish amali ishga tushdi.",
       "passageCreated": "{name} qo'shildi.",
+      "passageDeleted": "{name} o'chirildi.",
+      "confirmDeletePassage": "\"{name}\" o'chirilsinmi?",
       "variantCreated": "{name} yaratildi.",
       "variantUpdated": "{name} yangilandi.",
       "variantDuplicated": "{name} yangi draft sifatida nusxalandi.",
@@ -2976,6 +2989,15 @@
         "title": "Batafsil ko'rib chiqish tayyor emas",
         "description": "Bu modul uchun review sahifasi ishlab chiqilmoqda va tez orada qo'shiladi."
       }
+    },
+    "empty": {
+      "loading": "Analitika yuklanmoqda...",
+      "bandProgress": "Hozircha band progress ma'lumoti yo'q.",
+      "accuracy": "Hozircha aniqlik ma'lumoti yo'q.",
+      "weekly": "Hozircha haftalik faollik ma'lumoti yo'q.",
+      "modulePerformance": "Hozircha modul natijalari ma'lumoti yo'q.",
+      "insights": "Hozircha o'rganish insightlari yo'q.",
+      "recentActivity": "Hozircha so'nggi faoliyat yo'q."
     }
   },
   "studentStudyBank": {

@@ -22,7 +22,7 @@ import {useLocale, useTranslations} from "next-intl";
 import {Button} from "@/components/ui/button";
 import {ScrollArea} from "@/components/ui/scroll-area";
 import {Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "@/components/ui/sheet";
-import {adminNavItems, type AdminNavKey} from "@/data/admin-dashboard";
+import {ADMIN_NAV_ITEMS, type AdminNavKey} from "@/data/admin/profile";
 import {cn} from "@/lib/utils";
 
 const navIcons: Record<AdminNavKey, LucideIcon> = {
@@ -70,8 +70,8 @@ function AdminNavList({closeOnClick = false}: AdminNavListProps) {
   const locale = useLocale();
   const t = useTranslations("adminDashboard");
 
-  const primaryItems = adminNavItems.filter((item) => item.key !== "settings");
-  const settingsItem = adminNavItems.find((item) => item.key === "settings");
+  const primaryItems = ADMIN_NAV_ITEMS.filter((item) => item.key !== "settings");
+  const settingsItem = ADMIN_NAV_ITEMS.find((item) => item.key === "settings");
 
   return (
     <div className="flex h-full min-h-0 flex-col">

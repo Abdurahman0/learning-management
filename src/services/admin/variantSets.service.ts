@@ -41,8 +41,25 @@ function normalizeModule(module: "reading" | "listening"): VariantSetModule {
   return module === "listening" ? "LISTENING" : "READING";
 }
 
+function normalizeOwnerId(value: unknown) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const nestedId = (value as Record<string, unknown>).id;
+    if (typeof nestedId === "string" || typeof nestedId === "number") {
+      return String(nestedId).trim().toLowerCase();
+    }
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value).trim().toLowerCase();
+  }
+
+  return "";
+}
+
 function hasSameOwner(value: AdminEntityId | null | undefined, ownerId: AdminEntityId) {
-  return String(value ?? "").trim() !== "" && String(value) === String(ownerId);
+  const left = normalizeOwnerId(value);
+  const right = normalizeOwnerId(ownerId);
+  return Boolean(left) && Boolean(right) && left === right;
 }
 
 export const variantSetsService = {

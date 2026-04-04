@@ -111,13 +111,22 @@ Both models now store:
 - statuses: `DRAFT`, `PUBLISHED`, `USED`
 - tracks `origin_variant_set` when a bank variant is cloned into a real practice test
 
-`QuestionGroup` now requires `variant_set`.
+`QuestionGroup` accepts an optional `variant_set`.
 
-That means manual question-group creation must include:
+Manual question-group creation must include exactly one identifier:
 
 ```json
 {
   "reading_passage": "<uuid>",
+  "question_type": "TFNG",
+  "...": "..."
+}
+```
+
+Or you can create a question group from a variant set directly:
+
+```json
+{
   "variant_set": "<uuid>",
   "question_type": "TFNG",
   "...": "..."
@@ -523,14 +532,13 @@ These routes are still strict:
 
 ### `GET, POST /api/v1/admin/question-groups/`
 
-Question-group create/update now requires `variant_set`.
+Create requests must provide exactly one of `listening_part`, `reading_passage`, or `variant_set`.
 
 Example:
 
 ```json
 {
   "reading_passage": "<uuid>",
-  "variant_set": "<uuid>",
   "question_type": "TFNG",
   "group_order": 1,
   "instructions": "Do the following statements agree with the information given in the reading passage?",
@@ -592,4 +600,4 @@ New collection variables:
 - `content_bank_passage_id`
 - `variant_set_id`
 
-Existing manual question-group requests were also updated to include `variant_set`.
+Existing manual question-group requests can now use either `listening_part`, `reading_passage`, or `variant_set`.

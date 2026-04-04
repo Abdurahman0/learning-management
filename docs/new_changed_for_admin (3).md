@@ -68,9 +68,10 @@ Added:
 
 Validation now enforces:
 
-- exactly one parent (`listening_part` xor `reading_passage`)
-- `variant_set` is required
-- `variant_set` must belong to the same parent content item
+- exactly one resolved parent (`listening_part` xor `reading_passage`)
+- `variant_set` is optional on `QuestionGroup`
+- create requests must provide exactly one of `listening_part`, `reading_passage`, or `variant_set`
+- when `variant_set` is provided, it must belong to the same parent content item
 
 ## Migrations
 
@@ -112,7 +113,7 @@ Backfill behavior in `0007_admin_content_bank.py`:
 
 ## Existing Route Updates
 
-- `POST /api/v1/admin/question-groups/` now requires `variant_set`
+- `POST /api/v1/admin/question-groups/` now accepts exactly one of `listening_part`, `reading_passage`, or `variant_set`
 - `POST /api/v1/admin/practice-tests/import/` now auto-creates `Variant Set A` per imported passage/part
 - `DELETE /api/auth/admin/users/<uuid>/` now soft deactivates the user
 

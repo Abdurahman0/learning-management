@@ -84,10 +84,10 @@ export function TestsCompletedChart({points}: TestsCompletedChartProps) {
       <CardContent className="pt-1 pb-5">
         <ChartContainer className="relative overflow-x-hidden">
           <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="h-auto w-full" onMouseLeave={() => setActiveIndex(null)}>
-            {chart.yTicks.map((tick) => {
+            {chart.yTicks.map((tick, tickIndex) => {
               const y = chart.mapY(tick);
               return (
-                <g key={`completion-grid-${tick}`}>
+                <g key={`completion-grid-${tick}-${tickIndex}`}>
                   <line x1={chart.left} y1={y} x2={chart.width - chart.right} y2={y} stroke="var(--comp-grid)" strokeDasharray="4 5" />
                   <text x={6} y={y + 3} fontSize={10} fill="var(--comp-axis)">
                     {Math.round(tick).toLocaleString()}
@@ -105,7 +105,7 @@ export function TestsCompletedChart({points}: TestsCompletedChartProps) {
               const active = activeIndex === index;
               const fillColor = active ? "var(--comp-bar-hover)" : "var(--comp-bar)";
               return (
-                <g key={`completion-bar-${item.day}`} onMouseEnter={() => setActiveIndex(index)} className="cursor-pointer">
+                <g key={`completion-bar-${item.day}-${index}`} onMouseEnter={() => setActiveIndex(index)} className="cursor-pointer">
                   <path d={createTopRoundedBarPath(barX, topY, chart.barWidth, barHeight, 8)} fill={fillColor} style={{transition: "fill 180ms ease"}} />
                   <text x={centerX} y={chart.height - 14} fontSize={11} fill="var(--comp-axis)" textAnchor="middle">
                     {item.day}

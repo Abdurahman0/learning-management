@@ -41,20 +41,24 @@ export function AchievementsGrid({achievements}: AchievementsGridProps) {
         <CardTitle>{t("achievements.title")}</CardTitle>
         <p className="text-sm text-muted-foreground">{t("achievements.subtitle")}</p>
       </CardHeader>
-      <CardContent className="grid gap-4 sm:grid-cols-3">
-        {achievements.map((item) => {
-          const style = stylesById[item.id] ?? stylesById.perfect;
-          const Icon = style.icon;
-          return (
-            <div key={item.id} className="flex flex-col items-center rounded-xl border border-border/70 p-4 text-center">
-              <span className={cn("mb-3 flex size-14 items-center justify-center rounded-full", item.earned ? style.active : style.muted)}>
-                <Icon className="size-6" />
-              </span>
-              <p className="font-semibold">{item.title}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{item.subtitle}</p>
-            </div>
-          );
-        })}
+      <CardContent className={achievements.length ? "grid gap-4 sm:grid-cols-3" : undefined}>
+        {achievements.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-border/70 bg-background/60 p-4 text-sm text-muted-foreground">{t("achievements.empty")}</p>
+        ) : (
+          achievements.map((item) => {
+            const style = stylesById[item.id] ?? stylesById.perfect;
+            const Icon = style.icon;
+            return (
+              <div key={item.id} className="flex flex-col items-center rounded-xl border border-border/70 p-4 text-center">
+                <span className={cn("mb-3 flex size-14 items-center justify-center rounded-full", item.earned ? style.active : style.muted)}>
+                  <Icon className="size-6" />
+                </span>
+                <p className="font-semibold">{item.title}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{item.subtitle}</p>
+              </div>
+            );
+          })
+        )}
       </CardContent>
     </Card>
   );

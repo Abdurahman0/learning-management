@@ -6,7 +6,7 @@ import {useTranslations} from "next-intl";
 
 import {Badge} from "@/components/ui/badge";
 import {Card, CardContent} from "@/components/ui/card";
-import {adminSummary, type AdminSummaryIconKey, type AdminSummaryMetricKey} from "@/data/admin-dashboard";
+import type {AdminSummaryIconKey, AdminSummaryMetric, AdminSummaryMetricKey} from "@/data/admin-dashboard";
 
 const iconMap: Record<AdminSummaryIconKey, LucideIcon> = {
   users: Users,
@@ -20,10 +20,10 @@ function formatGrowth(value: number) {
 }
 
 type AdminStatCardsProps = {
-  summary?: typeof adminSummary;
+  summary: AdminSummaryMetric[];
 };
 
-export function AdminStatCards({summary = adminSummary}: AdminStatCardsProps) {
+export function AdminStatCards({summary}: AdminStatCardsProps) {
   const t = useTranslations("adminDashboard");
 
   return (

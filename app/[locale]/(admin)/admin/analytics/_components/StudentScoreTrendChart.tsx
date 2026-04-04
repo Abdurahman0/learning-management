@@ -57,7 +57,7 @@ export function StudentScoreTrendChart({points}: StudentScoreTrendChartProps) {
     const plotWidth = width - left - right;
     const plotHeight = height - top - bottom;
 
-    const values = points.flatMap((point) => [point.reading, point.listening]);
+    const values = points.length ? points.flatMap((point) => [point.reading, point.listening]) : [0];
     const minValue = Math.min(...values) - 0.35;
     const maxValue = Math.max(...values) + 0.3;
     const safeMax = Math.max(maxValue, minValue + 0.5);
@@ -111,10 +111,10 @@ export function StudentScoreTrendChart({points}: StudentScoreTrendChartProps) {
       <CardContent className="pt-1 pb-5">
         <ChartContainer className="relative overflow-x-hidden">
           <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="h-auto w-full" onMouseLeave={() => setActiveIndex(null)}>
-            {chart.yTicks.map((tick) => {
+            {chart.yTicks.map((tick, tickIndex) => {
               const y = chart.top + ((chart.yTicks[chart.yTicks.length - 1] - tick) / (chart.yTicks[chart.yTicks.length - 1] - chart.yTicks[0])) * chart.plotHeight;
               return (
-                <g key={`score-grid-${tick}`}>
+                <g key={`score-grid-${tick}-${tickIndex}`}>
                   <line x1={chart.left} y1={y} x2={chart.width - chart.right} y2={y} stroke="var(--trend-grid)" strokeDasharray="4 5" />
                   <text x={6} y={y + 3} fontSize={10} fill="var(--trend-axis)">
                     {tick.toFixed(1)}
@@ -136,7 +136,7 @@ export function StudentScoreTrendChart({points}: StudentScoreTrendChartProps) {
               const listeningY = chart.listeningPoints[index].y;
               const active = activeIndex === index;
               return (
-                <g key={`trend-x-${item.label}`} onMouseEnter={() => setActiveIndex(index)} className="cursor-pointer">
+                <g key={`trend-x-${item.label}-${index}`} onMouseEnter={() => setActiveIndex(index)} className="cursor-pointer">
                   <rect
                     x={x - chart.plotWidth / (points.length * 1.7)}
                     y={chart.top}

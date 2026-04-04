@@ -16,6 +16,7 @@ type SkillsSnapshotProps = {
 
 export function SkillsSnapshot({skills, summary, overallJourneyPct, id}: SkillsSnapshotProps) {
   const t = useTranslations("dashboard");
+  const visibleSkills = skills.filter((item) => item.key === "reading" || item.key === "listening" || item.band > 0);
 
   return (
     <div id={id} className="min-w-0 space-y-4">
@@ -24,15 +25,19 @@ export function SkillsSnapshot({skills, summary, overallJourneyPct, id}: SkillsS
           <CardTitle>{t("skillsSnapshot.title")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {skills.map((item) => (
-            <div key={item.key} className="space-y-1.5">
-              <div className="flex items-center justify-between text-sm">
-                <p className="text-muted-foreground">{t(`skills.${item.key}`)}</p>
-                <p className="font-medium">{item.band.toFixed(1)}</p>
+          {visibleSkills.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border/70 bg-background/60 p-4 text-sm text-muted-foreground">{t("empty.skillsSnapshot")}</p>
+          ) : (
+            visibleSkills.map((item) => (
+              <div key={item.key} className="space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <p className="text-muted-foreground">{t(`skills.${item.key}`)}</p>
+                  <p className="font-medium">{item.band.toFixed(1)}</p>
+                </div>
+                <Progress value={(item.band / 9) * 100} />
               </div>
-              <Progress value={(item.band / 9) * 100} />
-            </div>
-          ))}
+            ))
+          )}
         </CardContent>
       </Card>
 

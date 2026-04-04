@@ -141,6 +141,8 @@ export type BuilderQuestionGroup = {
   to: number;
   questions: BuilderQuestion[];
   variantSetId?: string;
+  instructions?: string;
+  groupContentJson?: unknown;
 };
 
 export type BuilderPassageSlot = {

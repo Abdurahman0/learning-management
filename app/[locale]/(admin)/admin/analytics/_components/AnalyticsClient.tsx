@@ -2,7 +2,7 @@
 
 import {useEffect, useMemo, useState} from "react";
 
-import {ADMIN_ANALYTICS_BY_RANGE, type AnalyticsRangeKey} from "@/data/admin-analytics";
+import type {AnalyticsRangeDataset, AnalyticsRangeKey} from "@/data/admin-analytics";
 import {adminAnalyticsService} from "@/src/services/admin/analytics.service";
 
 import {AdminSidebar} from "../../_components/AdminSidebar";
@@ -26,11 +26,32 @@ function mapQuestionTypeKey(value: string) {
   return "multipleChoice" as const;
 }
 
+const EMPTY_ANALYTICS_DATA: AnalyticsRangeDataset = {
+  summary: [
+    {id: "totalTestsTaken", value: "0", change: "+0.0%", icon: "tests"},
+    {id: "avgReadingScore", value: "0.0", change: "+0.0%", icon: "reading"},
+    {id: "avgListeningScore", value: "0.0", change: "+0.0%", icon: "listening"},
+    {id: "activeStudents", value: "0", change: "+0.0%", icon: "users"}
+  ],
+  scoreTrend: [],
+  completedPerDay: [],
+  questionTypeAccuracy: [],
+  skillDistribution: {
+    reading: 0,
+    listening: 0,
+    writing: 0,
+    speaking: 0
+  },
+  hardestQuestions: [],
+  passagePerformance: [],
+  insights: []
+};
+
 export function AnalyticsClient() {
   const [selectedRange, setSelectedRange] = useState<AnalyticsRangeKey>("last30Days");
   const [accuracySort, setAccuracySort] = useState<"asc" | "desc">("asc");
   const [hardestSearch, setHardestSearch] = useState("");
-  const [rangeData, setRangeData] = useState(ADMIN_ANALYTICS_BY_RANGE.last30Days);
+  const [rangeData, setRangeData] = useState<AnalyticsRangeDataset>(EMPTY_ANALYTICS_DATA);
 
   useEffect(() => {
     let active = true;
@@ -40,7 +61,6 @@ export function AnalyticsClient() {
         const response = await adminAnalyticsService.get();
         if (!active) return;
 
-        const fallback = ADMIN_ANALYTICS_BY_RANGE[selectedRange];
         const summary = [
           {id: "totalTestsTaken", value: response.metrics.totalCompletedAttempts.toLocaleString(), change: "+0.0%", icon: "tests"},
           {id: "avgReadingScore", value: response.metrics.averageReadingBand.toFixed(1), change: "+0.0%", icon: "reading"},
@@ -55,7 +75,7 @@ export function AnalyticsClient() {
                 reading: point.readingBand,
                 listening: point.listeningBand
               }))
-            : fallback.scoreTrend;
+            : [];
 
         const completedPerDay =
           response.testsPerDay.length > 0
@@ -63,7 +83,7 @@ export function AnalyticsClient() {
                 day: new Intl.DateTimeFormat("en-US", {month: "short", day: "numeric"}).format(new Date(point.date)),
                 value: point.testsCompleted
               }))
-            : fallback.completedPerDay;
+            : [];
 
         const typeColors = ["#3B82F6", "#F97316", "#22C55E", "#A855F7", "#06B6D4", "#F59E0B"];
         const questionTypeAccuracy =
@@ -74,7 +94,7 @@ export function AnalyticsClient() {
                 accuracy: item.accuracyPercent,
                 color: typeColors[index % typeColors.length]
               }))
-            : fallback.questionTypeAccuracy;
+            : [];
 
         const hardestQuestions =
           response.hardestQuestions.length > 0
@@ -86,7 +106,7 @@ export function AnalyticsClient() {
                 accuracy: item.accuracyPercent,
                 attempts: item.attempts
               }))
-            : fallback.hardestQuestions;
+            : [];
 
         const passagePerformance =
           response.passagePerformance.length > 0
@@ -99,7 +119,7 @@ export function AnalyticsClient() {
                   avgScore: item.accuracyPercent,
                   rank: index + 1
                 }))
-            : fallback.passagePerformance;
+            : [];
 
         setRangeData({
           summary: [...summary],
@@ -114,11 +134,11 @@ export function AnalyticsClient() {
           },
           hardestQuestions,
           passagePerformance,
-          insights: fallback.insights
+          insights: []
         });
       } catch {
         if (!active) return;
-        setRangeData(ADMIN_ANALYTICS_BY_RANGE[selectedRange]);
+        setRangeData(EMPTY_ANALYTICS_DATA);
       }
     };
 
@@ -182,7 +202,7 @@ export function AnalyticsClient() {
               <PassagePerformanceCard rows={rangeData.passagePerformance} />
             </section>
 
-            <InsightsCards items={rangeData.insights} />
+            {rangeData.insights.length > 0 ? <InsightsCards items={rangeData.insights} /> : null}
           </main>
         </div>
       </div>

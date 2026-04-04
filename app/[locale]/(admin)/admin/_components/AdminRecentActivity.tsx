@@ -7,7 +7,7 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
-import {recentActivity, type ActivityAvatarTone, type ActivityStatus} from "@/data/admin-dashboard";
+import type {ActivityAvatarTone, ActivityStatus, RecentActivityItem} from "@/data/admin-dashboard";
 
 const avatarToneClass: Record<ActivityAvatarTone, string> = {
   blue: "bg-sky-500/20 text-sky-300",
@@ -23,10 +23,10 @@ const statusClass: Record<ActivityStatus, string> = {
 };
 
 type AdminRecentActivityProps = {
-  activity?: typeof recentActivity;
+  activity: RecentActivityItem[];
 };
 
-export function AdminRecentActivity({activity = recentActivity}: AdminRecentActivityProps) {
+export function AdminRecentActivity({activity}: AdminRecentActivityProps) {
   const t = useTranslations("adminDashboard");
 
   return (

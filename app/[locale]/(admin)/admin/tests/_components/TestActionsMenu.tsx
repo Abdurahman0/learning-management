@@ -1,6 +1,6 @@
 "use client";
 
-import {EllipsisVertical, Eye, FilePenLine, Trash2} from "lucide-react";
+import {CheckCircle2, EllipsisVertical, Eye, FilePenLine, Trash2} from "lucide-react";
 import {useTranslations} from "next-intl";
 import {useState} from "react";
 
@@ -18,10 +18,11 @@ type TestActionsMenuProps = {
   test: AdminTest;
   onEdit: (testId: string) => void;
   onPreview: (testId: string) => void;
+  onActivate: (testId: string) => void;
   onDelete: (testId: string) => void;
 };
 
-export function TestActionsMenu({test, onEdit, onPreview, onDelete}: TestActionsMenuProps) {
+export function TestActionsMenu({test, onEdit, onPreview, onActivate, onDelete}: TestActionsMenuProps) {
   const t = useTranslations("adminTests");
   const [open, setOpen] = useState(false);
 
@@ -54,6 +55,12 @@ export function TestActionsMenu({test, onEdit, onPreview, onDelete}: TestActions
           <Eye className="size-4" />
           {t("table.actions.preview")}
         </DropdownMenuItem>
+        {test.status === "draft" ? (
+          <DropdownMenuItem onSelect={() => handleAction(() => onActivate(test.id))}>
+            <CheckCircle2 className="size-4" />
+            {t("table.actions.activate")}
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-rose-400 focus:bg-rose-500/10 focus:text-rose-300"

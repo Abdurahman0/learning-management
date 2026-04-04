@@ -1,12 +1,5 @@
-import {redirect} from "next/navigation";
+import {StudentProgressAnalyticsClient} from "./_components/StudentProgressAnalyticsClient";
 
-type AnalyticsPageProps = {
-  params: Promise<{
-    locale: string;
-  }>;
-};
-
-export default async function AnalyticsPage({params}: AnalyticsPageProps) {
-  const {locale} = await params;
-  redirect(`/${locale}/dashboard`);
+export default function AnalyticsPage() {
+  return <StudentProgressAnalyticsClient />;
 }

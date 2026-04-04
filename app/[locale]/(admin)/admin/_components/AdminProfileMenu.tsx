@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 import {ChevronDown, Copy, LayoutDashboard, LogOut, Users} from "lucide-react";
 import {useLocale} from "next-intl";
 import {useRouter} from "next/navigation";
@@ -17,7 +17,6 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import {adminProfile} from "@/data/admin-dashboard";
 import {cn} from "@/lib/utils";
 
 type AdminProfileMenuProps = {
@@ -26,11 +25,35 @@ type AdminProfileMenuProps = {
   className?: string;
 };
 
+type AdminProfileState = {
+  name: string;
+  role: string;
+  email: string;
+  initials: string;
+};
+
+function getInitials(name: string) {
+  const tokens = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (!tokens.length) return "A";
+  return tokens.map((token) => token.charAt(0).toUpperCase()).join("");
+}
+
 export function AdminProfileMenu({compact = false, visibility = "desktop", className}: AdminProfileMenuProps) {
   const locale = useLocale();
   const router = useRouter();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [profile, setProfile] = useState<AdminProfileState>({
+    name: "Admin",
+    role: "Admin",
+    email: "",
+    initials: "A"
+  });
 
   const visibilityClassName =
     visibility === "mobile"
@@ -39,9 +62,47 @@ export function AdminProfileMenu({compact = false, visibility = "desktop", class
         ? "flex"
         : "hidden md:flex";
 
+  useEffect(() => {
+    let active = true;
+
+    const loadProfile = async () => {
+      try {
+        const response = await fetch("/api/auth/me", {cache: "no-store"});
+        if (!response.ok) return;
+        const payload = (await response.json()) as {
+          full_name?: unknown;
+          email?: unknown;
+          is_staff?: unknown;
+        };
+        if (!active) return;
+
+        const fullName = typeof payload.full_name === "string" ? payload.full_name.trim() : "";
+        const email = typeof payload.email === "string" ? payload.email.trim() : "";
+        const isStaff = typeof payload.is_staff === "boolean" ? payload.is_staff : true;
+
+        const resolvedName = fullName || "Admin";
+        setProfile({
+          name: resolvedName,
+          role: isStaff ? "Admin" : "Student",
+          email,
+          initials: getInitials(resolvedName) || "A"
+        });
+      } catch {
+        // Keep existing profile if request fails.
+      }
+    };
+
+    void loadProfile();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleCopyEmail = async () => {
+    const valueToCopy = profile.email || "admin@gmail.com";
     try {
-      await navigator.clipboard.writeText("admin@gmail.com");
+      await navigator.clipboard.writeText(valueToCopy);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1200);
     } catch {
@@ -81,12 +142,12 @@ export function AdminProfileMenu({compact = false, visibility = "desktop", class
         >
           {compact ? null : (
             <div className="text-right leading-tight">
-              <p className="text-sm font-medium">{adminProfile.name}</p>
-              <p className="text-xs text-muted-foreground">{adminProfile.role}</p>
+              <p className="text-sm font-medium">{profile.name}</p>
+              <p className="text-xs text-muted-foreground">{profile.role}</p>
             </div>
           )}
           <Avatar className="ring-2 ring-border/70" size="lg">
-            <AvatarFallback className="bg-primary/18 text-primary">{adminProfile.initials}</AvatarFallback>
+            <AvatarFallback className="bg-primary/18 text-primary">{profile.initials}</AvatarFallback>
           </Avatar>
           {compact ? null : <ChevronDown className="size-4 text-muted-foreground" />}
         </Button>
@@ -94,8 +155,8 @@ export function AdminProfileMenu({compact = false, visibility = "desktop", class
 
       <DropdownMenuContent align="end" className="w-60">
         <DropdownMenuLabel>
-          <p className="text-sm font-semibold">{adminProfile.name}</p>
-          <p className="text-xs font-normal text-muted-foreground">{adminProfile.role}</p>
+          <p className="text-sm font-semibold">{profile.name}</p>
+          <p className="text-xs font-normal text-muted-foreground">{profile.role}</p>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>

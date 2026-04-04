@@ -744,7 +744,8 @@
     },
     "scoreProgress": {
       "title": "Score Progress",
-      "subtitle": "Your band trend over the last 10 tests"
+      "subtitle": "Your band trend over the last 10 tests",
+      "empty": "No score progression data yet."
     },
     "skillsSnapshot": {
       "title": "Skills Snapshot"
@@ -781,7 +782,13 @@
     },
     "achievements": {
       "title": "Your Achievements",
-      "subtitle": "Collect badges as you progress towards your goal"
+      "subtitle": "Collect badges as you progress towards your goal",
+      "empty": "No achievements yet."
+    },
+    "empty": {
+      "skillsSnapshot": "No skill snapshot data yet.",
+      "weakAreas": "No weak areas found yet.",
+      "recentHistory": "No recent test history yet."
     },
     "copyright": "All rights reserved.",
     "actions": {
@@ -962,6 +969,7 @@
         "open": "Open actions menu",
         "edit": "Edit test",
         "preview": "Preview test",
+        "activate": "Activate test",
         "delete": "Delete test"
       }
     },
@@ -1087,7 +1095,9 @@
       "fields": {
         "type": "Question Type",
         "from": "From",
-        "to": "To"
+        "to": "To",
+        "instructions": "Instructions",
+        "instructionsPlaceholder": "Enter instructions for this question group"
       },
       "validationRange": "Please choose a valid range inside the active passage/part.",
       "validationOverlap": "This range overlaps existing question numbers. Choose unused numbers only.",
@@ -1907,6 +1917,7 @@
       "selectPassage": "Select Passage",
       "readFullPassage": "Read Full Passage",
       "createVariantSet": "Create Variant Set",
+      "deletePassage": "Delete Passage",
       "previewQuestions": "Preview Questions",
       "edit": "Edit",
       "duplicateAsNewVariant": "Duplicate as New Variant",
@@ -2009,6 +2020,8 @@
       "addPassageRequested": "Add new passage action triggered.",
       "quickPublishRequested": "Quick publish action triggered.",
       "passageCreated": "{name} was added.",
+      "passageDeleted": "{name} was deleted.",
+      "confirmDeletePassage": "Delete \"{name}\"?",
       "variantCreated": "{name} was created.",
       "variantUpdated": "{name} was updated.",
       "variantDuplicated": "{name} was duplicated as a new draft.",
@@ -2977,6 +2990,15 @@
         "title": "Detailed review is not ready",
         "description": "This module review page is in progress and will be available soon."
       }
+    },
+    "empty": {
+      "loading": "Loading analytics...",
+      "bandProgress": "No band progression data yet.",
+      "accuracy": "No accuracy data yet.",
+      "weekly": "No weekly activity data yet.",
+      "modulePerformance": "No module performance data yet.",
+      "insights": "No learning insights yet.",
+      "recentActivity": "No recent activity yet."
     }
   },
   "studentStudyBank": {

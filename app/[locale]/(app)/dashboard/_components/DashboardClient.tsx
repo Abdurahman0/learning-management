@@ -16,7 +16,6 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Separator} from "@/components/ui/separator";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
-import {DASHBOARD_DATA} from "@/data/student/dashboard";
 import {studentDashboardService} from "@/src/services/student/dashboard.service";
 import type {StudentDashboardResponse} from "@/src/services/student/types";
 
@@ -25,11 +24,59 @@ type Notice = {
   description: string;
 };
 
+type DashboardUserSummary = {
+  name: string;
+  currentBand: number;
+  goalBand: number;
+  testsTaken: number;
+  readingAccuracy: number;
+  listeningAccuracy: number;
+  streakDays: number;
+  streakIncreasedToday: boolean;
+  bandsAway: number;
+};
+
+type DashboardContinueTest = {
+  id: string;
+  module: string;
+  title: string;
+  level: string;
+  lastActiveLabel: string;
+  progressQuestions: number;
+  totalQuestions: number;
+  href?: string;
+};
+
+type DashboardScorePoint = {
+  label: string;
+  band: number;
+};
+
+type DashboardSkillPoint = {
+  key: "listening" | "reading" | "writing" | "speaking";
+  band: number;
+};
+
+type DashboardRecentHistoryItem = {
+  id: string;
+  testName: string;
+  date: string;
+  module: "reading" | "listening" | "writing" | "speaking";
+  score: string;
+};
+
+type DashboardAchievement = {
+  id: string;
+  title: string;
+  subtitle: string;
+  earned: boolean;
+};
+
 type DashboardViewModel = {
-  userSummary: typeof DASHBOARD_DATA.userSummary;
-  continueTest: (typeof DASHBOARD_DATA.continueTest & {href?: string}) | null;
-  scoreProgress: typeof DASHBOARD_DATA.scoreProgress;
-  skillsSnapshot: typeof DASHBOARD_DATA.skillsSnapshot;
+  userSummary: DashboardUserSummary;
+  continueTest: DashboardContinueTest | null;
+  scoreProgress: DashboardScorePoint[];
+  skillsSnapshot: DashboardSkillPoint[];
   overallJourneyPct: number;
   weakAreas: Array<{
     id: string;
@@ -38,9 +85,9 @@ type DashboardViewModel = {
     accuracy: string;
     actionLabel: string;
   }>;
-  aiRecommendation: typeof DASHBOARD_DATA.aiRecommendation | null;
-  recentHistory: typeof DASHBOARD_DATA.recentHistory;
-  achievements: typeof DASHBOARD_DATA.achievements;
+  aiRecommendation: {tag: string; message: string} | null;
+  recentHistory: DashboardRecentHistoryItem[];
+  achievements: DashboardAchievement[];
 };
 
 function formatDateLabel(value: string) {
@@ -57,16 +104,16 @@ function formatDateLabel(value: string) {
 }
 
 function buildDashboardViewModel(payload: StudentDashboardResponse): DashboardViewModel {
-  const safeGoalBand = payload.summary.goalBand > 0 ? payload.summary.goalBand : DASHBOARD_DATA.userSummary.goalBand;
+  const safeGoalBand = payload.summary.goalBand > 0 ? payload.summary.goalBand : 0;
   const safeCurrentBand = payload.summary.currentBand >= 0 ? payload.summary.currentBand : 0;
   const journeyPercentRaw =
     payload.overallJourneyPct ??
-    (safeGoalBand > 0 ? Math.round((safeCurrentBand / safeGoalBand) * 100) : DASHBOARD_DATA.overallJourneyPct);
+    (safeGoalBand > 0 ? Math.round((safeCurrentBand / safeGoalBand) * 100) : 0);
   const overallJourneyPct = Math.max(0, Math.min(100, Number.isFinite(journeyPercentRaw) ? journeyPercentRaw : 0));
 
   return {
     userSummary: {
-      name: payload.summary.name || DASHBOARD_DATA.userSummary.name,
+      name: payload.summary.name || "Student",
       currentBand: safeCurrentBand,
       goalBand: safeGoalBand,
       testsTaken: payload.summary.testsTaken,
@@ -100,7 +147,7 @@ function buildDashboardViewModel(payload: StudentDashboardResponse): DashboardVi
       module: item.module,
       accuracy: item.accuracy,
       actionLabel: item.actionLabel
-    })),
+      })),
     aiRecommendation: payload.aiRecommendation ?? null,
     recentHistory: payload.recentHistory.map((item) => ({
       id: item.id,
@@ -109,10 +156,36 @@ function buildDashboardViewModel(payload: StudentDashboardResponse): DashboardVi
       module: item.module,
       score: item.score
     })),
-    achievements:
-      payload.achievements.length > 0
-        ? payload.achievements
-        : DASHBOARD_DATA.achievements
+    achievements: payload.achievements
+  };
+}
+
+function createEmptyDashboardViewModel(): DashboardViewModel {
+  return {
+    userSummary: {
+      name: "Student",
+      currentBand: 0,
+      goalBand: 0,
+      testsTaken: 0,
+      readingAccuracy: 0,
+      listeningAccuracy: 0,
+      streakDays: 0,
+      streakIncreasedToday: false,
+      bandsAway: 0
+    },
+    continueTest: null,
+    scoreProgress: [],
+    skillsSnapshot: [
+      {key: "listening", band: 0},
+      {key: "reading", band: 0},
+      {key: "writing", band: 0},
+      {key: "speaking", band: 0}
+    ],
+    overallJourneyPct: 0,
+    weakAreas: [],
+    aiRecommendation: null,
+    recentHistory: [],
+    achievements: []
   };
 }
 
@@ -121,11 +194,7 @@ export function DashboardClient() {
   const locale = useLocale();
   const router = useRouter();
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [dashboardData, setDashboardData] = useState<DashboardViewModel>({
-    ...DASHBOARD_DATA,
-    continueTest: {...DASHBOARD_DATA.continueTest},
-    aiRecommendation: DASHBOARD_DATA.aiRecommendation
-  });
+  const [dashboardData, setDashboardData] = useState<DashboardViewModel>(createEmptyDashboardViewModel);
 
   useEffect(() => {
     if (!notice) {
@@ -150,6 +219,7 @@ export function DashboardClient() {
         setDashboardData(buildDashboardViewModel(response));
       } catch {
         if (!active) return;
+        setDashboardData(createEmptyDashboardViewModel());
       }
     };
 
@@ -237,41 +307,45 @@ export function DashboardClient() {
             <CardTitle>{t("weakAreas.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {dashboardData.weakAreas.map((item) => (
-              <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{item.title}</p>
-                  <p className="text-xs text-muted-foreground">{t(`skills.${item.module}`)}</p>
+            {dashboardData.weakAreas.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-border/70 bg-background/60 p-4 text-sm text-muted-foreground">{t("empty.weakAreas")}</p>
+            ) : (
+              dashboardData.weakAreas.map((item) => (
+                <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{item.title}</p>
+                    <p className="text-xs text-muted-foreground">{t(`skills.${item.module}`)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-rose-500">{item.accuracy}</p>
+                    <Button variant="link" className="h-auto p-0 text-xs" onClick={() => handleWeakAreaAction(item.module)}>
+                      {item.actionLabel}
+                    </Button>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-rose-500">{item.accuracy}</p>
-                  <Button variant="link" className="h-auto p-0 text-xs" onClick={() => handleWeakAreaAction(item.module)}>
-                    {item.actionLabel}
-                  </Button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-border/70 bg-card/70">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="size-4 text-blue-400" />
-              {t("aiRecommendations.title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Badge className="mb-3">{dashboardData.aiRecommendation?.tag ?? "Tutor insight"}</Badge>
-            <p className="rounded-xl bg-muted/60 p-4 text-sm leading-relaxed text-muted-foreground">
-              {dashboardData.aiRecommendation?.message ?? "Keep practicing daily to build consistency."}
-            </p>
-            <Button className="mt-4" onClick={() => pushNotice(t("feedback.placeholder.title"), t("feedback.placeholder.description"))}>
-              <Sparkles className="size-4" />
-              {t("aiRecommendations.startTutorial")}
-            </Button>
-          </CardContent>
-        </Card>
+        {dashboardData.aiRecommendation ? (
+          <Card className="rounded-2xl border-border/70 bg-card/70">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="size-4 text-blue-400" />
+                {t("aiRecommendations.title")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Badge className="mb-3">{dashboardData.aiRecommendation.tag}</Badge>
+              <p className="rounded-xl bg-muted/60 p-4 text-sm leading-relaxed text-muted-foreground">{dashboardData.aiRecommendation.message}</p>
+              <Button className="mt-4" onClick={() => pushNotice(t("feedback.placeholder.title"), t("feedback.placeholder.description"))}>
+                <Sparkles className="size-4" />
+                {t("aiRecommendations.startTutorial")}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : null}
       </section>
 
       <section className="mt-4">
@@ -296,25 +370,33 @@ export function DashboardClient() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dashboardData.recentHistory.map((row) => (
-                    <TableRow key={row.id}>
-                      <TableCell>{row.testName}</TableCell>
-                      <TableCell className="text-muted-foreground">{row.date}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{t(`skills.${row.module}`)}</Badge>
-                      </TableCell>
-                      <TableCell className="font-semibold">{row.score}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="link"
-                          className="h-auto p-0 text-blue-400"
-                          onClick={() => pushNotice(t("feedback.reviewDetails.title"), t("feedback.reviewDetails.description"))}
-                        >
-                          {t("recentHistory.review")}
-                        </Button>
+                  {dashboardData.recentHistory.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                        {t("empty.recentHistory")}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    dashboardData.recentHistory.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell>{row.testName}</TableCell>
+                        <TableCell className="text-muted-foreground">{row.date}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{t(`skills.${row.module}`)}</Badge>
+                        </TableCell>
+                        <TableCell className="font-semibold">{row.score}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="link"
+                            className="h-auto p-0 text-blue-400"
+                            onClick={() => pushNotice(t("feedback.reviewDetails.title"), t("feedback.reviewDetails.description"))}
+                          >
+                            {t("recentHistory.review")}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>

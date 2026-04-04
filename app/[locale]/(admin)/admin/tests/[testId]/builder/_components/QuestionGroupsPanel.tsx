@@ -22,8 +22,8 @@ type QuestionGroupsPanelProps = {
   groups: QuestionGroup[];
   collapsedGroups: Record<string, boolean>;
   selectedQuestionId: string | null;
-  onCreateGroup: (type: QuestionType, from: number, to: number) => void;
-  onEditGroup: (groupId: string, type: QuestionType, from: number, to: number) => void;
+  onCreateGroup: (type: QuestionType, from: number, to: number, instructions: string) => void;
+  onEditGroup: (groupId: string, type: QuestionType, from: number, to: number, instructions: string) => void;
   onDuplicateGroup: (groupId: string) => void;
   onDeleteGroup: (groupId: string) => void;
   onToggleGroupCollapse: (groupId: string) => void;
@@ -42,6 +42,7 @@ type GroupEditorState = {
   type: QuestionType;
   from: number;
   to: number;
+  instructions: string;
 };
 
 type SlotRange = {
@@ -120,7 +121,8 @@ export function QuestionGroupsPanel({
     groupId: null,
     type: defaultType,
     from: range.from,
-    to: Math.min(range.from + 2, range.to)
+    to: Math.min(range.from + 2, range.to),
+    instructions: ""
   });
 
   const assignedCount = useMemo(() => {
@@ -186,7 +188,8 @@ export function QuestionGroupsPanel({
       groupId: null,
       type: defaultType,
       from: preferredRange.from,
-      to: preferredRange.to
+      to: preferredRange.to,
+      instructions: ""
     });
   };
 
@@ -197,7 +200,8 @@ export function QuestionGroupsPanel({
       groupId: group.id,
       type: group.type,
       from: group.from,
-      to: group.to
+      to: group.to,
+      instructions: group.instructions ?? ""
     });
   };
 
@@ -207,9 +211,9 @@ export function QuestionGroupsPanel({
     }
 
     if (editor.mode === "create") {
-      onCreateGroup(editor.type, editor.from, editor.to);
+      onCreateGroup(editor.type, editor.from, editor.to, editor.instructions);
     } else if (editor.groupId) {
-      onEditGroup(editor.groupId, editor.type, editor.from, editor.to);
+      onEditGroup(editor.groupId, editor.type, editor.from, editor.to, editor.instructions);
     }
 
     setEditor((current) => ({...current, open: false}));
@@ -324,6 +328,20 @@ export function QuestionGroupsPanel({
                   className="h-10 rounded-xl border-border/70 bg-background/50"
                 />
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.instructions")}</label>
+              <textarea
+                value={editor.instructions}
+                onChange={(event) =>
+                  setEditor((current) => ({
+                    ...current,
+                    instructions: event.target.value
+                  }))
+                }
+                placeholder={t("groups.fields.instructionsPlaceholder")}
+                className="min-h-24 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+              />
             </div>
 
             {hasRangeError ? <p className="text-xs text-rose-400">{t("groups.validationRange")}</p> : null}

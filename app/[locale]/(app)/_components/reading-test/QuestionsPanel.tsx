@@ -5,6 +5,7 @@ import { useMemo, useRef, useEffect } from "react";
 import type { ReadingQuestion } from "@/data/reading-test-demo";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
 
 import { QuestionRenderer } from "./QuestionRenderer";
 
@@ -74,7 +75,11 @@ export function QuestionsPanel({
               <section key={group.title} className="space-y-4">
                 <div>
                   <h3 className="text-4xl font-semibold tracking-tight text-slate-900">{group.title}</h3>
-                  {group.instruction ? <p className="mt-1.5 text-lg text-slate-600">{group.instruction}</p> : null}
+                  {group.instruction ? (
+                    <p className="mt-1.5 text-lg text-slate-600">
+                      <FormattedInstructionText text={group.instruction} />
+                    </p>
+                  ) : null}
                 </div>
 
                 {matchingExample?.options ? (

@@ -5,7 +5,7 @@ import {useTranslations} from "next-intl";
 
 import {ChartContainer} from "@/components/ui/chart";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
-import {growthStats, testCompletionStats, type AdminMonthKey} from "@/data/admin-dashboard";
+import type {AdminMonthKey} from "@/data/admin-dashboard";
 
 type Point = {
   x: number;
@@ -119,14 +119,14 @@ function AdminChartTooltip({month, label, value, dotColor, style}: AdminChartToo
 }
 
 type AdminChartsProps = {
-  growthPoints?: typeof growthStats;
-  completionPoints?: typeof testCompletionStats;
+  growthPoints?: Array<{month: AdminMonthKey; users: number}>;
+  completionPoints?: Array<{month: AdminMonthKey; academic: number}>;
 };
 
 export function AdminCharts({growthPoints, completionPoints}: AdminChartsProps) {
   const t = useTranslations("adminDashboard");
-  const growthSeries = growthPoints?.length ? growthPoints : growthStats;
-  const completionSeries = completionPoints?.length ? completionPoints : testCompletionStats;
+  const growthSeries = growthPoints ?? [];
+  const completionSeries = completionPoints ?? [];
   const [activeGrowthIndex, setActiveGrowthIndex] = useState<number | null>(growthSeries.length ? growthSeries.length - 1 : null);
   const [activeAcademicIndex, setActiveAcademicIndex] = useState<number | null>(completionSeries.length ? completionSeries.length - 1 : null);
 

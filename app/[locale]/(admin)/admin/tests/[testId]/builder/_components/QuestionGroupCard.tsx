@@ -6,6 +6,7 @@ import {useTranslations} from "next-intl";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
+import {FormattedInstructionText} from "@/components/test/FormattedInstructionText";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,6 +76,11 @@ export function QuestionGroupCard({
                 {t("groups.questionCount", {count: group.questions.length})}
               </span>
             </div>
+            {group.instructions ? (
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                <FormattedInstructionText text={group.instructions} />
+              </p>
+            ) : null}
           </div>
 
           {mode === "editor" ? (

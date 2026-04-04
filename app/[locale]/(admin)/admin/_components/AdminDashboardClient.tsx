@@ -2,7 +2,7 @@
 
 import {useEffect, useMemo, useState} from "react";
 
-import {adminSummary, growthStats, platformInsights, recentActivity, testCompletionStats, type AdminMonthKey} from "@/data/admin-dashboard";
+import type {ActivityStatus, AdminMonthKey, PlatformInsights, RecentActivityItem, UserGrowthPoint} from "@/data/admin-dashboard";
 import {adminDashboardService} from "@/src/services/admin/dashboard.service";
 
 import {AdminCharts} from "./AdminCharts";
@@ -13,7 +13,29 @@ import {AdminStatCards} from "./AdminStatCards";
 import {AdminTopbar} from "./AdminTopbar";
 
 const avatarTones = ["blue", "emerald", "violet", "amber"] as const;
-const activityStatuses = ["verified", "active", "pendingReview"] as const;
+const EMPTY_SUMMARY = [
+  {key: "totalUsers", icon: "users", value: 0, growthPct: 0},
+  {key: "testsCompleted", icon: "clipboardCheck", value: 0, growthPct: 0},
+  {key: "activeUsers", icon: "activity", value: 0, growthPct: 0},
+  {key: "premiumSubscribers", icon: "crown", value: 0, growthPct: 0}
+] as const;
+const EMPTY_INSIGHTS: PlatformInsights = {
+  mostDifficult: {
+    topic: "-",
+    averageScore: "0.0%"
+  },
+  averageScore: {
+    band: 0,
+    sampleSize: 0
+  }
+};
+
+function mapActivityStatus(value: string): ActivityStatus {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized.includes("pending")) return "pendingReview";
+  if (normalized.includes("verify") || normalized.includes("complete") || normalized.includes("passed")) return "verified";
+  return "active";
+}
 
 function toMonthKey(value: string): AdminMonthKey {
   const date = new Date(value);
@@ -51,19 +73,19 @@ export function AdminDashboardClient() {
   }, []);
 
   const mappedSummary = useMemo(() => {
-    if (!dashboardPayload) return adminSummary;
+    if (!dashboardPayload) return [...EMPTY_SUMMARY];
     const metrics = dashboardPayload.metrics;
 
     return [
-      {...adminSummary[0], value: metrics.totalUsers, growthPct: 0},
-      {...adminSummary[1], value: metrics.testsCompleted, growthPct: 0},
-      {...adminSummary[2], value: metrics.activeUsers, growthPct: 0},
-      {...adminSummary[3], value: metrics.premiumSubscribers, growthPct: 0}
+      {...EMPTY_SUMMARY[0], value: metrics.totalUsers, growthPct: 0},
+      {...EMPTY_SUMMARY[1], value: metrics.testsCompleted, growthPct: 0},
+      {...EMPTY_SUMMARY[2], value: metrics.activeUsers, growthPct: 0},
+      {...EMPTY_SUMMARY[3], value: metrics.premiumSubscribers, growthPct: 0}
     ];
   }, [dashboardPayload]);
 
-  const mappedGrowth = useMemo(() => {
-    if (!dashboardPayload || dashboardPayload.userGrowth.length === 0) return growthStats;
+  const mappedGrowth = useMemo<UserGrowthPoint[]>(() => {
+    if (!dashboardPayload || dashboardPayload.userGrowth.length === 0) return [];
 
     return dashboardPayload.userGrowth.slice(-7).map((item) => ({
       month: toMonthKey(item.date),
@@ -72,7 +94,7 @@ export function AdminDashboardClient() {
   }, [dashboardPayload]);
 
   const mappedCompletion = useMemo(() => {
-    if (!dashboardPayload || dashboardPayload.testsCompletedSeries.length === 0) return testCompletionStats;
+    if (!dashboardPayload || dashboardPayload.testsCompletedSeries.length === 0) return [];
 
     return dashboardPayload.testsCompletedSeries.slice(-7).map((item) => ({
       month: toMonthKey(item.date),
@@ -81,24 +103,24 @@ export function AdminDashboardClient() {
   }, [dashboardPayload]);
 
   const mappedInsights = useMemo(() => {
-    if (!dashboardPayload) return platformInsights;
+    if (!dashboardPayload) return EMPTY_INSIGHTS;
     const hardest = dashboardPayload.platformInsights.hardestQuestionTypes[0];
     const attemptsSum = dashboardPayload.platformInsights.hardestQuestionTypes.reduce((sum, item) => sum + item.attempts, 0);
 
     return {
       mostDifficult: {
-        topic: hardest?.questionType || platformInsights.mostDifficult.topic,
-        averageScore: hardest ? `${hardest.accuracyPercent.toFixed(1)}%` : platformInsights.mostDifficult.averageScore
+        topic: hardest?.questionType || "-",
+        averageScore: hardest ? `${hardest.accuracyPercent.toFixed(1)}%` : "0.0%"
       },
       averageScore: {
         band: dashboardPayload.platformInsights.averageScore,
-        sampleSize: attemptsSum || platformInsights.averageScore.sampleSize
+        sampleSize: attemptsSum
       }
     };
   }, [dashboardPayload]);
 
-  const mappedActivity = useMemo(() => {
-    if (!dashboardPayload || dashboardPayload.recentUserActivity.length === 0) return recentActivity;
+  const mappedActivity = useMemo<RecentActivityItem[]>(() => {
+    if (!dashboardPayload || dashboardPayload.recentUserActivity.length === 0) return [];
 
     return dashboardPayload.recentUserActivity.slice(0, 10).map((item, index) => {
       const firstChar = String(item.userName || item.email || "U").trim().charAt(0).toUpperCase();
@@ -115,7 +137,7 @@ export function AdminDashboardClient() {
         avatarTone: avatarTones[index % avatarTones.length],
         action: item.testTitle || "Completed test",
         score: item.bandScore > 0 ? item.bandScore.toFixed(1) : item.score > 0 ? `${item.score}` : "-",
-        status: activityStatuses[index % activityStatuses.length]
+        status: mapActivityStatus(item.status)
       };
     });
   }, [dashboardPayload]);

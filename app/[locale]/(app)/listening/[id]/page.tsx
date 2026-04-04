@@ -55,6 +55,7 @@ import { getListeningAnswerMeta } from "@/data/listening-answer-keys";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { flattenListeningQuestions } from "@/lib/listening-questions";
 import { Highlightable } from "@/components/test/Highlightable";
+import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
 import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
 import { useTestAppearance } from "@/lib/test-appearance";
 import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
@@ -1155,7 +1156,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
       <Card className="test-panel test-soft-surface min-w-0 gap-0 rounded-lg border border-border bg-muted/20 p-4 overflow-hidden">
         <h4 className="text-base font-semibold">{block.title}</h4>
         <p className="test-muted-copy mt-1 text-sm text-muted-foreground">
-          {block.instruction}
+          <FormattedInstructionText text={block.instruction} />
         </p>
         <div className="mt-3 space-y-3 text-sm leading-7">
           {block.lines.map((line) => (
@@ -1546,7 +1547,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
               </div>
 
               <p className="mt-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-sm wrap-break-word">
-                {activeSection.instructions}
+                <FormattedInstructionText text={activeSection.instructions} />
               </p>
             </div>
 

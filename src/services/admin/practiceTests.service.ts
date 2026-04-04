@@ -113,9 +113,11 @@ export const practiceTestsService = {
     }
   },
 
-  async remove(testId: number | string) {
+  async remove(testId: number | string, options?: {hard?: boolean}) {
     try {
-      await adminHttpClient.delete(`/practice-tests/${testId}/`);
+      await adminHttpClient.delete(`/practice-tests/${testId}/`, {
+        params: options?.hard ? {hard: "true"} : undefined
+      });
     } catch (error) {
       throw toAdminApiError(error);
     }

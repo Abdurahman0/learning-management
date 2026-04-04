@@ -30,12 +30,17 @@ function hasValidOwnerId(value: AdminEntityId | null | undefined) {
   return false;
 }
 
-function validateOwner(payload: QuestionGroupPayload) {
+function validateCreateOwnerChoice(payload: QuestionGroupPayload) {
   const hasListening = hasValidOwnerId(payload.listening_part);
   const hasReading = hasValidOwnerId(payload.reading_passage);
+  const hasVariantSet = hasValidOwnerId(payload.variant_set);
+  const activeCount = Number(hasListening) + Number(hasReading) + Number(hasVariantSet);
 
-  if (hasListening === hasReading) {
-    throw new AdminApiError("Question group must belong to either listening_part or reading_passage.", 400);
+  if (activeCount !== 1) {
+    throw new AdminApiError(
+      "Question-group create/update must include exactly one of listening_part, reading_passage, or variant_set.",
+      400
+    );
   }
 }
 
@@ -158,7 +163,7 @@ export const questionGroupsService = {
   async create(payload: QuestionGroupPayload) {
     try {
       const normalizedPayload = normalizeQuestionGroupPayload(payload);
-      validateOwner(normalizedPayload);
+      validateCreateOwnerChoice(normalizedPayload);
       const response = await adminHttpClient.post<QuestionGroupRecord>("/question-groups/", normalizedPayload);
       return response.data;
     } catch (error) {
@@ -169,7 +174,7 @@ export const questionGroupsService = {
   async update(groupId: number | string, payload: QuestionGroupPayload) {
     try {
       const normalizedPayload = normalizeQuestionGroupPayload(payload);
-      validateOwner(normalizedPayload);
+      validateCreateOwnerChoice(normalizedPayload);
       const response = await adminHttpClient.put<QuestionGroupRecord>(`/question-groups/${groupId}/`, normalizedPayload);
       return response.data;
     } catch (error) {
@@ -181,11 +186,20 @@ export const questionGroupsService = {
     try {
       const normalizedPayload = normalizeQuestionGroupPatchPayload(payload);
 
-      if (normalizedPayload.listening_part !== undefined || normalizedPayload.reading_passage !== undefined) {
+      if (
+        normalizedPayload.listening_part !== undefined ||
+        normalizedPayload.reading_passage !== undefined ||
+        normalizedPayload.variant_set !== undefined
+      ) {
         const hasListening = hasValidOwnerId(normalizedPayload.listening_part);
         const hasReading = hasValidOwnerId(normalizedPayload.reading_passage);
-        if (hasListening === hasReading) {
-          throw new AdminApiError("Question group must belong to either listening_part or reading_passage.", 400);
+        const hasVariantSet = hasValidOwnerId(normalizedPayload.variant_set);
+        const activeCount = Number(hasListening) + Number(hasReading) + Number(hasVariantSet);
+        if (activeCount !== 1) {
+          throw new AdminApiError(
+            "Question-group patch must include exactly one of listening_part, reading_passage, or variant_set when parent identifiers are provided.",
+            400
+          );
         }
       }
       const response = await adminHttpClient.patch<QuestionGroupRecord>(`/question-groups/${groupId}/`, normalizedPayload);

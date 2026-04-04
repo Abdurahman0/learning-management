@@ -6,7 +6,6 @@ import {useTranslations} from "next-intl";
 import type {AdminBuilderTest, BuilderQuestion, BuilderStructureItem, QuestionGroup, QuestionType} from "@/data/admin-test-builder";
 import {
   createDefaultQuestion,
-  createQuestionGroup,
   getInitialBuilderTest,
   getStructureRange,
   hasQuestionContent,
@@ -23,9 +22,18 @@ import {adminContentBankService} from "@/src/services/admin/contentBank.service"
 import {listeningPartsService} from "@/src/services/admin/listeningParts.service";
 import {practiceTestsService} from "@/src/services/admin/practiceTests.service";
 import {questionGroupsService} from "@/src/services/admin/questionGroups.service";
+import {questionsService} from "@/src/services/admin/questions.service";
 import {readingPassagesService} from "@/src/services/admin/readingPassages.service";
 import {variantSetsService} from "@/src/services/admin/variantSets.service";
-import type {ListeningPartRecord, PracticeTestDetailRecord, QuestionGroupRecord, QuestionRecord, ReadingPassageRecord} from "@/src/services/admin/types";
+import type {
+  ListeningPartRecord,
+  PracticeTestDetailRecord,
+  QuestionBulkItemPayload,
+  QuestionGroupPayload,
+  QuestionGroupRecord,
+  QuestionRecord,
+  ReadingPassageRecord
+} from "@/src/services/admin/types";
 
 import {AdminSidebar, AdminSidebarMobileNav} from "../../../../_components/AdminSidebar";
 import {BuilderTopbar} from "./BuilderTopbar";
@@ -155,6 +163,9 @@ function toNumberSafe(value: unknown, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+const DEFAULT_READING_SLOT_QUESTION_COUNTS = [13, 13, 14] as const;
+const DEFAULT_LISTENING_SLOT_QUESTION_COUNTS = [10, 10, 10, 10] as const;
+
 function parseStructureIndex(label: string, fallback: number) {
   const match = String(label ?? "").match(/\d+/);
   const parsed = match ? Number(match[0]) : Number.NaN;
@@ -181,6 +192,397 @@ function mapApiQuestionTypeToBuilder(value: string): QuestionType {
   if (normalized === "NOTE_COMPLETION") return "note_completion";
   if (normalized === "SHORT_ANSWER") return "short_answer";
   return "multiple_choice";
+}
+
+function extractVariantSetIdFromOwnerRecord(record: unknown) {
+  if (!record || typeof record !== "object") {
+    return "";
+  }
+
+  const root = record as Record<string, unknown>;
+  const directCandidates = [root.variant_set, root.variant_set_id, root.default_variant_set, root.default_variant_set_id];
+
+  for (const candidate of directCandidates) {
+    if (candidate && typeof candidate === "object") {
+      const nestedId = toStringSafe((candidate as Record<string, unknown>).id).trim();
+      if (nestedId) return nestedId;
+    }
+    const directId = toStringSafe(candidate).trim();
+    if (directId) return directId;
+  }
+
+  const variantSets = Array.isArray(root.variant_sets) ? root.variant_sets : [];
+  for (const item of variantSets) {
+    if (item && typeof item === "object") {
+      const nestedId = toStringSafe((item as Record<string, unknown>).id).trim();
+      if (nestedId) return nestedId;
+      const fallback = toStringSafe((item as Record<string, unknown>).variant_set).trim();
+      if (fallback) return fallback;
+    }
+    const directId = toStringSafe(item).trim();
+    if (directId) return directId;
+  }
+
+  const groupRows = Array.isArray(root.question_groups) ? root.question_groups : [];
+  for (const group of groupRows) {
+    if (!group || typeof group !== "object") continue;
+    const groupVariant = toStringSafe((group as Record<string, unknown>).variant_set).trim();
+    if (groupVariant) return groupVariant;
+  }
+
+  return "";
+}
+
+function getDefaultInstructionsForQuestionType(type: QuestionType) {
+  switch (type) {
+    case "tfng":
+      return "Do the following statements agree with the information given in the reading passage? Choose TRUE, FALSE or NOT GIVEN.";
+    case "yes_no_not_given":
+      return "Do the following statements agree with the views of the writer? Choose YES, NO or NOT GIVEN.";
+    case "multiple_choice":
+      return "Choose the correct letter, A, B or C.";
+    case "selecting_from_a_list":
+      return "Choose the correct answers from the list below.";
+    case "matching_headings":
+      return "Choose the correct heading for each section from the list of headings below.";
+    case "matching_information":
+      return "Which paragraph contains the following information?";
+    case "matching_features":
+      return "Match each statement with the correct option.";
+    case "sentence_completion":
+      return "Complete the sentences below.";
+    case "summary_completion":
+      return "Complete the summary below.";
+    case "table_completion":
+      return "Complete the table below.";
+    case "flow_chart":
+      return "Complete the flow chart below.";
+    case "map":
+      return "Label the map below.";
+    case "form_completion":
+      return "Complete the form below.";
+    case "note_completion":
+      return "Complete the notes below.";
+    case "short_answer":
+      return "Answer the questions below.";
+    default:
+      return "Follow the instructions and answer all questions.";
+  }
+}
+
+function resolveInstructionsForSubmit(type: QuestionType, instructions: string) {
+  return instructions.length > 0 ? instructions : getDefaultInstructionsForQuestionType(type);
+}
+
+function toRoman(index: number) {
+  const romans = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"];
+  return romans[index] ?? `h${index + 1}`;
+}
+
+function toOptionKey(index: number) {
+  return String.fromCharCode("A".charCodeAt(0) + index);
+}
+
+function buildTemplateText(from: number, to: number) {
+  const lines: string[] = [];
+  for (let number = from; number <= to; number += 1) {
+    lines.push(`Item ${number}: {${number}}`);
+  }
+  return lines.join("\n");
+}
+
+function buildDefaultGroupContentJson(type: QuestionType, from: number, to: number): unknown {
+  switch (type) {
+    case "form_completion":
+    case "note_completion":
+      return {template_text: buildTemplateText(from, to)};
+    case "summary_completion": {
+      const blanks = Array.from({length: Math.max(1, to - from + 1)}, (_, index) => `{${from + index}}`).join(" ");
+      return {summary_text: `Summary: ${blanks}`.trim(), word_bank: null};
+    }
+    case "table_completion":
+      return {
+        columns: ["Field", "Value"],
+        rows: Array.from({length: Math.max(1, to - from + 1)}, (_, index) => [`Item ${from + index}`, `{${from + index}}`])
+      };
+    case "flow_chart":
+      return {
+        steps: Array.from({length: Math.max(1, to - from + 1)}, (_, index) => ({
+          order: index + 1,
+          text: `Step ${index + 1}: {${from + index}}`
+        }))
+      };
+    case "map":
+      return {
+        image: "/media/diagrams/placeholder-map.png",
+        labels: Array.from({length: Math.max(1, Math.min(6, to - from + 1))}, (_, index) => ({
+          key: toOptionKey(index),
+          text: `Label ${toOptionKey(index)}`
+        }))
+      };
+    case "matching_headings":
+      return {
+        headings: Array.from({length: 5}, (_, index) => ({
+          key: toRoman(index),
+          text: `Heading ${index + 1}`
+        }))
+      };
+    case "matching_features":
+      return {
+        categories: [
+          {key: "A", label: "Category A"},
+          {key: "B", label: "Category B"},
+          {key: "C", label: "Category C"}
+        ]
+      };
+    case "selecting_from_a_list":
+      return {
+        options: Array.from({length: 5}, (_, index) => ({
+          key: toOptionKey(index),
+          text: `Option ${toOptionKey(index)}`
+        }))
+      };
+    default:
+      return null;
+  }
+}
+
+function resolveGroupContentForSync(group: QuestionGroup): unknown {
+  const current = group.groupContentJson;
+  if (current && typeof current === "object" && !Array.isArray(current) && Object.keys(current as Record<string, unknown>).length > 0) {
+    return current;
+  }
+
+  const fallback = buildDefaultGroupContentJson(group.type, group.from, group.to);
+  return fallback ?? null;
+}
+
+function mapBuilderQuestionTypeToApi(value: QuestionType, questionCount: number) {
+  if (value === "multiple_choice") {
+    return questionCount > 1 ? "MCQ_MULTIPLE" : "MCQ_SINGLE";
+  }
+
+  const mapping: Record<QuestionType, string> = {
+    tfng: "TFNG",
+    yes_no_not_given: "YNNG",
+    multiple_choice: "MCQ_SINGLE",
+    selecting_from_a_list: "LIST_SELECTION",
+    matching_headings: "MATCHING_HEADINGS",
+    matching_features: "CLASSIFICATION",
+    sentence_completion: "SENTENCE_COMPLETION",
+    summary_completion: "SUMMARY_COMPLETION",
+    table_completion: "TABLE_COMPLETION",
+    flow_chart: "FLOW_CHART_COMPLETION",
+    map: "PLAN_MAP_DIAGRAM",
+    diagram_labeling: "DIAGRAM_COMPLETION",
+    form_completion: "FORM_COMPLETION",
+    note_completion: "NOTE_COMPLETION",
+    matching_information: "MATCH_PARA_INFO",
+    short_answer: "SHORT_ANSWER"
+  };
+
+  return mapping[value] ?? String(value).toUpperCase();
+}
+
+function normalizeChoiceToken(value: string) {
+  return value.trim().toUpperCase().replace(/\s+/g, "_");
+}
+
+function toTextAnswers(question: BuilderQuestion) {
+  const answerCandidates: string[] = [];
+
+  if (Array.isArray((question as {correctAnswer?: unknown}).correctAnswer)) {
+    const values = (question as {correctAnswer: unknown[]}).correctAnswer;
+    for (const value of values) {
+      const normalized = toStringSafe(value).trim();
+      if (normalized) {
+        answerCandidates.push(normalized);
+      }
+    }
+  } else {
+    const normalized = toStringSafe((question as {correctAnswer?: unknown}).correctAnswer).trim();
+    if (normalized) {
+      answerCandidates.push(normalized);
+    }
+  }
+
+  const extras = Array.isArray((question as {acceptableAnswers?: unknown}).acceptableAnswers)
+    ? ((question as {acceptableAnswers: unknown[]}).acceptableAnswers ?? [])
+    : [];
+
+  for (const value of extras) {
+    const normalized = toStringSafe(value).trim();
+    if (normalized) {
+      answerCandidates.push(normalized);
+    }
+  }
+
+  const unique = [...new Set(answerCandidates)];
+  return {
+    answer: unique[0] ?? "",
+    alternatives: unique.slice(1)
+  };
+}
+
+function ensureAlternativeAnswers(answer: string, alternatives: string[]) {
+  const cleaned = [...new Set(alternatives.map((item) => item.trim()).filter(Boolean))];
+  if (cleaned.length > 0) {
+    return cleaned;
+  }
+
+  const normalizedAnswer = answer.trim();
+  return normalizedAnswer ? [normalizedAnswer] : [];
+}
+
+function isQuestionReadyForSync(question: BuilderQuestion) {
+  const prompt = question.prompt.trim();
+
+  if (question.type === "tfng" || question.type === "yes_no_not_given") {
+    return Boolean(prompt) && Boolean((question.correctAnswer ?? "").trim());
+  }
+
+  if (question.type === "multiple_choice") {
+    return Boolean(prompt) && question.options.some((option) => option.trim().length > 0) && Boolean(question.correctAnswer.trim());
+  }
+
+  if (question.type === "matching_headings") {
+    return Boolean(prompt) && Boolean(question.correctAnswer.trim());
+  }
+
+  if (
+    question.type === "matching_information" ||
+    question.type === "matching_features" ||
+    question.type === "selecting_from_a_list" ||
+    question.type === "map"
+  ) {
+    const mapped = Object.values(question.correctAnswer).find((value) => String(value ?? "").trim().length > 0);
+    return Boolean(prompt) && Boolean(mapped);
+  }
+
+  if (
+    question.type === "sentence_completion" ||
+    question.type === "summary_completion" ||
+    question.type === "table_completion" ||
+    question.type === "flow_chart" ||
+    question.type === "diagram_labeling" ||
+    question.type === "form_completion" ||
+    question.type === "note_completion" ||
+    question.type === "short_answer"
+  ) {
+    const answers = toTextAnswers(question);
+    return Boolean(prompt) && Boolean(answers.answer);
+  }
+
+  return false;
+}
+
+function mapBuilderQuestionToBulkPayload(question: BuilderQuestion, apiType: string, order: number): QuestionBulkItemPayload {
+  const prompt = question.prompt.trim() || `Question ${question.number}`;
+  const explanation = (question.explanation ?? "").trim();
+  const evidence = (question.evidence ?? question.evidenceText ?? "").trim();
+
+  const base: QuestionBulkItemPayload = {
+    question_number: question.number,
+    question_order: order,
+    question_text: prompt,
+    prompt,
+    explanation: explanation || undefined,
+    evidence_text: evidence || undefined,
+    answer_evidence_json: evidence ? {text_snippet: evidence} : undefined,
+    is_active: true
+  };
+
+  if (question.type === "tfng") {
+    return {
+      ...base,
+      options_json: {statement: prompt},
+      correct_answer_json: {answer: normalizeChoiceToken(question.correctAnswer)}
+    };
+  }
+
+  if (question.type === "yes_no_not_given") {
+    return {
+      ...base,
+      options_json: {statement: prompt},
+      correct_answer_json: {answer: normalizeChoiceToken(question.correctAnswer)}
+    };
+  }
+
+  if (question.type === "multiple_choice") {
+    const optionRows = question.options
+      .map((text, index) => ({key: toOptionKey(index), text: text.trim()}))
+      .filter((item) => item.text.length > 0);
+    const normalizedAnswer = question.correctAnswer.trim().toUpperCase();
+    return {
+      ...base,
+      options_json: {options: optionRows},
+      correct_answer_json: apiType === "MCQ_MULTIPLE" ? {answers: normalizedAnswer ? [normalizedAnswer] : []} : {answer: normalizedAnswer}
+    };
+  }
+
+  if (question.type === "matching_headings") {
+    return {
+      ...base,
+      options_json: null,
+      correct_answer_json: {answer: question.correctAnswer.trim()}
+    };
+  }
+
+  if (
+    question.type === "matching_information" ||
+    question.type === "matching_features" ||
+    question.type === "selecting_from_a_list" ||
+    question.type === "map"
+  ) {
+    const mappedAnswer =
+      question.correctAnswer[prompt]
+      ?? Object.values(question.correctAnswer).find((value) => String(value ?? "").trim().length > 0)
+      ?? "";
+
+    return {
+      ...base,
+      options_json: {statement: prompt},
+      correct_answer_json: {answer: String(mappedAnswer).trim()}
+    };
+  }
+
+  if (question.type === "sentence_completion") {
+    const answers = toTextAnswers(question);
+    return {
+      ...base,
+      options_json: {sentence_stem: prompt},
+      correct_answer_json: {
+        answer: answers.answer,
+        alternative_answers: ensureAlternativeAnswers(answers.answer, answers.alternatives)
+      }
+    };
+  }
+
+  if (
+    question.type === "summary_completion" ||
+    question.type === "table_completion" ||
+    question.type === "flow_chart" ||
+    question.type === "diagram_labeling" ||
+    question.type === "form_completion" ||
+    question.type === "note_completion" ||
+    question.type === "short_answer"
+  ) {
+    const answers = toTextAnswers(question);
+    return {
+      ...base,
+      options_json: null,
+      correct_answer_json: {
+        answer: answers.answer,
+        alternative_answers: ensureAlternativeAnswers(answers.answer, answers.alternatives)
+      }
+    };
+  }
+
+  return {
+    ...base,
+    options_json: null,
+    correct_answer_json: null
+  };
 }
 
 function toVariantStatus(value: unknown): ContentBankVariantSet["status"] {
@@ -358,19 +760,73 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
     from,
     to,
     questions,
-    variantSetId: toStringSafe(group.variant_set ?? "")
+    variantSetId: toStringSafe(group.variant_set ?? ""),
+    instructions: toStringSafe(group.instructions ?? ""),
+    groupContentJson: group.group_content_json ?? null
   });
 }
 
+async function ensureBackendStructuresForTest(testId: string, detail: PracticeTestDetailRecord) {
+  const moduleType: "reading" | "listening" = String(detail.test_type ?? "").toUpperCase().includes("LISTENING") ? "listening" : "reading";
+  const expectedCounts = moduleType === "reading" ? [...DEFAULT_READING_SLOT_QUESTION_COUNTS] : [...DEFAULT_LISTENING_SLOT_QUESTION_COUNTS];
+  const existingRows = moduleType === "reading" ? [...(detail.reading_passages ?? [])] : [...(detail.listening_parts ?? [])];
+
+  const usedSlots = new Set<number>();
+  for (const row of existingRows) {
+      const index = parseStructureIndex(
+      moduleType === "reading" ? toStringSafe((row as ReadingPassageRecord).passage_number) : toStringSafe((row as ListeningPartRecord).part_number),
+      0
+    );
+    if (index >= 1 && index <= expectedCounts.length) {
+      usedSlots.add(index);
+    }
+  }
+
+  let createdAny = false;
+  for (let slot = 1; slot <= expectedCounts.length; slot += 1) {
+    if (usedSlots.has(slot)) {
+      continue;
+    }
+
+    if (moduleType === "reading") {
+      await readingPassagesService.create(testId, {
+        passage_number: `PASSAGE_${slot}`,
+        title: `Passage ${slot}`,
+        passage_text: " ",
+        max_questions: expectedCounts[slot - 1] ?? 13,
+        time_limit_seconds: 1200,
+        is_active: true
+      });
+    } else {
+      await listeningPartsService.create(testId, {
+        part_number: `PART_${slot}`,
+        title: `Section ${slot}`,
+        transcript_text: " ",
+        max_questions: expectedCounts[slot - 1] ?? 10,
+        time_limit_seconds: 600,
+        is_active: true,
+        audio_file: null
+      });
+    }
+    createdAny = true;
+  }
+
+  if (!createdAny) {
+    return detail;
+  }
+
+  return practiceTestsService.getById(testId);
+}
+
 function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDetailRecord): AdminBuilderTest {
-  const module: "reading" | "listening" = String(detail.test_type ?? "").toUpperCase().includes("LISTENING") ? "listening" : "reading";
+  const moduleType: "reading" | "listening" = String(detail.test_type ?? "").toUpperCase().includes("LISTENING") ? "listening" : "reading";
 
   const structures: BuilderStructureItem[] = [];
   const questionGroupsByStructure: Record<string, QuestionGroup[]> = {};
 
   let cursor = 1;
 
-  if (module === "reading") {
+  if (moduleType === "reading") {
     const passages = [...(detail.reading_passages ?? [])].sort(
       (left, right) => parseStructureIndex(String(left.passage_number ?? ""), 0) - parseStructureIndex(String(right.passage_number ?? ""), 0)
     );
@@ -382,6 +838,7 @@ function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDeta
       cursor = to + 1;
 
       const structureId = toStringSafe(passage.id, `passage-${index + 1}`);
+      const linkedVariantSetId = extractVariantSetIdFromOwnerRecord(passage);
       structures.push({
         id: structureId,
         index: index + 1,
@@ -390,7 +847,7 @@ function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDeta
         questionRangeLabel: `Q${from}-${to}`,
         content: [toStringSafe(passage.passage_text).trim() || " "],
         linkedPassageId: undefined,
-        linkedVariantSetId: undefined
+        linkedVariantSetId: linkedVariantSetId || undefined
       });
 
       const groups = Array.isArray(passage.question_groups)
@@ -410,6 +867,7 @@ function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDeta
       cursor = to + 1;
 
       const structureId = toStringSafe(part.id, `part-${index + 1}`);
+      const linkedVariantSetId = extractVariantSetIdFromOwnerRecord(part);
       structures.push({
         id: structureId,
         index: index + 1,
@@ -419,7 +877,7 @@ function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDeta
         content: [toStringSafe(part.transcript_text).trim() || " "],
         audioLabel: toStringSafe(part.audio_url ?? part.audio_file ?? ""),
         linkedPassageId: undefined,
-        linkedVariantSetId: undefined
+        linkedVariantSetId: linkedVariantSetId || undefined
       });
 
       const groups = Array.isArray(part.question_groups)
@@ -437,7 +895,7 @@ function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDeta
     id: toStringSafe(detail.id, testId),
     name: toStringSafe(detail.title, "Practice Test"),
     book: toStringSafe(detail.title, "Practice Test"),
-    module,
+    module: moduleType,
     status: detail.is_active ? "published" : "draft",
     structures,
     questionGroupsByStructure
@@ -462,14 +920,13 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   const [contentBankVariants, setContentBankVariants] = useState<ContentBankVariantSet[]>([]);
   const [isPersisting, setIsPersisting] = useState(false);
   const [apiNotice, setApiNotice] = useState<string | null>(null);
-  const [isBackendLoaded, setIsBackendLoaded] = useState(false);
 
   useEffect(() => {
     let active = true;
 
     const loadTest = async () => {
       try {
-        const response = await practiceTestsService.getById(testId);
+        const response = await ensureBackendStructuresForTest(testId, await practiceTestsService.getById(testId));
         if (!active) return;
 
         const mapped = mapPracticeTestDetailToBuilder(testId, response);
@@ -592,12 +1049,10 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         }
 
         setApiNotice(null);
-        setIsBackendLoaded(true);
       } catch (error) {
         if (!active) return;
         const message = error instanceof AdminApiError ? error.message : t("validation.genericError");
         setApiNotice(message);
-        setIsBackendLoaded(false);
         setContentBankPassages([]);
         setContentBankVariants([]);
       }
@@ -782,8 +1237,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     }));
   };
 
-  const handleCreateGroup = (type: QuestionType, from: number, to: number) => {
-    if (!activeStructure) {
+  const handleCreateGroup = async (type: QuestionType, from: number, to: number, instructions: string) => {
+    if (!activeStructure || isPersisting) {
       return;
     }
 
@@ -792,18 +1247,62 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       return;
     }
 
-    const group = createQuestionGroup(type, from, to);
-    updateGroupsForActiveStructure((groups) => {
-      const occupied = getOccupiedNumbers(groups);
-      if (!isRangeFree(occupied, from, to)) {
-        return groups;
-      }
-      return [...groups, normalizeGroup(group)];
-    });
-    setCollapsedGroups((current) => ({...current, [group.id]: false}));
+    const occupied = getOccupiedNumbers(activeGroups);
+    if (!isRangeFree(occupied, from, to)) {
+      return;
+    }
+
+    setIsPersisting(true);
+    setApiNotice(null);
+
+    try {
+      const parentPayload =
+        test.module === "listening"
+          ? ({listening_part: activeStructure.id} satisfies Pick<QuestionGroupPayload, "listening_part">)
+          : ({reading_passage: activeStructure.id} satisfies Pick<QuestionGroupPayload, "reading_passage">);
+
+      const payload: QuestionGroupPayload = {
+        question_type: type,
+        group_order: activeGroups.length + 1,
+        instructions: resolveInstructionsForSubmit(type, instructions),
+        question_number_start: from,
+        question_number_end: to,
+        word_limit: null,
+        number_allowed: false,
+        group_content_json: buildDefaultGroupContentJson(type, from, to),
+        is_active: true,
+        ...parentPayload
+      };
+
+      const created = await questionGroupsService.create(payload);
+      const createdGroup = normalizeGroup(mapApiQuestionGroupToBuilderGroup(created, from));
+
+      setTest((current) => {
+        const currentGroups = current.questionGroupsByStructure[activeStructure.id] ?? [];
+        const currentOccupied = getOccupiedNumbers(currentGroups);
+        if (!isRangeFree(currentOccupied, createdGroup.from, createdGroup.to)) {
+          return current;
+        }
+
+        return {
+          ...current,
+          questionGroupsByStructure: {
+            ...current.questionGroupsByStructure,
+            [activeStructure.id]: [...currentGroups, createdGroup]
+          }
+        };
+      });
+      setCollapsedGroups((current) => ({...current, [createdGroup.id]: false}));
+      setApiNotice("Saved.");
+    } catch (error) {
+      const message = error instanceof AdminApiError ? error.message : "Failed to create question group.";
+      setApiNotice(message);
+    } finally {
+      setIsPersisting(false);
+    }
   };
 
-  const handleEditGroup = (groupId: string, type: QuestionType, from: number, to: number) => {
+  const handleEditGroup = (groupId: string, type: QuestionType, from: number, to: number, instructions: string) => {
     if (!activeStructure) {
       return;
     }
@@ -836,7 +1335,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           from,
           to,
           title: buildGroupTitle(from, to),
-          questions
+          questions,
+          instructions: resolveInstructionsForSubmit(type, instructions)
         });
       });
     });
@@ -1117,8 +1617,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   };
 
   const syncTestToBackend = async (nextStatus: "draft" | "published") => {
-    if (isPersisting || !isBackendLoaded) {
-      setTest((current) => ({...current, status: nextStatus}));
+    if (isPersisting) {
       return;
     }
 
@@ -1129,6 +1628,10 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       await practiceTestsService.patch(test.id, {
         is_active: nextStatus === "published"
       });
+
+      const nextGroupsByStructure: Record<string, QuestionGroup[]> = {
+        ...test.questionGroupsByStructure
+      };
 
       for (const structure of test.structures) {
         const range = getStructureRange(structure);
@@ -1143,19 +1646,121 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             max_questions: maxQuestions,
             is_active: true
           });
-          continue;
+        } else {
+          await listeningPartsService.patch(structure.id, {
+            part_number: `PART_${structure.index}`,
+            title: structure.title,
+            transcript_text: fullText || " ",
+            max_questions: maxQuestions,
+            is_active: true
+          });
         }
 
-        await listeningPartsService.patch(structure.id, {
-          part_number: `PART_${structure.index}`,
-          title: structure.title,
-          transcript_text: fullText || " ",
-          max_questions: maxQuestions,
-          is_active: true
+        const localGroups = [...(test.questionGroupsByStructure[structure.id] ?? [])]
+          .map((group) => normalizeGroup(group))
+          .sort((left, right) => left.from - right.from);
+
+        const listedGroups = await questionGroupsService.list({
+          ...(test.module === "reading" ? {reading_passage: structure.id} : {listening_part: structure.id}),
+          page: 1,
+          pageSize: 200,
+          ordering: "group_order"
         });
+
+        const existingById = new Map(
+          listedGroups.results
+            .map((group) => [toStringSafe(group.id), group] as const)
+            .filter(([id]) => Boolean(id))
+        );
+        const localIds = new Set(localGroups.map((group) => toStringSafe(group.id)).filter(Boolean));
+
+        for (const remote of listedGroups.results) {
+          const remoteId = toStringSafe(remote.id);
+          if (!remoteId || localIds.has(remoteId)) {
+            continue;
+          }
+          await questionGroupsService.remove(remoteId);
+        }
+
+        const syncedGroups: QuestionGroup[] = [];
+        for (let index = 0; index < localGroups.length; index += 1) {
+          const group = localGroups[index];
+          const normalizedLocalQuestions = [...group.questions].sort((left, right) => left.number - right.number);
+          const apiQuestionType = mapBuilderQuestionTypeToApi(group.type, normalizedLocalQuestions.length);
+          const commonPayload = {
+            question_type: group.type,
+            group_order: index + 1,
+            instructions: resolveInstructionsForSubmit(group.type, group.instructions ?? ""),
+            question_number_start: group.from,
+            question_number_end: group.to,
+            word_limit: null,
+            number_allowed: false,
+            group_content_json: resolveGroupContentForSync(group),
+            is_active: true
+          } satisfies Partial<QuestionGroupPayload>;
+
+          const groupId = toStringSafe(group.id);
+          let persistedGroup: QuestionGroupRecord;
+          if (groupId && existingById.has(groupId)) {
+            persistedGroup = await questionGroupsService.patch(groupId, commonPayload);
+          } else {
+            persistedGroup = await questionGroupsService.create({
+              ...commonPayload,
+              ...(test.module === "reading" ? {reading_passage: structure.id} : {listening_part: structure.id})
+            } as QuestionGroupPayload);
+          }
+
+          const persistedGroupId = toStringSafe(persistedGroup.id);
+          if (persistedGroupId) {
+            const existingQuestions = await questionsService.list({
+              question_group: persistedGroupId,
+              page: 1,
+              pageSize: 200,
+              ordering: "question_number"
+            });
+
+            for (const remoteQuestion of existingQuestions.results) {
+              const remoteQuestionId = toStringSafe(remoteQuestion.id);
+              if (!remoteQuestionId) continue;
+              await questionsService.remove(remoteQuestionId);
+            }
+
+            const readyQuestions = normalizedLocalQuestions.filter((question) => isQuestionReadyForSync(question));
+            if (readyQuestions.length > 0) {
+              await questionsService.bulkCreate(
+                persistedGroupId,
+                apiQuestionType,
+                {
+                  questions: readyQuestions.map((question, questionIndex) =>
+                    mapBuilderQuestionToBulkPayload(question, apiQuestionType, questionIndex + 1)
+                  )
+                }
+              );
+            }
+          }
+
+          syncedGroups.push(
+            normalizeGroup({
+              ...group,
+              id: persistedGroupId || group.id,
+              variantSetId: toStringSafe(persistedGroup.variant_set ?? group.variantSetId ?? ""),
+              instructions: commonPayload.instructions,
+              groupContentJson: commonPayload.group_content_json
+            })
+          );
+        }
+
+        nextGroupsByStructure[structure.id] = syncedGroups;
       }
 
-      setTest((current) => ({...current, status: nextStatus}));
+      setTest((current) => ({
+        ...current,
+        status: nextStatus,
+        questionGroupsByStructure: {
+          ...current.questionGroupsByStructure,
+          ...nextGroupsByStructure
+        }
+      }));
       setApiNotice("Saved.");
     } catch (error) {
       const message = error instanceof AdminApiError ? error.message : "Failed to save changes.";

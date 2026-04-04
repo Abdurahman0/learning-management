@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
 import { cn } from "@/lib/utils";
 
 type ListeningEvidenceStatus = "correct" | "incorrect" | "skipped";
@@ -102,7 +103,9 @@ export function ListeningTranscriptReviewPanel({
         <div className="space-y-4">
           <div className="space-y-2">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-[1.9rem]">{activeSection.title}</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">{activeSection.instructions}</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              <FormattedInstructionText text={activeSection.instructions} />
+            </p>
           </div>
 
           <Card className="gap-1 rounded-2xl border-slate-200 bg-slate-50/80 p-3.5 shadow-none dark:border-border/65 dark:bg-background/45">

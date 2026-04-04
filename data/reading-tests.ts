@@ -490,6 +490,39 @@ function enrichEvidencePhrases(test: ReadingFullTest): ReadingFullTest {
 
 export const READING_TESTS: ReadingFullTest[] = READING_TESTS_BASE.map(enrichEvidencePhrases);
 
+const RUNTIME_READING_TESTS_KEY = "runtime-reading-tests:v1";
+
+function loadRuntimeReadingTests() {
+  if (typeof window === "undefined") return [] as ReadingFullTest[];
+  try {
+    const raw = window.localStorage.getItem(RUNTIME_READING_TESTS_KEY);
+    if (!raw) return [] as ReadingFullTest[];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as ReadingFullTest[]) : ([] as ReadingFullTest[]);
+  } catch {
+    return [] as ReadingFullTest[];
+  }
+}
+
+export function saveRuntimeReadingTest(test: ReadingFullTest) {
+  if (typeof window === "undefined") return;
+  try {
+    const existing = loadRuntimeReadingTests();
+    const deduped = existing.filter((item) => item.id !== test.id);
+    const next = [test, ...deduped].slice(0, 20);
+    window.localStorage.setItem(RUNTIME_READING_TESTS_KEY, JSON.stringify(next));
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
 export function getReadingTestById(id: string) {
+  const fromStatic = READING_TESTS.find((test) => test.id === id);
+  if (fromStatic) return fromStatic;
+
+  return loadRuntimeReadingTests().find((test) => test.id === id);
+}
+
+export function getStaticReadingTestById(id: string) {
   return READING_TESTS.find((test) => test.id === id);
 }

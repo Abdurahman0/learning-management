@@ -13,10 +13,6 @@ import {Separator} from "@/components/ui/separator";
 import {Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle} from "@/components/ui/sheet";
 import {ThemeToggle} from "@/components/theme-toggle";
 import {
-  TEST_DIFFICULTY_OPTIONS,
-  TEST_MODULE_OPTIONS,
-  TEST_SORT_OPTIONS,
-  TEST_STATUS_OPTIONS,
   type AdminTest,
   type DifficultyFilterValue,
   type ModuleFilterValue,
@@ -33,6 +29,35 @@ import {TestsFilters} from "./TestsFilters";
 import {TestsTable} from "./TestsTable";
 
 const PAGE_SIZE = 5;
+type Option<Value extends string> = {
+  value: Value;
+  labelKey: string;
+};
+
+const TEST_MODULE_OPTIONS: Option<ModuleFilterValue>[] = [
+  {value: "all", labelKey: "filters.module.all"},
+  {value: "reading", labelKey: "filters.module.reading"},
+  {value: "listening", labelKey: "filters.module.listening"}
+];
+
+const TEST_DIFFICULTY_OPTIONS: Option<DifficultyFilterValue>[] = [
+  {value: "all", labelKey: "filters.difficulty.all"},
+  {value: "beginner", labelKey: "filters.difficulty.beginner"},
+  {value: "intermediate", labelKey: "filters.difficulty.intermediate"},
+  {value: "advanced", labelKey: "filters.difficulty.advanced"}
+];
+
+const TEST_STATUS_OPTIONS: Option<StatusFilterValue>[] = [
+  {value: "all", labelKey: "filters.status.all"},
+  {value: "published", labelKey: "filters.status.published"},
+  {value: "draft", labelKey: "filters.status.draft"}
+];
+
+const TEST_SORT_OPTIONS: Option<TestSort>[] = [
+  {value: "newest", labelKey: "filters.sort.newest"},
+  {value: "oldest", labelKey: "filters.sort.oldest"},
+  {value: "alphabetical", labelKey: "filters.sort.alphabetical"}
+];
 
 function mapDifficulty(value: string): AdminTest["difficulty"] {
   const normalized = String(value ?? "").trim().toUpperCase();
@@ -261,7 +286,7 @@ export function TestsManagementClient() {
 
   const handleDelete = async (testId: string) => {
     try {
-      await practiceTestsService.remove(testId);
+      await practiceTestsService.remove(testId, {hard: true});
       setTests((currentTests) => currentTests.filter((item) => item.id !== testId));
       setExpandedTestIds((currentExpanded) => {
         const next = new Set(currentExpanded);
@@ -270,6 +295,24 @@ export function TestsManagementClient() {
       });
     } catch {
       // Keep UI stable when API deletion fails.
+    }
+  };
+
+  const handleActivate = async (testId: string) => {
+    try {
+      await practiceTestsService.patch(testId, {is_active: true});
+      setTests((currentTests) =>
+        currentTests.map((item) =>
+          item.id === testId
+            ? {
+                ...item,
+                status: "published"
+              }
+            : item
+        )
+      );
+    } catch {
+      // Keep UI stable when API activation fails.
     }
   };
 
@@ -446,6 +489,7 @@ export function TestsManagementClient() {
               onToggleExpand={handleToggleExpand}
               onEdit={handleEditTest}
               onPreview={handlePreviewTest}
+              onActivate={handleActivate}
               onDelete={handleDelete}
               onEditPassage={handleEditPassage}
               page={safePage}

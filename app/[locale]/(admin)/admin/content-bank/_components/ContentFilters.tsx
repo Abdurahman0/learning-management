@@ -1,7 +1,7 @@
 "use client"
 
 import {Filter} from "lucide-react"
-import {useTranslations} from "next-intl"
+import {useMessages, useTranslations} from "next-intl"
 
 import {Button} from "@/components/ui/button"
 import {
@@ -42,13 +42,24 @@ type ContentFiltersProps = {
 
 function resolveLabel<Value extends string>(
   translate: ReturnType<typeof useTranslations<"adminContentBank">>,
+  messages: ReturnType<typeof useMessages>,
   option: Option<Value>
 ) {
-  try {
-    return translate(option.labelKey)
-  } catch {
+  if (option.value !== "all" && option.labelKey.startsWith("topics.")) {
     return option.value
   }
+
+  const segments = option.labelKey.split(".").filter(Boolean)
+  let current: unknown = messages
+
+  for (const segment of ["adminContentBank", ...segments]) {
+    if (!current || typeof current !== "object" || !(segment in (current as Record<string, unknown>))) {
+      return option.value
+    }
+    current = (current as Record<string, unknown>)[segment]
+  }
+
+  return translate(option.labelKey)
 }
 
 function FilterSelect<Value extends string>({
@@ -61,6 +72,7 @@ function FilterSelect<Value extends string>({
   onChange: (value: Value) => void
 }) {
   const t = useTranslations("adminContentBank")
+  const messages = useMessages()
 
   return (
     <Select value={value} onValueChange={(nextValue) => onChange(nextValue as Value)}>
@@ -70,7 +82,7 @@ function FilterSelect<Value extends string>({
       <SelectContent>
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
-            {resolveLabel(t, option)}
+            {resolveLabel(t, messages, option)}
           </SelectItem>
         ))}
       </SelectContent>

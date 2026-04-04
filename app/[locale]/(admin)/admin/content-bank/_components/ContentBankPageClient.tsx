@@ -5,9 +5,6 @@ import {useTranslations} from "next-intl"
 
 import {AdminSidebar} from "../../_components/AdminSidebar"
 import {
-  CONTENT_DIFFICULTY_OPTIONS,
-  CONTENT_MODULE_OPTIONS,
-  CONTENT_SOURCE_OPTIONS,
   type ContentBankPassage,
   type ContentBankTab,
   type ContentBankVariantSet,
@@ -41,6 +38,26 @@ type AdminTestSummary = {
   name: string
   module: "reading" | "listening"
 }
+
+const CONTENT_MODULE_OPTIONS: Option<ContentModuleFilterValue>[] = [
+  {value: "all", labelKey: "filters.module.allModules"},
+  {value: "reading", labelKey: "filters.module.reading"},
+  {value: "listening", labelKey: "filters.module.listening"}
+]
+
+const CONTENT_DIFFICULTY_OPTIONS: Option<ContentDifficultyFilterValue>[] = [
+  {value: "all", labelKey: "filters.difficulty.allDifficulty"},
+  {value: "easy", labelKey: "filters.difficulty.easy"},
+  {value: "medium", labelKey: "filters.difficulty.medium"},
+  {value: "hard", labelKey: "filters.difficulty.hard"}
+]
+
+const CONTENT_SOURCE_OPTIONS: Option<ContentSourceFilterValue>[] = [
+  {value: "all", labelKey: "filters.source.anySource"},
+  {value: "cambridge", labelKey: "filters.source.cambridge"},
+  {value: "practice", labelKey: "filters.source.practice"},
+  {value: "custom", labelKey: "filters.source.custom"}
+]
 
 function matchesSearch(value: string, query: string) {
   return value.toLowerCase().includes(query)
@@ -376,6 +393,26 @@ export function ContentBankPageClient() {
     }
   }
 
+  const handleDeletePassage = async (passageId: string) => {
+    const source = passagesState.find((item) => item.id === passageId)
+    if (!source) return
+
+    const shouldDelete = window.confirm(t("feedback.confirmDeletePassage", {name: source.title}))
+    if (!shouldDelete) return
+
+    try {
+      await adminContentBankService.deletePassage(source.id, source.module)
+      await loadContentBank()
+      if (fullPassageId === source.id) {
+        setFullPassageId(null)
+      }
+      postAction(t("feedback.passageDeleted", {name: source.title}))
+    } catch (cause) {
+      const message = cause instanceof AdminApiError ? cause.message : t("feedback.genericError")
+      postAction(message)
+    }
+  }
+
   const handleArchiveVariant = async (variantId: string) => {
     try {
       const source = variants.find((variant) => variant.id === variantId)
@@ -477,6 +514,7 @@ export function ContentBankPageClient() {
                     onSelectPassage={setSelectedPassageId}
                     onReadFullPassage={setFullPassageId}
                     onOpenCreateVariant={openCreateVariant}
+                    onDeletePassage={(passageId) => void handleDeletePassage(passageId)}
                   />
                   <p className="text-xs text-muted-foreground">
                     {t("table.showingResults", {visible: filteredPassages.length, total: passagesState.length})}

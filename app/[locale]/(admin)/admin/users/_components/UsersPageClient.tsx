@@ -4,14 +4,12 @@ import {useEffect, useMemo, useState} from "react";
 import {useTranslations} from "next-intl";
 
 import {
-  PLAN_FILTER_OPTIONS,
-  ROLE_FILTER_OPTIONS,
-  STATUS_FILTER_OPTIONS,
-  deriveUserStats,
   type AdminUser,
+  type FilterOption,
   type PlanFilterValue,
   type RoleFilterValue,
-  type StatusFilterValue
+  type StatusFilterValue,
+  type UserStatCard
 } from "@/data/admin-users";
 import {adminUsersService} from "@/src/services/admin/users.service";
 
@@ -23,6 +21,24 @@ import {UsersHeader} from "./UsersHeader";
 import {UsersTable} from "./UsersTable";
 
 const PAGE_SIZE = 6;
+const STATUS_FILTER_OPTIONS: FilterOption<StatusFilterValue>[] = [
+  {value: "all", labelKey: "filters.status.all"},
+  {value: "verified", labelKey: "filters.status.verified"},
+  {value: "active", labelKey: "filters.status.active"},
+  {value: "suspended", labelKey: "filters.status.suspended"}
+];
+const ROLE_FILTER_OPTIONS: FilterOption<RoleFilterValue>[] = [
+  {value: "all", labelKey: "filters.role.all"},
+  {value: "student", labelKey: "filters.role.student"},
+  {value: "admin", labelKey: "filters.role.admin"},
+  {value: "tutor", labelKey: "filters.role.tutor"}
+];
+const PLAN_FILTER_OPTIONS: FilterOption<PlanFilterValue>[] = [
+  {value: "all", labelKey: "filters.plan.all"},
+  {value: "free", labelKey: "filters.plan.free"},
+  {value: "pro", labelKey: "filters.plan.pro"},
+  {value: "premium", labelKey: "filters.plan.premium"}
+];
 
 type UsersPageClientProps = {
   initialQuery?: string;
@@ -168,20 +184,14 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
     };
   }, [initialQuery]);
 
-  const stats = useMemo(() => {
-    const fallback = deriveUserStats(users);
-    return fallback.map((item) => {
-      if (item.id === "totalUsers") {
-        return {...item, value: metrics.totalUsers || item.value};
-      }
-      if (item.id === "activeToday") {
-        return {...item, value: metrics.activeToday || item.value};
-      }
-      if (item.id === "newThisMonth") {
-        return {...item, value: metrics.newThisMonth || item.value};
-      }
-      return item;
-    });
+  const stats = useMemo<UserStatCard[]>(() => {
+    const payingUsers = users.filter((user) => user.plan !== "free").length;
+    return [
+      {id: "totalUsers", value: metrics.totalUsers || users.length, change: "+0.0%", icon: "users"},
+      {id: "activeToday", value: metrics.activeToday, change: "+0.0%", icon: "activity"},
+      {id: "newThisMonth", value: metrics.newThisMonth, change: "+0.0%", icon: "newUsers"},
+      {id: "payingUsers", value: payingUsers, change: "+0.0%", icon: "crown"}
+    ];
   }, [metrics, users]);
 
   const filteredUsers = useMemo(() => {
