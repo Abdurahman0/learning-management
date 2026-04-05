@@ -16,7 +16,7 @@ type SkillsSnapshotProps = {
 
 export function SkillsSnapshot({skills, summary, overallJourneyPct, id}: SkillsSnapshotProps) {
   const t = useTranslations("dashboard");
-  const visibleSkills = skills.filter((item) => item.key === "reading" || item.key === "listening" || item.band > 0);
+  const visibleSkills = skills.filter((item) => item.key === "reading" || item.key === "listening");
 
   return (
     <div id={id} className="min-w-0 space-y-4">

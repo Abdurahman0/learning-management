@@ -3,7 +3,7 @@
 import {useState} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
-import {BookOpen, ChevronDown, Headphones, Home, Lock, Mic, PenLine} from "lucide-react";
+import {BarChart3, BookOpen, ChevronDown, Headphones, Home, Lock, Mic, PenLine, TriangleAlert} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
@@ -60,43 +60,18 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
 
   const secondaryNavItems: NavItem[] = isStudent
     ? [
-        // Temporarily disabled while the product shifts from chat to 1-to-1 sessions.
-        // {
-        //   key: "messages",
-        //   label: t("sidebar.messages"),
-        //   href: messagesHref,
-        //   icon: MessageSquare
-        // },
-        // {
-        //   key: "assignments",
-        //   label: t("sidebar.assignments"),
-        //   href: `/${locale}/assignments`,
-        //   icon: ClipboardList
-        // },
-        // {
-        //   key: "sessions",
-        //   label: t("sidebar.sessions"),
-        //   href: `/${locale}/sessions`,
-        //   icon: CalendarClock
-        // },
-        // {
-        //   key: "aiCoach",
-        //   label: t("sidebar.aiCoach"),
-        //   href: `/${locale}/ai-coach`,
-        //   icon: Sparkles
-        // },
-        // {
-        //   key: "analytics",
-        //   label: t("sidebar.analytics"),
-        //   href: `/${locale}/analytics`,
-        //   icon: BarChart3
-        // },
-        // {
-        //   key: "reviewCenter",
-        //   label: t("sidebar.reviewCenter"),
-        //   href: `/${locale}/review-center`,
-        //   icon: BookCheck
-        // }
+        {
+          key: "analytics",
+          label: t("sidebar.analytics"),
+          href: `/${locale}/analytics`,
+          icon: BarChart3
+        },
+        {
+          key: "mistakeAnalysis",
+          label: t("sidebar.mistakeAnalysis"),
+          href: `/${locale}/mistake-analysis`,
+          icon: TriangleAlert
+        }
       ]
     : [];
 

@@ -266,6 +266,15 @@ export const studentAttemptsService = {
     }
   },
 
+  async getByIdRaw(attemptId: string) {
+    try {
+      const response = await studentHttpClient.get(`/attempts/${attemptId}/`);
+      return response.data;
+    } catch (error) {
+      throw toStudentApiError(error);
+    }
+  },
+
   async save(attemptId: string, payload: StudentAttemptSavePayload) {
     try {
       const response = await studentHttpClient.patch(`/attempts/${attemptId}/save/`, payload);

@@ -8,12 +8,14 @@ import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, 
 
 import {
   STUDENT_COMMON_ERROR_PATTERNS,
-  STUDENT_MISTAKE_ANALYSIS_BY_RANGE,
   STUDENT_MISTAKE_RANGE_OPTIONS,
   STUDENT_RECOMMENDED_FOCUS_AREAS,
   type StudentFocusAreaAction,
   type StudentMistakeRangeKey
 } from "@/data/student-mistake-analysis";
+import {getQuestionTypeDisplayLabel, getQuestionTypeShortCode} from "@/src/services/student/questionTypeLabels";
+import {studentReviewCenterService} from "@/src/services/student/reviewCenter.service";
+import type {StudentReviewCenterResponse} from "@/src/services/student/types";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
@@ -26,6 +28,24 @@ type ActionNotice = {
   description: string;
 };
 
+type SupportedModule = "reading" | "listening";
+
+type QuestionTypeSeriesItem = {
+  id: string;
+  type: string;
+  label: string;
+  shortLabel: string;
+  mistakes: number;
+};
+
+type ModuleSeriesItem = {
+  id: string;
+  module: SupportedModule;
+  label: string;
+  share: number;
+  color: string;
+};
+
 const cardClassName =
   "rounded-2xl border border-border/70 bg-card/95 dark:border-slate-700/45 dark:bg-[linear-gradient(155deg,rgba(17,24,39,0.92),rgba(15,23,42,0.9))] shadow-none";
 
@@ -35,6 +55,81 @@ const patternIcons = {
   instructions: TriangleAlert
 } as const;
 
+const MODULE_COLORS: Record<SupportedModule, string> = {
+  reading: "#6366f1",
+  listening: "#3b82f6"
+};
+
+const RANGE_DAYS: Record<StudentMistakeRangeKey, number> = {
+  last7Days: 7,
+  last30Days: 30,
+  last3Months: 90
+};
+
+const EMPTY_REVIEW_CENTER: StudentReviewCenterResponse = {
+  summary: null,
+  mistakesByType: [],
+  mistakesByModule: [],
+  items: [],
+  count: 0,
+  next: null,
+  previous: null,
+  raw: null
+};
+
+function isSupportedModule(value: string): value is SupportedModule {
+  return value === "reading" || value === "listening";
+}
+
+function toTimestamp(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function getRangeItems<T extends {createdAt?: string | null}>(items: T[], selectedRange: StudentMistakeRangeKey) {
+  const now = Date.now();
+  const rangeMilliseconds = RANGE_DAYS[selectedRange] * 24 * 60 * 60 * 1000;
+  const itemsWithDate = items.filter((item) => toTimestamp(item.createdAt) !== null);
+
+  if (itemsWithDate.length === 0) {
+    return items;
+  }
+
+  const filtered = items.filter((item) => {
+    const timestamp = toTimestamp(item.createdAt);
+    if (timestamp === null) {
+      return false;
+    }
+    return now - timestamp <= rangeMilliseconds;
+  });
+
+  return filtered.length > 0 ? filtered : itemsWithDate;
+}
+
+function getRangeDelta<T extends {createdAt?: string | null}>(items: T[], selectedRange: StudentMistakeRangeKey) {
+  const now = Date.now();
+  const rangeMilliseconds = RANGE_DAYS[selectedRange] * 24 * 60 * 60 * 1000;
+  const timestamps = items
+    .map((item) => toTimestamp(item.createdAt))
+    .filter((value): value is number => value !== null);
+
+  if (timestamps.length === 0) {
+    return 0;
+  }
+
+  const currentWindow = timestamps.filter((timestamp) => now - timestamp <= rangeMilliseconds).length;
+  const previousWindow = timestamps.filter((timestamp) => {
+    const age = now - timestamp;
+    return age > rangeMilliseconds && age <= rangeMilliseconds * 2;
+  }).length;
+
+  return Math.max(0, currentWindow - previousWindow);
+}
+
 export function StudentMistakeAnalysisPageClient() {
   const t = useTranslations("studentMistakes");
   const locale = useLocale();
@@ -43,37 +138,49 @@ export function StudentMistakeAnalysisPageClient() {
 
   const [selectedRange, setSelectedRange] = useState<StudentMistakeRangeKey>("last30Days");
   const [notice, setNotice] = useState<ActionNotice | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [reviewData, setReviewData] = useState<StudentReviewCenterResponse>(EMPTY_REVIEW_CENTER);
 
-  const dataset = useMemo(() => STUDENT_MISTAKE_ANALYSIS_BY_RANGE[selectedRange], [selectedRange]);
+  useEffect(() => {
+    let active = true;
 
-  const questionTypeSeries = useMemo(
-    () =>
-      dataset.questionTypeMistakes.map((item) => ({
-        id: item.id,
-        type: item.type,
-        label: t(`questionTypes.${item.type}`),
-        shortLabel: t(`questionTypesShort.${item.type}`),
-        mistakes: item.mistakes
-      })),
-    [dataset.questionTypeMistakes, t]
-  );
+    const loadMistakeData = async () => {
+      setIsLoading(true);
+      try {
+        const response = await studentReviewCenterService.list();
+        if (!active) {
+          return;
+        }
 
-  const moduleSeries = useMemo(
-    () =>
-      dataset.moduleDistribution.map((item) => ({
-        id: item.id,
-        module: item.module,
-        label: t(`modules.${item.module}`),
-        share: item.share,
-        color: item.color
-      })),
-    [dataset.moduleDistribution, t]
-  );
+        setReviewData({
+          ...response,
+          summary: response.summary
+            ? {
+                ...response.summary,
+                weakestModule: response.summary.weakestModule === "listening" ? "listening" : "reading"
+              }
+            : null,
+          items: response.items.filter((item) => isSupportedModule(item.module)),
+          mistakesByModule: response.mistakesByModule.filter((item) => isSupportedModule(item.module))
+        });
+      } catch {
+        if (!active) {
+          return;
+        }
+        setReviewData(EMPTY_REVIEW_CENTER);
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
 
-  const dominantModule = useMemo(() => {
-    const sorted = [...moduleSeries].sort((left, right) => right.share - left.share);
-    return sorted[0];
-  }, [moduleSeries]);
+    void loadMistakeData();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!notice) {
@@ -83,6 +190,122 @@ export function StudentMistakeAnalysisPageClient() {
     const timer = window.setTimeout(() => setNotice(null), 2500);
     return () => window.clearTimeout(timer);
   }, [notice]);
+
+  const itemsInRange = useMemo(() => getRangeItems(reviewData.items, selectedRange), [reviewData.items, selectedRange]);
+
+  const reviewedDelta = useMemo(() => getRangeDelta(reviewData.items, selectedRange), [reviewData.items, selectedRange]);
+
+  const questionTypeSeries = useMemo<QuestionTypeSeriesItem[]>(() => {
+    const counts = new Map<string, number>();
+
+    for (const item of itemsInRange) {
+      const questionType = item.questionType?.trim();
+      if (!questionType) {
+        continue;
+      }
+      counts.set(questionType, (counts.get(questionType) ?? 0) + 1);
+    }
+
+    const fromItems = [...counts.entries()].map(([type, mistakes], index) => ({
+      id: `range-type-${index + 1}-${type}`,
+      type,
+      mistakes
+    }));
+
+    const fallback = reviewData.mistakesByType
+      .filter((item) => item.type.trim().length > 0)
+      .map((item, index) => ({
+        id: item.id || `api-type-${index + 1}`,
+        type: item.type,
+        mistakes: item.count
+      }));
+
+    const source = (fromItems.length ? fromItems : fallback).sort((left, right) => right.mistakes - left.mistakes);
+
+    return source.map((item, index) => ({
+      id: item.id,
+      type: item.type,
+      label: getQuestionTypeDisplayLabel(item.type, {fallback: "-"}),
+      shortLabel: getQuestionTypeShortCode(item.type, `${index + 1}`),
+      mistakes: item.mistakes
+    }));
+  }, [itemsInRange, reviewData.mistakesByType]);
+
+  const moduleSeries = useMemo<ModuleSeriesItem[]>(() => {
+    const counts = new Map<SupportedModule, number>([
+      ["reading", 0],
+      ["listening", 0]
+    ]);
+
+    for (const item of itemsInRange) {
+      if (!isSupportedModule(item.module)) {
+        continue;
+      }
+      counts.set(item.module, (counts.get(item.module) ?? 0) + 1);
+    }
+
+    const totalFromItems = [...counts.values()].reduce((sum, value) => sum + value, 0);
+    if (totalFromItems > 0) {
+      return (["reading", "listening"] as const).map((module) => {
+        const count = counts.get(module) ?? 0;
+        const share = Number(((count / totalFromItems) * 100).toFixed(1));
+
+        return {
+          id: `module-${module}`,
+          module,
+          label: t(`modules.${module}`),
+          share,
+          color: MODULE_COLORS[module]
+        };
+      }).filter((item) => item.share > 0);
+    }
+
+    const fallback: ModuleSeriesItem[] = [];
+    for (const item of reviewData.mistakesByModule) {
+      if (!isSupportedModule(item.module) || item.share <= 0) {
+        continue;
+      }
+
+      fallback.push({
+        id: item.id,
+        module: item.module,
+        label: t(`modules.${item.module}`),
+        share: item.share,
+        color: MODULE_COLORS[item.module]
+      });
+    }
+
+    return fallback;
+  }, [itemsInRange, reviewData.mistakesByModule, t]);
+
+  const dominantModule = useMemo(() => {
+    if (moduleSeries.length === 0) {
+      return null;
+    }
+
+    return [...moduleSeries].sort((left, right) => right.share - left.share)[0];
+  }, [moduleSeries]);
+
+  const summary = useMemo(() => {
+    const totalFromTypes = questionTypeSeries.reduce((sum, item) => sum + item.mistakes, 0);
+    const totalMistakesReviewed = itemsInRange.length > 0
+      ? itemsInRange.length
+      : reviewData.summary?.questionsToReview ?? totalFromTypes;
+    const mostDifficultType = questionTypeSeries[0]?.type || reviewData.summary?.mostDifficultType || "";
+    const weakestModule = dominantModule?.module
+      || (reviewData.summary?.weakestModule === "listening" ? "listening" : "reading");
+    const accuracyTrend = Number.isFinite(reviewData.summary?.accuracyTrend)
+      ? reviewData.summary?.accuracyTrend ?? 0
+      : 0;
+
+    return {
+      totalMistakesReviewed,
+      reviewedDelta,
+      mostDifficultTypeLabel: mostDifficultType ? getQuestionTypeDisplayLabel(mostDifficultType, {fallback: "-"}) : "-",
+      weakestModule,
+      accuracyTrend
+    };
+  }, [dominantModule?.module, itemsInRange.length, questionTypeSeries, reviewData.summary, reviewedDelta]);
 
   const handleFocusAction = (action: StudentFocusAreaAction) => {
     if (action.action === "navigate" && action.href) {
@@ -109,6 +332,12 @@ export function StudentMistakeAnalysisPageClient() {
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-[15px]">{t("subtitle")}</p>
         </header>
 
+        {isLoading ? (
+          <Card className={cardClassName}>
+            <CardContent className="p-4 text-sm text-muted-foreground">{t("subtitle")}</CardContent>
+          </Card>
+        ) : null}
+
         {notice ? (
           <Card className="rounded-xl border-blue-400/35 bg-blue-500/10 shadow-none">
             <CardContent className="flex items-start gap-3 p-3 text-sm">
@@ -131,8 +360,8 @@ export function StudentMistakeAnalysisPageClient() {
                 <Target className="size-4.5" />
               </div>
               <p className="text-sm text-muted-foreground">{t("summary.totalMistakesReviewed.label")}</p>
-              <p className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{dataset.summary.totalMistakesReviewed}</p>
-              <p className="mt-1 text-xs text-blue-600 dark:text-blue-300">{t("summary.totalMistakesReviewed.meta", {value: dataset.summary.reviewedDelta})}</p>
+              <p className="mt-1 text-3xl font-semibold tracking-tight text-foreground">{summary.totalMistakesReviewed}</p>
+              <p className="mt-1 text-xs text-blue-600 dark:text-blue-300">{t("summary.totalMistakesReviewed.meta", {value: summary.reviewedDelta})}</p>
             </CardContent>
           </Card>
 
@@ -143,7 +372,7 @@ export function StudentMistakeAnalysisPageClient() {
                 <TriangleAlert className="size-4.5" />
               </div>
               <p className="text-sm text-muted-foreground">{t("summary.mostDifficultType.label")}</p>
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">{t(`questionTypes.${dataset.summary.mostDifficultType}`)}</p>
+              <p className="mt-1 text-xl font-semibold tracking-tight text-foreground">{summary.mostDifficultTypeLabel}</p>
               <p className="mt-1 text-xs text-muted-foreground">{t("summary.mostDifficultType.meta")}</p>
             </CardContent>
           </Card>
@@ -155,7 +384,7 @@ export function StudentMistakeAnalysisPageClient() {
                 <TriangleAlert className="size-4.5" />
               </div>
               <p className="text-sm text-muted-foreground">{t("summary.weakestModule.label")}</p>
-              <p className="mt-1 text-3xl font-semibold tracking-tight text-rose-600 dark:text-rose-300">{t(`modules.${dataset.summary.weakestModule}`)}</p>
+              <p className="mt-1 text-3xl font-semibold tracking-tight text-rose-600 dark:text-rose-300">{t(`modules.${summary.weakestModule}`)}</p>
               <p className="mt-1 text-xs text-muted-foreground">{t("summary.weakestModule.meta")}</p>
             </CardContent>
           </Card>
@@ -168,7 +397,8 @@ export function StudentMistakeAnalysisPageClient() {
               </div>
               <p className="text-sm text-muted-foreground">{t("summary.accuracyTrend.label")}</p>
               <p className="mt-1 flex items-center gap-1 text-3xl font-semibold tracking-tight text-emerald-600 dark:text-emerald-300">
-                +{dataset.summary.accuracyTrend}%
+                {summary.accuracyTrend > 0 ? "+" : ""}
+                {summary.accuracyTrend}%
                 <ArrowUpRight className="size-4.5" />
               </p>
               <p className="mt-1 text-xs text-emerald-700/80 dark:text-emerald-200/90">{t("summary.accuracyTrend.meta")}</p>
@@ -224,7 +454,7 @@ export function StudentMistakeAnalysisPageClient() {
                             return null;
                           }
 
-                          const point = payload[0]?.payload as {label: string; mistakes: number};
+                          const point = payload[0]?.payload as QuestionTypeSeriesItem;
 
                           return (
                             <div className="rounded-xl border border-border/70 bg-popover/95 px-3 py-2 text-xs dark:border-slate-600/70 dark:bg-slate-900/95">
@@ -265,7 +495,7 @@ export function StudentMistakeAnalysisPageClient() {
                             return null;
                           }
 
-                          const point = payload[0]?.payload as {label: string; mistakes: number};
+                          const point = payload[0]?.payload as QuestionTypeSeriesItem;
 
                           return (
                             <div className="rounded-xl border border-border/70 bg-popover/95 px-3 py-2 text-xs dark:border-slate-600/70 dark:bg-slate-900/95">
@@ -314,7 +544,7 @@ export function StudentMistakeAnalysisPageClient() {
                           return null;
                         }
 
-                        const point = payload[0]?.payload as {label: string; share: number};
+                        const point = payload[0]?.payload as ModuleSeriesItem;
 
                         return (
                           <div className="rounded-xl border border-border/70 bg-popover/95 px-3 py-2 text-xs dark:border-slate-600/70 dark:bg-slate-900/95">

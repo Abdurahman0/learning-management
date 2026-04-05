@@ -12,6 +12,8 @@ export type ReadingEvidenceSpan = {
 
 type BaseQuestion = {
   id: string;
+  backendQuestionId?: string;
+  backendQuestionCandidateIds?: string[];
   number: number;
   passageId: ReadingPassage["id"];
   prompt: string;

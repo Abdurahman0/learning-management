@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { useParams, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
-import { getReadingAnswerMeta } from "@/data/reading-answer-keys";
 import { getReadingTestById, type ReadingQuestion } from "@/data/reading-tests";
 import { getReadingReviewData } from "@/data/review-reading";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,7 @@ import {
   loadLatestAttemptResult,
   type PersistedAttempt,
 } from "@/lib/test-attempt-storage";
+import { studentAttemptsService } from "@/src/services/student/attempts.service";
 import {
   QuestionTypePerformance,
   type QuestionTypePerformanceItem,
@@ -25,6 +25,30 @@ import { ReviewHeader } from "./ReviewHeader";
 import { ReviewMistakeHeatmap } from "./ReviewMistakeHeatmap";
 import { ReviewNextActions } from "./ReviewNextActions";
 import { ReviewVideoLessonCard } from "./ReviewVideoLessonCard";
+import { adaptReadingBackendReview, type AdaptedReadingBackendReview } from "./backendReviewAdapters";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value.trim());
+}
+
+function normalizeStoredAnswers(input?: Record<string, string | string[] | null>) {
+  const normalized: Record<string, string | string[]> = {};
+  if (!input) return normalized;
+
+  for (const [questionId, value] of Object.entries(input)) {
+    if (typeof value === "string") {
+      normalized[questionId] = value;
+      continue;
+    }
+    if (Array.isArray(value)) {
+      normalized[questionId] = value;
+    }
+  }
+
+  return normalized;
+}
 
 export function ReadingSummaryPageClient() {
   const params = useParams<{ id: string }>();
@@ -36,46 +60,104 @@ export function ReadingSummaryPageClient() {
   const testId = typeof params?.id === "string" ? params.id : "";
   const attemptId = searchParams.get("attempt") ?? "";
   const test = getReadingTestById(testId);
-  const isClient = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [backendReview, setBackendReview] = useState<AdaptedReadingBackendReview | null>(null);
+  const [backendTimeUsedSeconds, setBackendTimeUsedSeconds] = useState<number | null>(null);
 
-  const attempt = useMemo<PersistedAttempt | null>(() => {
-    if (!isClient || !test) return null;
-    if (!attemptId) return loadLatestAttemptResult("reading", test.id);
-    return loadAttemptResult("reading", test.id, attemptId);
-  }, [attemptId, isClient, test]);
+  const attempt = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") {
+        return () => undefined;
+      }
+      const handler = () => onStoreChange();
+      window.addEventListener("storage", handler);
+      return () => window.removeEventListener("storage", handler);
+    },
+    () => {
+      if (typeof window === "undefined" || !test) return null;
+      if (!attemptId) return loadLatestAttemptResult("reading", test.id);
+      return loadAttemptResult("reading", test.id, attemptId);
+    },
+    () => null
+  ) as PersistedAttempt | null;
+
+  const resolvedBackendAttemptId = useMemo(() => {
+    if (isUuid(attemptId)) return attemptId;
+    const fromPersisted = attempt?.backendAttemptId ?? "";
+    return isUuid(fromPersisted) ? fromPersisted : "";
+  }, [attempt?.backendAttemptId, attemptId]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!resolvedBackendAttemptId) {
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadBackendReview = async () => {
+      try {
+        const response = await studentAttemptsService.review(resolvedBackendAttemptId);
+        if (!active) return;
+        setBackendReview(adaptReadingBackendReview(response));
+        setBackendTimeUsedSeconds(typeof response.time_used_seconds === "number" ? response.time_used_seconds : null);
+      } catch {
+        if (!active) return;
+        setBackendReview(null);
+        setBackendTimeUsedSeconds(null);
+      }
+    };
+
+    void loadBackendReview();
+
+    return () => {
+      active = false;
+    };
+  }, [resolvedBackendAttemptId]);
+
+  const activeBackendReview = resolvedBackendAttemptId ? backendReview : null;
+  const activeBackendTimeUsedSeconds = resolvedBackendAttemptId ? backendTimeUsedSeconds : null;
+
+  const gradingQuestions = useMemo(
+    () => activeBackendReview?.questions ?? test?.questions ?? [],
+    [activeBackendReview, test?.questions]
+  );
+
+  const gradingAnswers = useMemo(
+    () =>
+      activeBackendReview
+        ? normalizeStoredAnswers(activeBackendReview.answers)
+        : normalizeStoredAnswers(attempt?.answers),
+    [activeBackendReview, attempt?.answers]
+  );
 
   const gradeableQuestions = useMemo<GradeableQuestion[]>(() => {
-    if (!test) return [];
-    return test.questions.map((question) => {
-      const meta = getReadingAnswerMeta(question.id);
+    if (!gradingQuestions.length) return [];
+    return gradingQuestions.map((question) => {
       return {
         id: question.id,
         number: question.number,
         type: question.type,
-        correctAnswer: meta?.correctAnswer,
-        acceptableAnswers: meta?.acceptableAnswers,
+        correctAnswer: question.correctAnswer,
+        acceptableAnswers: question.acceptableAnswers,
       };
     });
-  }, [test]);
+  }, [gradingQuestions]);
 
   const grading = useMemo(() => {
-    if (!test || !attempt) return null;
-    return gradeTest(gradeableQuestions, attempt.answers);
-  }, [attempt, gradeableQuestions, test]);
+    if (!gradeableQuestions.length) return null;
+    return gradeTest(gradeableQuestions, gradingAnswers);
+  }, [gradeableQuestions, gradingAnswers]);
 
   const accuracyByType = useMemo(() => {
-    if (!test || !grading) return [] as QuestionTypePerformanceItem[];
+    if (!grading || !gradingQuestions.length) return [] as QuestionTypePerformanceItem[];
     const buckets = new Map<
       ReadingQuestion["type"],
       { correct: number; total: number }
     >();
 
-    for (const question of test.questions) {
+    for (const question of gradingQuestions) {
       const result = grading.byQuestion[question.id];
       const key = question.type;
       const previous = buckets.get(key) ?? { correct: 0, total: 0 };
@@ -92,7 +174,7 @@ export function ReadingSummaryPageClient() {
       total: stats.total,
       percent: stats.total ? Math.round((stats.correct / stats.total) * 100) : 0,
     }));
-  }, [grading, test]);
+  }, [grading, gradingQuestions]);
 
   const reviewData = useMemo(() => getReadingReviewData(testId), [testId]);
 
@@ -100,7 +182,7 @@ export function ReadingSummaryPageClient() {
     if (!test || !grading) return reviewData.heatmap;
 
     return test.passages.map((passage, index) => {
-      const inPassage = test.questions.filter((question) => question.passageId === passage.id);
+      const inPassage = gradingQuestions.filter((question) => question.passageId === passage.id);
       const total = inPassage.length;
       const answeredCorrectly = inPassage.reduce((sum, question) => sum + (grading.byQuestion[question.id]?.isCorrect ? 1 : 0), 0);
       const ratio = total ? answeredCorrectly / total : 0;
@@ -113,7 +195,7 @@ export function ReadingSummaryPageClient() {
         total,
       } as const;
     });
-  }, [grading, reviewData.heatmap, test]);
+  }, [grading, gradingQuestions, reviewData.heatmap, test]);
 
   useEffect(() => {
     if (!actionNotice) return;
@@ -146,17 +228,7 @@ export function ReadingSummaryPageClient() {
     );
   }
 
-  if (!isClient) {
-    return (
-      <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
-        <Card className="rounded-2xl border-border/70 bg-card/70 p-6">
-          <p className="text-sm text-muted-foreground">{tResults("title")}</p>
-        </Card>
-      </section>
-    );
-  }
-
-  if (!attempt || !grading) {
+  if ((!attempt && !activeBackendReview) || !grading) {
     return (
       <div className="mx-auto mt-8 max-w-3xl px-4">
         <Card className="p-6">
@@ -174,15 +246,13 @@ export function ReadingSummaryPageClient() {
     );
   }
 
-  const timerSpentSec = Math.max(
-    0,
-    test.durationMinutes * 60 - attempt.timeRemainingSec,
-  );
-  const fallbackSpentSec = Math.max(
-    0,
-    attempt.finishedAt ? Math.floor((attempt.finishedAt - attempt.startedAt) / 1000) : 0,
-  );
-  const effectiveSpentSec = attempt.timerUsed ? timerSpentSec : fallbackSpentSec;
+  const timerSpentSec = attempt
+    ? Math.max(0, test.durationMinutes * 60 - attempt.timeRemainingSec)
+    : 0;
+  const fallbackSpentSec = attempt
+    ? Math.max(0, attempt.finishedAt ? Math.floor((attempt.finishedAt - attempt.startedAt) / 1000) : 0)
+    : 0;
+  const effectiveSpentSec = activeBackendTimeUsedSeconds ?? (attempt?.timerUsed ? timerSpentSec : fallbackSpentSec);
   const minutes = Math.floor(effectiveSpentSec / 60)
     .toString()
     .padStart(2, "0");
@@ -207,12 +277,13 @@ export function ReadingSummaryPageClient() {
     ...reviewData.aiCoach,
     score: `${grading.correctCount}/${grading.total}`,
     accuracy: `${grading.scorePercent}%`,
-    timeUsed: attempt.timerUsed ? `${minutes}:${seconds}` : tReadingResult("practiceTest"),
+    timeUsed: attempt ? (attempt.timerUsed ? `${minutes}:${seconds}` : tReadingResult("practiceTest")) : `${minutes}:${seconds}`,
     weakestQuestionType,
     weakestPassage: weakestPassageNumber
       ? tReadingResult("passageLabel", { index: Number(weakestPassageNumber) })
       : reviewData.aiCoach.weakestPassage,
   };
+  const reviewAttemptParam = resolvedBackendAttemptId || attempt?.attemptId || "";
 
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
@@ -226,8 +297,12 @@ export function ReadingSummaryPageClient() {
         scorePercent={grading.scorePercent}
         minutes={minutes}
         seconds={seconds}
-        timerUsed={attempt.timerUsed}
-        reviewHref={`/${locale}/reading/${test.id}/review?attempt=${attempt.attemptId}`}
+        timerUsed={attempt?.timerUsed ?? true}
+        reviewHref={
+          reviewAttemptParam
+            ? `/${locale}/reading/${test.id}/review?attempt=${reviewAttemptParam}`
+            : `/${locale}/reading/${test.id}/review`
+        }
       />
 
       <QuestionTypePerformance items={accuracyByType} />

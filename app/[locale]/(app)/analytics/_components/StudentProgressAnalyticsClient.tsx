@@ -183,13 +183,22 @@ export function StudentProgressAnalyticsClient() {
   const modulePerformanceData = useMemo(
     () =>
       analyticsData.modulePerformance.filter(
-        (item) => item.module === "reading" || item.module === "listening" || item.percentage > 0
+        (item) => item.module === "reading" || item.module === "listening"
       ),
     [analyticsData.modulePerformance]
   );
 
-  const insights = analyticsData.learningInsights.filter((item) => item.description?.trim());
-  const recentActivity = analyticsData.recentPracticeActivity;
+  const insights = analyticsData.learningInsights.filter((item) => {
+    const description = item.description?.trim() ?? "";
+    if (!description) {
+      return false;
+    }
+    const normalized = description.toLowerCase();
+    return !normalized.includes("writing") && !normalized.includes("speaking");
+  });
+  const recentActivity = analyticsData.recentPracticeActivity.filter(
+    (item) => item.module === "reading" || item.module === "listening"
+  );
   const accuracyStart = accuracyData[0]?.percentage ?? 0;
   const accuracyCurrent = accuracyData[accuracyData.length - 1]?.percentage ?? 0;
   const bandDomain = getDomain(

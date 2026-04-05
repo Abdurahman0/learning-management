@@ -90,6 +90,10 @@ type DashboardViewModel = {
   achievements: DashboardAchievement[];
 };
 
+function isSupportedStudentModule(module: string): module is "reading" | "listening" {
+  return module === "reading" || module === "listening";
+}
+
 function formatDateLabel(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -141,21 +145,25 @@ function buildDashboardViewModel(payload: StudentDashboardResponse): DashboardVi
     })),
     skillsSnapshot: payload.skillsSnapshot,
     overallJourneyPct,
-    weakAreas: payload.weakAreas.map((item) => ({
-      id: item.id,
-      title: item.questionTypeLabel || item.title,
-      module: item.module,
-      accuracy: item.accuracy,
-      actionLabel: item.actionLabel
+    weakAreas: payload.weakAreas
+      .filter((item) => isSupportedStudentModule(item.module))
+      .map((item) => ({
+        id: item.id,
+        title: item.questionTypeLabel || item.title,
+        module: item.module,
+        accuracy: item.accuracy,
+        actionLabel: item.actionLabel
       })),
     aiRecommendation: payload.aiRecommendation ?? null,
-    recentHistory: payload.recentHistory.map((item) => ({
-      id: item.id,
-      testName: item.testName,
-      date: formatDateLabel(item.date),
-      module: item.module,
-      score: item.score
-    })),
+    recentHistory: payload.recentHistory
+      .filter((item) => isSupportedStudentModule(item.module))
+      .map((item) => ({
+        id: item.id,
+        testName: item.testName,
+        date: formatDateLabel(item.date),
+        module: item.module,
+        score: item.score
+      })),
     achievements: payload.achievements
   };
 }

@@ -2,6 +2,7 @@ import {cookies} from "next/headers";
 import {redirect} from "next/navigation";
 
 import {AUTH_COOKIE_NAME, parseSessionRole} from "@/lib/auth/session";
+import {StudentMistakeAnalysisPageClient} from "./_components/StudentMistakeAnalysisPageClient";
 
 type MistakeAnalysisPageProps = {
   params: Promise<{
@@ -26,5 +27,5 @@ export default async function MistakeAnalysisPage({params}: MistakeAnalysisPageP
     redirect(`/${locale}/teacher`);
   }
 
-  redirect(`/${locale}/review-center`);
+  return <StudentMistakeAnalysisPageClient />;
 }

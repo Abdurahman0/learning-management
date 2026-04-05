@@ -3,6 +3,7 @@ export type AttemptMode = "real" | "practice";
 
 export type PersistedAttempt = {
   attemptId: string;
+  backendAttemptId?: string;
   module: TestModule;
   testId: string;
   mode?: AttemptMode;

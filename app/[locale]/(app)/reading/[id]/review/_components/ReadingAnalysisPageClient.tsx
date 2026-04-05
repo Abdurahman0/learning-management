@@ -1,19 +1,43 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
-import { getReadingAnswerMeta } from "@/data/reading-answer-keys";
 import { getReadingTestById } from "@/data/reading-tests";
 import { buildReviewPassages } from "@/data/review-reading";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { loadAttemptResult, loadLatestAttemptResult, type PersistedAttempt } from "@/lib/test-attempt-storage";
+import { studentAttemptsService } from "@/src/services/student/attempts.service";
 import { ReviewPassagePanel } from "../../result/_components/ReviewPassagePanel";
 import { ReviewQuestionsPanel } from "../../result/_components/ReviewQuestionsPanel";
+import { adaptReadingBackendReview, type AdaptedReadingBackendReview } from "../../result/_components/backendReviewAdapters";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value.trim());
+}
+
+function normalizeStoredAnswers(input?: Record<string, string | string[] | null>) {
+  const normalized: Record<string, string | string[]> = {};
+  if (!input) return normalized;
+
+  for (const [questionId, value] of Object.entries(input)) {
+    if (typeof value === "string") {
+      normalized[questionId] = value;
+      continue;
+    }
+    if (Array.isArray(value)) {
+      normalized[questionId] = value;
+    }
+  }
+
+  return normalized;
+}
 
 export function ReadingAnalysisPageClient() {
   const params = useParams<{ id: string }>();
@@ -30,41 +54,93 @@ export function ReadingAnalysisPageClient() {
   const [activePassageId, setActivePassageId] = useState<"p1" | "p2" | "p3">("p1");
   const [highlightedParagraphId, setHighlightedParagraphId] = useState<string | null>(null);
   const passageScrollRef = useRef<HTMLDivElement | null>(null);
-  const isClient = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
+  const [backendReview, setBackendReview] = useState<AdaptedReadingBackendReview | null>(null);
+  const attempt = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") {
+        return () => undefined;
+      }
+      const handler = () => onStoreChange();
+      window.addEventListener("storage", handler);
+      return () => window.removeEventListener("storage", handler);
+    },
+    () => {
+      if (typeof window === "undefined" || !test) return null;
+      if (!attemptId) return loadLatestAttemptResult("reading", test.id);
+      return loadAttemptResult("reading", test.id, attemptId);
+    },
+    () => null
+  ) as PersistedAttempt | null;
+
+  const resolvedBackendAttemptId = useMemo(() => {
+    if (isUuid(attemptId)) return attemptId;
+    const fromPersisted = attempt?.backendAttemptId ?? "";
+    return isUuid(fromPersisted) ? fromPersisted : "";
+  }, [attempt?.backendAttemptId, attemptId]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!resolvedBackendAttemptId) {
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadBackendReview = async () => {
+      try {
+        const response = await studentAttemptsService.review(resolvedBackendAttemptId);
+        if (!active) return;
+        setBackendReview(adaptReadingBackendReview(response));
+      } catch {
+        if (!active) return;
+        setBackendReview(null);
+      }
+    };
+
+    void loadBackendReview();
+
+    return () => {
+      active = false;
+    };
+  }, [resolvedBackendAttemptId]);
+
+  const activeBackendReview = resolvedBackendAttemptId ? backendReview : null;
+
+  const gradingQuestions = useMemo(
+    () => activeBackendReview?.questions ?? test?.questions ?? [],
+    [activeBackendReview, test?.questions]
   );
 
-  const attempt = useMemo<PersistedAttempt | null>(() => {
-    if (!isClient || !test) return null;
-    if (!attemptId) return loadLatestAttemptResult("reading", test.id);
-    return loadAttemptResult("reading", test.id, attemptId);
-  }, [attemptId, isClient, test]);
+  const gradingAnswers = useMemo(
+    () =>
+      activeBackendReview
+        ? normalizeStoredAnswers(activeBackendReview.answers)
+        : normalizeStoredAnswers(attempt?.answers),
+    [activeBackendReview, attempt?.answers]
+  );
 
   const gradeableQuestions = useMemo<GradeableQuestion[]>(() => {
-    if (!test) return [];
-    return test.questions.map((question) => {
-      const meta = getReadingAnswerMeta(question.id);
-      return {
-        id: question.id,
-        number: question.number,
-        type: question.type,
-        correctAnswer: meta?.correctAnswer,
-        acceptableAnswers: meta?.acceptableAnswers,
-      };
-    });
-  }, [test]);
+    if (!gradingQuestions.length) return [];
+    return gradingQuestions.map((question) => ({
+      id: question.id,
+      number: question.number,
+      type: question.type,
+      correctAnswer: question.correctAnswer,
+      acceptableAnswers: question.acceptableAnswers,
+    }));
+  }, [gradingQuestions]);
 
   const grading = useMemo(() => {
-    if (!test || !attempt) return null;
-    return gradeTest(gradeableQuestions, attempt.answers);
-  }, [attempt, gradeableQuestions, test]);
+    if (!gradeableQuestions.length) return null;
+    return gradeTest(gradeableQuestions, gradingAnswers);
+  }, [gradeableQuestions, gradingAnswers]);
 
   const reviewPassages = useMemo(() => {
+    if (activeBackendReview) return activeBackendReview.passages;
     if (!test) return [];
     return buildReviewPassages(test);
-  }, [test]);
+  }, [activeBackendReview, test]);
 
   useEffect(() => {
     if (!highlightedParagraphId) return;
@@ -72,20 +148,23 @@ export function ReadingAnalysisPageClient() {
     return () => window.clearTimeout(timer);
   }, [highlightedParagraphId]);
 
-  const handleJumpEvidence = useCallback((questionId: string) => {
-    const meta = getReadingAnswerMeta(questionId);
-    const paragraphIndex = meta?.evidence.paragraphIndex;
-    if (!meta?.evidence.passageId || paragraphIndex == null) return;
+  const handleJumpEvidence = useCallback(
+    (questionId: string) => {
+      const question = gradingQuestions.find((item) => item.id === questionId);
+      const evidence = question?.evidenceSpans[0];
+      if (!evidence) return;
 
-    const paragraphId = `review-para-${meta.evidence.passageId}-${paragraphIndex}`;
-    setActivePassageId(meta.evidence.passageId);
-    setHighlightedParagraphId(paragraphId);
+      const paragraphId = `review-para-${evidence.passageId}-${evidence.paragraphIndex}`;
+      setActivePassageId(evidence.passageId);
+      setHighlightedParagraphId(paragraphId);
 
-    window.setTimeout(() => {
-      const node = document.getElementById(paragraphId);
-      node?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 120);
-  }, []);
+      window.setTimeout(() => {
+        const node = document.getElementById(paragraphId);
+        node?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 120);
+    },
+    [gradingQuestions]
+  );
 
   if (!test) {
     return (
@@ -101,17 +180,7 @@ export function ReadingAnalysisPageClient() {
     );
   }
 
-  if (!isClient) {
-    return (
-      <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
-        <Card className="rounded-2xl border-border/70 bg-card/70 p-6">
-          <p className="text-sm text-muted-foreground">{tResults("title")}</p>
-        </Card>
-      </section>
-    );
-  }
-
-  if (!attempt || !grading) {
+  if ((!attempt && !activeBackendReview) || !grading) {
     return (
       <div className="mx-auto mt-8 max-w-3xl px-4">
         <Card className="p-6">
@@ -125,6 +194,8 @@ export function ReadingAnalysisPageClient() {
     );
   }
 
+  const resultsAttemptParam = resolvedBackendAttemptId || attempt?.attemptId || "";
+
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
       <Card className="rounded-3xl border-slate-200/85 bg-white/95 p-4 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none sm:p-5">
@@ -133,11 +204,19 @@ export function ReadingAnalysisPageClient() {
             <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">{t("reviewAnswers")}</p>
             <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{test.title}</h1>
             <p className="text-sm text-muted-foreground">
-              {t("passageAnalysis")} · {t("questionAnalysis")}
+              {t("passageAnalysis")} - {t("questionAnalysis")}
             </p>
           </div>
           <Button asChild className="h-9 rounded-xl px-4">
-            <Link href={`/${locale}/reading/${test.id}/result?attempt=${attempt.attemptId}`}>{t("resultsButton")}</Link>
+            <Link
+              href={
+                resultsAttemptParam
+                  ? `/${locale}/reading/${test.id}/result?attempt=${resultsAttemptParam}`
+                  : `/${locale}/reading/${test.id}/result`
+              }
+            >
+              {t("resultsButton")}
+            </Link>
           </Button>
         </div>
       </Card>
@@ -151,8 +230,8 @@ export function ReadingAnalysisPageClient() {
           onPassageChange={setActivePassageId}
         />
         <ReviewQuestionsPanel
-          questions={test.questions}
-          answers={attempt.answers}
+          questions={gradingQuestions}
+          answers={gradingAnswers}
           grading={grading}
           expanded={expanded}
           onToggleExplanation={(questionId) => {
@@ -172,4 +251,3 @@ export function ReadingAnalysisPageClient() {
     </section>
   );
 }
-

@@ -43,6 +43,7 @@ import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
 import { useTestAppearance } from "@/lib/test-appearance";
 import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
 import { ReviewQuestionsPanel } from "./result/_components/ReviewQuestionsPanel";
+import { adaptReadingBackendReview, type AdaptedReadingBackendReview } from "./result/_components/backendReviewAdapters";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
 import { studentTestsService } from "@/src/services/student/tests.service";
 import { StudentApiError } from "@/src/services/student/types";
@@ -80,6 +81,34 @@ function toSubmitAnswer(value: AnswerValue | undefined): string | string[] | nul
     const cleaned = value.map((item) => item.trim()).filter(Boolean);
     return cleaned.length ? cleaned : null;
   }
+  return null;
+}
+
+function normalizeBackendReviewAnswers(answers: Record<string, string | string[] | null>) {
+  const next: Record<string, AnswerValue> = {};
+  for (const [questionId, value] of Object.entries(answers)) {
+    if (typeof value === "string") {
+      next[questionId] = value;
+      continue;
+    }
+    if (Array.isArray(value)) {
+      next[questionId] = value;
+    }
+  }
+  return next;
+}
+
+function toBackendAnswerPayload(value: string | string[] | null): {answer: string} | {answers: string[]} | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length ? {answer: trimmed} : null;
+  }
+
+  if (Array.isArray(value)) {
+    const cleaned = value.map((item) => item.trim()).filter(Boolean);
+    return cleaned.length ? {answers: cleaned} : null;
+  }
+
   return null;
 }
 
@@ -199,6 +228,196 @@ function buildEvidencePhrase(prompt: string, fallbackNumber: number) {
   return `Question ${fallbackNumber}`;
 }
 
+function resolveSubmitQuestionId(question: StudentAttemptQuestion) {
+  const canonicalQuestionId = toStringSafe(question.question_id).trim();
+  if (canonicalQuestionId) {
+    return canonicalQuestionId;
+  }
+
+  const directId = toStringSafe(question.id).trim();
+  if (directId) {
+    return directId;
+  }
+
+  const attemptQuestionId = toStringSafe(question.attempt_question_id).trim();
+  if (attemptQuestionId) {
+    return attemptQuestionId;
+  }
+
+  const candidates = [
+    toStringSafe(question.question_id).trim(),
+    toStringSafe(question.id).trim(),
+    ...asArray<string>(question.candidate_question_ids)
+      .map((value) => toStringSafe(value).trim())
+      .filter(Boolean)
+  ].filter((value, index, source) => Boolean(value) && source.indexOf(value) === index);
+  return candidates[0] ?? "";
+}
+
+function extractValidationAnswerQuestionIdFailures(error: unknown) {
+  if (!(error instanceof StudentApiError)) {
+    return new Set<string>();
+  }
+
+  const raw = asRecord(error.raw);
+  const payloadError = asRecord(raw?.error);
+  const details = asRecord(payloadError?.details);
+  const answers = asRecord(details?.answers);
+  if (!answers) {
+    return new Set<string>();
+  }
+
+  const failed = new Set<string>();
+  for (const [questionId, detail] of Object.entries(answers)) {
+    const row = asRecord(detail);
+    const messages = asArray<unknown>(row?.question_id)
+      .map((message) => toStringSafe(message).toLowerCase())
+      .filter(Boolean);
+    const hasBelongMessage = messages.some((message) => message.includes("does not belong to this attempt"));
+    if (hasBelongMessage) {
+      failed.add(questionId);
+    }
+  }
+
+  return failed;
+}
+
+function resolveSubmitCandidateIds(question: ReadingQuestion) {
+  const preferred = toStringSafe(question.backendQuestionId ?? question.id).trim();
+  const fromCandidates = asArray<string>(question.backendQuestionCandidateIds)
+    .map((value) => toStringSafe(value).trim())
+    .filter(Boolean);
+  return [preferred, ...fromCandidates].filter((value, index, source) => Boolean(value) && source.indexOf(value) === index);
+}
+
+function collectAttemptSubmitCandidatesByNumber(attempt: StudentAttemptDetail) {
+  const byNumber = new Map<number, string[]>();
+
+  for (const passage of attempt.reading_passages) {
+    for (const group of passage.question_groups) {
+      for (const question of group.questions) {
+        const number = toNumberSafe(question.question_number, 0);
+        if (number <= 0) continue;
+
+        const preferred = resolveSubmitQuestionId(question);
+        const candidates = [
+          preferred,
+          ...asArray<string>(question.candidate_question_ids)
+            .map((value) => toStringSafe(value).trim())
+            .filter(Boolean)
+        ].filter((value, index, source) => Boolean(value) && source.indexOf(value) === index);
+
+        if (candidates.length > 0) {
+          byNumber.set(number, candidates);
+        }
+      }
+    }
+  }
+
+  return byNumber;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function collectUuidStrings(value: unknown, maxDepth = 4): string[] {
+  if (maxDepth < 0) return [];
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return UUID_PATTERN.test(trimmed) ? [trimmed] : [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => collectUuidStrings(item, maxDepth - 1));
+  }
+
+  const record = asRecord(value);
+  if (!record) return [];
+  return Object.values(record).flatMap((item) => collectUuidStrings(item, maxDepth - 1));
+}
+
+function collectAttemptRawSubmitCandidatesByNumber(rawAttempt: unknown) {
+  const result = new Map<number, string[]>();
+  const root = asRecord(rawAttempt);
+  const passages = asArray<unknown>(root?.reading_passages);
+
+  for (const passage of passages) {
+    const passageRecord = asRecord(passage);
+    const groups = asArray<unknown>(passageRecord?.question_groups);
+    for (const group of groups) {
+      const groupRecord = asRecord(group);
+      const questions = asArray<unknown>(groupRecord?.questions);
+      for (const question of questions) {
+        const row = asRecord(question);
+        if (!row) continue;
+
+        const nestedQuestion = asRecord(row.question);
+        const number = toNumberSafe(row.question_number ?? nestedQuestion?.question_number, 0);
+        if (number <= 0) continue;
+
+        const prioritized = [
+          toStringSafe(row.question_id).trim(),
+          typeof row.question === "string" ? row.question.trim() : "",
+          toStringSafe(nestedQuestion?.question_id).trim(),
+          toStringSafe(nestedQuestion?.id).trim(),
+          toStringSafe(row.id).trim(),
+          toStringSafe(row.attempt_question_id).trim(),
+          toStringSafe(row.attempt_question).trim(),
+          toStringSafe(row.question_answer_id).trim(),
+          toStringSafe(row.question_answer).trim()
+        ].filter(Boolean);
+        const scanned = collectUuidStrings(row, 4);
+        const combined = [...prioritized, ...scanned].filter(
+          (value, index, source) => Boolean(value) && source.indexOf(value) === index
+        );
+
+        if (combined.length > 0) {
+          result.set(number, combined);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+type BackendAttemptAnswerEntry = {
+  questionKey: string;
+  questionNumber: number;
+  candidateIds: string[];
+  answer: string | string[] | null;
+  is_flagged: boolean;
+};
+
+function collectBackendAttemptAnswerEntries(params: {
+  questions: ReadingQuestion[];
+  answers: Record<string, AnswerValue>;
+  marked: Set<string>;
+  submitCandidatesByNumber: Map<number, string[]>;
+  rawSubmitCandidatesByNumber: Map<number, string[]>;
+}) {
+  return params.questions
+    .map((question) => {
+      const answer = toSubmitAnswer(params.answers[question.id]);
+      const isFlagged = params.marked.has(question.id);
+      const candidateIds =
+        params.rawSubmitCandidatesByNumber.get(question.number)
+        ?? params.submitCandidatesByNumber.get(question.number)
+        ?? resolveSubmitCandidateIds(question);
+      if (!candidateIds.length || (answer === null && !isFlagged)) {
+        return null;
+      }
+
+      return {
+        questionKey: question.id,
+        questionNumber: question.number,
+        candidateIds,
+        answer,
+        is_flagged: isFlagged
+      } satisfies BackendAttemptAnswerEntry;
+    })
+    .filter((item): item is BackendAttemptAnswerEntry => item !== null);
+}
+
 function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord, attempt: StudentAttemptDetail): ReadingFullTest {
   const passages: ReadingFullTest["passages"] = attempt.reading_passages.map((passage, index) => ({
     id: (`p${index + 1}` as ReadingFullTest["passages"][number]["id"]),
@@ -223,6 +442,10 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
       for (const question of group.questions as StudentAttemptQuestion[]) {
         const number = toNumberSafe(question.question_number, questions.length + 1);
         const questionId = toStringSafe(question.id, `${passageId}-q-${number}`);
+        const submitQuestionId = resolveSubmitQuestionId(question);
+        const submitQuestionCandidates = asArray<string>(question.candidate_question_ids)
+          .map((value) => toStringSafe(value).trim())
+          .filter(Boolean);
         const prompt = extractQuestionPrompt(question);
         const qType = toStringSafe(question.question_type).toUpperCase();
         const evidenceSpans = [{ passageId, paragraphIndex: 0, phrase: buildEvidencePhrase(prompt, number) }];
@@ -233,6 +456,8 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
             number,
             passageId,
             type: "tfng",
+            backendQuestionId: submitQuestionId || undefined,
+            backendQuestionCandidateIds: submitQuestionCandidates.length ? submitQuestionCandidates : undefined,
             groupTitle,
             groupInstruction: instruction,
             prompt,
@@ -250,6 +475,8 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
             number,
             passageId,
             type: "matchingHeadings",
+            backendQuestionId: submitQuestionId || undefined,
+            backendQuestionCandidateIds: submitQuestionCandidates.length ? submitQuestionCandidates : undefined,
             groupTitle,
             groupInstruction: instruction,
             prompt: prompt || `Question ${number}`,
@@ -268,6 +495,8 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
             number,
             passageId,
             type: "matchingInfo",
+            backendQuestionId: submitQuestionId || undefined,
+            backendQuestionCandidateIds: submitQuestionCandidates.length ? submitQuestionCandidates : undefined,
             groupTitle,
             groupInstruction: instruction,
             prompt,
@@ -285,6 +514,8 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
             number,
             passageId,
             type: "mcq",
+            backendQuestionId: submitQuestionId || undefined,
+            backendQuestionCandidateIds: submitQuestionCandidates.length ? submitQuestionCandidates : undefined,
             groupTitle,
             groupInstruction: instruction,
             prompt,
@@ -301,6 +532,8 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
           number,
           passageId,
           type: "sentenceCompletion",
+          backendQuestionId: submitQuestionId || undefined,
+          backendQuestionCandidateIds: submitQuestionCandidates.length ? submitQuestionCandidates : undefined,
           groupTitle,
           groupInstruction: instruction,
           prompt: prompt || toStringSafe(question.question_text, `Question ${number}`),
@@ -529,6 +762,7 @@ function ReadingTestClient({
     visibility: 0,
   });
   const [isSubmittingResult, setIsSubmittingResult] = useState(false);
+  const [backendReviewData, setBackendReviewData] = useState<AdaptedReadingBackendReview | null>(null);
   const splitStorageKey = "readingSplitPct";
   const [splitPct, setSplitPct] = useState(() => {
     if (typeof window === "undefined") return DEFAULT_SPLIT;
@@ -564,6 +798,8 @@ function ReadingTestClient({
   const realModeAutoFinishedRef = useRef(false);
   const fullscreenRequestInFlightRef = useRef(false);
   const initDoneRef = useRef(false);
+  const backendSaveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const initialBackendSaveAttemptRef = useRef<string | null>(null);
   const leaveWarningMessage = t.has("leaveWarning")
     ? t("leaveWarning")
     : "Are you sure you want to quit this test? Your results will not be saved.";
@@ -584,6 +820,7 @@ function ReadingTestClient({
     setRealModeInterruptionCount({ fullscreen: 0, visibility: 0 });
     setFinishOpen(false);
     setReviewMode(false);
+    setBackendReviewData(null);
     setExpandedExplanations(new Set());
     setActivePassageId("p1");
     setActiveQuestionNumber(1);
@@ -747,23 +984,33 @@ function ReadingTestClient({
     return groups;
   }, [passageQuestions]);
 
+  const reviewQuestions = useMemo(
+    () => backendReviewData?.questions ?? test.questions,
+    [backendReviewData, test.questions]
+  );
+
+  const reviewAnswers = useMemo(
+    () => (backendReviewData ? normalizeBackendReviewAnswers(backendReviewData.answers) : answers),
+    [answers, backendReviewData]
+  );
+
   const gradeableQuestions = useMemo<GradeableQuestion[]>(
     () =>
-      test.questions.map((question) => ({
+      reviewQuestions.map((question) => ({
         id: question.id,
         number: question.number,
         type: question.type,
         correctAnswer: question.correctAnswer,
         acceptableAnswers: question.acceptableAnswers,
       })),
-    [test.questions]
+    [reviewQuestions]
   );
 
-  const grading = useMemo(() => gradeTest(gradeableQuestions, answers), [answers, gradeableQuestions]);
+  const grading = useMemo(() => gradeTest(gradeableQuestions, reviewAnswers), [gradeableQuestions, reviewAnswers]);
 
   const highlightsForPassage = useMemo(() => {
     if (!reviewMode) return [] as HighlightItem[];
-    return test.questions.flatMap((question) =>
+    return reviewQuestions.flatMap((question) =>
       question.evidenceSpans
         .filter((span) => span.passageId === activePassageId)
         .map((span) => ({
@@ -772,7 +1019,7 @@ function ReadingTestClient({
           paragraphIndex: span.paragraphIndex,
         }))
     );
-  }, [activePassageId, reviewMode, test.questions]);
+  }, [activePassageId, reviewMode, reviewQuestions]);
 
   useEffect(() => {
     passageScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -812,6 +1059,7 @@ function ReadingTestClient({
     if (!attemptId || !attemptMode) return;
     saveAttemptProgress({
       attemptId,
+      backendAttemptId: backendAttemptId ?? undefined,
       module: "reading",
       testId: test.id,
       mode: attemptMode,
@@ -821,7 +1069,173 @@ function ReadingTestClient({
       timeRemainingSec: remainingSeconds,
       timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
     });
-  }, [answers, attemptId, attemptMode, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
+  }, [answers, attemptId, attemptMode, backendAttemptId, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
+
+  const resolveTimeUsedSeconds = useCallback(
+    (finishedAtMs?: number) => {
+      const finishedAt = typeof finishedAtMs === "number" ? finishedAtMs : Date.now();
+      const timerUsed = timerRunning || remainingSeconds !== test.durationMinutes * 60;
+      const timerSpentSeconds = Math.max(0, test.durationMinutes * 60 - remainingSeconds);
+      const elapsedSeconds = Math.max(0, Math.floor((finishedAt - startedAt) / 1000));
+      return timerUsed ? timerSpentSeconds : elapsedSeconds;
+    },
+    [remainingSeconds, startedAt, test.durationMinutes, timerRunning]
+  );
+
+  const saveAttemptToBackend = useCallback(
+    (options?: {strict?: boolean; includeAnswers?: boolean; context?: string; finishedAtMs?: number}) => {
+      const strict = Boolean(options?.strict);
+      const includeAnswers = options?.includeAnswers ?? true;
+      const context = options?.context ?? "unspecified";
+
+      const runSave = async () => {
+        if (!backendAttemptId || reviewMode) return;
+
+        const [snapshot, rawSnapshot] = await Promise.all([
+          studentAttemptsService.getById(backendAttemptId),
+          studentAttemptsService.getByIdRaw(backendAttemptId)
+        ]);
+        const submitCandidatesByNumber = collectAttemptSubmitCandidatesByNumber(snapshot);
+        const rawSubmitCandidatesByNumber = collectAttemptRawSubmitCandidatesByNumber(rawSnapshot);
+
+        let activeEntries = includeAnswers
+          ? collectBackendAttemptAnswerEntries({
+              questions: test.questions,
+              answers,
+              marked,
+              submitCandidatesByNumber,
+              rawSubmitCandidatesByNumber
+            })
+          : [];
+        const currentIds = new Map<string, string>();
+        activeEntries.forEach((entry) => {
+          const initialId = entry.candidateIds[0] ?? "";
+          if (initialId) {
+            currentIds.set(entry.questionKey, initialId);
+          }
+        });
+
+        const maxAttempts = 14;
+        let attemptIndex = 0;
+        while (attemptIndex < maxAttempts) {
+          const payloadAnswers = activeEntries
+            .map((entry) => {
+              const questionId = currentIds.get(entry.questionKey) ?? "";
+              const answerPayload = toBackendAnswerPayload(entry.answer);
+              if (!questionId || (answerPayload === null && !entry.is_flagged)) {
+                return null;
+              }
+              return {
+                question_id: questionId,
+                answer: answerPayload,
+                is_flagged: entry.is_flagged
+              };
+            })
+            .filter(
+              (item): item is {question_id: string; answer: {answer: string} | {answers: string[]} | null; is_flagged: boolean} =>
+                item !== null
+            );
+
+          try {
+            await studentAttemptsService.save(backendAttemptId, {
+              time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+              answers: payloadAnswers
+            });
+            return;
+          } catch (error) {
+            const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
+            if (!failedQuestionIds.size) {
+              throw error;
+            }
+
+            let changed = false;
+            for (const entry of activeEntries) {
+              const currentId = currentIds.get(entry.questionKey) ?? "";
+              if (!currentId || !failedQuestionIds.has(currentId)) continue;
+              const nextCandidate = entry.candidateIds.find((candidate) => candidate && candidate !== currentId);
+              if (nextCandidate) {
+                currentIds.set(entry.questionKey, nextCandidate);
+                changed = true;
+              }
+            }
+
+            if (!changed) {
+              const before = activeEntries.length;
+              activeEntries = activeEntries.filter((entry) => {
+                const currentId = currentIds.get(entry.questionKey) ?? "";
+                return !currentId || !failedQuestionIds.has(currentId);
+              });
+              changed = activeEntries.length < before;
+            }
+
+            if (!changed) {
+              throw error;
+            }
+          }
+
+          attemptIndex += 1;
+        }
+      };
+
+      const run = backendSaveChainRef.current.then(runSave, runSave);
+      backendSaveChainRef.current = run.catch(() => undefined);
+
+      if (strict) {
+        return run;
+      }
+
+      return run.catch((error) => {
+        console.warn("[reading save] save failed", {
+          attemptId: backendAttemptId,
+          context,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      });
+    },
+    [answers, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, test.questions]
+  );
+
+  useEffect(() => {
+    if (!backendAttemptId) {
+      initialBackendSaveAttemptRef.current = null;
+    }
+  }, [backendAttemptId]);
+
+  useEffect(() => {
+    setBackendReviewData(null);
+  }, [backendAttemptId, test.id]);
+
+  useEffect(() => {
+    if (!backendAttemptId || reviewMode) return;
+    if (initialBackendSaveAttemptRef.current === backendAttemptId) return;
+    initialBackendSaveAttemptRef.current = backendAttemptId;
+    void saveAttemptToBackend({
+      includeAnswers: false,
+      context: "enter"
+    });
+  }, [backendAttemptId, reviewMode, saveAttemptToBackend]);
+
+  useEffect(() => {
+    if (!backendAttemptId || !attemptMode || reviewMode) return;
+    const autosaveTimer = window.setTimeout(() => {
+      void saveAttemptToBackend({
+        includeAnswers: true,
+        context: "change"
+      });
+    }, 900);
+    return () => window.clearTimeout(autosaveTimer);
+  }, [answers, attemptMode, backendAttemptId, marked, reviewMode, saveAttemptToBackend]);
+
+  useEffect(() => {
+    if (!backendAttemptId || !attemptMode || reviewMode) return;
+    const intervalId = window.setInterval(() => {
+      void saveAttemptToBackend({
+        includeAnswers: false,
+        context: "interval"
+      });
+    }, 30_000);
+    return () => window.clearInterval(intervalId);
+  }, [attemptMode, backendAttemptId, reviewMode, saveAttemptToBackend]);
 
   const currentQuestion = questionsByNumber.get(activeQuestionNumber);
   const answeredCount = answeredNumbers.size;
@@ -1027,7 +1441,7 @@ function ReadingTestClient({
 
   const jumpToEvidenceFromReview = useCallback(
     (questionId: string) => {
-      const question = test.questions.find((item) => item.id === questionId);
+      const question = reviewQuestions.find((item) => item.id === questionId);
       const evidence = question?.evidenceSpans[0];
       if (!evidence) return;
 
@@ -1040,7 +1454,7 @@ function ReadingTestClient({
       const target = document.getElementById(paragraphId);
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
     },
-    [activePassageId, test.questions]
+    [activePassageId, reviewQuestions]
   );
 
   const finishTest = useCallback(async () => {
@@ -1049,37 +1463,27 @@ function ReadingTestClient({
 
     const finishedAt = Date.now();
     const timerUsed = timerRunning || remainingSeconds !== test.durationMinutes * 60;
-    const timerSpentSeconds = Math.max(0, test.durationMinutes * 60 - remainingSeconds);
-    const elapsedSeconds = Math.max(0, Math.floor((finishedAt - startedAt) / 1000));
-    const timeUsedSeconds = timerUsed ? timerSpentSeconds : elapsedSeconds;
+    const timeUsedSeconds = resolveTimeUsedSeconds(finishedAt);
 
     try {
       if (backendAttemptId) {
-        const submitAnswers = test.questions
-          .map((question) => {
-            const answer = toSubmitAnswer(answers[question.id]);
-            const isFlagged = marked.has(question.id);
-            if (answer === null && !isFlagged) {
-              return null;
-            }
-            return {
-              question_id: question.id,
-              answer,
-              is_flagged: isFlagged
-            };
-          })
-          .filter((item): item is { question_id: string; answer: string | string[] | null; is_flagged: boolean } => item !== null);
-
+        await saveAttemptToBackend({
+          strict: true,
+          includeAnswers: true,
+          context: "finish-pre-submit",
+          finishedAtMs: finishedAt
+        });
         await studentAttemptsService.submit(backendAttemptId, {
           time_used_seconds: timeUsedSeconds,
-          answers: submitAnswers
+          answers: []
         });
+        const reviewResponse = await studentAttemptsService.review(backendAttemptId);
+        setBackendReviewData(adaptReadingBackendReview(reviewResponse));
       }
-    } catch (error) {
-      console.error("Reading submit failed", error);
-    } finally {
+
       saveAttemptResult({
         attemptId,
+        backendAttemptId: backendAttemptId ?? undefined,
         module: "reading",
         testId: test.id,
         mode: attemptMode ?? "practice",
@@ -1094,6 +1498,9 @@ function ReadingTestClient({
       setReviewMode(true);
       setFinishOpen(false);
       setTimerRunning(false);
+    } catch (error) {
+      console.error("Reading submit failed", error);
+    } finally {
       setIsSubmittingResult(false);
     }
   }, [
@@ -1104,10 +1511,11 @@ function ReadingTestClient({
     isSubmittingResult,
     marked,
     remainingSeconds,
+    resolveTimeUsedSeconds,
+    saveAttemptToBackend,
     startedAt,
     test.durationMinutes,
     test.id,
-    test.questions,
     timerRunning,
   ]);
 
@@ -1428,7 +1836,7 @@ function ReadingTestClient({
                   asChild
                   className="h-9 rounded-xl bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90 sm:h-10 sm:px-6"
                 >
-                  <Link href={`/${locale}/reading/${test.id}/result?attempt=${attemptId}`}>
+                  <Link href={`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId ?? attemptId}`}>
                     {tReadingResult("resultsButton")}
                   </Link>
                 </Button>
@@ -1607,8 +2015,8 @@ function ReadingTestClient({
         <div className={cn("min-h-0 min-w-0", isCompact && mobilePanel !== "questions" && "hidden")}>
           {reviewMode ? (
             <ReviewQuestionsPanel
-              questions={test.questions}
-              answers={answers}
+              questions={reviewQuestions}
+              answers={reviewAnswers}
               grading={grading}
               expanded={expandedExplanations}
               onToggleExplanation={(questionId) => {

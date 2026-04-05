@@ -10,7 +10,6 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { ReadingQuestion } from "@/data/reading-tests";
 import type { GradeTestResult } from "@/lib/grading";
-import { getReadingAnswerMeta } from "@/data/reading-answer-keys";
 
 type ReviewQuestionsPanelProps = {
   questions: ReadingQuestion[];
@@ -128,12 +127,12 @@ export function ReviewQuestionsPanel({
         {questions.map((question) => {
           const status = getQuestionStatus(grading, question.id);
           const statusStyles = getStatusStyles(status);
-          const answerMeta = getReadingAnswerMeta(question.id);
           const isOpen = expanded.has(question.id);
           const userAnswer = normalizeAnswerValue(answers[question.id]);
-          const correctAnswer = Array.isArray(answerMeta?.correctAnswer)
-            ? answerMeta?.correctAnswer.join(", ")
-            : answerMeta?.correctAnswer ?? "";
+          const correctAnswer = Array.isArray(question.correctAnswer)
+            ? question.correctAnswer.join(", ")
+            : question.correctAnswer;
+          const evidenceSnippet = question.evidenceSpans[0]?.phrase ?? "";
 
           return (
             <Card
@@ -206,9 +205,9 @@ export function ReviewQuestionsPanel({
 
               {isOpen ? (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/90 p-3 text-sm dark:border-border/70 dark:bg-background/50">
-                  <p>{answerMeta?.explanation ?? t("notAvailable")}</p>
-                  {answerMeta?.evidence.startQuote ? (
-                    <p className="mt-2 text-xs text-muted-foreground">{answerMeta.evidence.startQuote}</p>
+                  <p>{question.explanation || t("notAvailable")}</p>
+                  {evidenceSnippet ? (
+                    <p className="mt-2 text-xs text-muted-foreground">{evidenceSnippet}</p>
                   ) : null}
                 </div>
               ) : null}
