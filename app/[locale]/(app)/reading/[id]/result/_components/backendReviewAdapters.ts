@@ -147,6 +147,7 @@ function normalizeQuestionType(value: string): ReadingQuestion["type"] {
   if (normalized.includes("heading")) return "matchingHeadings";
   if (normalized.includes("matching")) return "matchingInfo";
   if (normalized.includes("mcq") || normalized.includes("multiple")) return "mcq";
+  if (normalized.includes("summary")) return "summaryCompletion";
   return "sentenceCompletion";
 }
 
@@ -345,6 +346,29 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
             options: options.length ? options : ["A", "B", "C", "D"],
             correctAnswer: typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] ?? "",
             acceptableAnswers: toAcceptableAnswers(typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] ?? ""),
+            explanation: toStringSafe(question.explanation, ""),
+            evidenceSpans
+          };
+        } else if (questionType === "summaryCompletion") {
+          const content = asRecord(group.group_content_json);
+          const summaryText = toStringSafe(content?.summary_text, "").trim();
+          const wordBankRaw = Array.isArray(content?.word_bank) ? content.word_bank : null;
+          const wordBank = wordBankRaw
+            ? (wordBankRaw as unknown[]).map((item) => toStringSafe(item).trim()).filter(Boolean)
+            : null;
+
+          readingQuestion = {
+            id: question.id,
+            number: questionNumber,
+            passageId: passageInfo.passageId,
+            type: "summaryCompletion",
+            prompt,
+            groupTitle,
+            groupInstruction: group.instructions ?? undefined,
+            summaryText: summaryText || prompt,
+            wordBank: wordBank && wordBank.length ? wordBank : null,
+            correctAnswer: typeof correctAnswer === "string" ? correctAnswer : correctAnswer,
+            acceptableAnswers: toAcceptableAnswers(typeof correctAnswer === "string" ? correctAnswer : correctAnswer.join(", ")),
             explanation: toStringSafe(question.explanation, ""),
             evidenceSpans
           };

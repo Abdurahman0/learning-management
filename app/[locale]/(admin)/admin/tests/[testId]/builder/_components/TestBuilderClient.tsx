@@ -1302,7 +1302,14 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     }
   };
 
-  const handleEditGroup = (groupId: string, type: QuestionType, from: number, to: number, instructions: string) => {
+  const handleEditGroup = (
+    groupId: string,
+    type: QuestionType,
+    from: number,
+    to: number,
+    instructions: string,
+    groupContent?: any
+  ) => {
     if (!activeStructure) {
       return;
     }
@@ -1336,7 +1343,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           to,
           title: buildGroupTitle(from, to),
           questions,
-          instructions: resolveInstructionsForSubmit(type, instructions)
+          instructions: resolveInstructionsForSubmit(type, instructions),
+          groupContentJson: groupContent || group.groupContentJson
         });
       });
     });

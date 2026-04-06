@@ -213,6 +213,16 @@ function extractHeadingOptions(group: StudentAttemptQuestionGroup): string[] {
   return headings.length ? headings : ["i. Heading 1", "ii. Heading 2", "iii. Heading 3", "iv. Heading 4", "v. Heading 5"];
 }
 
+function extractSummaryInfo(group: StudentAttemptQuestionGroup): { summaryText: string; wordBank: string[] | null } {
+  const content = asRecord(group.group_content_json);
+  const summaryText = toStringSafe(content?.summary_text).trim();
+  const wordBankRaw = Array.isArray(content?.word_bank) ? content.word_bank : null;
+  const wordBank = wordBankRaw
+    ? (wordBankRaw as unknown[]).map((item) => toStringSafe(item).trim()).filter(Boolean)
+    : null;
+  return { summaryText, wordBank: wordBank && wordBank.length ? wordBank : null };
+}
+
 function buildGroupTitle(group: StudentAttemptQuestionGroup) {
   const from = toNumberSafe(group.question_number_start, 0);
   const to = toNumberSafe(group.question_number_end, 0);
@@ -521,6 +531,28 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
             prompt,
             options: extractMcqOptions(question),
             correctAnswer: "",
+            explanation: "",
+            evidenceSpans
+          });
+          continue;
+        }
+
+        if (qType === "SUMMARY_COMPLETION") {
+          const summaryInfo = extractSummaryInfo(group);
+          questions.push({
+            id: questionId,
+            number,
+            passageId,
+            type: "summaryCompletion",
+            backendQuestionId: submitQuestionId || undefined,
+            backendQuestionCandidateIds: submitQuestionCandidates.length ? submitQuestionCandidates : undefined,
+            groupTitle,
+            groupInstruction: instruction,
+            prompt: prompt || toStringSafe(question.question_text, `Question ${number}`),
+            summaryText: summaryInfo.summaryText,
+            wordBank: summaryInfo.wordBank,
+            correctAnswer: "",
+            acceptableAnswers: [],
             explanation: "",
             evidenceSpans
           });
@@ -2322,6 +2354,58 @@ function ReadingTestClient({
                                   className="test-input-surface max-w-sm bg-background/70 placeholder:text-muted-foreground/80 dark:bg-muted/30"
                                 />
                               ) : null}
+
+                              {question.type === "summaryCompletion" ? (() => {
+                                const parts = question.summaryText.split(/(\{\d+\})/g);
+                                const thisPlaceholder = `{${question.number}}`;
+                                return (
+                                  <div className="space-y-2">
+                                    <p className="wrap-break-word text-sm leading-relaxed text-foreground/90">
+                                      {parts.map((part, partIndex) => {
+                                        if (part === thisPlaceholder) {
+                                          return (
+                                            <span key={partIndex} className="inline-flex items-baseline gap-1 mx-0.5">
+                                              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white" style={{ verticalAlign: "baseline", position: "relative", top: "2px" }}>
+                                                {question.number}
+                                              </span>
+                                              <Input
+                                                aria-label={`Question ${question.number}`}
+                                                value={typeof value === "string" ? value : ""}
+                                                disabled={reviewMode}
+                                                onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
+                                                placeholder="………"
+                                                className="test-input-surface inline-block h-7 w-28 rounded-md border-blue-300/60 bg-background/70 px-2 text-sm placeholder:text-muted-foreground/50 focus:border-blue-500 focus:ring-blue-500/30 dark:bg-muted/30 sm:w-36"
+                                                style={{ verticalAlign: "baseline" }}
+                                              />
+                                            </span>
+                                          );
+                                        }
+                                        if (/^\{\d+\}$/.test(part)) {
+                                          const otherNum = part.slice(1, -1);
+                                          return (
+                                            <span key={partIndex} className="inline-flex items-baseline gap-1 mx-0.5">
+                                              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-muted-foreground/30 text-[10px] font-bold text-muted-foreground" style={{ verticalAlign: "baseline", position: "relative", top: "2px" }}>
+                                                {otherNum}
+                                              </span>
+                                              <span className="inline-block h-7 w-28 rounded-md border border-dashed border-border/60 bg-muted/20 px-2 text-sm leading-7 text-muted-foreground/60 sm:w-36">………</span>
+                                            </span>
+                                          );
+                                        }
+                                        return <span key={partIndex}>{part}</span>;
+                                      })}
+                                    </p>
+                                    {question.wordBank && question.wordBank.length > 0 ? (
+                                      <div className="mt-2 flex flex-wrap gap-1.5">
+                                        <span className="text-xs font-semibold text-muted-foreground">{t.has("wordBank") ? t("wordBank") : "Word bank"}:</span>
+                                        {question.wordBank.map((word) => (
+                                          <span key={word} className="rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 text-xs text-foreground/80">{word}</span>
+                                        ))}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                );
+                              })() : null}
+
 
                               {reviewMode ? (
                                 <div className="mt-3 space-y-2">

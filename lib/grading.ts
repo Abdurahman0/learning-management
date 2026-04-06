@@ -4,6 +4,7 @@ export type QuestionTypeForGrading =
   | "matchingHeadings"
   | "matchingInfo"
   | "sentenceCompletion"
+  | "summaryCompletion"
   | "text"
   | "matching";
 

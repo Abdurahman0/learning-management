@@ -412,8 +412,8 @@
     "placeholders": {
       "fullName": "John Doe",
       "email": "name@example.com",
-      "password": "вЂўвЂўвЂўвЂўвЂўвЂўвЂўвЂў",
-      "confirmPassword": "вЂўвЂўвЂўвЂўвЂўвЂўвЂўвЂў"
+      "password": "••••••••",
+      "confirmPassword": "••••••••"
     },
     "signup": {
       "title": "Create your account",
@@ -437,8 +437,7 @@
       "submit": "Sign In",
       "bottomText": "Don't have an account?",
       "bottomLink": "Create one",
-      "success": "Signed in. You can connect backend auth next.",
-      "demoCredentials": "Demo credentials: string@gmail.com/string1234 (student), teacher@gmail.com/teacher1234 (teacher), admin@gmail.com/admin1234 (admin)"
+      "success": "Signed in. You can connect backend auth next."
     },
     "signupMarketing": {
       "title": "Master the IELTS exam with confidence",

@@ -30,6 +30,7 @@ export type ReadingQuestion =
   | (BaseQuestion & { type: "mcq"; options: string[] })
   | (BaseQuestion & { type: "matchingHeadings"; target: string; headingOptions: string[] })
   | (BaseQuestion & { type: "sentenceCompletion"; blanks: number })
+  | (BaseQuestion & { type: "summaryCompletion"; summaryText: string; wordBank?: string[] | null })
   | (BaseQuestion & { type: "matchingInfo"; paragraphOptions: string[] });
 
 export type ReadingFullTest = {

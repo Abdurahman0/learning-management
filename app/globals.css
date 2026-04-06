@@ -94,6 +94,10 @@
   a {
     @apply outline-ring/50;
   }
+
+  input[type="password"] {
+    font-family: Arial, sans-serif !important;
+  }
 }
 
 @layer utilities {

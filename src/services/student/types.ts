@@ -200,6 +200,7 @@ export type StudentAttemptReviewGroup = {
   instructions?: string | null;
   question_number_start?: number | null;
   question_number_end?: number | null;
+  group_content_json?: unknown;
   questions: StudentAttemptReviewQuestion[];
 };
 

@@ -43,6 +43,8 @@ type GroupEditorState = {
   from: number;
   to: number;
   instructions: string;
+  summaryText: string;
+  wordBank: string;
 };
 
 type SlotRange = {
@@ -122,7 +124,9 @@ export function QuestionGroupsPanel({
     type: defaultType,
     from: range.from,
     to: Math.min(range.from + 2, range.to),
-    instructions: ""
+    instructions: "",
+    summaryText: "",
+    wordBank: ""
   });
 
   const assignedCount = useMemo(() => {
@@ -189,7 +193,9 @@ export function QuestionGroupsPanel({
       type: defaultType,
       from: preferredRange.from,
       to: preferredRange.to,
-      instructions: ""
+      instructions: "",
+      summaryText: "",
+      wordBank: ""
     });
   };
 
@@ -201,7 +207,11 @@ export function QuestionGroupsPanel({
       type: group.type,
       from: group.from,
       to: group.to,
-      instructions: group.instructions ?? ""
+      instructions: group.instructions ?? "",
+      summaryText: (group.groupContentJson as any)?.summary_text ?? "",
+      wordBank: Array.isArray((group.groupContentJson as any)?.word_bank) 
+        ? ((group.groupContentJson as any).word_bank as string[]).join(", ") 
+        : ""
     });
   };
 
@@ -213,7 +223,13 @@ export function QuestionGroupsPanel({
     if (editor.mode === "create") {
       onCreateGroup(editor.type, editor.from, editor.to, editor.instructions);
     } else if (editor.groupId) {
-      onEditGroup(editor.groupId, editor.type, editor.from, editor.to, editor.instructions);
+      // We'll need to pass summaryText and wordBank here
+      // Since the signature in props is fixed, we'll need to update the props or use a separate handle.
+      // Actually, let's see how onEditGroup is defined in props.
+      (onEditGroup as any)(editor.groupId, editor.type, editor.from, editor.to, editor.instructions, {
+        summary_text: editor.summaryText,
+        word_bank: editor.wordBank.split(",").map(s => s.trim()).filter(Boolean)
+      });
     }
 
     setEditor((current) => ({...current, open: false}));
@@ -343,6 +359,41 @@ export function QuestionGroupsPanel({
                 className="min-h-24 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
               />
             </div>
+
+            {editor.type === "summary_completion" && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.summaryText") || "Summary Text"}</label>
+                  <textarea
+                    value={editor.summaryText}
+                    onChange={(event) =>
+                      setEditor((current) => ({
+                        ...current,
+                        summaryText: event.target.value
+                      }))
+                    }
+                    placeholder="{21} is the placeholder for question 21..."
+                    className="min-h-32 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                  />
+                  <p className="text-[10px] text-muted-foreground">Use {"{number}"} placeholders that match question numbers.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.wordBank") || "Word Bank (optional)"}</label>
+                  <Input
+                    value={editor.wordBank}
+                    onChange={(event) =>
+                      setEditor((current) => ({
+                        ...current,
+                        wordBank: event.target.value
+                      }))
+                    }
+                    placeholder="word1, word2, word3..."
+                    className="h-10 rounded-xl border-border/70 bg-background/50"
+                  />
+                  <p className="text-[10px] text-muted-foreground">Comma-separated list of words to show as options.</p>
+                </div>
+              </>
+            )}
 
             {hasRangeError ? <p className="text-xs text-rose-400">{t("groups.validationRange")}</p> : null}
             {hasRangeOverlap ? <p className="text-xs text-rose-400">{t("groups.validationOverlap")}</p> : null}

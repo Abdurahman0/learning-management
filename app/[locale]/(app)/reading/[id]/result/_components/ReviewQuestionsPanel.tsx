@@ -143,7 +143,28 @@ export function ReviewQuestionsPanel({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1.5">
                   <p className="text-base font-semibold leading-snug">
-                    {question.number}. {question.prompt}
+                    {question.type === "summaryCompletion" ? (() => {
+                      const parts = question.summaryText.split(/(\{\d+\})/g);
+                      const thisPlaceholder = `{${question.number}}`;
+                      return (
+                        <span>
+                          {parts.map((part, partIndex) => {
+                            if (part === thisPlaceholder) {
+                              return <span key={partIndex} className="mx-1 inline-flex size-6 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{question.number}</span>;
+                            }
+                            if (/^\{\d+\}$/.test(part)) {
+                              const otherNum = part.slice(1, -1);
+                              return <span key={partIndex} className="mx-1 inline-flex size-6 items-center justify-center rounded-full bg-muted-foreground/20 text-[10px] font-bold text-muted-foreground">{otherNum}</span>;
+                            }
+                            return <span key={partIndex}>{part}</span>;
+                          })}
+                        </span>
+                      );
+                    })() : (
+                      <>
+                        {question.number}. {question.prompt}
+                      </>
+                    )}
                   </p>
                   <Badge variant="outline" className={cn("rounded-full text-[11px]", statusStyles.badge)}>
                     {t(`questionTypes.${question.type}`)}

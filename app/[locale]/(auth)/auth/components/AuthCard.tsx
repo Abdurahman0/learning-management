@@ -296,11 +296,6 @@ export function AuthCard({ mode }: AuthCardProps) {
             {status}
           </p>
         ) : null}
-        {!isSignup ? (
-          <p className="text-center text-xs text-muted-foreground">
-            {t("signin.demoCredentials")}
-          </p>
-        ) : null}
       </form>
 
       <Separator />
