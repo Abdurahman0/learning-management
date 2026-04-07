@@ -17,7 +17,7 @@ const DEFAULT_APPEARANCE: TestAppearanceState = {
 };
 
 function getStorageKey(scope: string) {
-  return `ielts-master:test-appearance:${scope}`;
+  return `englishlabs:test-appearance:${scope}`;
 }
 
 function getDefaultContrastMode(): TestContrastMode {

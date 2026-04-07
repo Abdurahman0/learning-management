@@ -15,9 +15,9 @@ export type PersistedAttempt = {
   timerUsed: boolean;
 };
 
-const ATTEMPT_PREFIX = "ielts-master:attempt";
-const RESULT_PREFIX = "ielts-master:result";
-const LATEST_PREFIX = "ielts-master:latest-attempt";
+const ATTEMPT_PREFIX = "englishlabs:attempt";
+const RESULT_PREFIX = "englishlabs:result";
+const LATEST_PREFIX = "englishlabs:latest-attempt";
 
 function buildKey(prefix: string, module: TestModule, testId: string, attemptId: string) {
   return `${prefix}:${module}:${testId}:${attemptId}`;

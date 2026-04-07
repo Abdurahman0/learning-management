@@ -12,7 +12,7 @@ export type TimezoneOption = {
 
 export const DEFAULT_GENERAL_SETTINGS = {
   platformName: "EnglishLabs",
-  supportEmail: "support@englishlabs.com",
+  supportEmail: "support@englishlabs.uz",
   timezone: "utc_london",
   maintenanceMode: false
 } satisfies GeneralSettings;

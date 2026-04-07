@@ -18,7 +18,7 @@ const STATIC_CREDENTIALS: StaticCredential[] = [
   {name: "String User", initials: "SU", email: "string@gmail.com", password: "string1234", role: "user"},
   {
     id: "teacher-1",
-    title: "Senior IELTS Instructor",
+    title: "Senior EnglishLabs Instructor",
     name: "Dr. Sarah Jenkins",
     initials: "SJ",
     email: "teacher@gmail.com",
