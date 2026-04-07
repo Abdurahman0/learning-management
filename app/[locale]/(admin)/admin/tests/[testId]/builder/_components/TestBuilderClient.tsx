@@ -1276,6 +1276,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
         return {...group, questions: updatedQuestions};
       })
+    );
   };
 
   const updateActiveStructure = (updater: (structure: typeof test.structures[number]) => typeof test.structures[number]) => {
