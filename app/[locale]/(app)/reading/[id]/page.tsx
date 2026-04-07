@@ -2164,17 +2164,18 @@ function ReadingTestClient({
                                 )
                               : [];
 
+                          const isSummary = question.type === "summaryCompletion";
+                          const isDuplicateSummary = isSummary && renderedSummariesInGroup.has(question.summaryText);
+                          if (isDuplicateSummary) {
+                            return null;
+                          }
+                          if (isSummary) {
+                            renderedSummariesInGroup.add(question.summaryText);
+                          }
+
                           return (
                             <article
                               key={question.id}
-                              id={`q-${question.number}`}
-                              ref={(el) => {
-                                if (!el) {
-                                  questionRefs.current.delete(question.number);
-                                  return;
-                                }
-                                questionRefs.current.set(question.number, el);
-                              }}
                               className={cn(
                                 "test-panel scroll-mt-24 rounded-xl border p-4 transition-all duration-200",
                                 "hover:border-border hover:bg-accent/20",
@@ -2187,10 +2188,31 @@ function ReadingTestClient({
                                 reviewMode && !answered && "border-border bg-muted/20"
                               )}
                               onClick={() => setActiveQuestionNumber(question.number)}
+                              ref={(el) => {
+                                if (!el) {
+                                  questionRefs.current.delete(question.number);
+                                  return;
+                                }
+                                questionRefs.current.set(question.number, el);
+                                // If this is a summary completion, link all questions in this group to this element
+                                if (question.type === "summaryCompletion") {
+                                  group.questions.forEach((q) => {
+                                    if (q.type === "summaryCompletion") {
+                                      questionRefs.current.set(q.number, el);
+                                    }
+                                  });
+                                }
+                              }}
                             >
                               <div className="mb-2 flex items-start justify-between gap-2">
                                 <p className="min-w-0 wrap-break-word text-base font-medium leading-relaxed text-foreground">
-                                  {question.number}.{" "}
+                                  {isSummary ? (
+                                    <>
+                                      {group.questions[0]?.number}-{group.questions[group.questions.length - 1]?.number}.{" "}
+                                    </>
+                                  ) : (
+                                    <>{question.number}.{" "}</>
+                                  )}
                                   <HighlightableText
                                     text={question.prompt}
                                     userHighlights={getQuestionLocalHighlights(question.id, promptStart, question.prompt.length)}
