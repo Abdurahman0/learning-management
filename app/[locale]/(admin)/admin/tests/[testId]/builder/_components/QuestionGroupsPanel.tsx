@@ -45,6 +45,8 @@ type GroupEditorState = {
   instructions: string;
   summaryText: string;
   wordBank: string;
+  headings: string;
+  choices: string;
 };
 
 type SlotRange = {
@@ -126,7 +128,9 @@ export function QuestionGroupsPanel({
     to: Math.min(range.from + 2, range.to),
     instructions: "",
     summaryText: "",
-    wordBank: ""
+    wordBank: "",
+    headings: "",
+    choices: ""
   });
 
   const assignedCount = useMemo(() => {
@@ -195,7 +199,9 @@ export function QuestionGroupsPanel({
       to: preferredRange.to,
       instructions: "",
       summaryText: "",
-      wordBank: ""
+      wordBank: "",
+      headings: "",
+      choices: ""
     });
   };
 
@@ -211,7 +217,9 @@ export function QuestionGroupsPanel({
       summaryText: (group.groupContentJson as any)?.summary_text ?? "",
       wordBank: Array.isArray((group.groupContentJson as any)?.word_bank) 
         ? ((group.groupContentJson as any).word_bank as string[]).join(", ") 
-        : ""
+        : "",
+      headings: (group.questions[0] as any)?.headings?.join("\n") ?? "",
+      choices: (group.questions[0] as any)?.choices?.join("\n") ?? ""
     });
   };
 
@@ -228,7 +236,9 @@ export function QuestionGroupsPanel({
       // Actually, let's see how onEditGroup is defined in props.
       (onEditGroup as any)(editor.groupId, editor.type, editor.from, editor.to, editor.instructions, {
         summary_text: editor.summaryText,
-        word_bank: editor.wordBank.split(",").map(s => s.trim()).filter(Boolean)
+        word_bank: editor.wordBank.split(",").map(s => s.trim()).filter(Boolean),
+        headings: editor.headings.split("\n").map(s => s.trim()).filter(Boolean),
+        choices: editor.choices.split("\n").map(s => s.trim()).filter(Boolean)
       });
     }
 
@@ -393,6 +403,33 @@ export function QuestionGroupsPanel({
                   <p className="text-[10px] text-muted-foreground">{t("groups.fields.wordBankHint")}</p>
                 </div>
               </>
+            )}
+
+            {editor.type === "matching_headings" && (
+              <div className="space-y-1.5">
+                <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.headingOptions")}</label>
+                <textarea
+                  value={editor.headings}
+                  onChange={(event) => setEditor((current) => ({...current, headings: event.target.value}))}
+                  placeholder="Enter headings, one per line..."
+                  className="min-h-32 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                />
+              </div>
+            )}
+
+            {(editor.type === "matching_information" ||
+              editor.type === "matching_features" ||
+              editor.type === "selecting_from_a_list" ||
+              editor.type === "map") && (
+              <div className="space-y-1.5">
+                <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.choices")}</label>
+                <textarea
+                  value={editor.choices}
+                  onChange={(event) => setEditor((current) => ({...current, choices: event.target.value}))}
+                  placeholder="Enter choices, one per line..."
+                  className="min-h-32 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                />
+              </div>
             )}
 
             {hasRangeError ? <p className="text-xs text-rose-400">{t("groups.validationRange")}</p> : null}

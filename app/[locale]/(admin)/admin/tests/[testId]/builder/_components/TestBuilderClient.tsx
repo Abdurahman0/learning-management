@@ -1384,7 +1384,22 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         const questions: BuilderQuestion[] = [];
         for (let number = from; number <= to; number += 1) {
           const existing = group.questions.find((question) => question.number === number && question.type === type);
-          questions.push(existing ? {...existing, number} : createDefaultQuestion(type, number));
+          let q = existing ? {...existing, number} : createDefaultQuestion(type, number);
+
+          // Propagate group-level options to questions
+          if (groupContent?.headings && q.type === "matching_headings") {
+            (q as any).headings = [...groupContent.headings];
+          }
+          if (groupContent?.choices && (
+            q.type === "matching_information" ||
+            q.type === "matching_features" ||
+            q.type === "selecting_from_a_list" ||
+            q.type === "map"
+          )) {
+            (q as any).choices = [...groupContent.choices];
+          }
+
+          questions.push(q);
         }
 
         return normalizeGroup({
