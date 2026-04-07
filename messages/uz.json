@@ -1,6 +1,6 @@
-{
+﻿{
   "nav": {
-    "brand": "IELTS MASTER",
+    "brand": "EnglishLabs",
     "practiceTests": "Sinovlar",
     "practiceMenu": "Sinovlar menyusi",
     "features": "Imkoniyatlar",
@@ -90,7 +90,7 @@
     "page": {
       "badge": "TALABALAR FIKRI",
       "title": "Haqiqiy talabalar, haqiqiy natijalar",
-      "subtitle": "IELTS MASTER orqali maqsad bandiga erishib, chet elda o'qish orzusiga yaqinlashgan O'zbekiston bo'ylab 10 000+ talabalarga qo'shiling."
+      "subtitle": "EnglishLabs orqali maqsad bandiga erishib, chet elda o'qish orzusiga yaqinlashgan O'zbekiston bo'ylab 10 000+ talabalarga qo'shiling."
     },
     "stats": {
       "avgRating": "O'rtacha baho",
@@ -126,7 +126,7 @@
     },
     "cta": {
       "title": "IELTS tayyorgarligini boshlashga tayyormisiz?",
-      "subtitle": "IELTS MASTER bilan maqsad bandiga erishgan minglab talabalar safiga qo'shiling."
+      "subtitle": "EnglishLabs bilan maqsad bandiga erishgan minglab talabalar safiga qo'shiling."
     },
     "ratingLabel": "5 dan {rating} yulduz",
     "items": {
@@ -163,7 +163,7 @@
     }
   },
   "guest": {
-    "brand": "IELTS MASTER",
+    "brand": "EnglishLabs",
     "banner": {
       "title": "Mehmon rejimi faol",
       "desc": "Sizda 4 ta demo testga kirish bor (2 ta Reading, 2 ta Listening). Barcha testlar, to'liq tahlil, tarix va tavsiyalarni ochish uchun ro'yxatdan o'ting.",
@@ -389,7 +389,7 @@
   "auth": {
     "orContinueWithEmail": "YOKI EMAIL ORQALI DAVOM ETING",
     "or": "YOKI",
-    "brand": "IELTS MASTER",
+    "brand": "EnglishLabs",
     "nav": {
       "features": "Imkoniyatlar",
       "pricing": "Narxlar",
@@ -511,7 +511,7 @@
     "terms": "Foydalanish shartlari",
     "contact": "Bog'lanish",
     "help": "Yordam markazi",
-    "copyright": "В© 2026 IELTS Master Practice. Barcha huquqlar himoyalangan."
+    "copyright": "В© 2026 EnglishLabs. Barcha huquqlar himoyalangan."
   },
   "common": {
     "explain": "Izoh",
@@ -806,7 +806,7 @@
   },
   "adminDashboard": {
     "sidebar": {
-      "brand": "IELTS MASTER",
+      "brand": "EnglishLabs",
       "subtitle": "Admin Panel",
       "openMenu": "Admin menyusini ochish",
       "items": {
@@ -2054,7 +2054,7 @@
     },
     "comingSoon": "Tez orada",
     "sidebar": {
-      "brand": "IELTS MASTER",
+      "brand": "EnglishLabs",
       "subtitle": "Teacher Portal",
       "openMenu": "Teacher menyusini ochish",
       "items": {

@@ -1,6 +1,6 @@
-{
+﻿{
   "info": {
-    "name": "IELTS Master — Admin API",
+    "name": "EnglishLabs — Admin API",
     "description": "Complete admin API collection for managing IELTS practice tests. Covers authentication, practice tests, listening parts, reading passages, question groups, and questions.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },

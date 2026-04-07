@@ -1795,7 +1795,7 @@ function ReadingTestClient({
             <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
               <BookOpen className="size-4.5" aria-hidden="true" />
             </span>
-            <p className="truncate text-base font-semibold sm:text-lg">IELTS MASTER</p>
+            <p className="truncate text-base font-semibold sm:text-lg">EnglishLabs</p>
             <Separator orientation="vertical" className="hidden h-6 md:block" />
             <p className="hidden truncate text-sm text-muted-foreground md:block">{t("title")}</p>
           </div>

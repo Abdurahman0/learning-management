@@ -11,8 +11,8 @@ export type TimezoneOption = {
 };
 
 export const DEFAULT_GENERAL_SETTINGS = {
-  platformName: "IELTS MASTER",
-  supportEmail: "support@ieltsmaster.com",
+  platformName: "EnglishLabs",
+  supportEmail: "support@englishlabs.com",
   timezone: "utc_london",
   maintenanceMode: false
 } satisfies GeneralSettings;

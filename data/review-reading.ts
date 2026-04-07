@@ -93,7 +93,7 @@ const DEFAULT_VIDEO_LESSON: VideoLesson = {
   description:
     "A focused walkthrough of how to locate supporting lines faster, eliminate distractors, and handle passage transitions under time pressure.",
   duration: "12:40",
-  instructor: "IELTS MASTER Coach",
+  instructor: "EnglishLabs Coach",
   tag: "Reading Band 7+",
   thumbnailLabel: "Lesson Preview",
   timestamps: [

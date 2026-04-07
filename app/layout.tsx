@@ -9,8 +9,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "IELTS Master",
-  description: "Practice IELTS Reading and Listening with realistic tests.",
+  title: "EnglishLabs",
+  description: "Practice IELTS Reading and Listening with realistic tests on EnglishLabs.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

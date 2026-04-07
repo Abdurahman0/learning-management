@@ -100,7 +100,7 @@ export function ReadingTestShell() {
             <span className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
               <GraduationCap className="size-4.5" aria-hidden="true" />
             </span>
-            <p className="text-xl font-semibold tracking-tight text-foreground">IELTS MASTER</p>
+            <p className="text-xl font-semibold tracking-tight text-foreground">EnglishLabs</p>
             <Separator orientation="vertical" className="mx-1 h-6" />
             <p className="text-base font-medium text-slate-700">{t("title")}</p>
           </div>

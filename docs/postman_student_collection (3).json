@@ -1,7 +1,7 @@
-{
+﻿{
   "info": {
-    "name": "IELTS Master — Student API",
-    "description": "Complete Postman collection for the IELTS Master student-facing API.\n\n## Setup\n1. Import this collection.\n2. Import the `IELTS Master - Student Env` environment (or create one with the variables listed below).\n3. Run **Auth / Login** first — the access and refresh tokens are captured automatically.\n4. All other requests use `{{access_token}}` automatically.\n\n## Environment Variables Required\n| Variable | Initial Value |\n|---|---|\n| `base_url` | `http://localhost:8000` |\n| `access_token` | *(auto-set after Login)* |\n| `refresh_token` | *(auto-set after Login)* |\n| `attempt_id` | *(auto-set after Start Attempt)* |\n| `review_item_id` | *(auto-set after Get Review Center)* |\n| `test_id` | *(paste a test UUID here)* |\n| `question_id` | *(paste a question UUID here)* |",
+    "name": "EnglishLabs — Student API",
+    "description": "Complete Postman collection for the EnglishLabs student-facing API.\n\n## Setup\n1. Import this collection.\n2. Import the `EnglishLabs - Student Env` environment (or create one with the variables listed below).\n3. Run **Auth / Login** first — the access and refresh tokens are captured automatically.\n4. All other requests use `{{access_token}}` automatically.\n\n## Environment Variables Required\n| Variable | Initial Value |\n|---|---|\n| `base_url` | `http://localhost:8000` |\n| `access_token` | *(auto-set after Login)* |\n| `refresh_token` | *(auto-set after Login)* |\n| `attempt_id` | *(auto-set after Start Attempt)* |\n| `review_item_id` | *(auto-set after Get Review Center)* |\n| `test_id` | *(paste a test UUID here)* |\n| `question_id` | *(paste a question UUID here)* |",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
