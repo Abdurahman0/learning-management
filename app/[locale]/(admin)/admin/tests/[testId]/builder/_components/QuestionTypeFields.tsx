@@ -3,6 +3,7 @@
 import {useMemo} from "react";
 import {useTranslations} from "next-intl";
 
+import {Badge} from "@/components/ui/badge";
 import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import type {BuilderQuestion, TextInputQuestion} from "@/data/admin-test-builder";
@@ -155,7 +156,12 @@ export function QuestionTypeFields({question, onChange}: QuestionTypeFieldsProps
       {question.type === "matching_headings" ? (
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.headingOptions")}</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.headingOptions")}</Label>
+              <Badge variant="outline" className="rounded-md border-primary/30 bg-primary/5 px-1.5 py-0 text-[10px] text-primary lowercase">
+                {t("questions.hints.groupWide")}
+              </Badge>
+            </div>
             <textarea
               value={question.headings.join("\n")}
               onChange={(event) => onChange({...question, headings: event.target.value.split("\n").map((item) => item.trim()).filter(Boolean)})}
@@ -192,7 +198,12 @@ export function QuestionTypeFields({question, onChange}: QuestionTypeFieldsProps
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.choices")}</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.choices")}</Label>
+              <Badge variant="outline" className="rounded-md border-primary/30 bg-primary/5 px-1.5 py-0 text-[10px] text-primary lowercase">
+                {t("questions.hints.groupWide")}
+              </Badge>
+            </div>
             <textarea
               value={question.choices.join("\n")}
               onChange={(event) => onChange({...question, choices: event.target.value.split("\n").map((item) => item.trim()).filter(Boolean)})}

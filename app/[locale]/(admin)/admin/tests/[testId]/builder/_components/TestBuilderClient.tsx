@@ -41,6 +41,8 @@ import {PassageEditor} from "./PassageEditor";
 import {QuestionEditorModal} from "./QuestionEditorModal";
 import {QuestionGroupsPanel} from "./QuestionGroupsPanel";
 import {TestStructurePanel} from "./TestStructurePanel";
+import {LoadingModal} from "@/components/ui/loading-modal";
+
 
 type TestBuilderClientProps = {
   testId: string;
@@ -322,7 +324,7 @@ function buildDefaultGroupContentJson(type: QuestionType, from: number, to: numb
       };
     case "matching_headings":
       return {
-        headings: Array.from({length: 5}, (_, index) => ({
+        headings: Array.from({length: 6}, (_, index) => ({
           key: toRoman(index),
           text: `Heading ${index + 1}`
         }))
@@ -348,6 +350,30 @@ function buildDefaultGroupContentJson(type: QuestionType, from: number, to: numb
 }
 
 function resolveGroupContentForSync(group: QuestionGroup): unknown {
+  if (group.type === "matching_headings") {
+    return {
+      headings: (group.questions[0] as any)?.headings.map((text: string, index: number) => ({
+        key: toRoman(index),
+        text: text
+      })) || []
+    };
+  }
+
+  const isMatchingStyle =
+    group.type === "matching_information" ||
+    group.type === "matching_features" ||
+    group.type === "selecting_from_a_list" ||
+    group.type === "map";
+
+  if (isMatchingStyle) {
+    return {
+      options: (group.questions[0] as any)?.choices.map((text: string, index: number) => ({
+        key: toOptionKey(index),
+        text: text
+      })) || []
+    };
+  }
+
   const current = group.groupContentJson;
   if (current && typeof current === "object" && !Array.isArray(current) && Object.keys(current as Record<string, unknown>).length > 0) {
     return current;
@@ -1217,15 +1243,39 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
   const updateQuestion = (groupId: string, questionId: string, updater: (question: BuilderQuestion) => BuilderQuestion) => {
     updateGroupsForActiveStructure((groups) =>
-      groups.map((group) =>
-        group.id === groupId
-          ? {
-              ...group,
-              questions: group.questions.map((question) => (question.id === questionId ? updater(question) : question))
-            }
-          : group
-      )
-    );
+      groups.map((group) => {
+        if (group.id !== groupId) return group;
+
+        const updatedQuestions = group.questions.map((q) => (q.id === questionId ? updater(q) : q));
+        const changedQuestion = updatedQuestions.find((q) => q.id === questionId);
+
+        if (!changedQuestion) return group;
+
+        // Cascade group-wide options for matching types
+        const isMatchingHeadings = changedQuestion.type === "matching_headings";
+        const isOtherMatching =
+          changedQuestion.type === "matching_information" ||
+          changedQuestion.type === "matching_features" ||
+          changedQuestion.type === "selecting_from_a_list" ||
+          changedQuestion.type === "map";
+
+        if (isMatchingHeadings || isOtherMatching) {
+          const sourceQuestion = changedQuestion as any;
+          return {
+            ...group,
+            questions: updatedQuestions.map((q) => {
+              if (q.id === questionId) return q;
+              const other = q as any;
+              if (isMatchingHeadings) {
+                return {...other, headings: [...sourceQuestion.headings]};
+              }
+              return {...other, choices: [...sourceQuestion.choices]};
+            })
+          };
+        }
+
+        return {...group, questions: updatedQuestions};
+      })
   };
 
   const updateActiveStructure = (updater: (structure: typeof test.structures[number]) => typeof test.structures[number]) => {
@@ -1840,6 +1890,12 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
                 {apiNotice}
               </div>
             ) : null}
+
+            <LoadingModal 
+              open={isPersisting} 
+              message={t("validation.syncing") ?? "Saving your changes to the server..."} 
+            />
+
             <section className="grid min-w-0 gap-4 xl:grid-cols-[280px_minmax(0,1fr)_460px]">
               <TestStructurePanel
                 module={test.module}

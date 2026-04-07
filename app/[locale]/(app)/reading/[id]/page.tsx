@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { BookOpen, Bookmark, BookmarkCheck, Clock3, Grid2x2, HelpCircle, Maximize2, Menu, Minimize2, MoveLeft, MoveRight, Play, RotateCcw, Square, User } from "lucide-react";
+import { LoadingModal } from "@/components/ui/loading-modal";
 import { useLocale, useTranslations } from "next-intl";
 
 import { getStaticReadingTestById, saveRuntimeReadingTest, type ReadingFullTest, type ReadingQuestion } from "@/data/reading-tests";
@@ -2841,6 +2842,11 @@ function ReadingTestClient({
           </Card>
         </div>
       ) : null}
+
+      <LoadingModal 
+        open={isSubmittingResult} 
+        message={t.has("submittingTest") ? t("submittingTest") : "Submitting your test and calculating results..."} 
+      />
     </section>
   );
 }
