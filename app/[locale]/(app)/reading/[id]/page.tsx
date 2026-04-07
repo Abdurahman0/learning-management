@@ -2213,24 +2213,26 @@ function ReadingTestClient({
                                   ) : (
                                     <>{question.number}.{" "}</>
                                   )}
-                                  <HighlightableText
-                                    text={question.prompt}
-                                    userHighlights={getQuestionLocalHighlights(question.id, promptStart, question.prompt.length)}
-                                    notesStorageKey={`reading:${test.id}:notes`}
-                                    noteScopeKey={`question:${question.id}:prompt`}
-                                    markLabel={t.has("markText") ? t("markText") : "Mark"}
-                                    unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
-                                    onToggle={({ start, end, color, action }) =>
-                                      toggleHighlight({
-                                        scope: "question",
-                                        questionId: question.id,
-                                        start: promptStart + start,
-                                        end: promptStart + end,
-                                        color,
-                                        action,
-                                      })
-                                    }
-                                  />
+                                   {!isSummary && (
+                                    <HighlightableText
+                                      text={question.prompt}
+                                      userHighlights={getQuestionLocalHighlights(question.id, promptStart, question.prompt.length)}
+                                      notesStorageKey={`reading:${test.id}:notes`}
+                                      noteScopeKey={`${question.id}:prompt`}
+                                      markLabel={t.has("markText") ? t("markText") : "Mark"}
+                                      unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
+                                      onToggle={({ start, end, color, action }) =>
+                                        toggleHighlight({
+                                          scope: "question",
+                                          questionId: question.id,
+                                          start: promptStart + start,
+                                          end: promptStart + end,
+                                          color,
+                                          action,
+                                        })
+                                      }
+                                    />
+                                  )}
                                 </p>
                                 {isMarked && !reviewMode ? (
                                   <Badge variant="secondary" className="shrink-0 rounded-full border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/20 dark:text-amber-200">
@@ -2380,15 +2382,11 @@ function ReadingTestClient({
                               ) : null}
 
                               {question.type === "summaryCompletion" ? (() => {
-                                if (renderedSummariesInGroup.has(question.summaryText)) {
-                                  return null;
-                                }
-                                renderedSummariesInGroup.add(question.summaryText);
-
                                 const parts = question.summaryText.split(/(\{\d+\})/g);
                                 return (
-                                  <div className="space-y-2">
-                                    <p className="wrap-break-word text-sm leading-relaxed text-foreground/90">
+                                  <div className="space-y-4">
+                                    <div className="test-soft-surface rounded-lg border border-border/60 bg-muted/20 p-4">
+                                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
                                       {parts.map((part, partIndex) => {
                                         const match = part.match(/^\{(\d+)\}$/);
                                         if (match) {
@@ -2444,8 +2442,9 @@ function ReadingTestClient({
                                       </div>
                                     ) : null}
                                   </div>
-                                );
-                              })() : null}
+                                </div>
+                              );
+                            })() : null}
 
 
                               {reviewMode ? (
