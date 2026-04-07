@@ -239,29 +239,14 @@ function buildEvidencePhrase(prompt: string, fallbackNumber: number) {
 }
 
 function resolveSubmitQuestionId(question: StudentAttemptQuestion) {
-  const canonicalQuestionId = toStringSafe(question.question_id).trim();
-  if (canonicalQuestionId) {
-    return canonicalQuestionId;
-  }
+  const attemptId = toStringSafe(question.id).trim();
+  const canonicalId = toStringSafe(question.question_id).trim();
+  const tryAttemptQuestionId = toStringSafe(question.attempt_question_id).trim();
 
-  const directId = toStringSafe(question.id).trim();
-  if (directId) {
-    return directId;
-  }
-
-  const attemptQuestionId = toStringSafe(question.attempt_question_id).trim();
-  if (attemptQuestionId) {
-    return attemptQuestionId;
-  }
-
-  const candidates = [
-    toStringSafe(question.question_id).trim(),
-    toStringSafe(question.id).trim(),
-    ...asArray<string>(question.candidate_question_ids)
-      .map((value) => toStringSafe(value).trim())
-      .filter(Boolean)
-  ].filter((value, index, source) => Boolean(value) && source.indexOf(value) === index);
-  return candidates[0] ?? "";
+  // Prefer attempt_question_id if present, otherwise try default id
+  if (tryAttemptQuestionId) return tryAttemptQuestionId;
+  if (attemptId) return attemptId;
+  return canonicalId || "";
 }
 
 function extractValidationAnswerQuestionIdFailures(error: unknown) {
@@ -309,9 +294,10 @@ function collectAttemptSubmitCandidatesByNumber(attempt: StudentAttemptDetail) {
         const number = toNumberSafe(question.question_number, 0);
         if (number <= 0) continue;
 
-        const preferred = resolveSubmitQuestionId(question);
         const candidates = [
-          preferred,
+          toStringSafe(question.id).trim(),
+          toStringSafe(question.attempt_question_id).trim(),
+          toStringSafe(question.question_id).trim(),
           ...asArray<string>(question.candidate_question_ids)
             .map((value) => toStringSafe(value).trim())
             .filter(Boolean)
