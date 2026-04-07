@@ -2084,6 +2084,8 @@ function ReadingTestClient({
                       }, [])
                     : [];
 
+                  const renderedSummariesInGroup = new Set<string>();
+
                   return (
                     <section key={group.title} className="space-y-4">
                       <div>
@@ -2356,40 +2358,57 @@ function ReadingTestClient({
                               ) : null}
 
                               {question.type === "summaryCompletion" ? (() => {
+                                if (renderedSummariesInGroup.has(question.summaryText)) {
+                                  return null;
+                                }
+                                renderedSummariesInGroup.add(question.summaryText);
+
                                 const parts = question.summaryText.split(/(\{\d+\})/g);
-                                const thisPlaceholder = `{${question.number}}`;
                                 return (
                                   <div className="space-y-2">
                                     <p className="wrap-break-word text-sm leading-relaxed text-foreground/90">
                                       {parts.map((part, partIndex) => {
-                                        if (part === thisPlaceholder) {
-                                          return (
-                                            <span key={partIndex} className="inline-flex items-baseline gap-1 mx-0.5">
-                                              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white" style={{ verticalAlign: "baseline", position: "relative", top: "2px" }}>
-                                                {question.number}
+                                        const match = part.match(/^\{(\d+)\}$/);
+                                        if (match) {
+                                          const num = Number(match[1]);
+                                          const targetQuestion = questionsByNumber.get(num);
+                                          if (targetQuestion) {
+                                            const questionValue = answers[targetQuestion.id];
+                                            const isThisQuestion = num === question.number;
+
+                                            return (
+                                              <span key={partIndex} className="inline-flex items-baseline gap-1 mx-0.5">
+                                                <span 
+                                                  className={cn(
+                                                    "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white transition-colors",
+                                                    isThisQuestion ? "bg-blue-600" : "bg-muted-foreground/40"
+                                                  )} 
+                                                  style={{ verticalAlign: "baseline", position: "relative", top: "2px" }}
+                                                >
+                                                  {num}
+                                                </span>
+                                                <Input
+                                                  aria-label={`Question ${num}`}
+                                                  value={typeof questionValue === "string" ? questionValue : ""}
+                                                  disabled={reviewMode}
+                                                  onFocus={() => {
+                                                    if (activeQuestionNumber !== num) {
+                                                      setActiveQuestionNumber(num);
+                                                    }
+                                                  }}
+                                                  onChange={(e) => setAnswers((prev) => ({ ...prev, [targetQuestion.id]: e.target.value }))}
+                                                  placeholder="………"
+                                                  className={cn(
+                                                    "test-input-surface inline-block h-7 w-28 rounded-md px-2 text-sm transition-all sm:w-36",
+                                                    isThisQuestion 
+                                                      ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-400/30 dark:bg-blue-900/20" 
+                                                      : "border-blue-300/40 bg-background/70 placeholder:text-muted-foreground/30 dark:bg-muted/30"
+                                                  )}
+                                                  style={{ verticalAlign: "baseline" }}
+                                                />
                                               </span>
-                                              <Input
-                                                aria-label={`Question ${question.number}`}
-                                                value={typeof value === "string" ? value : ""}
-                                                disabled={reviewMode}
-                                                onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
-                                                placeholder="………"
-                                                className="test-input-surface inline-block h-7 w-28 rounded-md border-blue-300/60 bg-background/70 px-2 text-sm placeholder:text-muted-foreground/50 focus:border-blue-500 focus:ring-blue-500/30 dark:bg-muted/30 sm:w-36"
-                                                style={{ verticalAlign: "baseline" }}
-                                              />
-                                            </span>
-                                          );
-                                        }
-                                        if (/^\{\d+\}$/.test(part)) {
-                                          const otherNum = part.slice(1, -1);
-                                          return (
-                                            <span key={partIndex} className="inline-flex items-baseline gap-1 mx-0.5">
-                                              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-muted-foreground/30 text-[10px] font-bold text-muted-foreground" style={{ verticalAlign: "baseline", position: "relative", top: "2px" }}>
-                                                {otherNum}
-                                              </span>
-                                              <span className="inline-block h-7 w-28 rounded-md border border-dashed border-border/60 bg-muted/20 px-2 text-sm leading-7 text-muted-foreground/60 sm:w-36">………</span>
-                                            </span>
-                                          );
+                                            );
+                                          }
                                         }
                                         return <span key={partIndex}>{part}</span>;
                                       })}

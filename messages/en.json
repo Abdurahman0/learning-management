@@ -1,4 +1,4 @@
-﻿{
+{
   "nav": {
     "brand": "EnglishLabs",
     "practiceTests": "Practice Tests",
@@ -1096,7 +1096,13 @@
         "from": "From",
         "to": "To",
         "instructions": "Instructions",
-        "instructionsPlaceholder": "Enter instructions for this question group"
+        "instructionsPlaceholder": "Enter instructions for this question group",
+        "summaryText": "Summary Text",
+        "summaryTextPlaceholder": "{21} is the placeholder for question 21...",
+        "summaryTextHint": "Use {number} placeholders that match question numbers.",
+        "wordBank": "Word Bank (optional)",
+        "wordBankPlaceholder": "word1, word2, word3...",
+        "wordBankHint": "Comma-separated list of words to show as options."
       },
       "validationRange": "Please choose a valid range inside the active passage/part.",
       "validationOverlap": "This range overlaps existing question numbers. Choose unused numbers only.",

@@ -1,4 +1,4 @@
-﻿{
+{
   "nav": {
     "brand": "EnglishLabs",
     "practiceTests": "Sinovlar",
@@ -1096,7 +1096,13 @@
         "from": "Dan",
         "to": "Gacha",
         "instructions": "Ko'rsatmalar",
-        "instructionsPlaceholder": "Savol guruhi uchun ko'rsatmalarni kiriting"
+        "instructionsPlaceholder": "Savol guruhi uchun ko'rsatmalarni kiriting",
+        "summaryText": "Matn (summary)",
+        "summaryTextPlaceholder": "{21} 21-savol uchun joy...",
+        "summaryTextHint": "Savol raqamlari bilan mos keluvchi {number} belgilaridan foydalaning.",
+        "wordBank": "So'zlar banki (ixtiyoriy)",
+        "wordBankPlaceholder": "so'z1, so'z2, so'z3...",
+        "wordBankHint": "Tanlov variantlari sifatida ko'rsatiladigan vergul bilan ajratilgan so'zlar ro'yxati."
       },
       "validationRange": "Faol passage/qism ichida togri diapazon tanlang.",
       "validationOverlap": "Bu diapazon mavjud savol raqamlari bilan kesishmoqda. Faqat bo'sh raqamlarni tanlang.",
@@ -1148,20 +1154,20 @@
     "questionTypes": {
       "tfng": "True / False / Not Given",
       "yes_no_not_given": "Yes / No / Not Given",
-      "multiple_choice": "Multiple Choice",
-      "selecting_from_a_list": "Selecting from a List",
-      "matching_headings": "Matching Headings",
-      "matching_information": "Matching Information",
-      "matching_features": "Matching Features",
-      "sentence_completion": "Sentence Completion",
-      "summary_completion": "Summary Completion",
-      "table_completion": "Table Completion",
-      "flow_chart": "Flow Chart",
-      "map": "Map",
-      "diagram_labeling": "Diagram Labeling",
-      "form_completion": "Form Completion",
-      "note_completion": "Note Completion",
-      "short_answer": "Short Answer"
+      "multiple_choice": "Ko'p variantli",
+      "selecting_from_a_list": "Ro'yxatdan tanlash",
+      "matching_headings": "Sarlavhalarni moslashtirish",
+      "matching_information": "Ma'lumotni moslashtirish",
+      "matching_features": "Xususiyatlarni moslashtirish",
+      "sentence_completion": "Gapni to'ldirish",
+      "summary_completion": "Summaryni (xulosani) to'ldirish",
+      "table_completion": "Jadvalni to'ldirish",
+      "flow_chart": "Blok-sxemani to'ldirish",
+      "map": "Xaritani to'ldirish",
+      "diagram_labeling": "Diagrammani belgilash",
+      "form_completion": "Formani to'ldirish",
+      "note_completion": "Eslatmani to'ldirish",
+      "short_answer": "Qisqa javob"
     },
     "common": {
       "cancel": "Bekor qilish"

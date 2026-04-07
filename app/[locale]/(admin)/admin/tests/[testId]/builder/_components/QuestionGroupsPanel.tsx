@@ -363,7 +363,7 @@ export function QuestionGroupsPanel({
             {editor.type === "summary_completion" && (
               <>
                 <div className="space-y-1.5">
-                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.summaryText") || "Summary Text"}</label>
+                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.summaryText")}</label>
                   <textarea
                     value={editor.summaryText}
                     onChange={(event) =>
@@ -372,13 +372,13 @@ export function QuestionGroupsPanel({
                         summaryText: event.target.value
                       }))
                     }
-                    placeholder="{21} is the placeholder for question 21..."
+                    placeholder={t("groups.fields.summaryTextPlaceholder")}
                     className="min-h-32 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
                   />
-                  <p className="text-[10px] text-muted-foreground">Use {"{number}"} placeholders that match question numbers.</p>
+                  <p className="text-[10px] text-muted-foreground">{t("groups.fields.summaryTextHint")}</p>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.wordBank") || "Word Bank (optional)"}</label>
+                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.wordBank")}</label>
                   <Input
                     value={editor.wordBank}
                     onChange={(event) =>
@@ -387,10 +387,10 @@ export function QuestionGroupsPanel({
                         wordBank: event.target.value
                       }))
                     }
-                    placeholder="word1, word2, word3..."
+                    placeholder={t("groups.fields.wordBankPlaceholder")}
                     className="h-10 rounded-xl border-border/70 bg-background/50"
                   />
-                  <p className="text-[10px] text-muted-foreground">Comma-separated list of words to show as options.</p>
+                  <p className="text-[10px] text-muted-foreground">{t("groups.fields.wordBankHint")}</p>
                 </div>
               </>
             )}
