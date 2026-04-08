@@ -205,13 +205,12 @@ function extractHeadingOptions(group: StudentAttemptQuestionGroup): string[] {
       const row = asRecord(item);
       const key = toStringSafe(row?.key);
       const text = toStringSafe(row?.text);
-      if (key && text) return `${key}. ${text}`;
       return text || key;
     })
     .map((item) => item.trim())
     .filter(Boolean);
 
-  return headings.length ? headings : ["i. Heading 1", "ii. Heading 2", "iii. Heading 3", "iv. Heading 4", "v. Heading 5"];
+  return headings.length ? headings : ["Heading 1", "Heading 2", "Heading 3", "Heading 4", "Heading 5"];
 }
 
 function extractSummaryInfo(group: StudentAttemptQuestionGroup): { summaryText: string; wordBank: string[] | null } {
@@ -2049,21 +2048,6 @@ function ReadingTestClient({
             <div ref={questionsScrollRef} className="min-h-0 flex-1 min-w-0 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5 lg:py-6 [scrollbar-color:hsl(var(--border))_transparent]">
               <div className="space-y-7 pb-8">
                 {groupedQuestions.map((group) => {
-                  const headings = group.questions.find((q) => q.type === "matchingHeadings") as Extract<ReadingQuestion, { type: "matchingHeadings" }> | undefined;
-                  const headingsHighlightKey = headings ? `matching-headings:${headings.id}` : null;
-                  const headingOptionStarts = headings
-                    ? headings.headingOptions.reduce<number[]>((acc, option, index) => {
-                        if (index === 0) {
-                          acc.push(0);
-                          return acc;
-                        }
-                        const previousStart = acc[index - 1] ?? 0;
-                        const previousOption = headings.headingOptions[index - 1] ?? "";
-                        acc.push(previousStart + previousOption.length + 1);
-                        return acc;
-                      }, [])
-                    : [];
-
                   const renderedSummariesInGroup = new Set<string>();
 
                   return (
@@ -2076,47 +2060,6 @@ function ReadingTestClient({
                           </p>
                         ) : null}
                       </div>
-
-                      {headings ? (
-                        <div className="test-soft-surface rounded-lg border border-border/80 bg-muted/35 p-3">
-                          <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{t("headingsList")}</p>
-                          <ul className="mt-2 space-y-1 text-sm">
-                            {headings.headingOptions.map((heading, headingIndex) => {
-                              const optionBase = headingOptionStarts[headingIndex] ?? 0;
-
-                              return (
-                                <li key={heading} className="wrap-break-word text-foreground/90">
-                                  <HighlightableText
-                                    text={heading}
-                                    userHighlights={
-                                      headingsHighlightKey
-                                        ? getQuestionLocalHighlights(headingsHighlightKey, optionBase, heading.length)
-                                        : []
-                                    }
-                                    notesStorageKey={`reading:${test.id}:notes`}
-                                    noteScopeKey={`${headingsHighlightKey ?? "matching-headings"}:option:${headingIndex}`}
-                                    markLabel={t.has("markText") ? t("markText") : "Mark"}
-                                    unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
-                                    onToggle={
-                                      headingsHighlightKey
-                                        ? ({ start, end, color, action }) =>
-                                            toggleHighlight({
-                                              scope: "question",
-                                              questionId: headingsHighlightKey,
-                                              start: optionBase + start,
-                                              end: optionBase + end,
-                                              color,
-                                              action,
-                                            })
-                                        : undefined
-                                    }
-                                  />
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      ) : null}
 
                       <div className="space-y-3">
                         {group.questions.map((question) => {
