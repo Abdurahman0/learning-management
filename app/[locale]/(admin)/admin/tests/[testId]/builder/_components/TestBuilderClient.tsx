@@ -1013,6 +1013,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [contentBankPassages, setContentBankPassages] = useState<ContentBankPassage[]>([]);
   const [contentBankVariants, setContentBankVariants] = useState<ContentBankVariantSet[]>([]);
+  const [audioFilesByStructureId, setAudioFilesByStructureId] = useState<Record<string, File | null>>({});
+  const [removeAudioByStructureId, setRemoveAudioByStructureId] = useState<Record<string, boolean>>({});
   const [isPersisting, setIsPersisting] = useState(false);
   const [apiNotice, setApiNotice] = useState<string | null>(null);
 
@@ -1026,6 +1028,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
         const mapped = mapPracticeTestDetailToBuilder(testId, response);
         setTest(mapped);
+        setAudioFilesByStructureId({});
+        setRemoveAudioByStructureId({});
         setActiveStructureId(() => {
           if (initialStructureId && mapped.structures.some((item) => item.id === initialStructureId)) {
             return initialStructureId;
@@ -1661,11 +1665,18 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     }));
   };
 
-  const handleUpdateAudioLabel = (structureId: string, audioLabel: string) => {
-    setTest((current) => ({
-      ...current,
-      structures: current.structures.map((structure) => (structure.id === structureId ? {...structure, audioLabel} : structure))
-    }));
+  const handleSelectAudioFile = (structureId: string, file: File | null) => {
+    setAudioFilesByStructureId((current) => ({...current, [structureId]: file}));
+    if (file) {
+      setRemoveAudioByStructureId((current) => ({...current, [structureId]: false}));
+    }
+  };
+
+  const handleToggleRemoveAudio = (structureId: string, remove: boolean) => {
+    setRemoveAudioByStructureId((current) => ({...current, [structureId]: remove}));
+    if (remove) {
+      setAudioFilesByStructureId((current) => ({...current, [structureId]: null}));
+    }
   };
 
   const handleSelectContentBankPassage = (passageId: string) => {
@@ -1775,6 +1786,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       const nextGroupsByStructure: Record<string, QuestionGroup[]> = {
         ...test.questionGroupsByStructure
       };
+      const nextAudioLabelByStructureId: Record<string, string> = {};
 
       for (const structure of test.structures) {
         const range = getStructureRange(structure);
@@ -1790,13 +1802,18 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             is_active: true
           });
         } else {
-          await listeningPartsService.patch(structure.id, {
+          const selectedAudioFile = audioFilesByStructureId[structure.id] ?? null;
+          const removeCurrentAudio = Boolean(removeAudioByStructureId[structure.id]);
+          const updatedPart = await listeningPartsService.patch(structure.id, {
             part_number: `PART_${structure.index}`,
             title: structure.title,
             transcript_text: fullText || " ",
             max_questions: maxQuestions,
-            is_active: true
+            is_active: true,
+            ...(selectedAudioFile ? {audio_file: selectedAudioFile} : {}),
+            ...(removeCurrentAudio ? {remove_audio: true} : {})
           });
+          nextAudioLabelByStructureId[structure.id] = toStringSafe(updatedPart.audio_url ?? updatedPart.audio_file ?? "");
         }
 
         const localGroups = [...(test.questionGroupsByStructure[structure.id] ?? [])]
@@ -1899,11 +1916,18 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       setTest((current) => ({
         ...current,
         status: nextStatus,
+        structures: current.structures.map((structure) =>
+          structure.id in nextAudioLabelByStructureId
+            ? {...structure, audioLabel: nextAudioLabelByStructureId[structure.id]}
+            : structure
+        ),
         questionGroupsByStructure: {
           ...current.questionGroupsByStructure,
           ...nextGroupsByStructure
         }
       }));
+      setAudioFilesByStructureId({});
+      setRemoveAudioByStructureId({});
       setApiNotice("Saved.");
     } catch (error) {
       const message = error instanceof AdminApiError ? error.message : "Failed to save changes.";
@@ -2010,7 +2034,10 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
                 selectedVariantSetName={selectedVariantSet?.name ?? null}
                 onSelectVariantSet={handleSelectVariantSet}
                 onUpdateContent={handleUpdateStructureContent}
-                onUpdateAudioLabel={handleUpdateAudioLabel}
+                selectedAudioFileName={audioFilesByStructureId[activeStructure.id]?.name ?? undefined}
+                removeCurrentAudio={Boolean(removeAudioByStructureId[activeStructure.id])}
+                onSelectAudioFile={(file) => handleSelectAudioFile(activeStructure.id, file)}
+                onToggleRemoveCurrentAudio={(remove) => handleToggleRemoveAudio(activeStructure.id, remove)}
                 onAttachEvidence={handleAttachEvidence}
               />
 

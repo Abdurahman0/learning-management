@@ -5,8 +5,8 @@ import {AudioLines, FileText} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Badge} from "@/components/ui/badge";
+import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
-import {Input} from "@/components/ui/input";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import type {BuilderMode, BuilderStructureItem, TestModule} from "@/data/admin-test-builder";
 import type {ContentBankPassage, ContentBankVariantSet} from "@/data/admin/selectors";
@@ -28,7 +28,10 @@ type PassageEditorProps = {
   selectedVariantSetName: string | null;
   onSelectVariantSet: (variantSetId: string) => void;
   onUpdateContent: (structureId: string, content: string[]) => void;
-  onUpdateAudioLabel: (structureId: string, audioLabel: string) => void;
+  selectedAudioFileName?: string;
+  removeCurrentAudio: boolean;
+  onSelectAudioFile: (file: File | null) => void;
+  onToggleRemoveCurrentAudio: (remove: boolean) => void;
   onAttachEvidence: (text: string) => boolean;
 };
 
@@ -54,13 +57,17 @@ export function PassageEditor({
   selectedVariantSetName,
   onSelectVariantSet,
   onUpdateContent,
-  onUpdateAudioLabel,
+  selectedAudioFileName,
+  removeCurrentAudio,
+  onSelectAudioFile,
+  onToggleRemoveCurrentAudio,
   onAttachEvidence
 }: PassageEditorProps) {
   const t = useTranslations("adminTestBuilder");
   const [evidenceDraft, setEvidenceDraft] = useState("");
   const textValue = useMemo(() => structure.content.join("\n\n"), [structure.content]);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const applyEvidence = () => {
     const element = textRef.current;
@@ -176,13 +183,71 @@ export function PassageEditor({
             />
 
             {module === "listening" ? (
-              <div className="space-y-2 rounded-2xl border border-border/70 bg-background/35 p-3">
-                <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("editor.audioLabel")}</label>
-                <Input
-                  value={structure.audioLabel ?? ""}
-                  onChange={(event) => onUpdateAudioLabel(structure.id, event.target.value)}
-                  placeholder={t("editor.audioPlaceholder")}
-                  className="h-9 rounded-lg border-border/70 bg-background/50"
+              <div className="space-y-3 rounded-2xl border border-border/70 bg-background/35 p-3">
+                <div className="space-y-1">
+                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">
+                    {t("editor.audioLabel")}
+                  </label>
+                  <p className="text-xs text-muted-foreground">
+                    Upload audio for this listening section.
+                  </p>
+                </div>
+
+                {selectedAudioFileName ? (
+                  <p className="text-xs text-primary">
+                    Selected file: {selectedAudioFileName}
+                  </p>
+                ) : structure.audioLabel ? (
+                  <p className="text-xs text-muted-foreground">
+                    Current audio: {structure.audioLabel}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    No audio uploaded yet.
+                  </p>
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 rounded-lg border-border/70 bg-background/50"
+                    onClick={() => audioInputRef.current?.click()}
+                  >
+                    Upload audio
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-9 rounded-lg border-border/70 bg-background/50"
+                    onClick={() => onSelectAudioFile(null)}
+                    disabled={!selectedAudioFileName}
+                  >
+                    Clear selected file
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={removeCurrentAudio ? "default" : "outline"}
+                    className="h-9 rounded-lg border-border/70 bg-background/50"
+                    onClick={() => onToggleRemoveCurrentAudio(!removeCurrentAudio)}
+                    disabled={!structure.audioLabel && !removeCurrentAudio}
+                  >
+                    {removeCurrentAudio ? "Will remove current audio" : "Remove current audio"}
+                  </Button>
+                </div>
+
+                <input
+                  ref={audioInputRef}
+                  type="file"
+                  accept="audio/*"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    onSelectAudioFile(file);
+                    if (event.target) {
+                      event.target.value = "";
+                    }
+                  }}
                 />
               </div>
             ) : null}
