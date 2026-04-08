@@ -5,7 +5,7 @@ import {useState} from "react";
 import {useRouter} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
 
-import type {ReadingGuestTest} from "@/data/guest-tests";
+import type {ReadingGuestTest} from "../tests/types";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
@@ -120,3 +120,5 @@ export function ReadingTestCard({test}: ReadingTestCardProps) {
     </Card>
   );
 }
+
+

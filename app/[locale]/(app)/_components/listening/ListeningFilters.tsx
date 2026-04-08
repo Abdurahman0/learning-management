@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import type {ListeningDifficulty} from "@/data/listening-tests";
+import type {ListeningDifficulty} from "../tests/types";
 
 type ListeningTab = "all" | "free" | "premium";
 type DifficultyFilter = "all" | ListeningDifficulty;
@@ -111,3 +111,5 @@ export function ListeningFilters({
     </div>
   );
 }
+
+

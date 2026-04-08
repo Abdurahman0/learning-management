@@ -1,15 +1,13 @@
 import type {ReactNode} from "react";
 
-import {requireTeacherOrRedirect} from "@/lib/auth/guards";
+import {redirect} from "next/navigation";
 
 type TeacherLayoutProps = {
   children: ReactNode;
   params: Promise<{locale: string}>;
 };
 
-export default async function Layout({children, params}: TeacherLayoutProps) {
+export default async function Layout({params}: TeacherLayoutProps) {
   const {locale} = await params;
-  await requireTeacherOrRedirect(locale);
-
-  return <>{children}</>;
+  redirect(`/${locale}/dashboard`);
 }

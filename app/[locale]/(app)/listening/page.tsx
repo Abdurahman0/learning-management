@@ -3,7 +3,6 @@
 import {useEffect, useMemo, useState} from "react";
 import {useTranslations} from "next-intl";
 
-import type {ListeningDifficulty, ListeningTestItem} from "@/data/listening-tests";
 import {studentTestsService} from "@/src/services/student/tests.service";
 import type {StudentTestRecord} from "@/src/services/student/types";
 
@@ -14,8 +13,22 @@ import {ListeningTestCard} from "../_components/listening/ListeningTestCard";
 import {UnlockMoreCard} from "../_components/listening/UnlockMoreCard";
 
 type ListeningTab = "all" | "free" | "premium";
+type ListeningDifficulty = "easy" | "medium" | "hard";
 type DifficultyFilter = "all" | ListeningDifficulty;
 type SortFilter = "newest" | "az";
+
+type ListeningTestItem = {
+  id: string;
+  title: string;
+  isPremium: boolean;
+  difficulty: ListeningDifficulty;
+  durationMins: number;
+  totalQuestions: number;
+  sections: Array<{
+    label: string;
+    questions: number;
+  }>;
+};
 
 function sortListeningTests(tests: ListeningTestItem[], sort: SortFilter) {
   const copy = [...tests];

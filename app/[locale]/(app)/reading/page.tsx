@@ -3,7 +3,6 @@
 import {useEffect, useMemo, useState} from "react";
 import {useTranslations} from "next-intl";
 
-import type {Difficulty, ReadingGuestTest} from "@/data/guest-tests";
 import {studentTestsService} from "@/src/services/student/tests.service";
 import type {StudentTestRecord} from "@/src/services/student/types";
 
@@ -14,8 +13,23 @@ import {ReadingTestCard} from "../_components/reading/ReadingTestCard";
 import {ReadingUnlockMoreCard} from "../_components/reading/ReadingUnlockMoreCard";
 
 type ReadingTab = "all" | "free" | "premium";
+type Difficulty = "easy" | "medium" | "hard";
 type DifficultyFilter = "all" | Difficulty;
 type SortFilter = "newest" | "az";
+
+type ReadingGuestTest = {
+  id: string;
+  title: string;
+  isPremium: boolean;
+  durationMinutes: number;
+  totalQuestions: number;
+  difficulty: Difficulty;
+  passages: Array<{
+    title: string;
+    questionsCount: number;
+    difficulty: Difficulty;
+  }>;
+};
 
 function sortReadingTests(tests: ReadingGuestTest[], sort: SortFilter) {
   const copy = [...tests];

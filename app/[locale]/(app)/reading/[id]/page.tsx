@@ -7,7 +7,7 @@ import { BookOpen, Bookmark, BookmarkCheck, Clock3, Grid2x2, HelpCircle, Maximiz
 import { LoadingModal } from "@/components/ui/loading-modal";
 import { useLocale, useTranslations } from "next-intl";
 
-import { getStaticReadingTestById, saveRuntimeReadingTest, type ReadingFullTest, type ReadingQuestion } from "@/data/reading-tests";
+import { saveRuntimeReadingTest, type ReadingFullTest, type ReadingQuestion } from "@/data/reading-tests";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -597,16 +597,8 @@ export default function ReadingTestPage() {
   const modeParam = searchParams.get("mode");
   const requestedMode: AttemptMode | null =
     modeParam === "real" || modeParam === "practice" ? modeParam : null;
-  const demoTest = getStaticReadingTestById(testId);
-  const shouldLoadFromBackend =
-    Boolean(testId)
-    && (
-      requestedMode !== null
-      || restartRequested
-      || !demoTest
-      || demoTest.questions.length === 0
-    );
-  const [test, setTest] = useState<ReadingFullTest | null>(shouldLoadFromBackend ? null : (demoTest ?? null));
+  const shouldLoadFromBackend = Boolean(testId);
+  const [test, setTest] = useState<ReadingFullTest | null>(null);
   const [backendAttemptId, setBackendAttemptId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(shouldLoadFromBackend);
   const [loadError, setLoadError] = useState<string | null>(null);

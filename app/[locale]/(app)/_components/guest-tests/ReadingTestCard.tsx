@@ -4,7 +4,7 @@ import {ChevronDown, Clock3, ListChecks, Lock} from "lucide-react";
 import {useState} from "react";
 import {useTranslations} from "next-intl";
 
-import type {ReadingGuestTest} from "@/data/guest-tests";
+import type {ReadingGuestTest} from "../tests/types";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
@@ -109,5 +109,7 @@ export function ReadingTestCard({test, defaultOpen = false}: ReadingTestCardProp
     </Card>
   );
 }
+
+
 
 

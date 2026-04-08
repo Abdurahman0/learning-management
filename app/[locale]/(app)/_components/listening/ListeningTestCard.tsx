@@ -8,7 +8,7 @@ import {useLocale, useTranslations} from "next-intl";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
-import type {ListeningTestItem} from "@/data/listening-tests";
+import type {ListeningTestItem} from "../tests/types";
 import {cn} from "@/lib/utils";
 import {DifficultySignal} from "./DifficultySignal";
 
@@ -119,3 +119,5 @@ export function ListeningTestCard({test}: ListeningTestCardProps) {
     </Card>
   );
 }
+
+

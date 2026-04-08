@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import type {Difficulty} from "@/data/guest-tests";
+import type {Difficulty} from "../tests/types";
 
 type ReadingTab = "all" | "free" | "premium";
 type DifficultyFilter = "all" | Difficulty;
@@ -86,3 +86,5 @@ export function ReadingFilters({
     </div>
   );
 }
+
+

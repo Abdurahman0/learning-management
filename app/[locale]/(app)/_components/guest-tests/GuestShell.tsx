@@ -9,6 +9,7 @@ import ReactCountryFlag from "react-country-flag";
 
 import {ThemeToggle} from "@/components/theme-toggle";
 import {Button} from "@/components/ui/button";
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "@/components/ui/sheet";
 import {cn} from "@/lib/utils";
@@ -35,6 +36,25 @@ type MobileTestNavItem = {
   href?: string;
 };
 
+function isBackendOnlySupportedStudentPath(pathWithoutLocale: string) {
+  const allowedPrefixes = ["/dashboard", "/reading", "/listening", "/analytics", "/mistake-analysis", "/settings"];
+  const blockedPrefixes = ["/messages", "/assignments", "/study-bank", "/vocabulary", "/review-center", "/sessions", "/result"];
+
+  if (blockedPrefixes.some((prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`))) {
+    return false;
+  }
+
+  if (/^\/listening\/[^/]+(?:\/.*)?$/.test(pathWithoutLocale)) {
+    return false;
+  }
+
+  if (/^\/reading\/[^/]+\/(?:result|review)$/.test(pathWithoutLocale)) {
+    return false;
+  }
+
+  return allowedPrefixes.some((prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`));
+}
+
 export function GuestShell({children}: GuestShellProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -57,6 +77,7 @@ export function GuestShell({children}: GuestShellProps) {
   const hideSidebar = /^\/(reading|listening)\/[^/]+(?:\/result)?\/?$/.test(pathWithoutLocale)
     || /^\/(reading|listening)\/test\/[^/]+\/?$/.test(pathWithoutLocale)
     || /^\/result\/[^/]+\/?$/.test(pathWithoutLocale);
+  const isBackendOnlySupported = isBackendOnlySupportedStudentPath(pathWithoutLocale);
 
   const mobilePrimaryItems: MobileNavItem[] = !isGuest
     ? [{key: "dashboard", label: t("sidebar.dashboard"), href: dashboardHref, icon: Home}]
@@ -94,6 +115,23 @@ export function GuestShell({children}: GuestShellProps) {
       <div className="flex">
         {hideSidebar ? null : <GuestSidebar usedTests={usedTests} totalTests={totalTests} role={role} />}
         <main className="min-h-screen min-w-0 flex-1 px-4 py-4 sm:px-5 lg:px-10 lg:py-8">
+          {!isBackendOnlySupported ? (
+            <div className="mx-auto w-full max-w-245 pt-4">
+              <Card className="border-border/70 bg-card/90">
+                <CardHeader>
+                  <CardTitle>Feature temporarily hidden</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-muted-foreground">
+                  <p>This page is disabled while we complete backend-only integration and remove all local mock data.</p>
+                  <Button asChild className="w-fit">
+                    <Link href={`/${locale}/dashboard`}>Back to dashboard</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
+          {isBackendOnlySupported ? (
+            <>
           {isMobileHeaderVisible ? (
             <header className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border/80 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:-mx-5 sm:px-5 lg:hidden">
               <div className="mx-auto flex h-14 w-full max-w-[1240px] items-center justify-between">
@@ -271,6 +309,8 @@ export function GuestShell({children}: GuestShellProps) {
             </header>
           ) : null}
           {children}
+            </>
+          ) : null}
         </main>
       </div>
     </div>

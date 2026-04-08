@@ -1,6 +1,6 @@
 ﻿import {cn} from "@/lib/utils";
 
-import type {ListeningDifficulty} from "@/data/listening-tests";
+import type {ListeningDifficulty} from "../tests/types";
 
 type DifficultySignalProps = {
   difficulty: ListeningDifficulty;
@@ -37,3 +37,5 @@ export function DifficultySignal({difficulty, className}: DifficultySignalProps)
     </span>
   );
 }
+
+

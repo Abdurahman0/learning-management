@@ -4,7 +4,7 @@ import {ChevronDown, Clock3, ListChecks, Lock, Play} from "lucide-react";
 import {useState} from "react";
 import {useTranslations} from "next-intl";
 
-import type {ListeningGuestTest} from "@/data/guest-tests";
+import type {ListeningGuestTest} from "../tests/types";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
@@ -19,7 +19,8 @@ type ListeningTestCardProps = {
 export function ListeningTestCard({test, defaultOpen = false}: ListeningTestCardProps) {
   const t = useTranslations("guest");
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  const sectionQuestionCount = Math.round(test.totalQuestions / test.sectionsCount);
+  const sectionsCount = test.sectionsCount ?? (test.sections.length || 4);
+  const sectionQuestionCount = Math.round(test.totalQuestions / sectionsCount);
 
   return (
     <Card className={cn("border-border bg-card py-0 shadow-sm", test.isPremium && "opacity-80", isOpen && !test.isPremium && "border-blue-600")}>
@@ -64,7 +65,7 @@ export function ListeningTestCard({test, defaultOpen = false}: ListeningTestCard
         {isOpen && (
           <div className="border-t border-border px-4 py-4 lg:px-5">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {Array.from({length: test.sectionsCount}, (_, index) => (
+              {Array.from({length: sectionsCount}, (_, index) => (
                 <div key={`${test.id}-section-${index + 1}`} className="rounded-xl border border-border bg-background p-3">
                   <p className="text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
                     {t("card.section")} {index + 1}
@@ -104,3 +105,5 @@ export function ListeningTestCard({test, defaultOpen = false}: ListeningTestCard
     </Card>
   );
 }
+
+
