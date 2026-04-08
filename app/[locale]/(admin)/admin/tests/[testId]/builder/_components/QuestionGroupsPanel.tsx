@@ -238,22 +238,31 @@ export function QuestionGroupsPanel({
       return;
     }
 
-    const groupContent = {
-      summary_text: editor.summaryText,
-      word_bank:
-        editor.type === "summary_completion"
-          ? ["word1"]
-          : editor.wordBank.split(",").map(s => s.trim()).filter(Boolean),
-      headings: editor.headings.split("\n").map(s => s.trim()).filter(Boolean),
-      choices: editor.choices.split("\n").map(s => s.trim()).filter(Boolean)
-    };
+    const parsedHeadings = editor.headings.split("\n").map((value) => value.trim()).filter(Boolean);
+    const parsedChoices = editor.choices.split("\n").map((value) => value.trim()).filter(Boolean);
+    const parsedWordBank = editor.wordBank.split(",").map((value) => value.trim()).filter(Boolean);
+
+    const groupContent =
+      editor.type === "summary_completion"
+        ? {
+            summary_text: editor.summaryText,
+            word_bank: parsedWordBank.length ? parsedWordBank : ["word1"]
+          }
+        : editor.type === "matching_headings"
+          ? {headings: parsedHeadings}
+          : (
+                editor.type === "matching_information"
+                || editor.type === "matching_features"
+                || editor.type === "selecting_from_a_list"
+                || editor.type === "map"
+              )
+            ? {choices: parsedChoices}
+            : undefined;
 
     if (editor.mode === "create") {
       onCreateGroup(editor.type, editor.from, editor.to, editor.instructions, groupContent);
     } else if (editor.groupId) {
-      (onEditGroup as any)(editor.groupId, editor.type, editor.from, editor.to, editor.instructions, {
-        ...groupContent
-      });
+      (onEditGroup as any)(editor.groupId, editor.type, editor.from, editor.to, editor.instructions, groupContent);
     }
 
     setEditor((current) => ({...current, open: false}));
