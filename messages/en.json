@@ -426,7 +426,7 @@
                                 "submit":  "Create Account",
                                 "bottomText":  "Already have an account?",
                                 "bottomLink":  "Sign in here",
-                                "success":  "Account created. You can connect backend auth next."
+                                "success":  "Account created successfully."
                             },
                  "signin":  {
                                 "title":  "Sign In",
@@ -437,7 +437,7 @@
                                 "submit":  "Sign In",
                                 "bottomText":  "Don\u0027t have an account?",
                                 "bottomLink":  "Create one",
-                                "success":  "Signed in. You can connect backend auth next."
+                                "success":  "Signed in successfully."
                             },
                  "signupMarketing":  {
                                          "title":  "Master the IELTS exam with confidence",

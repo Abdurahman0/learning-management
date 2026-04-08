@@ -1,107 +1,106 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
+import {useCallback, useEffect, useMemo, useState} from "react";
+import {usePathname, useRouter, useSearchParams} from "next/navigation";
+import {useLocale} from "next-intl";
+
+import {authApi} from "@/lib/api/auth";
+import {requestGoogleIdToken} from "@/lib/auth/google-client";
+import {resolveGoogleClientId} from "@/lib/auth/google-config";
 
 type GoogleSignInOptions = {
   onSuccess?: () => void;
   onError?: (error: string) => void;
 };
 
-export function useGoogleSignIn({ onSuccess, onError }: GoogleSignInOptions = {}) {
+function resolveDashboardPath(locale: string, role: string) {
+  if (role === "admin") return `/${locale}/admin`;
+  if (role === "teacher") return `/${locale}/teacher`;
+  return `/${locale}/reading`;
+}
+
+export function useGoogleSignIn({onSuccess, onError}: GoogleSignInOptions = {}) {
   const locale = useLocale();
   const router = useRouter();
-  const [isInitialized, setIsInitialized] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const code = searchParams.get("code")?.trim() ?? "";
+
+  const callbackPath = useMemo(() => {
+    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    nextSearchParams.delete("code");
+    const query = nextSearchParams.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  }, [pathname, searchParams]);
 
   useEffect(() => {
-    const initGoogle = async () => {
-      try {
-        const response = await fetch("/api/auth/google/client-id");
-        if (!response.ok) {
-          throw new Error("Failed to fetch Google Client ID");
-        }
-        const { client_id } = await response.json();
+    setIsInitialized(true);
+  }, []);
 
-        if (!client_id) {
-          throw new Error("Google Client ID is missing");
-        }
+  useEffect(() => {
+    if (!code) {
+      return;
+    }
 
-        const script = document.createElement("script");
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          const google = (window as any).google;
-          if (google) {
-            google.accounts.id.initialize({
-              client_id: client_id,
-              callback: handleCredentialResponse,
-            });
-            setIsInitialized(true);
-          }
-        };
-        document.body.appendChild(script);
-      } catch (err) {
-        console.error("Google Auth initialization failed:", err);
-      }
-    };
+    let isCancelled = false;
 
-    const handleCredentialResponse = async (response: any) => {
+    const exchangeCode = async () => {
       setIsLoading(true);
-      try {
-        const res = await fetch("/api/auth/google", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id_token: response.credential }),
-        });
 
-        const payload = (await res.json()) as {
-          role?: string;
-          detail?: string;
-          error?: string;
-        };
-
-        if (!res.ok || !payload.role) {
-          throw new Error(payload.detail || payload.error || "Google Auth failed");
-        }
-
-        onSuccess?.();
-        
-        if (payload.role === "admin") {
-          router.replace(`/${locale}/admin`);
-        } else if (payload.role === "teacher") {
-          router.replace(`/${locale}/teacher`);
-        } else {
-          router.replace(`/${locale}/reading`);
-        }
-        
-        router.refresh();
-      } catch (err: any) {
-        console.error("Google Login failed:", err);
-        onError?.(err.message || "Something went wrong during Google Sign-In");
-      } finally {
-        setIsLoading(false);
+      const response = await authApi.exchangeGoogleCode({code});
+      if (isCancelled) {
+        return;
       }
+
+      if (!response.ok || !response.data?.role) {
+        setIsLoading(false);
+        onError?.(response.detail ?? "Google authentication failed.");
+        return;
+      }
+
+      onSuccess?.();
+      router.replace(resolveDashboardPath(locale, response.data.role));
+      router.refresh();
     };
 
-    initGoogle();
+    void exchangeCode();
 
     return () => {
-      const script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-      if (script) {
-        document.body.removeChild(script);
-      }
+      isCancelled = true;
     };
-  }, [locale, router, onSuccess, onError]);
+  }, [code, locale, onError, onSuccess, router]);
 
-  const signIn = useCallback(() => {
-    const google = (window as any).google;
-    if (google && isInitialized) {
-      google.accounts.id.prompt(); 
+  const signIn = useCallback(async () => {
+    setIsLoading(true);
+
+    try {
+      const redirectFlowResponse = await authApi.getGoogleAuthorizationUrl(callbackPath);
+      const authUrl = redirectFlowResponse.data?.authorization_url?.trim() ?? "";
+
+      if (redirectFlowResponse.ok && authUrl) {
+        window.location.assign(authUrl);
+        return;
+      }
+
+      const clientId = await resolveGoogleClientId();
+      const idToken = await requestGoogleIdToken(clientId);
+      const directFlowResponse = await authApi.loginWithGoogleToken({id_token: idToken});
+
+      if (!directFlowResponse.ok || !directFlowResponse.data?.role) {
+        throw new Error(directFlowResponse.detail ?? "Google authentication failed.");
+      }
+
+      onSuccess?.();
+      router.replace(resolveDashboardPath(locale, directFlowResponse.data.role));
+      router.refresh();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Something went wrong during Google sign-in.";
+      onError?.(message);
+      setIsLoading(false);
     }
-  }, [isInitialized]);
+  }, [callbackPath, locale, onError, onSuccess, router]);
 
-  return { signIn, isReady: isInitialized, isLoading };
+  return {signIn, isReady: isInitialized && !code, isLoading};
 }

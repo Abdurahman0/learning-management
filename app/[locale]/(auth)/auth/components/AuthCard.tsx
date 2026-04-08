@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { authApi } from "@/lib/api/auth";
 import { cn } from "@/lib/utils";
 
 import type { AuthMode } from "./AuthShell";
@@ -107,19 +108,32 @@ export function AuthCard({ mode }: AuthCardProps) {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-        }),
+      if (isSignup) {
+        const response = await authApi.register({
+          full_name: form.fullName.trim(),
+          email: form.email.trim().toLowerCase(),
+          password: form.password
+        });
+
+        if (!response.ok) {
+          setStatus(response.detail ?? "Registration failed. Please try again.");
+          setStatusType("error");
+          return;
+        }
+
+        setStatus(response.detail ?? successLabel);
+        setStatusType("success");
+        router.replace(`/${locale}/activate?email=${encodeURIComponent(form.email.trim().toLowerCase())}`);
+        return;
+      }
+
+      const response = await authApi.login({
+        email: form.email.trim().toLowerCase(),
+        password: form.password
       });
 
-      const payload = (await response.json().catch(() => null)) as {role?: "user" | "teacher" | "admin"; error?: string} | null;
-
-      if (!response.ok || !payload?.role) {
-        setStatus(payload?.error ?? "Invalid credentials.");
+      if (!response.ok || !response.data?.role) {
+        setStatus(response.data?.error ?? response.detail ?? "Invalid credentials.");
         setStatusType("error");
         return;
       }
@@ -127,9 +141,9 @@ export function AuthCard({ mode }: AuthCardProps) {
       setStatus(successLabel);
       setStatusType("success");
 
-      if (payload.role === "admin") {
+      if (response.data.role === "admin") {
         router.replace(`/${locale}/admin`);
-      } else if (payload.role === "teacher") {
+      } else if (response.data.role === "teacher") {
         router.replace(`/${locale}/teacher`);
       } else {
         router.replace(`/${locale}/reading`);
@@ -151,7 +165,10 @@ export function AuthCard({ mode }: AuthCardProps) {
         <p className="text-lg text-muted-foreground">{isSignup ? t("signup.subtitle") : t("signin.subtitle")}</p>
       </div>
 
-      <GoogleButton label={t("common.continueWithGoogle")} disabled={isSubmitting} />
+      <GoogleButton label={t("common.continueWithGoogle")} disabled={isSubmitting} onError={(error) => {
+        setStatus(error);
+        setStatusType("error");
+      }} />
 
       <div className="my-6 flex w-full items-center gap-3 overflow-hidden">
         <div className="h-px flex-1 bg-border" />

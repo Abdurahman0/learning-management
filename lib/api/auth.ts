@@ -3,6 +3,7 @@ import type {AuthCurrentUser} from "@/lib/auth/current-user";
 type AuthApiRequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
+  query?: Record<string, string | undefined>;
 };
 
 export type AuthApiResponse<T = Record<string, unknown>> = {
@@ -38,9 +39,29 @@ function extractDetail(payload: unknown): string | null {
 async function requestAuthApi<T>(path: string, options?: AuthApiRequestOptions): Promise<AuthApiResponse<T>> {
   const method = options?.method ?? "POST";
   const hasBody = options?.body !== undefined && method !== "GET" && method !== "DELETE";
+  const query = options?.query;
+  const requestPath = (() => {
+    if (!query || Object.keys(query).length === 0) {
+      return path;
+    }
+
+    const searchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (typeof value === "string" && value.trim()) {
+        searchParams.set(key, value);
+      }
+    }
+
+    const queryString = searchParams.toString();
+    if (!queryString) {
+      return path;
+    }
+
+    return path.includes("?") ? `${path}&${queryString}` : `${path}?${queryString}`;
+  })();
 
   try {
-    const response = await fetch(path, {
+    const response = await fetch(requestPath, {
       method,
       headers: {
         Accept: "application/json",
@@ -70,6 +91,29 @@ async function requestAuthApi<T>(path: string, options?: AuthApiRequestOptions):
 }
 
 export const authApi = {
+  register(payload: {full_name?: string; fullName?: string; email: string; password: string}) {
+    return requestAuthApi<{detail?: string}>("/api/auth/register", {body: payload});
+  },
+
+  login(payload: {email: string; password: string}) {
+    return requestAuthApi<{role?: "user" | "teacher" | "admin"; error?: string}>("/api/auth/login", {body: payload});
+  },
+
+  loginWithGoogleToken(payload: {id_token: string}) {
+    return requestAuthApi<{role?: "user" | "teacher" | "admin"; detail?: string}>("/api/auth/google", {body: payload});
+  },
+
+  getGoogleAuthorizationUrl(next?: string) {
+    return requestAuthApi<{authorization_url?: string; redirect_uri?: string; detail?: string}>("/api/auth/google/url", {
+      method: "GET",
+      query: {next}
+    });
+  },
+
+  exchangeGoogleCode(payload: {code: string}) {
+    return requestAuthApi<{role?: "user" | "teacher" | "admin"; detail?: string}>("/api/auth/google/exchange", {body: payload});
+  },
+
   me() {
     return requestAuthApi<AuthCurrentUser>("/api/auth/me", {method: "GET"});
   },

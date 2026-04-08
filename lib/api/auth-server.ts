@@ -4,6 +4,8 @@ export const AUTH_BACKEND_ENDPOINTS = {
   resendActivation: "/api/auth/resend-activation/",
   login: "/api/auth/login/",
   google: "/api/auth/google/",
+  googleUrl: "/api/auth/google/url/",
+  googleExchange: "/api/auth/google/exchange/",
   me: "/api/auth/me/",
   edit: "/api/auth/edit/",
   refresh: "/api/auth/token/refresh/",
