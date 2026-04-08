@@ -45,6 +45,7 @@ type GroupEditorState = {
   instructions: string;
   summaryText: string;
   completionTemplateText: string;
+  mcqMode: "single" | "multiple";
   wordBank: string;
   headings: string;
   choices: string;
@@ -138,6 +139,7 @@ export function QuestionGroupsPanel({
     instructions: "",
     summaryText: "",
     completionTemplateText: "",
+    mcqMode: "single",
     wordBank: "",
     headings: "",
     choices: ""
@@ -210,6 +212,7 @@ export function QuestionGroupsPanel({
       instructions: "",
       summaryText: "",
       completionTemplateText: "",
+      mcqMode: "single",
       wordBank: "",
       headings: "",
       choices: ""
@@ -227,6 +230,7 @@ export function QuestionGroupsPanel({
       instructions: group.instructions ?? "",
       summaryText: (group.groupContentJson as any)?.summary_text ?? "",
       completionTemplateText: (group.groupContentJson as any)?.template_text ?? "",
+      mcqMode: (group.groupContentJson as any)?.mcq_mode === "multiple" ? "multiple" : "single",
       wordBank: Array.isArray((group.groupContentJson as any)?.word_bank) 
         ? ((group.groupContentJson as any).word_bank as string[]).join(", ") 
         : "",
@@ -256,7 +260,9 @@ export function QuestionGroupsPanel({
     const parsedTemplateText = editor.completionTemplateText.trim();
 
     const groupContent =
-      editor.type === "summary_completion"
+      editor.type === "multiple_choice" && module === "listening"
+        ? {mcq_mode: editor.mcqMode}
+        : editor.type === "summary_completion"
         ? {
             summary_text: editor.summaryText,
             word_bank: parsedWordBank.length ? parsedWordBank : ["word1"]
@@ -426,6 +432,29 @@ export function QuestionGroupsPanel({
                   <p className="text-[10px] text-muted-foreground">{t("groups.fields.summaryTextHint")}</p>
                 </div>
               </>
+            )}
+
+            {editor.type === "multiple_choice" && module === "listening" && (
+              <div className="space-y-1.5">
+                <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCQ Mode</label>
+                <Select
+                  value={editor.mcqMode}
+                  onValueChange={(value) =>
+                    setEditor((current) => ({
+                      ...current,
+                      mcqMode: value === "multiple" ? "multiple" : "single"
+                    }))
+                  }
+                >
+                  <SelectTrigger className="h-10 rounded-xl border-border/70 bg-background/50">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="single">Single answer (MCQ_SINGLE)</SelectItem>
+                    <SelectItem value="multiple">Multiple answers (MCQ_MULTIPLE)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
 
             {(editor.type === "note_completion" || editor.type === "form_completion") && (

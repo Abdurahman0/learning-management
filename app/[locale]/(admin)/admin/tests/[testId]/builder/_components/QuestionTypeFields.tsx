@@ -10,6 +10,7 @@ import type {BuilderQuestion, TextInputQuestion} from "@/data/admin-test-builder
 
 type QuestionTypeFieldsProps = {
   question: BuilderQuestion;
+  mcqMode?: "single" | "multiple";
   onChange: (question: BuilderQuestion) => void;
 };
 
@@ -52,7 +53,7 @@ function isMatchingChoiceQuestion(question: BuilderQuestion): question is Extrac
   return question.type === "matching_information" || question.type === "matching_features";
 }
 
-export function QuestionTypeFields({question, onChange}: QuestionTypeFieldsProps) {
+export function QuestionTypeFields({question, mcqMode = "single", onChange}: QuestionTypeFieldsProps) {
   const t = useTranslations("adminTestBuilder");
   const answerValue = useMemo(() => {
     if (!("correctAnswer" in question)) {
@@ -141,18 +142,54 @@ export function QuestionTypeFields({question, onChange}: QuestionTypeFieldsProps
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctOption")}</Label>
-            <Select value={question.correctAnswer} onValueChange={(value) => onChange({...question, correctAnswer: value as "A" | "B" | "C" | "D"})}>
-              <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {["A", "B", "C", "D"].map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {value}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {mcqMode === "multiple" ? (
+              <div className="grid grid-cols-4 gap-2">
+                {["A", "B", "C", "D"].map((value) => {
+                  const selected = question.correctAnswer
+                    .split(",")
+                    .map((item) => item.trim().toUpperCase())
+                    .filter(Boolean)
+                    .includes(value);
+
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`h-9 rounded-lg border text-xs font-semibold tracking-wide ${
+                        selected
+                          ? "border-primary/60 bg-primary/20 text-primary"
+                          : "border-border/70 bg-background/45 text-muted-foreground"
+                      }`}
+                      onClick={() => {
+                        const current = question.correctAnswer
+                          .split(",")
+                          .map((item) => item.trim().toUpperCase())
+                          .filter(Boolean);
+                        const next = selected
+                          ? current.filter((item) => item !== value)
+                          : [...current, value];
+                        onChange({...question, correctAnswer: next.join(", ")});
+                      }}
+                    >
+                      {value}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <Select value={question.correctAnswer} onValueChange={(value) => onChange({...question, correctAnswer: value})}>
+                <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {["A", "B", "C", "D"].map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
       ) : null}

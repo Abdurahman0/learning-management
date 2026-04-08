@@ -139,6 +139,7 @@ function extractOptionTexts(value: unknown) {
       const text = toStringSafe(row?.text).trim();
       const label = toStringSafe(row?.label).trim();
       const key = toStringSafe(row?.key).trim();
+      if (key && text) return `${key}. ${text}`;
       return text || label || key;
     })
     .filter(Boolean);
@@ -227,6 +228,7 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
     return [{
       type: "mcqGroup",
       title: toStringSafe(group.instructions).trim() || "Choose the correct answer.",
+      allowMultiple: type === "MCQ_MULTIPLE",
       questions: questions.map((question) => {
         const options = asRecord(question.options_json);
         const optionTexts = extractOptionTexts(options?.options);
@@ -415,6 +417,21 @@ type AnswersMap = Record<number, string>;
 
 function isAnswered(value: string | undefined) {
   return (value ?? "").trim().length > 0;
+}
+
+function parseOptionChoice(option: string, index: number) {
+  const match = option.match(/^\s*([A-Z])[\)\].:\-]\s*(.+)$/i);
+  if (match) {
+    return {
+      key: match[1].toUpperCase(),
+      label: `${match[1].toUpperCase()}. ${match[2].trim()}`
+    };
+  }
+
+  return {
+    key: String.fromCharCode("A".charCodeAt(0) + index),
+    label: option
+  };
 }
 
 function QuestionChip({
@@ -1376,27 +1393,54 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                 {question.prompt}
               </p>
               <div className="mt-2 space-y-2">
-                {question.options.map((option) => (
+                {question.options.map((option, optionIndex) => {
+                  const choice = parseOptionChoice(option, optionIndex);
+                  const selectedSet = new Set(
+                    (answers[question.questionNumber] ?? "")
+                      .split(",")
+                      .map((item) => item.trim().toUpperCase())
+                      .filter(Boolean)
+                  );
+                  const selected = selectedSet.has(choice.key);
+
+                  return (
                   <label
-                    key={option}
+                    key={`${question.questionNumber}-${choice.key}`}
                     className="flex min-w-0 items-start gap-2 text-sm"
                   >
                     <input
-                      type="radio"
+                      type={block.allowMultiple ? "checkbox" : "radio"}
                       name={`q-${question.questionNumber}`}
-                      value={option}
-                      checked={answers[question.questionNumber] === option}
-                      onChange={(e) =>
-                        setAnswer(question.questionNumber, e.target.value)
-                      }
+                      value={choice.key}
+                      checked={block.allowMultiple ? selected : answers[question.questionNumber] === choice.key}
+                      onChange={(e) => {
+                        if (!block.allowMultiple) {
+                          setAnswer(question.questionNumber, e.target.value);
+                          return;
+                        }
+
+                        const current = new Set(
+                          (answers[question.questionNumber] ?? "")
+                            .split(",")
+                            .map((item) => item.trim().toUpperCase())
+                            .filter(Boolean)
+                        );
+                        if (current.has(choice.key)) {
+                          current.delete(choice.key);
+                        } else {
+                          current.add(choice.key);
+                        }
+                        setAnswer(question.questionNumber, [...current].join(", "));
+                      }}
                       onFocus={() =>
                         setActiveQuestionNumber(question.questionNumber)
                       }
                       className="mt-0.5"
                     />
-                    <span className="wrap-break-word">{option}</span>
+                    <span className="wrap-break-word">{choice.label}</span>
                   </label>
-                ))}
+                  );
+                })}
               </div>
             </article>
           ))}
@@ -1763,8 +1807,8 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
       {!reviewMode ? (
       <div
         className={cn(
-          "sticky top-14 z-30 border-b border-border bg-background/95 px-3 py-2 backdrop-blur sm:top-16 sm:px-4 lg:px-8",
-          isSmallLandscape && "top-12 py-1.5 px-2",
+          "border-b border-border bg-background/95 px-3 py-2 backdrop-blur sm:px-4 lg:px-8",
+          isSmallLandscape && "py-1.5 px-2",
         )}
       >
         <div className="grid w-full min-w-0 max-w-full grid-cols-[36px_minmax(0,1fr)] items-center gap-2 sm:gap-3">

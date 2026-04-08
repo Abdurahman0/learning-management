@@ -451,6 +451,18 @@ function mapBuilderQuestionTypeToApi(value: QuestionType, questionCount: number)
   return mapping[value] ?? String(value).toUpperCase();
 }
 
+function resolveMcqModeFromGroupContent(groupContent: unknown): "single" | "multiple" {
+  const content = asRecord(groupContent);
+  return toStringSafe(content.mcq_mode).trim().toLowerCase() === "multiple" ? "multiple" : "single";
+}
+
+function resolveApiQuestionTypeForGroup(type: QuestionType, questionCount: number, groupContent?: unknown) {
+  if (type !== "multiple_choice") {
+    return mapBuilderQuestionTypeToApi(type, questionCount);
+  }
+  return resolveMcqModeFromGroupContent(groupContent) === "multiple" ? "MCQ_MULTIPLE" : "MCQ_SINGLE";
+}
+
 function normalizeChoiceToken(value: string) {
   return value.trim().toUpperCase().replace(/\s+/g, "_");
 }
@@ -579,11 +591,17 @@ function mapBuilderQuestionToBulkPayload(question: BuilderQuestion, apiType: str
     const optionRows = question.options
       .map((text, index) => ({key: toOptionKey(index), text: text.trim()}))
       .filter((item) => item.text.length > 0);
-    const normalizedAnswer = question.correctAnswer.trim().toUpperCase();
+    const normalizedAnswers = question.correctAnswer
+      .split(",")
+      .map((value) => value.trim().toUpperCase())
+      .filter((value) => value === "A" || value === "B" || value === "C" || value === "D");
+    const normalizedAnswer = normalizedAnswers[0] ?? "";
     return {
       ...base,
       options_json: {options: optionRows},
-      correct_answer_json: apiType === "MCQ_MULTIPLE" ? {answers: normalizedAnswer ? [normalizedAnswer] : []} : {answer: normalizedAnswer}
+      correct_answer_json: apiType === "MCQ_MULTIPLE"
+        ? {answers: [...new Set(normalizedAnswers)]}
+        : {answer: normalizedAnswer}
     };
   }
 
@@ -742,8 +760,13 @@ function mapApiQuestionToBuilderQuestion(
     if (options.length) {
       builderQuestion.options = [...options, ...Array.from({length: Math.max(0, 4 - options.length)}, () => "")].slice(0, 4);
     }
-    const normalizedAnswer = answer.answer.toUpperCase();
-    builderQuestion.correctAnswer = normalizedAnswer === "A" || normalizedAnswer === "B" || normalizedAnswer === "C" || normalizedAnswer === "D" ? normalizedAnswer : "";
+    const normalizedSingle = answer.answer.toUpperCase();
+    const normalizedMultiple = answer.answers
+      .map((value) => value.toUpperCase())
+      .filter((value) => value === "A" || value === "B" || value === "C" || value === "D");
+    builderQuestion.correctAnswer = normalizedMultiple.length
+      ? [...new Set(normalizedMultiple)].join(", ")
+      : (normalizedSingle === "A" || normalizedSingle === "B" || normalizedSingle === "C" || normalizedSingle === "D" ? normalizedSingle : "");
     return builderQuestion;
   }
 
@@ -822,7 +845,11 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
     ? sourceQuestions.map((question, index) => mapApiQuestionToBuilderQuestion(type, question, group, from + index))
     : Array.from({length: Math.max(0, to - from + 1)}, (_, index) => createDefaultQuestion(type, from + index));
 
-  const groupContent = asRecord(group.group_content_json);
+  const rawGroupContent = asRecord(group.group_content_json);
+  const groupContent =
+    toStringSafe(group.question_type).trim().toUpperCase() === "MCQ_MULTIPLE"
+      ? {...rawGroupContent, mcq_mode: "multiple"}
+      : rawGroupContent;
   const headingRows = Array.isArray(groupContent.headings) ? groupContent.headings : [];
   const choiceRows = Array.isArray(groupContent.choices)
     ? groupContent.choices
@@ -874,7 +901,7 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
     questions: enrichedQuestions,
     variantSetId: toStringSafe(group.variant_set ?? ""),
     instructions: toStringSafe(group.instructions ?? ""),
-    groupContentJson: group.group_content_json ?? null
+    groupContentJson: groupContent
   });
 }
 
@@ -1402,15 +1429,18 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           ? ({listening_part: activeStructure.id} satisfies Pick<QuestionGroupPayload, "listening_part">)
           : ({reading_passage: activeStructure.id} satisfies Pick<QuestionGroupPayload, "reading_passage">);
 
+      const resolvedGroupContent = ensureGroupContentForApi(type, from, to, groupContent);
+      const apiQuestionType = resolveApiQuestionTypeForGroup(type, Math.max(1, to - from + 1), resolvedGroupContent);
+
       const payload: QuestionGroupPayload = {
-        question_type: type,
+        question_type: apiQuestionType,
         group_order: activeGroups.length + 1,
         instructions: resolveInstructionsForSubmit(type, instructions),
         question_number_start: from,
         question_number_end: to,
         word_limit: null,
         number_allowed: false,
-        group_content_json: ensureGroupContentForApi(type, from, to, groupContent),
+        group_content_json: resolvedGroupContent,
         is_active: true,
         ...parentPayload
       };
@@ -1894,9 +1924,9 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         for (let index = 0; index < localGroups.length; index += 1) {
           const group = localGroups[index];
           const normalizedLocalQuestions = [...group.questions].sort((left, right) => left.number - right.number);
-          const apiQuestionType = mapBuilderQuestionTypeToApi(group.type, normalizedLocalQuestions.length);
+          const apiQuestionType = resolveApiQuestionTypeForGroup(group.type, normalizedLocalQuestions.length, group.groupContentJson);
           const commonPayload = {
-            question_type: group.type,
+            question_type: apiQuestionType,
             group_order: index + 1,
             instructions: resolveInstructionsForSubmit(group.type, group.instructions ?? ""),
             question_number_start: group.from,
@@ -2116,6 +2146,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       <QuestionEditorModal
         open={questionEditorOpen && Boolean(selectedQuestionData)}
         question={selectedQuestionData?.question ?? null}
+        mcqMode={resolveMcqModeFromGroupContent(selectedQuestionData?.group?.groupContentJson)}
         onOpenChange={setQuestionEditorOpen}
         onQuestionChange={(nextQuestion) => {
           if (!selectedQuestion) {

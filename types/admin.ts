@@ -80,7 +80,7 @@ export type BuilderQuestionBase = {
 
 export type TFNGAnswer = "TRUE" | "FALSE" | "NOT GIVEN" | "";
 export type YesNoNotGivenAnswer = "YES" | "NO" | "NOT GIVEN" | "";
-export type MultipleChoiceAnswer = "A" | "B" | "C" | "D" | "";
+export type MultipleChoiceAnswer = string;
 
 export type TFNGBuilderQuestion = BuilderQuestionBase & {
   type: "tfng";

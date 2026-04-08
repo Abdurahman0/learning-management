@@ -30,6 +30,7 @@ export type TableCompletionBlock = {
 export type McqGroupBlock = {
   type: "mcqGroup";
   title?: string;
+  allowMultiple?: boolean;
   questions: Array<{
     questionNumber: number;
     prompt: string;
