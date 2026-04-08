@@ -94,6 +94,8 @@ export type ListeningFullTest = {
   sections: ListeningSectionFull[];
 };
 
+const RUNTIME_LISTENING_TESTS = new Map<string, ListeningFullTest>();
+
 export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
   {
     id: "cambridge-19-listening-2",
@@ -618,6 +620,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
 ];
 
 export function getListeningTestById(id: string) {
-  return LISTENING_TESTS_FULL.find((test) => test.id === id);
+  return RUNTIME_LISTENING_TESTS.get(id) ?? LISTENING_TESTS_FULL.find((test) => test.id === id);
+}
+
+export function saveRuntimeListeningTest(test: ListeningFullTest) {
+  if (!test?.id) return;
+  RUNTIME_LISTENING_TESTS.set(test.id, test);
 }
 

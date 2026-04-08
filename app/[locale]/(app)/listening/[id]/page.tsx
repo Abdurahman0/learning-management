@@ -20,9 +20,13 @@ import {
   Volume2,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { LoadingModal } from "@/components/ui/loading-modal";
 
 import {
+  type ListeningFullTest,
+  type ListeningSectionId,
   getListeningTestById,
+  saveRuntimeListeningTest,
   type ListeningBlock,
   type ListeningSectionFull,
 } from "@/data/listening-tests-full";
@@ -62,6 +66,10 @@ import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
 import { ListeningQuestionAnalysisPanel } from "./result/_components/ListeningQuestionAnalysisPanel";
 import type { ListeningBackendAnswerMeta } from "./result/_components/backendReviewAdapters";
 import { ListeningTranscriptReviewPanel, type ListeningReviewSection } from "./result/_components/ListeningTranscriptReviewPanel";
+import { studentAttemptsService } from "@/src/services/student/attempts.service";
+import { studentTestsService } from "@/src/services/student/tests.service";
+import { StudentApiError } from "@/src/services/student/types";
+import type { StudentAttemptDetail, StudentAttemptQuestion, StudentAttemptQuestionGroup, StudentAttemptListeningPart, StudentTestRecord } from "@/src/services/student/types";
 
 function formatTime(seconds: number) {
   const safe = Math.max(0, seconds);
@@ -89,6 +97,264 @@ function getQuestionNumbersFromBlock(block: ListeningBlock): number[] {
     default:
       return [];
   }
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function toStringSafe(value: unknown, fallback = "") {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return fallback;
+}
+
+function toNumberSafe(value: unknown, fallback = 0) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function extractQuestionPrompt(question: StudentAttemptQuestion) {
+  const options = asRecord(question.options_json);
+  return (
+    toStringSafe(options?.statement).trim()
+    || toStringSafe(options?.sentence_stem).trim()
+    || toStringSafe(question.question_text).trim()
+    || `Question ${question.question_number}`
+  );
+}
+
+function extractOptionTexts(value: unknown) {
+  return asArray<unknown>(value)
+    .map((item) => {
+      if (typeof item === "string") return item.trim();
+      const row = asRecord(item);
+      const text = toStringSafe(row?.text).trim();
+      const label = toStringSafe(row?.label).trim();
+      const key = toStringSafe(row?.key).trim();
+      return text || label || key;
+    })
+    .filter(Boolean);
+}
+
+function parseTemplateFields(templateText: string, questions: StudentAttemptQuestion[]) {
+  const fallbackByNumber = new Map(
+    questions.map((q) => [Number(q.question_number), toStringSafe(q.question_text).trim() || `Question ${q.question_number}`])
+  );
+
+  const lines = templateText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const fields: Array<{questionNumber: number; label: string; placeholder?: string}> = [];
+
+  for (const line of lines) {
+    const match = line.match(/\{(\d+)\}/);
+    if (!match) continue;
+    const questionNumber = Number(match[1]);
+    if (!Number.isFinite(questionNumber) || questionNumber <= 0) continue;
+
+    const cleanedLabel = line
+      .replace(/\{(\d+)\}/g, "")
+      .replace(/[:\-–]\s*$/, "")
+      .trim();
+
+    fields.push({
+      questionNumber,
+      label: cleanedLabel || fallbackByNumber.get(questionNumber) || `Question ${questionNumber}`
+    });
+  }
+
+  if (fields.length) return fields;
+
+  return questions
+    .slice()
+    .sort((a, b) => a.question_number - b.question_number)
+    .map((question) => ({
+      questionNumber: question.question_number,
+      label: toStringSafe(question.question_text).trim() || `Question ${question.question_number}`
+    }));
+}
+
+function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] {
+  const type = toStringSafe(group.question_type).trim().toUpperCase();
+  const content = asRecord(group.group_content_json);
+  const questions = group.questions.slice().sort((a, b) => a.question_number - b.question_number);
+
+  if (type === "MCQ_SINGLE" || type === "MCQ_MULTIPLE") {
+    return [{
+      type: "mcqGroup",
+      title: toStringSafe(group.instructions).trim() || "Choose the correct answer.",
+      questions: questions.map((question) => {
+        const options = asRecord(question.options_json);
+        const optionTexts = extractOptionTexts(options?.options);
+        return {
+          questionNumber: question.question_number,
+          prompt: extractQuestionPrompt(question),
+          options: optionTexts.length ? optionTexts : ["A", "B", "C"]
+        };
+      })
+    }];
+  }
+
+  if (type === "FORM_COMPLETION" || type === "NOTE_COMPLETION") {
+    const templateText = toStringSafe(content?.template_text).trim();
+    return [{
+      type: "noteForm",
+      title: type === "FORM_COMPLETION" ? "Form Completion" : "Note Completion",
+      description: toStringSafe(group.instructions).trim() || undefined,
+      fields: parseTemplateFields(templateText, questions)
+    }];
+  }
+
+  if (type === "TABLE_COMPLETION") {
+    const columnsRaw = extractOptionTexts(content?.columns);
+    const columns = columnsRaw.length ? columnsRaw : ["Prompt", "Answer"];
+    const rowsRaw = asArray<unknown>(content?.rows);
+    const rows = rowsRaw
+      .map((row, index) => {
+        const cells = asArray<unknown>(row).map((item) => toStringSafe(item).trim());
+        const fallbackQuestion = questions[index];
+        const match = cells.join(" ").match(/\{(\d+)\}/);
+        const questionNumber = match ? Number(match[1]) : fallbackQuestion?.question_number ?? index + 1;
+        return {questionNumber, values: cells.length ? cells : [`Question ${questionNumber}`, ""]};
+      });
+
+    return [{
+      type: "tableCompletion",
+      title: "Table Completion",
+      columns,
+      rows: rows.length
+        ? rows
+        : questions.map((q) => ({questionNumber: q.question_number, values: [extractQuestionPrompt(q), ""]}))
+    }];
+  }
+
+  if (type === "PLAN_MAP_DIAGRAM" || type === "DIAGRAM_COMPLETION") {
+    const labels = extractOptionTexts(content?.labels).length
+      ? extractOptionTexts(content?.labels)
+      : extractOptionTexts(content?.options);
+
+    return [{
+      type: "diagramLabeling",
+      title: "Diagram",
+      description: toStringSafe(group.instructions).trim() || "Choose the correct label.",
+      options: labels.length ? labels : ["A", "B", "C", "D"],
+      items: questions.map((q) => ({
+        questionNumber: q.question_number,
+        label: extractQuestionPrompt(q)
+      }))
+    }];
+  }
+
+  if (
+    type === "MATCHING"
+    || type === "CLASSIFICATION"
+    || type === "LIST_SELECTION"
+    || type === "MATCH_PARA_INFO"
+  ) {
+    const options = extractOptionTexts(content?.options).length
+      ? extractOptionTexts(content?.options)
+      : extractOptionTexts(content?.choices).length
+        ? extractOptionTexts(content?.choices)
+        : extractOptionTexts(content?.categories).length
+          ? extractOptionTexts(content?.categories)
+          : extractOptionTexts(content?.labels);
+
+    return [{
+      type: "matching",
+      title: "Matching",
+      options: options.length ? options : ["A", "B", "C", "D"],
+      items: questions.map((q) => ({
+        questionNumber: q.question_number,
+        prompt: extractQuestionPrompt(q)
+      }))
+    }];
+  }
+
+  const summaryText = toStringSafe(content?.summary_text).trim();
+  if (summaryText) {
+    const lines = questions.map((question) => {
+      const token = `{${question.question_number}}`;
+      const tokenIndex = summaryText.indexOf(token);
+      if (tokenIndex >= 0) {
+        return {
+          before: summaryText.slice(0, tokenIndex).trim(),
+          questionNumber: question.question_number,
+          after: summaryText.slice(tokenIndex + token.length).trim()
+        };
+      }
+      return {
+        before: extractQuestionPrompt(question),
+        questionNumber: question.question_number,
+        after: ""
+      };
+    });
+
+    return [{
+      type: "summaryCompletion",
+      title: "Summary Completion",
+      instruction: toStringSafe(group.instructions).trim() || "Complete the summary.",
+      lines
+    }];
+  }
+
+  return [{
+    type: "summaryCompletion",
+    title: "Completion",
+    instruction: toStringSafe(group.instructions).trim() || "Complete each item.",
+    lines: questions.map((question) => ({
+      before: extractQuestionPrompt(question),
+      questionNumber: question.question_number,
+      after: ""
+    }))
+  }];
+}
+
+function mapListeningAttemptToRuntimeTest(test: StudentTestRecord, attempt: StudentAttemptDetail): ListeningFullTest {
+  const parts = attempt.listening_parts
+    .slice()
+    .sort((a: StudentAttemptListeningPart, b: StudentAttemptListeningPart) => {
+      const aPart = toNumberSafe(toStringSafe(a.part_number).replace(/\D/g, ""), 0);
+      const bPart = toNumberSafe(toStringSafe(b.part_number).replace(/\D/g, ""), 0);
+      return aPart - bPart;
+    });
+
+  const totalParts = Math.max(parts.length, 1);
+  const estimatedPartDuration = Math.max(120, Math.floor((attempt.time_limit_seconds ?? 1800) / totalParts));
+
+  const sections: ListeningSectionFull[] = parts.map((part, index) => {
+    const groups = part.question_groups.slice().sort((a, b) => a.group_order - b.group_order);
+    const blocks = groups.flatMap(mapGroupToBlocks);
+    const allQuestionNumbers = groups.flatMap((group) => group.questions.map((question) => Number(question.question_number)));
+    const minQuestion = allQuestionNumbers.length ? Math.min(...allQuestionNumbers) : index * 10 + 1;
+    const maxQuestion = allQuestionNumbers.length ? Math.max(...allQuestionNumbers) : minQuestion + 9;
+
+    return {
+      id: (`s${index + 1}` as ListeningSectionId),
+      title: toStringSafe(part.title).trim() || `Part ${index + 1}`,
+      instructions: toStringSafe(groups[0]?.instructions).trim() || "Answer the questions below.",
+      questionRangeLabel: `Questions ${minQuestion}-${maxQuestion}`,
+      audioMeta: {
+        nowPlayingLabel: `Part ${index + 1} of ${totalParts}`,
+        durationSec: estimatedPartDuration,
+        currentTrackTitle: toStringSafe(part.title).trim() || `Listening Part ${index + 1}`
+      },
+      blocks
+    };
+  });
+
+  return {
+    id: test.id,
+    title: toStringSafe(test.title).trim() || "Listening Test",
+    durationMinutes: Math.max(1, Math.ceil((test.time_limit_seconds ?? 1800) / 60)),
+    totalQuestions: test.total_questions || attempt.total_questions || 40,
+    sections
+  };
 }
 
 type AnswersMap = Record<number, string>;
@@ -132,14 +398,96 @@ export default function ListeningTestPage() {
   const modeParam = searchParams.get("mode");
   const requestedMode: AttemptMode | null =
     modeParam === "real" || modeParam === "practice" ? modeParam : null;
-  const test = getListeningTestById(testId);
+
+  const [resolvedTestId, setResolvedTestId] = useState<string>(testId);
+  const [loadingBackendTest, setLoadingBackendTest] = useState(false);
+  const [backendLoadError, setBackendLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const local = getListeningTestById(testId);
+    if (local) {
+      setResolvedTestId(testId);
+      setLoadingBackendTest(false);
+      setBackendLoadError(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    if (!UUID_PATTERN.test(testId)) {
+      setResolvedTestId(testId);
+      setLoadingBackendTest(false);
+      setBackendLoadError(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadFromBackend = async () => {
+      setLoadingBackendTest(true);
+      setBackendLoadError(null);
+
+      try {
+        const listed = await studentTestsService.listListeningAllPages({ pageSize: 100 });
+        const matched = listed.results.find((item) => String(item.id) === testId) ?? null;
+
+        if (!matched) {
+          throw new Error("Listening test not found in backend.");
+        }
+
+        const createdAttempt = await studentAttemptsService.create({
+          practice_test: matched.id,
+          mode: "PRACTICE"
+        });
+        const finalAttempt = createdAttempt.listening_parts?.length
+          ? createdAttempt
+          : await studentAttemptsService.getById(String(createdAttempt.id));
+
+        const mapped = mapListeningAttemptToRuntimeTest(matched, finalAttempt);
+        saveRuntimeListeningTest(mapped);
+
+        if (!active) return;
+        setResolvedTestId(mapped.id);
+      } catch (error) {
+        if (!active) return;
+        const message =
+          error instanceof StudentApiError
+            ? error.message
+            : "Failed to load this listening test from backend.";
+        setBackendLoadError(message);
+      } finally {
+        if (active) {
+          setLoadingBackendTest(false);
+        }
+      }
+    };
+
+    void loadFromBackend();
+
+    return () => {
+      active = false;
+    };
+  }, [testId]);
+
+  const test = getListeningTestById(resolvedTestId);
+
+  if (loadingBackendTest && !test) {
+    return (
+      <LoadingModal
+        open={true}
+        message={t.has("loadingDesc") ? t("loadingDesc") : "Fetching test content from backend."}
+      />
+    );
+  }
 
   if (!test) {
     return (
       <div className="mx-auto mt-8 max-w-xl px-4">
         <Card className="gap-3 p-6">
           <h1 className="text-xl font-semibold">{t("notFoundTitle")}</h1>
-          <p className="text-sm text-muted-foreground">{t("notFoundDesc")}</p>
+          <p className="text-sm text-muted-foreground">{backendLoadError || t("notFoundDesc")}</p>
           <Button asChild className="mt-2 w-fit">
             <Link href={`/${locale}/listening`}>{t("backToListening")}</Link>
           </Button>
