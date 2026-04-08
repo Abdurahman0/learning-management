@@ -1968,6 +1968,7 @@ function ReadingTestClient({
                     <p id={paragraphId} key={paragraphId} className="test-body-copy wrap-break-word text-foreground/90">
                       <HighlightableText
                         text={paragraph}
+                        enableMarkdownBold
                         userHighlights={getPassageLocalHighlights(paragraphStart, paragraph.length)}
                         notesStorageKey={`reading:${test.id}:notes`}
                         noteScopeKey={`passage:${activePassageId}:paragraph:${index}`}

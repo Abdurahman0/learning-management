@@ -33,6 +33,7 @@ type HighlightableTextProps = {
   text: string;
   userHighlights: LocalHighlight[];
   answerHighlights?: LocalAnswerHighlight[];
+  enableMarkdownBold?: boolean;
   className?: string;
   interactive?: boolean;
   showAnswerBadges?: boolean;
@@ -55,6 +56,87 @@ type SelectionInfo = {
 
 const MIN_SELECTION_CHARS = 1;
 const COLORS: ReadingHighlightColor[] = ["yellow", "green", "blue", "pink"];
+
+type ParsedBoldText = {
+  displayText: string;
+  rawToDisplay: number[];
+  displayToRaw: number[];
+  boldRanges: Array<{ start: number; end: number }>;
+};
+
+function parseMarkdownBoldText(rawText: string, enabled: boolean): ParsedBoldText {
+  const rawToDisplay = new Array(rawText.length + 1).fill(0);
+
+  if (!enabled || !rawText.includes("**")) {
+    const displayToRaw = new Array(rawText.length + 1).fill(0).map((_, index) => index);
+    for (let index = 0; index <= rawText.length; index += 1) {
+      rawToDisplay[index] = index;
+    }
+    return {
+      displayText: rawText,
+      rawToDisplay,
+      displayToRaw,
+      boldRanges: [],
+    };
+  }
+
+  let displayText = "";
+  const displayToRaw: number[] = [0];
+  const boldRanges: Array<{ start: number; end: number }> = [];
+
+  let rawIndex = 0;
+  let displayIndex = 0;
+  let isBold = false;
+  let boldStart = 0;
+
+  while (rawIndex < rawText.length) {
+    rawToDisplay[rawIndex] = displayIndex;
+
+    if (rawText[rawIndex] === "*" && rawText[rawIndex + 1] === "*") {
+      rawToDisplay[rawIndex + 1] = displayIndex;
+      if (!isBold) {
+        isBold = true;
+        boldStart = displayIndex;
+      } else if (displayIndex > boldStart) {
+        boldRanges.push({ start: boldStart, end: displayIndex });
+        isBold = false;
+      } else {
+        isBold = false;
+      }
+      rawIndex += 2;
+      continue;
+    }
+
+    displayText += rawText[rawIndex];
+    displayIndex += 1;
+    rawIndex += 1;
+    displayToRaw[displayIndex] = rawIndex;
+  }
+
+  if (isBold && displayIndex > boldStart) {
+    boldRanges.push({ start: boldStart, end: displayIndex });
+  }
+
+  rawToDisplay[rawText.length] = displayIndex;
+  for (let index = 0; index <= rawText.length; index += 1) {
+    if (rawToDisplay[index] === undefined) {
+      rawToDisplay[index] = displayIndex;
+    }
+  }
+
+  for (let index = 0; index <= displayIndex; index += 1) {
+    if (displayToRaw[index] === undefined) {
+      displayToRaw[index] = index === 0 ? 0 : displayToRaw[index - 1] ?? 0;
+    }
+  }
+
+  return {
+    displayText,
+    rawToDisplay,
+    displayToRaw,
+    boldRanges,
+  };
+}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -108,6 +190,7 @@ export function HighlightableText({
   text,
   userHighlights,
   answerHighlights = [],
+  enableMarkdownBold = false,
   className,
   interactive = true,
   showAnswerBadges = false,
@@ -132,6 +215,22 @@ export function HighlightableText({
   const [notesOpen, setNotesOpen] = useState(false);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [hydratedNotesKey, setHydratedNotesKey] = useState<string | null>(null);
+  const parsedText = useMemo(
+    () => parseMarkdownBoldText(text, enableMarkdownBold),
+    [enableMarkdownBold, text]
+  );
+
+  const displayText = parsedText.displayText;
+
+  const toDisplayOffset = (rawOffset: number) => {
+    const clamped = clamp(rawOffset, 0, text.length);
+    return parsedText.rawToDisplay[clamped] ?? 0;
+  };
+
+  const toRawOffset = (displayOffset: number) => {
+    const clamped = clamp(displayOffset, 0, displayText.length);
+    return parsedText.displayToRaw[clamped] ?? 0;
+  };
 
   const mergedUserRanges = useMemo(
     () => mergeRanges(userHighlights.map((item) => ({ start: item.start, end: item.end }))),
@@ -145,21 +244,21 @@ export function HighlightableText({
   const sourceHighlights = useMemo<SourceHighlight[]>(() => {
     const user = userHighlights.map((item) => ({
       id: item.id,
-      start: clamp(item.start, 0, text.length),
-      end: clamp(item.end, 0, text.length),
+      start: toDisplayOffset(item.start),
+      end: toDisplayOffset(item.end),
       kind: "user" as const,
-    }));
+    })).filter((item) => item.end > item.start);
     const answer = answerHighlights.map((item) => ({
       id: item.id,
-      start: clamp(item.start, 0, text.length),
-      end: clamp(item.end, 0, text.length),
+      start: toDisplayOffset(item.start),
+      end: toDisplayOffset(item.end),
       questionNumber: item.questionNumber,
       kind: "answer" as const,
-    }));
+    })).filter((item) => item.end > item.start);
     return [...user, ...answer];
-  }, [answerHighlights, text.length, userHighlights]);
+  }, [answerHighlights, parsedText, text.length, userHighlights]);
 
-  const ranges = useMemo(() => buildRanges(text, sourceHighlights), [sourceHighlights, text]);
+  const ranges = useMemo(() => buildRanges(displayText, sourceHighlights), [displayText, sourceHighlights]);
   const noteRanges = useMemo(
     () =>
       notes
@@ -169,19 +268,23 @@ export function HighlightableText({
         .filter((item) => item.end > item.start)
         .filter((item) => item.start >= 0 && item.end <= text.length)
         .filter((item) => {
-          const normalizedSlice = text
-            .slice(item.start, item.end)
+          const displayStart = toDisplayOffset(item.start);
+          const displayEnd = toDisplayOffset(item.end);
+          const normalizedSlice = displayText
+            .slice(displayStart, displayEnd)
             .replace(/\s+/g, " ")
             .trim();
           return normalizedSlice === item.quote;
         })
-        .map((item) => ({ start: item.start, end: item.end })),
-    [noteScopeKey, notes, text]
+        .map((item) => ({ start: toDisplayOffset(item.start), end: toDisplayOffset(item.end) }))
+        .filter((item) => item.end > item.start),
+    [displayText, noteScopeKey, notes, parsedText, text]
   );
   const renderedRanges = useMemo(() => {
     const output: Array<
       (typeof ranges)[number] & {
         hasNote: boolean;
+        isBold: boolean;
       }
     > = [];
 
@@ -192,6 +295,11 @@ export function HighlightableText({
         if (note.start > base.start && note.start < base.end) cutPoints.add(note.start);
         if (note.end > base.start && note.end < base.end) cutPoints.add(note.end);
       }
+      for (const boldRange of parsedText.boldRanges) {
+        if (!intersects(base.start, base.end, boldRange.start, boldRange.end)) continue;
+        if (boldRange.start > base.start && boldRange.start < base.end) cutPoints.add(boldRange.start);
+        if (boldRange.end > base.start && boldRange.end < base.end) cutPoints.add(boldRange.end);
+      }
 
       const sortedCuts = [...cutPoints].sort((a, b) => a - b);
       for (let index = 0; index < sortedCuts.length - 1; index += 1) {
@@ -201,17 +309,21 @@ export function HighlightableText({
         const hasNote = noteRanges.some((note) =>
           intersects(segmentStart, segmentEnd, note.start, note.end)
         );
+        const isBold = parsedText.boldRanges.some((boldRange) =>
+          intersects(segmentStart, segmentEnd, boldRange.start, boldRange.end)
+        );
         output.push({
           ...base,
           start: segmentStart,
           end: segmentEnd,
           hasNote,
+          isBold,
         });
       }
     }
 
     return output;
-  }, [noteRanges, ranges]);
+  }, [noteRanges, parsedText.boldRanges, ranges]);
 
   useEffect(() => {
     setNotes(loadTextNotes(defaultNotesKey));
@@ -315,12 +427,15 @@ export function HighlightableText({
       return;
     }
 
+    const rawStart = toRawOffset(start);
+    const rawEnd = toRawOffset(end);
+
     const hasIntersecting =
       isMeaningful &&
-      isRangeFullyCoveredByHighlights(start, end, mergedUserRanges);
+      isRangeFullyCoveredByHighlights(rawStart, rawEnd, mergedUserRanges);
     setSelection({
-      start,
-      end,
+      start: rawStart,
+      end: rawEnd,
       text: normalizedText,
       isMeaningful,
       hasIntersecting,
@@ -439,13 +554,14 @@ export function HighlightableText({
         onKeyUp={queueSelectionRead}
       >
         {renderedRanges.map((range) => {
-          const value = text.slice(range.start, range.end);
+          const value = displayText.slice(range.start, range.end);
           const hasNote = range.hasNote;
+          const boldClass = range.isBold ? "font-semibold" : undefined;
           if (range.kind === "plain") {
             return (
               <span
                 key={`plain-${range.start}-${range.end}`}
-                className={cn(hasNote && "note-mark")}
+                className={cn(boldClass, hasNote && "note-mark")}
               >
                 {value}
               </span>
@@ -456,7 +572,7 @@ export function HighlightableText({
             return (
               <span
                 key={`answer-${range.start}-${range.end}`}
-                className={cn("py-[0.5px]", answerHighlightClass(), hasNote && "note-mark")}
+                className={cn("py-[0.5px]", answerHighlightClass(), boldClass, hasNote && "note-mark")}
               >
                 {showAnswerBadges && range.answerQuestionNumbers?.length
                   ? range.answerQuestionNumbers.map((questionNumber) => (
@@ -481,6 +597,7 @@ export function HighlightableText({
               className={cn(
                 "rounded-[2px] px-[1px] py-[0.5px] highlight-mark",
                 userHighlightClass(rangeColor),
+                boldClass,
                 hasNote && "note-mark"
               )}
             >
