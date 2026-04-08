@@ -1546,10 +1546,41 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     });
   };
 
-  const handleDeleteGroup = (groupId: string) => {
+  const handleDeleteGroup = async (groupId: string) => {
+    if (!activeStructure) {
+      return;
+    }
+
+    const previousGroups = [...activeGroups];
+    const looksPersistedId = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(groupId)
+      || /^\d+$/.test(groupId);
+
     updateGroupsForActiveStructure((groups) => groups.filter((group) => group.id !== groupId));
     setSelectedQuestion((current) => (current?.groupId === groupId ? null : current));
     setQuestionEditorOpen(false);
+
+    if (!looksPersistedId) {
+      return;
+    }
+
+    setIsPersisting(true);
+    setApiNotice(null);
+    try {
+      await questionGroupsService.remove(groupId);
+      setApiNotice("Deleted.");
+    } catch (error) {
+      setTest((current) => ({
+        ...current,
+        questionGroupsByStructure: {
+          ...current.questionGroupsByStructure,
+          [activeStructure.id]: previousGroups
+        }
+      }));
+      const message = error instanceof AdminApiError ? error.message : "Failed to delete question group.";
+      setApiNotice(message);
+    } finally {
+      setIsPersisting(false);
+    }
   };
 
   const handleAddQuestion = (groupId: string) => {
