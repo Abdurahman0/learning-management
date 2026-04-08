@@ -180,6 +180,44 @@ function parseTemplateFields(templateText: string, questions: StudentAttemptQues
     }));
 }
 
+function parseTemplateLines(templateText: string, questions: StudentAttemptQuestion[]) {
+  const fallbackByNumber = new Map(
+    questions.map((q) => [Number(q.question_number), toStringSafe(q.question_text).trim() || `Question ${q.question_number}`])
+  );
+
+  const lines = templateText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const parsed: Array<{questionNumber: number; before: string; after: string}> = [];
+
+  for (const line of lines) {
+    const match = line.match(/\{(\d+)\}/);
+    if (!match) continue;
+
+    const questionNumber = Number(match[1]);
+    if (!Number.isFinite(questionNumber) || questionNumber <= 0) continue;
+
+    const token = `{${questionNumber}}`;
+    const tokenIndex = line.indexOf(token);
+    if (tokenIndex < 0) continue;
+
+    parsed.push({
+      questionNumber,
+      before: line.slice(0, tokenIndex).trim(),
+      after: line.slice(tokenIndex + token.length).trim()
+    });
+  }
+
+  if (parsed.length) return parsed;
+
+  return questions
+    .slice()
+    .sort((a, b) => a.question_number - b.question_number)
+    .map((question) => ({
+      questionNumber: question.question_number,
+      before: toStringSafe(question.question_text).trim() || `Question ${question.question_number}`,
+      after: ""
+    }));
+}
+
 function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] {
   const type = toStringSafe(group.question_type).trim().toUpperCase();
   const content = asRecord(group.group_content_json);
@@ -213,16 +251,16 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
 
   if (type === "NOTE_COMPLETION") {
     const templateText = toStringSafe(content?.template_text).trim();
-    const fields = parseTemplateFields(templateText, questions);
+    const lines = parseTemplateLines(templateText, questions);
 
     return [{
       type: "summaryCompletion",
       title: "Note Completion",
       instruction: toStringSafe(group.instructions).trim() || "Complete the notes below.",
-      lines: fields.map((field) => ({
-        before: field.label,
-        questionNumber: field.questionNumber,
-        after: ""
+      lines: lines.map((line) => ({
+        before: line.before,
+        questionNumber: line.questionNumber,
+        after: line.after
       }))
     }];
   }
