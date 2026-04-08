@@ -2177,6 +2177,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       <QuestionEditorModal
         open={questionEditorOpen && Boolean(selectedQuestionData)}
         question={selectedQuestionData?.question ?? null}
+        module={test.module}
         mcqMode={resolveMcqModeFromGroupContent(selectedQuestionData?.group?.groupContentJson)}
         onOpenChange={setQuestionEditorOpen}
         onQuestionChange={(nextQuestion) => {

@@ -10,6 +10,7 @@ import type {BuilderQuestion, TextInputQuestion} from "@/data/admin-test-builder
 
 type QuestionTypeFieldsProps = {
   question: BuilderQuestion;
+  module?: "reading" | "listening";
   mcqMode?: "single" | "multiple";
   onChange: (question: BuilderQuestion) => void;
 };
@@ -65,8 +66,9 @@ function isMatchingChoiceQuestion(question: BuilderQuestion): question is Extrac
   return question.type === "matching_information" || question.type === "matching_features";
 }
 
-export function QuestionTypeFields({question, mcqMode = "single", onChange}: QuestionTypeFieldsProps) {
+export function QuestionTypeFields({question, module = "reading", mcqMode = "single", onChange}: QuestionTypeFieldsProps) {
   const t = useTranslations("adminTestBuilder");
+  const useSharedListeningMcqOptions = module === "listening" && question.type === "multiple_choice";
   const answerValue = useMemo(() => {
     if (!("correctAnswer" in question)) {
       return "";
@@ -131,49 +133,57 @@ export function QuestionTypeFields({question, mcqMode = "single", onChange}: Que
 
       {question.type === "multiple_choice" ? (
         <div className="space-y-3">
-          <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.options")}</Label>
-          <div className="space-y-2">
-            {question.options.map((option, index) => {
-              const key = toOptionKey(index);
-              return (
-                <div key={`${question.id}-${key}`} className="grid grid-cols-[24px_minmax(0,1fr)] items-center gap-2">
-                  <span className="text-xs font-semibold text-muted-foreground">{key}</span>
-                  <input
-                    value={option}
-                    onChange={(event) =>
-                      onChange({
-                        ...question,
-                        options: question.options.map((item, optionIndex) => (optionIndex === index ? event.target.value : item))
-                      })
-                    }
-                    className={inputClassName}
-                  />
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className="h-8 rounded-lg border border-border/70 px-3 text-xs font-semibold text-muted-foreground"
-              onClick={() => onChange({...question, options: [...question.options, ""]})}
-            >
-              + Add option
-            </button>
-            <button
-              type="button"
-              className="h-8 rounded-lg border border-border/70 px-3 text-xs font-semibold text-muted-foreground disabled:opacity-50"
-              disabled={question.options.length <= 2}
-              onClick={() =>
-                onChange({
-                  ...question,
-                  options: question.options.slice(0, -1)
-                })
-              }
-            >
-              Remove option
-            </button>
-          </div>
+          {useSharedListeningMcqOptions ? (
+            <div className="rounded-xl border border-border/70 bg-background/35 px-3 py-2 text-xs text-muted-foreground">
+              MCQ options are shared at question group level for listening. Edit them in the group settings.
+            </div>
+          ) : (
+            <>
+              <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.options")}</Label>
+              <div className="space-y-2">
+                {question.options.map((option, index) => {
+                  const key = toOptionKey(index);
+                  return (
+                    <div key={`${question.id}-${key}`} className="grid grid-cols-[24px_minmax(0,1fr)] items-center gap-2">
+                      <span className="text-xs font-semibold text-muted-foreground">{key}</span>
+                      <input
+                        value={option}
+                        onChange={(event) =>
+                          onChange({
+                            ...question,
+                            options: question.options.map((item, optionIndex) => (optionIndex === index ? event.target.value : item))
+                          })
+                        }
+                        className={inputClassName}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="h-8 rounded-lg border border-border/70 px-3 text-xs font-semibold text-muted-foreground"
+                  onClick={() => onChange({...question, options: [...question.options, ""]})}
+                >
+                  + Add option
+                </button>
+                <button
+                  type="button"
+                  className="h-8 rounded-lg border border-border/70 px-3 text-xs font-semibold text-muted-foreground disabled:opacity-50"
+                  disabled={question.options.length <= 2}
+                  onClick={() =>
+                    onChange({
+                      ...question,
+                      options: question.options.slice(0, -1)
+                    })
+                  }
+                >
+                  Remove option
+                </button>
+              </div>
+            </>
+          )}
           <div className="space-y-1.5">
             <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctOption")}</Label>
             {mcqMode === "multiple" ? (

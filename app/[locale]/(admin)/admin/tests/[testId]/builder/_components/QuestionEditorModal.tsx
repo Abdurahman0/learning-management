@@ -11,12 +11,13 @@ import {QuestionTypeFields} from "./QuestionTypeFields";
 type QuestionEditorModalProps = {
   open: boolean;
   question: BuilderQuestion | null;
+  module?: "reading" | "listening";
   mcqMode?: "single" | "multiple";
   onOpenChange: (open: boolean) => void;
   onQuestionChange: (question: BuilderQuestion) => void;
 };
 
-export function QuestionEditorModal({open, question, mcqMode = "single", onOpenChange, onQuestionChange}: QuestionEditorModalProps) {
+export function QuestionEditorModal({open, question, module = "reading", mcqMode = "single", onOpenChange, onQuestionChange}: QuestionEditorModalProps) {
   const t = useTranslations("adminTestBuilder");
 
   return (
@@ -35,7 +36,7 @@ export function QuestionEditorModal({open, question, mcqMode = "single", onOpenC
         </SheetHeader>
 
         <div className="p-5">
-          {question ? <QuestionTypeFields question={question} mcqMode={mcqMode} onChange={onQuestionChange} /> : null}
+          {question ? <QuestionTypeFields question={question} module={module} mcqMode={mcqMode} onChange={onQuestionChange} /> : null}
         </div>
       </SheetContent>
     </Sheet>
