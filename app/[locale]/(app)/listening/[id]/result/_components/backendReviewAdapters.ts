@@ -1,10 +1,22 @@
-import type {ListeningAnswerMeta} from "@/data/listening-answer-keys";
 import type {StudentAttemptReviewResponse} from "@/src/services/student/types";
 import type {FlattenedListeningQuestion} from "@/lib/listening-questions";
 import type {ListeningTypePerformance} from "@/lib/listening-review-insights";
 import type {ListeningSectionPerformanceItem} from "./ListeningSectionPerformance";
 import type {ListeningReviewSection} from "./ListeningTranscriptReviewPanel";
-import type {ListeningSectionId} from "@/data/listening-tests-full";
+
+export type ListeningBackendAnswerMeta = {
+  questionId: string;
+  questionNumber: number;
+  type: FlattenedListeningQuestion["type"];
+  correctAnswer: string | string[] | null;
+  acceptableAnswers?: string[] | undefined;
+  explanation: string;
+  evidence: {
+    sectionId: string;
+    transcriptQuote: string;
+    timeRange?: [number, number];
+  };
+};
 
 type ListeningAnswerValue = string | string[] | null;
 
@@ -87,7 +99,7 @@ function serializeUnknown(value: unknown) {
   return "";
 }
 
-function toSectionId(index: number): ListeningSectionId {
+function toSectionId(index: number): FlattenedListeningQuestion["sectionId"] {
   if (index <= 0) return "s1";
   if (index === 1) return "s2";
   if (index === 2) return "s3";
@@ -97,7 +109,7 @@ function toSectionId(index: number): ListeningSectionId {
 export type AdaptedListeningBackendReview = {
   questions: FlattenedListeningQuestion[];
   answers: Record<string, ListeningAnswerValue>;
-  answerMeta: ListeningAnswerMeta[];
+  answerMeta: ListeningBackendAnswerMeta[];
   reviewSections: ListeningReviewSection[];
   sectionPerformance: ListeningSectionPerformanceItem[];
   typePerformance: ListeningTypePerformance[];
@@ -132,7 +144,7 @@ function estimateListeningBand(correct: number) {
 
 export function adaptListeningBackendReview(review: StudentAttemptReviewResponse): AdaptedListeningBackendReview {
   const answers: Record<string, ListeningAnswerValue> = {};
-  const answerMeta: ListeningAnswerMeta[] = [];
+  const answerMeta: ListeningBackendAnswerMeta[] = [];
   const questions: FlattenedListeningQuestion[] = [];
 
   const rawQuestionsByPart = (review.parts ?? []).map((part, partIndex) => {

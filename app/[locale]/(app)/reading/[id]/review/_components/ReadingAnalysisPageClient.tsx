@@ -1,20 +1,17 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useParams, useSearchParams} from "next/navigation";
+import {useLocale, useTranslations} from "next-intl";
 
-import { getReadingTestById } from "@/data/reading-tests";
-import { buildReviewPassages } from "@/data/review-reading";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { gradeTest, type GradeableQuestion } from "@/lib/grading";
-import { loadAttemptResult, loadLatestAttemptResult, type PersistedAttempt } from "@/lib/test-attempt-storage";
-import { studentAttemptsService } from "@/src/services/student/attempts.service";
-import { ReviewPassagePanel } from "../../result/_components/ReviewPassagePanel";
-import { ReviewQuestionsPanel } from "../../result/_components/ReviewQuestionsPanel";
-import { adaptReadingBackendReview, type AdaptedReadingBackendReview } from "../../result/_components/backendReviewAdapters";
+import {Button} from "@/components/ui/button";
+import {Card} from "@/components/ui/card";
+import {gradeTest, type GradeableQuestion} from "@/lib/grading";
+import {studentAttemptsService} from "@/src/services/student/attempts.service";
+import {ReviewPassagePanel} from "../../result/_components/ReviewPassagePanel";
+import {ReviewQuestionsPanel} from "../../result/_components/ReviewQuestionsPanel";
+import {adaptReadingBackendReview, type AdaptedReadingBackendReview} from "../../result/_components/backendReviewAdapters";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -22,15 +19,15 @@ function isUuid(value: string) {
   return UUID_PATTERN.test(value.trim());
 }
 
-function normalizeStoredAnswers(input?: Record<string, string | string[] | null>) {
+function normalizeStoredAnswers(input: Record<string, string | string[] | null>) {
   const normalized: Record<string, string | string[]> = {};
-  if (!input) return normalized;
 
   for (const [questionId, value] of Object.entries(input)) {
     if (typeof value === "string") {
       normalized[questionId] = value;
       continue;
     }
+
     if (Array.isArray(value)) {
       normalized[questionId] = value;
     }
@@ -40,54 +37,34 @@ function normalizeStoredAnswers(input?: Record<string, string | string[] | null>
 }
 
 export function ReadingAnalysisPageClient() {
-  const params = useParams<{ id: string }>();
+  const params = useParams<{id: string}>();
   const searchParams = useSearchParams();
   const locale = useLocale();
   const tResults = useTranslations("testResults");
   const t = useTranslations("readingResult");
-
   const testId = typeof params?.id === "string" ? params.id : "";
-  const attemptId = searchParams.get("attempt") ?? "";
-  const test = getReadingTestById(testId);
+  const attemptId = searchParams.get("attempt")?.trim() ?? "";
+  const resolvedBackendAttemptId = isUuid(attemptId) ? attemptId : "";
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [activePassageId, setActivePassageId] = useState<"p1" | "p2" | "p3">("p1");
   const [highlightedParagraphId, setHighlightedParagraphId] = useState<string | null>(null);
   const passageScrollRef = useRef<HTMLDivElement | null>(null);
   const [backendReview, setBackendReview] = useState<AdaptedReadingBackendReview | null>(null);
-  const attempt = useSyncExternalStore(
-    (onStoreChange) => {
-      if (typeof window === "undefined") {
-        return () => undefined;
-      }
-      const handler = () => onStoreChange();
-      window.addEventListener("storage", handler);
-      return () => window.removeEventListener("storage", handler);
-    },
-    () => {
-      if (typeof window === "undefined" || !test) return null;
-      if (!attemptId) return loadLatestAttemptResult("reading", test.id);
-      return loadAttemptResult("reading", test.id, attemptId);
-    },
-    () => null
-  ) as PersistedAttempt | null;
-
-  const resolvedBackendAttemptId = useMemo(() => {
-    if (isUuid(attemptId)) return attemptId;
-    const fromPersisted = attempt?.backendAttemptId ?? "";
-    return isUuid(fromPersisted) ? fromPersisted : "";
-  }, [attempt?.backendAttemptId, attemptId]);
+  const [isLoading, setIsLoading] = useState(Boolean(resolvedBackendAttemptId));
 
   useEffect(() => {
     let active = true;
 
     if (!resolvedBackendAttemptId) {
+      setIsLoading(false);
       return () => {
         active = false;
       };
     }
 
     const loadBackendReview = async () => {
+      setIsLoading(true);
       try {
         const response = await studentAttemptsService.review(resolvedBackendAttemptId);
         if (!active) return;
@@ -95,6 +72,10 @@ export function ReadingAnalysisPageClient() {
       } catch {
         if (!active) return;
         setBackendReview(null);
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -105,42 +86,28 @@ export function ReadingAnalysisPageClient() {
     };
   }, [resolvedBackendAttemptId]);
 
-  const activeBackendReview = resolvedBackendAttemptId ? backendReview : null;
-
-  const gradingQuestions = useMemo(
-    () => activeBackendReview?.questions ?? test?.questions ?? [],
-    [activeBackendReview, test?.questions]
-  );
-
+  const gradingQuestions = useMemo(() => backendReview?.questions ?? [], [backendReview]);
   const gradingAnswers = useMemo(
-    () =>
-      activeBackendReview
-        ? normalizeStoredAnswers(activeBackendReview.answers)
-        : normalizeStoredAnswers(attempt?.answers),
-    [activeBackendReview, attempt?.answers]
+    () => normalizeStoredAnswers(backendReview?.answers ?? {}),
+    [backendReview]
   );
 
-  const gradeableQuestions = useMemo<GradeableQuestion[]>(() => {
-    if (!gradingQuestions.length) return [];
-    return gradingQuestions.map((question) => ({
-      id: question.id,
-      number: question.number,
-      type: question.type,
-      correctAnswer: question.correctAnswer,
-      acceptableAnswers: question.acceptableAnswers,
-    }));
-  }, [gradingQuestions]);
+  const gradeableQuestions = useMemo<GradeableQuestion[]>(
+    () =>
+      gradingQuestions.map((question) => ({
+        id: question.id,
+        number: question.number,
+        type: question.type,
+        correctAnswer: question.correctAnswer,
+        acceptableAnswers: question.acceptableAnswers
+      })),
+    [gradingQuestions]
+  );
 
   const grading = useMemo(() => {
     if (!gradeableQuestions.length) return null;
     return gradeTest(gradeableQuestions, gradingAnswers);
   }, [gradeableQuestions, gradingAnswers]);
-
-  const reviewPassages = useMemo(() => {
-    if (activeBackendReview) return activeBackendReview.passages;
-    if (!test) return [];
-    return buildReviewPassages(test);
-  }, [activeBackendReview, test]);
 
   useEffect(() => {
     if (!highlightedParagraphId) return;
@@ -160,41 +127,47 @@ export function ReadingAnalysisPageClient() {
 
       window.setTimeout(() => {
         const node = document.getElementById(paragraphId);
-        node?.scrollIntoView({ behavior: "smooth", block: "center" });
+        node?.scrollIntoView({behavior: "smooth", block: "center"});
       }, 120);
     },
     [gradingQuestions]
   );
 
-  if (!test) {
+  if (!resolvedBackendAttemptId) {
     return (
       <div className="mx-auto mt-8 max-w-3xl px-4">
         <Card className="p-6">
           <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{tResults("missingAttemptDescription")}</p>
+          <p className="mt-2 text-sm text-muted-foreground">Attempt ID is required to load backend review.</p>
           <Button className="mt-4" asChild>
-            <Link href={`/${locale}/reading/${testId}?restart=1`}>{tResults("retakeTest")}</Link>
+            <Link href={`/${locale}/reading/${testId}`}>{tResults("retakeTest")}</Link>
           </Button>
         </Card>
       </div>
     );
   }
 
-  if ((!attempt && !activeBackendReview) || !grading) {
+  if (isLoading) {
+    return (
+      <div className="mx-auto mt-8 max-w-3xl px-4">
+        <Card className="p-6 text-sm text-muted-foreground">Loading backend review...</Card>
+      </div>
+    );
+  }
+
+  if (!backendReview || !grading) {
     return (
       <div className="mx-auto mt-8 max-w-3xl px-4">
         <Card className="p-6">
           <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{tResults("missingAttemptDescription")}</p>
           <Button className="mt-4" asChild>
-            <Link href={`/${locale}/reading/${testId}?restart=1`}>{tResults("retakeTest")}</Link>
+            <Link href={`/${locale}/reading/${testId}`}>{tResults("retakeTest")}</Link>
           </Button>
         </Card>
       </div>
     );
   }
-
-  const resultsAttemptParam = resolvedBackendAttemptId || attempt?.attemptId || "";
 
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
@@ -202,28 +175,20 @@ export function ReadingAnalysisPageClient() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">{t("reviewAnswers")}</p>
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{test.title}</h1>
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Reading Review</h1>
             <p className="text-sm text-muted-foreground">
               {t("passageAnalysis")} - {t("questionAnalysis")}
             </p>
           </div>
           <Button asChild className="h-9 rounded-xl px-4">
-            <Link
-              href={
-                resultsAttemptParam
-                  ? `/${locale}/reading/${test.id}/result?attempt=${resultsAttemptParam}`
-                  : `/${locale}/reading/${test.id}/result`
-              }
-            >
-              {t("resultsButton")}
-            </Link>
+            <Link href={`/${locale}/reading/${testId}/result?attempt=${resolvedBackendAttemptId}`}>{t("resultsButton")}</Link>
           </Button>
         </div>
       </Card>
 
       <section id="review-main" className="grid min-h-0 items-start gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
         <ReviewPassagePanel
-          passages={reviewPassages}
+          passages={backendReview.passages}
           activePassageId={activePassageId}
           highlightedParagraphId={highlightedParagraphId}
           passageScrollRef={passageScrollRef}

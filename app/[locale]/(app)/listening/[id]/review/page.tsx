@@ -1,23 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
-import { getListeningAnswerMeta } from "@/data/listening-answer-keys";
-import { getListeningTestById, type ListeningSectionId } from "@/data/listening-tests-full";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
-import { flattenListeningQuestions } from "@/lib/listening-questions";
-import { loadAttemptResult, loadLatestAttemptResult, type PersistedAttempt } from "@/lib/test-attempt-storage";
+import { studentAttemptsService } from "@/src/services/student/attempts.service";
+import type { StudentAttemptReviewResponse } from "@/src/services/student/types";
 import { cn } from "@/lib/utils";
 import { ListeningQuestionAnalysisPanel } from "../result/_components/ListeningQuestionAnalysisPanel";
+import { ListeningTranscriptReviewPanel } from "../result/_components/ListeningTranscriptReviewPanel";
 import {
-  ListeningTranscriptReviewPanel,
-  type ListeningReviewSection,
-} from "../result/_components/ListeningTranscriptReviewPanel";
+  adaptListeningBackendReview,
+  type AdaptedListeningBackendReview,
+  type ListeningBackendAnswerMeta,
+} from "../result/_components/backendReviewAdapters";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string) {
+  return UUID_PATTERN.test(value.trim());
+}
+
+function normalizeStoredAnswers(input: Record<string, string | string[] | null>) {
+  const normalized: Record<string, string | string[]> = {};
+
+  for (const [questionId, value] of Object.entries(input)) {
+    if (typeof value === "string") {
+      normalized[questionId] = value;
+      continue;
+    }
+
+    if (Array.isArray(value)) {
+      normalized[questionId] = value;
+    }
+  }
+
+  return normalized;
+}
 
 type QuestionStatus = "correct" | "incorrect" | "skipped";
 
@@ -33,35 +56,57 @@ export default function ListeningReviewPage() {
   const locale = useLocale();
   const tResults = useTranslations("testResults");
   const t = useTranslations("listeningResult");
-  const isClient = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  );
 
   const testId = typeof params?.id === "string" ? params.id : "";
-  const attemptId = searchParams.get("attempt") ?? "";
-  const test = getListeningTestById(testId);
+  const attemptId = searchParams.get("attempt")?.trim() ?? "";
+  const resolvedBackendAttemptId = isUuid(attemptId) ? attemptId : "";
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [activeSectionId, setActiveSectionId] = useState<ListeningSectionId>("s1");
+  const [activeSectionId, setActiveSectionId] = useState("s1");
   const [highlightedEvidenceQuestionId, setHighlightedEvidenceQuestionId] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState<"transcript" | "questions">("transcript");
+  const [reviewPayload, setReviewPayload] = useState<StudentAttemptReviewResponse | null>(null);
+  const [backendReview, setBackendReview] = useState<AdaptedListeningBackendReview | null>(null);
+  const [isLoading, setIsLoading] = useState(Boolean(resolvedBackendAttemptId));
 
-  const flatQuestions = useMemo(() => {
-    if (!test) return [];
-    return flattenListeningQuestions(test.id, test.sections);
-  }, [test]);
+  useEffect(() => {
+    let active = true;
 
-  const attempt = useMemo<PersistedAttempt | null>(() => {
-    if (!isClient || !test) return null;
-    if (!attemptId) return loadLatestAttemptResult("listening", test.id);
-    return loadAttemptResult("listening", test.id, attemptId);
-  }, [attemptId, isClient, test]);
+    if (!resolvedBackendAttemptId) {
+      setIsLoading(false);
+      return () => {
+        active = false;
+      };
+    }
 
-  const gradeable = useMemo<GradeableQuestion[]>(() => {
-    return flatQuestions.map((question) => {
-      const meta = getListeningAnswerMeta(question.id);
+    const loadBackendReview = async () => {
+      setIsLoading(true);
+      try {
+        const response = await studentAttemptsService.review(resolvedBackendAttemptId);
+        if (!active) return;
+        setReviewPayload(response);
+        setBackendReview(adaptListeningBackendReview(response));
+      } catch {
+        if (!active) return;
+        setReviewPayload(null);
+        setBackendReview(null);
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadBackendReview();
+
+    return () => {
+      active = false;
+    };
+  }, [resolvedBackendAttemptId]);
+
+  const gradeableQuestions = useMemo<GradeableQuestion[]>(() => {
+    return (backendReview?.questions ?? []).map((question) => {
+      const meta = backendReview?.answerMeta.find((item) => item.questionId === question.id);
       return {
         id: question.id,
         number: question.number,
@@ -70,12 +115,17 @@ export default function ListeningReviewPage() {
         acceptableAnswers: meta?.acceptableAnswers,
       };
     });
-  }, [flatQuestions]);
+  }, [backendReview]);
+
+  const answers = useMemo(
+    () => normalizeStoredAnswers(backendReview?.answers ?? {}),
+    [backendReview],
+  );
 
   const grading = useMemo(() => {
-    if (!attempt) return null;
-    return gradeTest(gradeable, attempt.answers);
-  }, [attempt, gradeable]);
+    if (!gradeableQuestions.length) return null;
+    return gradeTest(gradeableQuestions, answers);
+  }, [answers, gradeableQuestions]);
 
   useEffect(() => {
     if (!highlightedEvidenceQuestionId) return;
@@ -84,33 +134,29 @@ export default function ListeningReviewPage() {
   }, [highlightedEvidenceQuestionId]);
 
   const reviewSections = useMemo(() => {
-    if (!test || !grading) return [] as ListeningReviewSection[];
-
-    return test.sections.map((section, index) => ({
-      sectionId: section.id,
+    if (!backendReview || !grading) return [];
+    return backendReview.reviewSections.map((section, index) => ({
+      ...section,
       label: t("partLabel", { index: index + 1 }),
-      title: section.title,
-      instructions: section.instructions,
-      nowPlayingLabel: section.audioMeta.nowPlayingLabel,
-      audioTitle: section.audioMeta.currentTrackTitle,
-      evidenceItems: flatQuestions
-        .filter((question) => question.sectionId === section.id)
-        .map((question) => {
-          const meta = getListeningAnswerMeta(question.id);
-          return {
-            questionId: question.id,
-            questionNumber: question.number,
-            prompt: question.prompt,
-            quote: meta?.evidence.transcriptQuote ?? question.prompt,
-            timeRange: meta?.evidence.timeRange,
-            status: getQuestionStatus(grading, question.id),
-          };
-        }),
+      evidenceItems: section.evidenceItems.map((item) => ({
+        ...item,
+        status: getQuestionStatus(grading, item.questionId),
+      })),
     }));
-  }, [flatQuestions, grading, t, test]);
+  }, [backendReview, grading, t]);
+
+  const answerMetaByQuestionId = useMemo(() => {
+    return (backendReview?.answerMeta ?? []).reduce<Record<string, ListeningBackendAnswerMeta>>(
+      (accumulator, item) => {
+        accumulator[item.questionId] = item;
+        return accumulator;
+      },
+      {},
+    );
+  }, [backendReview]);
 
   const handleJumpEvidence = useCallback((questionId: string) => {
-    const meta = getListeningAnswerMeta(questionId);
+    const meta = answerMetaByQuestionId[questionId];
     setMobilePanel("transcript");
     if (meta?.evidence.sectionId) {
       setActiveSectionId(meta.evidence.sectionId);
@@ -121,7 +167,7 @@ export default function ListeningReviewPage() {
       const node = document.getElementById(`listening-evidence-${questionId}`);
       node?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 120);
-  }, []);
+  }, [answerMetaByQuestionId]);
 
   const handleGoToQuestion = useCallback((questionId: string) => {
     setMobilePanel("questions");
@@ -131,47 +177,45 @@ export default function ListeningReviewPage() {
     }, 120);
   }, []);
 
-  if (!test) {
+  if (!resolvedBackendAttemptId) {
     return (
       <div className="mx-auto mt-8 max-w-3xl px-4">
         <Card className="p-6">
           <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{tResults("missingAttemptDescription")}</p>
+          <p className="mt-2 text-sm text-muted-foreground">Attempt ID is required to load backend review.</p>
           <Button className="mt-4" asChild>
-            <Link href={`/${locale}/listening/${testId}?restart=1`}>{tResults("retakeTest")}</Link>
+            <Link href={`/${locale}/listening/${testId}`}>{tResults("retakeTest")}</Link>
           </Button>
         </Card>
       </div>
     );
   }
 
-  if (!isClient) {
+  if (isLoading) {
     return (
-      <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
-        <Card className="rounded-2xl border-border/70 bg-card/70 p-6">
-          <p className="text-sm text-muted-foreground">{tResults("title")}</p>
-        </Card>
-      </section>
+      <div className="mx-auto mt-8 max-w-3xl px-4">
+        <Card className="p-6 text-sm text-muted-foreground">Loading backend review...</Card>
+      </div>
     );
   }
 
-  if (!attempt || !grading) {
+  if (!backendReview || !grading) {
     return (
       <div className="mx-auto mt-8 max-w-3xl px-4">
         <Card className="p-6">
           <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{tResults("missingAttemptDescription")}</p>
           <Button className="mt-4" asChild>
-            <Link href={`/${locale}/listening/${testId}?restart=1`}>{tResults("retakeTest")}</Link>
+            <Link href={`/${locale}/listening/${testId}`}>{tResults("retakeTest")}</Link>
           </Button>
         </Card>
       </div>
     );
   }
 
-  const resolvedActiveSectionId = test.sections.some((section) => section.id === activeSectionId)
+  const resolvedActiveSectionId = reviewSections.some((section) => section.sectionId === activeSectionId)
     ? activeSectionId
-    : (test.sections[0]?.id ?? "s1");
+    : (reviewSections[0]?.sectionId ?? "s1");
 
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
@@ -179,13 +223,15 @@ export default function ListeningReviewPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
             <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">{t("reviewAnswers")}</p>
-            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{test.title}</h1>
+            <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+              {reviewPayload?.test_title || "Listening Review"}
+            </h1>
             <p className="text-sm text-muted-foreground">
-              {t("listeningReview")} · {t("questionAnalysis")}
+              {t("listeningReview")} - {t("questionAnalysis")}
             </p>
           </div>
           <Button asChild className="h-9 rounded-xl px-4">
-            <Link href={`/${locale}/listening/${test.id}/result?attempt=${attempt.attemptId}`}>{t("resultsButton")}</Link>
+            <Link href={`/${locale}/listening/${testId}/result?attempt=${resolvedBackendAttemptId}`}>{t("resultsButton")}</Link>
           </Button>
         </div>
       </Card>
@@ -220,15 +266,16 @@ export default function ListeningReviewPage() {
             sections={reviewSections}
             activeSectionId={resolvedActiveSectionId}
             highlightedQuestionId={highlightedEvidenceQuestionId}
-            onSectionChange={(sectionId) => setActiveSectionId(sectionId as ListeningSectionId)}
+            onSectionChange={setActiveSectionId}
             onGoToQuestion={handleGoToQuestion}
           />
         </div>
 
         <div className={cn("min-h-0", mobilePanel !== "questions" && "hidden xl:block")}>
           <ListeningQuestionAnalysisPanel
-            questions={flatQuestions}
-            answers={attempt.answers}
+            questions={backendReview.questions}
+            answers={backendReview.answers}
+            answerMetaByQuestionId={answerMetaByQuestionId}
             grading={grading}
             expanded={expanded}
             onToggleExplanation={(questionId) => {

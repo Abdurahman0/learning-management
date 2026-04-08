@@ -13,14 +13,15 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getListeningAnswerMeta } from "@/data/listening-answer-keys";
 import type { FlattenedListeningQuestion } from "@/lib/listening-questions";
 import type { GradeTestResult } from "@/lib/grading";
 import { cn } from "@/lib/utils";
+import type { ListeningBackendAnswerMeta } from "./backendReviewAdapters";
 
 type ListeningQuestionAnalysisPanelProps = {
   questions: FlattenedListeningQuestion[];
   answers: Record<string, string | string[] | null>;
+  answerMetaByQuestionId: Record<string, ListeningBackendAnswerMeta>;
   grading: GradeTestResult;
   expanded: Set<string>;
   onToggleExplanation: (questionId: string) => void;
@@ -74,6 +75,7 @@ function getStatusStyles(status: QuestionStatus) {
 export function ListeningQuestionAnalysisPanel({
   questions,
   answers,
+  answerMetaByQuestionId,
   grading,
   expanded,
   onToggleExplanation,
@@ -138,7 +140,7 @@ export function ListeningQuestionAnalysisPanel({
         {questions.map((question) => {
           const status = getQuestionStatus(grading, question.id);
           const statusStyles = getStatusStyles(status);
-          const answerMeta = getListeningAnswerMeta(question.id);
+          const answerMeta = answerMetaByQuestionId[question.id];
           const isOpen = expanded.has(question.id);
           const userAnswer = normalizeAnswerValue(answers[question.id]);
           const correctAnswer = Array.isArray(answerMeta?.correctAnswer)

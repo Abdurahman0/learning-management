@@ -44,11 +44,14 @@ function isBackendOnlySupportedStudentPath(pathWithoutLocale: string) {
     return false;
   }
 
-  if (/^\/listening\/[^/]+(?:\/.*)?$/.test(pathWithoutLocale)) {
-    return false;
+  const isListeningResultOrReview = /^\/listening\/[^/]+\/(?:result|review)(?:\/)?$/.test(pathWithoutLocale);
+  const isReadingResultOrReview = /^\/reading\/[^/]+\/(?:result|review)(?:\/)?$/.test(pathWithoutLocale);
+
+  if (isListeningResultOrReview || isReadingResultOrReview) {
+    return true;
   }
 
-  if (/^\/reading\/[^/]+\/(?:result|review)$/.test(pathWithoutLocale)) {
+  if (/^\/listening\/[^/]+(?:\/.*)?$/.test(pathWithoutLocale)) {
     return false;
   }
 

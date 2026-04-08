@@ -60,6 +60,7 @@ import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
 import { useTestAppearance } from "@/lib/test-appearance";
 import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
 import { ListeningQuestionAnalysisPanel } from "./result/_components/ListeningQuestionAnalysisPanel";
+import type { ListeningBackendAnswerMeta } from "./result/_components/backendReviewAdapters";
 import { ListeningTranscriptReviewPanel, type ListeningReviewSection } from "./result/_components/ListeningTranscriptReviewPanel";
 
 function formatTime(seconds: number) {
@@ -446,6 +447,25 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
       }),
     [flatQuestions]
   );
+  const reviewAnswerMetaByQuestionId = useMemo(() => {
+    return flatQuestions.reduce<Record<string, ListeningBackendAnswerMeta>>((accumulator, question) => {
+      const meta = getListeningAnswerMeta(question.id);
+      accumulator[question.id] = {
+        questionId: question.id,
+        questionNumber: question.number,
+        type: question.type,
+        correctAnswer: meta?.correctAnswer ?? null,
+        acceptableAnswers: meta?.acceptableAnswers,
+        explanation: meta?.explanation ?? "",
+        evidence: {
+          sectionId: question.sectionId,
+          transcriptQuote: meta?.evidence.transcriptQuote ?? question.prompt,
+          timeRange: meta?.evidence.timeRange,
+        },
+      };
+      return accumulator;
+    }, {});
+  }, [flatQuestions]);
   const grading = useMemo(
     () => gradeTest(gradeableQuestions, persistedAnswersByQuestionId),
     [gradeableQuestions, persistedAnswersByQuestionId]
@@ -1463,6 +1483,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                 <ListeningQuestionAnalysisPanel
                   questions={flatQuestions}
                   answers={persistedAnswersByQuestionId}
+                  answerMetaByQuestionId={reviewAnswerMetaByQuestionId}
                   grading={grading}
                   expanded={expandedReviewQuestions}
                   onToggleExplanation={(questionId) => {
