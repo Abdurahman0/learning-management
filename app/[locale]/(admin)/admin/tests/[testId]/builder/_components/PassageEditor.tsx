@@ -65,6 +65,7 @@ export function PassageEditor({
 }: PassageEditorProps) {
   const t = useTranslations("adminTestBuilder");
   const [evidenceDraft, setEvidenceDraft] = useState("");
+  const [isDraggingAudio, setIsDraggingAudio] = useState(false);
   const textValue = useMemo(() => structure.content.join("\n\n"), [structure.content]);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -206,6 +207,43 @@ export function PassageEditor({
                     No audio uploaded yet.
                   </p>
                 )}
+
+                <button
+                  type="button"
+                  onDragEnter={(event) => {
+                    event.preventDefault();
+                    setIsDraggingAudio(true);
+                  }}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setIsDraggingAudio(true);
+                  }}
+                  onDragLeave={(event) => {
+                    event.preventDefault();
+                    setIsDraggingAudio(false);
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setIsDraggingAudio(false);
+                    const file = event.dataTransfer?.files?.[0] ?? null;
+                    if (file && file.type.startsWith("audio/")) {
+                      onSelectAudioFile(file);
+                    }
+                  }}
+                  onClick={() => audioInputRef.current?.click()}
+                  className={`w-full rounded-xl border border-dashed px-4 py-5 text-left transition-colors ${
+                    isDraggingAudio
+                      ? "border-blue-500/70 bg-blue-500/10"
+                      : "border-border/70 bg-background/45 hover:bg-background/60"
+                  }`}
+                >
+                  <p className="text-sm font-medium text-foreground">
+                    Drag and drop audio file here
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    or click to choose a file
+                  </p>
+                </button>
 
                 <div className="flex flex-wrap gap-2">
                   <Button
