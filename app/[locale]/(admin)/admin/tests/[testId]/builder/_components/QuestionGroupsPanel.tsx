@@ -46,6 +46,7 @@ type GroupEditorState = {
   summaryText: string;
   completionTemplateText: string;
   mcqMode: "single" | "multiple";
+  mcqOptions: string;
   wordBank: string;
   headings: string;
   choices: string;
@@ -140,6 +141,7 @@ export function QuestionGroupsPanel({
     summaryText: "",
     completionTemplateText: "",
     mcqMode: "single",
+    mcqOptions: "",
     wordBank: "",
     headings: "",
     choices: ""
@@ -213,6 +215,7 @@ export function QuestionGroupsPanel({
       summaryText: "",
       completionTemplateText: "",
       mcqMode: "single",
+      mcqOptions: "",
       wordBank: "",
       headings: "",
       choices: ""
@@ -231,6 +234,13 @@ export function QuestionGroupsPanel({
       summaryText: (group.groupContentJson as any)?.summary_text ?? "",
       completionTemplateText: (group.groupContentJson as any)?.template_text ?? "",
       mcqMode: (group.groupContentJson as any)?.mcq_mode === "multiple" ? "multiple" : "single",
+      mcqOptions:
+        Array.isArray((group.groupContentJson as any)?.options)
+          ? ((group.groupContentJson as any).options as Array<{text?: string; label?: string; key?: string}>)
+              .map((item) => item?.text ?? item?.label ?? item?.key ?? "")
+              .filter(Boolean)
+              .join("\n")
+          : (group.questions[0] as any)?.options?.join("\n") ?? "",
       wordBank: Array.isArray((group.groupContentJson as any)?.word_bank) 
         ? ((group.groupContentJson as any).word_bank as string[]).join(", ") 
         : "",
@@ -258,10 +268,17 @@ export function QuestionGroupsPanel({
     const parsedChoices = editor.choices.split("\n").map((value) => value.trim()).filter(Boolean);
     const parsedWordBank = editor.wordBank.split(",").map((value) => value.trim()).filter(Boolean);
     const parsedTemplateText = editor.completionTemplateText.trim();
+    const parsedMcqOptions = editor.mcqOptions.split("\n").map((value) => value.trim()).filter(Boolean);
 
     const groupContent =
       editor.type === "multiple_choice" && module === "listening"
-        ? {mcq_mode: editor.mcqMode}
+        ? {
+            mcq_mode: editor.mcqMode,
+            options: parsedMcqOptions.map((text, index) => ({
+              key: String.fromCharCode("A".charCodeAt(0) + index),
+              text
+            }))
+          }
         : editor.type === "summary_completion"
         ? {
             summary_text: editor.summaryText,
@@ -435,26 +452,38 @@ export function QuestionGroupsPanel({
             )}
 
             {editor.type === "multiple_choice" && module === "listening" && (
-              <div className="space-y-1.5">
-                <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCQ Mode</label>
-                <Select
-                  value={editor.mcqMode}
-                  onValueChange={(value) =>
-                    setEditor((current) => ({
-                      ...current,
-                      mcqMode: value === "multiple" ? "multiple" : "single"
-                    }))
-                  }
-                >
-                  <SelectTrigger className="h-10 rounded-xl border-border/70 bg-background/50">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="single">Single answer (MCQ_SINGLE)</SelectItem>
-                    <SelectItem value="multiple">Multiple answers (MCQ_MULTIPLE)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCQ Mode</label>
+                  <Select
+                    value={editor.mcqMode}
+                    onValueChange={(value) =>
+                      setEditor((current) => ({
+                        ...current,
+                        mcqMode: value === "multiple" ? "multiple" : "single"
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-border/70 bg-background/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Single answer (MCQ_SINGLE)</SelectItem>
+                      <SelectItem value="multiple">Multiple answers (MCQ_MULTIPLE)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCQ Options (shared)</label>
+                  <textarea
+                    value={editor.mcqOptions}
+                    onChange={(event) => setEditor((current) => ({...current, mcqOptions: event.target.value}))}
+                    placeholder="Option A text&#10;Option B text&#10;Option C text&#10;Option D text&#10;Option E text"
+                    className="min-h-32 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                  />
+                  <p className="text-[10px] text-muted-foreground">One option per line. You can add more than 4.</p>
+                </div>
+              </>
             )}
 
             {(editor.type === "note_completion" || editor.type === "form_completion") && (

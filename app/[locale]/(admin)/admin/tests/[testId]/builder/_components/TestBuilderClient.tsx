@@ -282,7 +282,15 @@ function toRoman(index: number) {
 }
 
 function toOptionKey(index: number) {
-  return String.fromCharCode("A".charCodeAt(0) + index);
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let value = index + 1;
+  let result = "";
+  while (value > 0) {
+    value -= 1;
+    result = alphabet[value % 26] + result;
+    value = Math.floor(value / 26);
+  }
+  return result || "A";
 }
 
 function buildTemplateText(from: number, to: number) {
@@ -860,6 +868,7 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
         : Array.isArray(groupContent.categories)
           ? groupContent.categories
           : [];
+  const mcqRows = Array.isArray(groupContent.options) ? groupContent.options : [];
 
   const headings = headingRows
     .map((item) => {
@@ -879,7 +888,19 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
     .map((item) => item.trim())
     .filter(Boolean);
 
+  const mcqOptions = mcqRows
+    .map((item) => {
+      if (typeof item === "string") return item;
+      const row = asRecord(item);
+      return toStringSafe(row.text ?? row.label ?? row.key);
+    })
+    .map((item) => item.trim())
+    .filter(Boolean);
+
   const enrichedQuestions = questions.map((question) => {
+    if (question.type === "multiple_choice" && mcqOptions.length > 0) {
+      return {...question, options: [...mcqOptions]};
+    }
     if (question.type === "matching_headings" && headings.length > 0) {
       return {...question, headings};
     }
@@ -1517,6 +1538,16 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             q.type === "map"
           )) {
             (q as any).choices = [...groupContent.choices];
+          }
+          if (groupContent?.options && q.type === "multiple_choice") {
+            (q as any).options = [...groupContent.options]
+              .map((item: any) =>
+                typeof item === "string"
+                  ? item
+                  : toStringSafe(item?.text ?? item?.label ?? item?.key)
+              )
+              .map((item: string) => item.trim())
+              .filter(Boolean);
           }
 
           questions.push(q);

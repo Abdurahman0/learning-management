@@ -420,6 +420,18 @@ function isAnswered(value: string | undefined) {
 }
 
 function parseOptionChoice(option: string, index: number) {
+  const toOptionKey = (rawIndex: number) => {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    let value = rawIndex + 1;
+    let result = "";
+    while (value > 0) {
+      value -= 1;
+      result = alphabet[value % 26] + result;
+      value = Math.floor(value / 26);
+    }
+    return result || "A";
+  };
+
   const match = option.match(/^\s*([A-Z])[\)\].:\-]\s*(.+)$/i);
   if (match) {
     return {
@@ -429,7 +441,7 @@ function parseOptionChoice(option: string, index: number) {
   }
 
   return {
-    key: String.fromCharCode("A".charCodeAt(0) + index),
+    key: toOptionKey(index),
     label: option
   };
 }

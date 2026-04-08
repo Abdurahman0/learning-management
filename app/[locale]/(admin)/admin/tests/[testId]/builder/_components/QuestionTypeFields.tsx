@@ -49,6 +49,18 @@ function isMatchingStyleQuestion(question: BuilderQuestion): question is Extract
   );
 }
 
+function toOptionKey(index: number) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let value = index + 1;
+  let result = "";
+  while (value > 0) {
+    value -= 1;
+    result = alphabet[value % 26] + result;
+    value = Math.floor(value / 26);
+  }
+  return result || "A";
+}
+
 function isMatchingChoiceQuestion(question: BuilderQuestion): question is Extract<BuilderQuestion, {type: "matching_information" | "matching_features"}> {
   return question.type === "matching_information" || question.type === "matching_features";
 }
@@ -122,7 +134,7 @@ export function QuestionTypeFields({question, mcqMode = "single", onChange}: Que
           <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.options")}</Label>
           <div className="space-y-2">
             {question.options.map((option, index) => {
-              const key = ["A", "B", "C", "D"][index] as "A" | "B" | "C" | "D";
+              const key = toOptionKey(index);
               return (
                 <div key={`${question.id}-${key}`} className="grid grid-cols-[24px_minmax(0,1fr)] items-center gap-2">
                   <span className="text-xs font-semibold text-muted-foreground">{key}</span>
@@ -140,11 +152,34 @@ export function QuestionTypeFields({question, mcqMode = "single", onChange}: Que
               );
             })}
           </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="h-8 rounded-lg border border-border/70 px-3 text-xs font-semibold text-muted-foreground"
+              onClick={() => onChange({...question, options: [...question.options, ""]})}
+            >
+              + Add option
+            </button>
+            <button
+              type="button"
+              className="h-8 rounded-lg border border-border/70 px-3 text-xs font-semibold text-muted-foreground disabled:opacity-50"
+              disabled={question.options.length <= 2}
+              onClick={() =>
+                onChange({
+                  ...question,
+                  options: question.options.slice(0, -1)
+                })
+              }
+            >
+              Remove option
+            </button>
+          </div>
           <div className="space-y-1.5">
             <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctOption")}</Label>
             {mcqMode === "multiple" ? (
               <div className="grid grid-cols-4 gap-2">
-                {["A", "B", "C", "D"].map((value) => {
+                {question.options.map((_, index) => {
+                  const value = toOptionKey(index);
                   const selected = question.correctAnswer
                     .split(",")
                     .map((item) => item.trim().toUpperCase())
@@ -182,11 +217,14 @@ export function QuestionTypeFields({question, mcqMode = "single", onChange}: Que
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {["A", "B", "C", "D"].map((value) => (
+                  {question.options.map((_, index) => {
+                    const value = toOptionKey(index);
+                    return (
                     <SelectItem key={value} value={value}>
                       {value}
                     </SelectItem>
-                  ))}
+                    );
+                  })}
                 </SelectContent>
               </Select>
             )}
