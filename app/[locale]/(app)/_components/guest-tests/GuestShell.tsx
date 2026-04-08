@@ -51,10 +51,6 @@ function isBackendOnlySupportedStudentPath(pathWithoutLocale: string) {
     return true;
   }
 
-  if (/^\/listening\/[^/]+(?:\/.*)?$/.test(pathWithoutLocale)) {
-    return false;
-  }
-
   return allowedPrefixes.some((prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`));
 }
 
