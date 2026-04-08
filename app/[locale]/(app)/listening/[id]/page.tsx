@@ -201,13 +201,29 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
     }];
   }
 
-  if (type === "FORM_COMPLETION" || type === "NOTE_COMPLETION") {
+  if (type === "FORM_COMPLETION") {
     const templateText = toStringSafe(content?.template_text).trim();
     return [{
       type: "noteForm",
-      title: type === "FORM_COMPLETION" ? "Form Completion" : "Note Completion",
+      title: "Form Completion",
       description: toStringSafe(group.instructions).trim() || undefined,
       fields: parseTemplateFields(templateText, questions)
+    }];
+  }
+
+  if (type === "NOTE_COMPLETION") {
+    const templateText = toStringSafe(content?.template_text).trim();
+    const fields = parseTemplateFields(templateText, questions);
+
+    return [{
+      type: "summaryCompletion",
+      title: "Note Completion",
+      instruction: toStringSafe(group.instructions).trim() || "Complete the notes below.",
+      lines: fields.map((field) => ({
+        before: field.label,
+        questionNumber: field.questionNumber,
+        after: ""
+      }))
     }];
   }
 
