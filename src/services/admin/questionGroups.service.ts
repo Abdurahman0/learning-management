@@ -107,6 +107,10 @@ function normalizeQuestionGroupPayload(payload: QuestionGroupPayload): QuestionG
   const normalizedType = normalizeQuestionTypeForApi(payload.question_type, Number.isFinite(questionCount) ? questionCount : undefined);
 
   let normalizedGroupContent = payload.group_content_json;
+  if (normalizedType === "MCQ_SINGLE" || normalizedType === "MCQ_MULTIPLE") {
+    normalizedGroupContent = null;
+  }
+
   if (normalizedType === "FORM_COMPLETION" || normalizedType === "NOTE_COMPLETION") {
     const templateText =
       normalizedGroupContent && typeof normalizedGroupContent === "object" && !Array.isArray(normalizedGroupContent)
@@ -144,9 +148,11 @@ function normalizeQuestionGroupPatchPayload(payload: Partial<QuestionGroupPayloa
   const hasEnd = typeof payload.question_number_end === "number";
   const questionCount = hasStart && hasEnd ? payload.question_number_end! - payload.question_number_start! + 1 : undefined;
 
+  const normalizedType = normalizeQuestionTypeForApi(payload.question_type, questionCount);
   return {
     ...payload,
-    question_type: normalizeQuestionTypeForApi(payload.question_type, questionCount)
+    question_type: normalizedType,
+    ...(normalizedType === "MCQ_SINGLE" || normalizedType === "MCQ_MULTIPLE" ? {group_content_json: null} : {})
   };
 }
 

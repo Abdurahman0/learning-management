@@ -368,6 +368,10 @@ function ensureGroupContentForApi(type: QuestionType, from: number, to: number, 
   const fallback = buildDefaultGroupContentJson(type, from, to);
   const content = asRecord(input);
 
+  if (type === "multiple_choice") {
+    return null;
+  }
+
   if (type === "form_completion" || type === "note_completion") {
     const templateText = toStringSafe(content.template_text).trim();
     if (templateText.length > 0) {
@@ -401,6 +405,10 @@ function ensureGroupContentForApi(type: QuestionType, from: number, to: number, 
 }
 
 function resolveGroupContentForSync(group: QuestionGroup): unknown {
+  if (group.type === "multiple_choice") {
+    return null;
+  }
+
   if (group.type === "summary_completion") {
     return ensureGroupContentForApi(group.type, group.from, group.to, group.groupContentJson);
   }
@@ -602,7 +610,7 @@ function mapBuilderQuestionToBulkPayload(question: BuilderQuestion, apiType: str
     const normalizedAnswers = question.correctAnswer
       .split(",")
       .map((value) => value.trim().toUpperCase())
-      .filter((value) => value === "A" || value === "B" || value === "C" || value === "D");
+      .filter((value) => /^[A-Z]+$/.test(value));
     const normalizedAnswer = normalizedAnswers[0] ?? "";
     return {
       ...base,
@@ -710,7 +718,7 @@ function extractOptions(raw: unknown): string[] {
     .filter(Boolean);
 
   if (mapped.length) {
-    return mapped.slice(0, 4);
+    return mapped;
   }
 
   const direct = toStringSafe(record.statement).trim();
@@ -1451,7 +1459,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           : ({reading_passage: activeStructure.id} satisfies Pick<QuestionGroupPayload, "reading_passage">);
 
       const resolvedGroupContent = ensureGroupContentForApi(type, from, to, groupContent);
-      const apiQuestionType = resolveApiQuestionTypeForGroup(type, Math.max(1, to - from + 1), resolvedGroupContent);
+      const apiQuestionType = resolveApiQuestionTypeForGroup(type, Math.max(1, to - from + 1), groupContent);
 
       const payload: QuestionGroupPayload = {
         question_type: apiQuestionType,
@@ -1467,7 +1475,33 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       };
 
       const created = await questionGroupsService.create(payload);
-      const createdGroup = normalizeGroup(mapApiQuestionGroupToBuilderGroup(created, from));
+      const baseCreatedGroup = normalizeGroup(mapApiQuestionGroupToBuilderGroup(created, from));
+      const createdGroup = normalizeGroup({
+        ...baseCreatedGroup,
+        groupContentJson: groupContent ?? baseCreatedGroup.groupContentJson,
+        questions: baseCreatedGroup.questions.map((question) => {
+          if (question.type === "multiple_choice" && Array.isArray((groupContent as any)?.options)) {
+            const options = (groupContent as any).options
+              .map((item: any) => (typeof item === "string" ? item : toStringSafe(item?.text ?? item?.label ?? item?.key)))
+              .map((item: string) => item.trim())
+              .filter(Boolean);
+            return options.length > 0 ? {...question, options} : question;
+          }
+          if (question.type === "matching_headings" && Array.isArray((groupContent as any)?.headings)) {
+            return {...question, headings: [...(groupContent as any).headings]};
+          }
+          if (
+            (question.type === "matching_information"
+              || question.type === "matching_features"
+              || question.type === "selecting_from_a_list"
+              || question.type === "map")
+            && Array.isArray((groupContent as any)?.choices)
+          ) {
+            return {...question, choices: [...(groupContent as any).choices]};
+          }
+          return question;
+        })
+      });
 
       setTest((current) => {
         const currentGroups = current.questionGroupsByStructure[activeStructure.id] ?? [];
@@ -2014,7 +2048,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
               id: persistedGroupId || group.id,
               variantSetId: toStringSafe(persistedGroup.variant_set ?? group.variantSetId ?? ""),
               instructions: commonPayload.instructions,
-              groupContentJson: commonPayload.group_content_json
+              groupContentJson: group.type === "multiple_choice" ? group.groupContentJson : commonPayload.group_content_json
             })
           );
         }
