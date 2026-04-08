@@ -26,11 +26,6 @@ function toArray(value: string) {
     .filter(Boolean);
 }
 
-function toRoman(num: number): string {
-  const map = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"];
-  return map[num] ?? (num + 1).toString();
-}
-
 function isTextInputQuestion(question: BuilderQuestion): question is TextInputQuestion {
   return [
     "sentence_completion",
@@ -171,8 +166,8 @@ export function QuestionTypeFields({question, onChange}: QuestionTypeFieldsProps
               </SelectTrigger>
               <SelectContent>
                 {question.headings.map((heading, index) => (
-                  <SelectItem key={`${question.id}-heading-${index}`} value={toRoman(index)}>
-                    {toRoman(index)}: {heading}
+                  <SelectItem key={`${question.id}-heading-${index}`} value={heading}>
+                    {heading}
                   </SelectItem>
                 ))}
               </SelectContent>
