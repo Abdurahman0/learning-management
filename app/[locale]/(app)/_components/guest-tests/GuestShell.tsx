@@ -45,9 +45,8 @@ export function GuestShell({children}: GuestShellProps) {
   const isGuest = role === "guest";
   const isStudent = role === "user";
 
-  // TODO: Replace with real guest usage counters from backend/session.
-  const usedTests = 0;
-  const totalTests = 4;
+  const usedTests = null;
+  const totalTests = null;
   const baseRoute = `/${locale}`;
   const dashboardHref = role === "admin" ? `/${locale}/admin` : role === "teacher" ? `/${locale}/teacher` : `/${locale}/dashboard`;
   const topLevelRoutes = isGuest

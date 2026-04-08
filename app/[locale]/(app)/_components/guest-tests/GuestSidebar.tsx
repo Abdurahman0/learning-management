@@ -1,6 +1,6 @@
 "use client";
 
-import {useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
 import {BarChart3, BookOpen, ChevronDown, Headphones, Home, Lock, Mic, PenLine, TriangleAlert} from "lucide-react";
@@ -9,13 +9,14 @@ import {useLocale, useTranslations} from "next-intl";
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
 import {Button} from "@/components/ui/button";
 import {ThemeToggle} from "@/components/theme-toggle";
-import {getStaticProfile} from "@/lib/auth/session";
+import {authApi} from "@/lib/api/auth";
+import {getUserInitials} from "@/lib/auth/current-user";
 import {cn} from "@/lib/utils";
 import type {AppSessionRole} from "../session/AppSessionContext";
 
 type GuestSidebarProps = {
-  usedTests: number;
-  totalTests: number;
+  usedTests: number | null;
+  totalTests: number | null;
   role: AppSessionRole;
 };
 
@@ -41,7 +42,49 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
   const router = useRouter();
   const isGuest = role === "guest";
   const isStudent = role === "user";
-  const profile = role === "guest" ? null : getStaticProfile(role);
+  const [realProfile, setRealProfile] = useState<{name: string; email: string; initials: string} | null>(null);
+
+  useEffect(() => {
+    if (isGuest) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadCurrentUser = async () => {
+      const response = await authApi.me();
+      if (isCancelled || !response.ok || !response.data) {
+        return;
+      }
+
+      const fullName = response.data.full_name.trim();
+      const email = response.data.email.trim();
+
+      if (!fullName || !email) {
+        return;
+      }
+
+      setRealProfile({
+        name: fullName,
+        email,
+        initials: getUserInitials(fullName)
+      });
+    };
+
+    void loadCurrentUser();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isGuest]);
+
+  const profile = useMemo(() => {
+    if (isGuest) {
+      return null;
+    }
+
+    return realProfile;
+  }, [isGuest, realProfile]);
 
   const dashboardHref = role === "admin" ? `/${locale}/admin` : role === "teacher" ? `/${locale}/teacher` : `/${locale}/dashboard`;
   const readingHref = `/${locale}/reading`;
@@ -230,7 +273,7 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
         })}
       </nav>
 
-      {isGuest ? (
+      {isGuest && usedTests !== null && totalTests !== null ? (
         <div className="mt-7 border-t border-border pt-5">
           <div className="mb-2.5 flex items-center justify-between">
             <p className="text-xl font-semibold text-foreground">{t("sidebar.dailyProgress")}</p>
@@ -258,12 +301,12 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
             <div className="flex items-center gap-2.5">
               <Avatar className="ring-2 ring-border/70" size="lg">
                 <AvatarFallback className="bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
-                  {profile?.initials}
+                  {profile?.initials ?? "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-foreground">{profile?.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{profile?.email}</p>
+                <p className="truncate text-sm font-semibold text-foreground">{profile?.name ?? "User"}</p>
+                <p className="truncate text-xs text-muted-foreground">{profile?.email ?? ""}</p>
               </div>
             </div>
           </div>

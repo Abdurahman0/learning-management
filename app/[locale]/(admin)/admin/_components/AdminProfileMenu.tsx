@@ -100,7 +100,11 @@ export function AdminProfileMenu({compact = false, visibility = "desktop", class
   }, []);
 
   const handleCopyEmail = async () => {
-    const valueToCopy = profile.email || "admin@gmail.com";
+    const valueToCopy = profile.email.trim();
+    if (!valueToCopy) {
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(valueToCopy);
       setCopied(true);
@@ -172,6 +176,7 @@ export function AdminProfileMenu({compact = false, visibility = "desktop", class
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem
+          disabled={!profile.email.trim()}
           onSelect={(event) => {
             event.preventDefault();
             void handleCopyEmail();

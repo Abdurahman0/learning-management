@@ -3,7 +3,7 @@
 import {useEffect, useMemo, useState} from "react";
 import {useTranslations} from "next-intl";
 
-import {LISTENING_TESTS, type ListeningDifficulty, type ListeningTestItem} from "@/data/listening-tests";
+import type {ListeningDifficulty, ListeningTestItem} from "@/data/listening-tests";
 import {studentTestsService} from "@/src/services/student/tests.service";
 import type {StudentTestRecord} from "@/src/services/student/types";
 
@@ -80,6 +80,48 @@ function mapStudentListeningTest(item: StudentTestRecord): ListeningTestItem {
   };
 }
 
+type PublicPaginatedResponse = {
+  count?: unknown;
+  next?: unknown;
+  previous?: unknown;
+  results?: unknown;
+};
+
+function asArray<T = unknown>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+async function fetchPublicListeningTests() {
+  const collected: StudentTestRecord[] = [];
+  let nextPath = "/api/public/tests/listening?page_size=100";
+
+  while (nextPath) {
+    const response = await fetch(nextPath, {cache: "no-store"});
+    if (!response.ok) {
+      throw new Error("Failed to fetch public listening tests.");
+    }
+
+    const payload = (await response.json().catch(() => null)) as PublicPaginatedResponse | null;
+    const results = asArray<StudentTestRecord>(payload?.results);
+    collected.push(...results);
+
+    const next = typeof payload?.next === "string" ? payload.next.trim() : "";
+    if (!next) {
+      nextPath = "";
+      continue;
+    }
+
+    try {
+      const url = new URL(next);
+      nextPath = `/api/public/tests/listening${url.search}`;
+    } catch {
+      nextPath = "";
+    }
+  }
+
+  return collected;
+}
+
 export default function ListeningPage() {
   const t = useTranslations("guest");
   const role = useAppSessionRole();
@@ -95,11 +137,12 @@ export default function ListeningPage() {
     let active = true;
 
     const loadTests = async () => {
-      if (isGuest) return;
       try {
-        const response = await studentTestsService.listListeningAllPages({pageSize: 100});
+        const results = isGuest
+          ? await fetchPublicListeningTests()
+          : (await studentTestsService.listListeningAllPages({pageSize: 100})).results;
         if (!active) return;
-        setApiTests(response.results.map(mapStudentListeningTest));
+        setApiTests(results.map(mapStudentListeningTest));
       } catch {
         if (!active) return;
         setApiTests([]);
@@ -114,7 +157,7 @@ export default function ListeningPage() {
   }, [isGuest]);
 
   const filteredTests = useMemo(() => {
-    let tests = isGuest ? [...LISTENING_TESTS] : [...apiTests];
+    let tests = [...apiTests];
 
     if (tab === "free") {
       tests = tests.filter((test) => !test.isPremium);
@@ -132,7 +175,7 @@ export default function ListeningPage() {
     }
 
     return sortListeningTests(tests, sort);
-  }, [apiTests, difficulty, isGuest, search, sort, tab]);
+  }, [apiTests, difficulty, search, sort, tab]);
 
   return (
     <div>

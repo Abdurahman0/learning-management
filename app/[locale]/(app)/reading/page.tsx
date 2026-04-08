@@ -3,7 +3,7 @@
 import {useEffect, useMemo, useState} from "react";
 import {useTranslations} from "next-intl";
 
-import {READING_TESTS, type Difficulty, type ReadingGuestTest} from "@/data/guest-tests";
+import type {Difficulty, ReadingGuestTest} from "@/data/guest-tests";
 import {studentTestsService} from "@/src/services/student/tests.service";
 import type {StudentTestRecord} from "@/src/services/student/types";
 
@@ -66,6 +66,48 @@ function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
   };
 }
 
+type PublicPaginatedResponse = {
+  count?: unknown;
+  next?: unknown;
+  previous?: unknown;
+  results?: unknown;
+};
+
+function asArray<T = unknown>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+async function fetchPublicReadingTests() {
+  const collected: StudentTestRecord[] = [];
+  let nextPath = "/api/public/tests/reading?page_size=100";
+
+  while (nextPath) {
+    const response = await fetch(nextPath, {cache: "no-store"});
+    if (!response.ok) {
+      throw new Error("Failed to fetch public reading tests.");
+    }
+
+    const payload = (await response.json().catch(() => null)) as PublicPaginatedResponse | null;
+    const results = asArray<StudentTestRecord>(payload?.results);
+    collected.push(...results);
+
+    const next = typeof payload?.next === "string" ? payload.next.trim() : "";
+    if (!next) {
+      nextPath = "";
+      continue;
+    }
+
+    try {
+      const url = new URL(next);
+      nextPath = `/api/public/tests/reading${url.search}`;
+    } catch {
+      nextPath = "";
+    }
+  }
+
+  return collected;
+}
+
 export default function ReadingPage() {
   const t = useTranslations("guest");
   const role = useAppSessionRole();
@@ -81,11 +123,12 @@ export default function ReadingPage() {
     let active = true;
 
     const loadTests = async () => {
-      if (isGuest) return;
       try {
-        const response = await studentTestsService.listReadingAllPages({pageSize: 100});
+        const results = isGuest
+          ? await fetchPublicReadingTests()
+          : (await studentTestsService.listReadingAllPages({pageSize: 100})).results;
         if (!active) return;
-        setApiTests(response.results.map(mapStudentReadingTest));
+        setApiTests(results.map(mapStudentReadingTest));
       } catch {
         if (!active) return;
         setApiTests([]);
@@ -100,7 +143,7 @@ export default function ReadingPage() {
   }, [isGuest]);
 
   const filteredTests = useMemo(() => {
-    let tests = isGuest ? [...READING_TESTS] : [...apiTests];
+    let tests = [...apiTests];
 
     if (tab === "free") {
       tests = tests.filter((test) => !test.isPremium);
@@ -118,7 +161,7 @@ export default function ReadingPage() {
     }
 
     return sortReadingTests(tests, sort);
-  }, [apiTests, difficulty, isGuest, search, sort, tab]);
+  }, [apiTests, difficulty, search, sort, tab]);
 
   return (
     <div>
