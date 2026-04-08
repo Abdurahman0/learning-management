@@ -104,10 +104,34 @@ function normalizeQuestionTypeForApi(value: string, questionCount?: number) {
 function normalizeQuestionGroupPayload(payload: QuestionGroupPayload): QuestionGroupPayload {
   const questionCount =
     Number(payload.question_number_end ?? 0) - Number(payload.question_number_start ?? 0) + 1;
+  const normalizedType = normalizeQuestionTypeForApi(payload.question_type, Number.isFinite(questionCount) ? questionCount : undefined);
+
+  let normalizedGroupContent = payload.group_content_json;
+  if (normalizedType === "FORM_COMPLETION" || normalizedType === "NOTE_COMPLETION") {
+    const templateText =
+      normalizedGroupContent && typeof normalizedGroupContent === "object" && !Array.isArray(normalizedGroupContent)
+        ? String((normalizedGroupContent as Record<string, unknown>).template_text ?? "").trim()
+        : "";
+
+    if (!templateText) {
+      const start = Number(payload.question_number_start ?? 1);
+      const end = Number(payload.question_number_end ?? start);
+      const from = Number.isFinite(start) ? start : 1;
+      const to = Number.isFinite(end) && end >= from ? end : from;
+      const lines: string[] = [];
+      for (let number = from; number <= to; number += 1) {
+        lines.push(`Item ${number}: {${number}}`);
+      }
+      normalizedGroupContent = {template_text: lines.join("\n")};
+    } else {
+      normalizedGroupContent = {template_text: templateText};
+    }
+  }
 
   return {
     ...payload,
-    question_type: normalizeQuestionTypeForApi(payload.question_type, Number.isFinite(questionCount) ? questionCount : undefined)
+    question_type: normalizedType,
+    group_content_json: normalizedGroupContent
   };
 }
 

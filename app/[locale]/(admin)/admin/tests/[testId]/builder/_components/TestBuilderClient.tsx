@@ -356,22 +356,45 @@ function buildDefaultGroupContentJson(type: QuestionType, from: number, to: numb
   }
 }
 
-function resolveGroupContentForSync(group: QuestionGroup): unknown {
-  if (group.type === "summary_completion") {
-    const content = asRecord(group.groupContentJson);
+function ensureGroupContentForApi(type: QuestionType, from: number, to: number, input: unknown): unknown {
+  const fallback = buildDefaultGroupContentJson(type, from, to);
+  const content = asRecord(input);
+
+  if (type === "form_completion" || type === "note_completion") {
+    const templateText = toStringSafe(content.template_text).trim();
+    if (templateText.length > 0) {
+      return {template_text: templateText};
+    }
+    return fallback;
+  }
+
+  if (type === "summary_completion") {
     const summaryText = toStringSafe(content.summary_text).trim();
-    const blanks = Array.from({length: Math.max(1, group.to - group.from + 1)}, (_, index) => `{${group.from + index}}`).join(" ");
-    const rawWordBank = Array.isArray(content.word_bank)
-      ? content.word_bank
+    const wordBank = Array.isArray(content.word_bank)
+      ? content.word_bank.map((item) => toStringSafe(item).trim()).filter(Boolean)
       : [];
-    const wordBank = rawWordBank
-      .map((item) => toStringSafe(item).trim())
-      .filter(Boolean);
+    const fallbackSummary = asRecord(fallback);
 
     return {
-      summary_text: summaryText || `Summary: ${blanks}`.trim(),
+      summary_text: summaryText || toStringSafe(fallbackSummary.summary_text),
       word_bank: wordBank.length ? wordBank : ["word1"]
     };
+  }
+
+  if (input === undefined || input === null) {
+    return fallback ?? null;
+  }
+
+  if (typeof input === "object" && !Array.isArray(input) && Object.keys(input as Record<string, unknown>).length === 0) {
+    return fallback ?? null;
+  }
+
+  return input;
+}
+
+function resolveGroupContentForSync(group: QuestionGroup): unknown {
+  if (group.type === "summary_completion") {
+    return ensureGroupContentForApi(group.type, group.from, group.to, group.groupContentJson);
   }
 
   if (group.type === "matching_headings") {
@@ -398,13 +421,7 @@ function resolveGroupContentForSync(group: QuestionGroup): unknown {
     };
   }
 
-  const current = group.groupContentJson;
-  if (current && typeof current === "object" && !Array.isArray(current) && Object.keys(current as Record<string, unknown>).length > 0) {
-    return current;
-  }
-
-  const fallback = buildDefaultGroupContentJson(group.type, group.from, group.to);
-  return fallback ?? null;
+  return ensureGroupContentForApi(group.type, group.from, group.to, group.groupContentJson);
 }
 
 function mapBuilderQuestionTypeToApi(value: QuestionType, questionCount: number) {
@@ -1393,7 +1410,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         question_number_end: to,
         word_limit: null,
         number_allowed: false,
-        group_content_json: groupContent ?? buildDefaultGroupContentJson(type, from, to),
+        group_content_json: ensureGroupContentForApi(type, from, to, groupContent),
         is_active: true,
         ...parentPayload
       };
