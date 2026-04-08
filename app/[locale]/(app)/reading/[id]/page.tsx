@@ -213,6 +213,30 @@ function extractHeadingOptions(group: StudentAttemptQuestionGroup): string[] {
   return headings.length ? headings : ["Heading 1", "Heading 2", "Heading 3", "Heading 4", "Heading 5"];
 }
 
+function extractMatchingChoiceOptions(group: StudentAttemptQuestionGroup): string[] {
+  const content = asRecord(group.group_content_json);
+  const optionRows = asArray<unknown>(content?.choices).length
+    ? asArray<unknown>(content?.choices)
+    : asArray<unknown>(content?.options).length
+      ? asArray<unknown>(content?.options)
+      : asArray<unknown>(content?.labels).length
+        ? asArray<unknown>(content?.labels)
+        : asArray<unknown>(content?.categories);
+
+  const options = optionRows
+    .map((item) => {
+      const row = asRecord(item);
+      const text = toStringSafe(row?.text);
+      const label = toStringSafe(row?.label);
+      const key = toStringSafe(row?.key);
+      return text || label || key;
+    })
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return options.length ? options : ["A", "B", "C", "D", "E", "F"];
+}
+
 function extractSummaryInfo(group: StudentAttemptQuestionGroup): { summaryText: string; wordBank: string[] | null } {
   const content = asRecord(group.group_content_json);
   const summaryText = toStringSafe(content?.summary_text).trim();
@@ -433,7 +457,7 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
       const groupTitle = buildGroupTitle(group);
       const instruction = toStringSafe(group.instructions);
       const headingOptions = extractHeadingOptions(group);
-      const paragraphOptions = ["A", "B", "C", "D", "E", "F"];
+      const matchingChoiceOptions = extractMatchingChoiceOptions(group);
 
       for (const question of group.questions as StudentAttemptQuestion[]) {
         const number = toNumberSafe(question.question_number, questions.length + 1);
@@ -485,7 +509,7 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
           continue;
         }
 
-        if (qType === "MATCH_PARA_INFO") {
+        if (qType === "MATCH_PARA_INFO" || qType === "MATCHING_INFORMATION") {
           questions.push({
             id: questionId,
             number,
@@ -496,7 +520,26 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
             groupTitle,
             groupInstruction: instruction,
             prompt,
-            paragraphOptions,
+            paragraphOptions: matchingChoiceOptions,
+            correctAnswer: "",
+            explanation: "",
+            evidenceSpans
+          });
+          continue;
+        }
+
+        if (qType === "CLASSIFICATION" || qType === "MATCHING_FEATURES") {
+          questions.push({
+            id: questionId,
+            number,
+            passageId,
+            type: "matchingInfo",
+            backendQuestionId: submitQuestionId || undefined,
+            backendQuestionCandidateIds: submitQuestionCandidates.length ? submitQuestionCandidates : undefined,
+            groupTitle,
+            groupInstruction: instruction,
+            prompt: prompt || `Question ${number}`,
+            paragraphOptions: matchingChoiceOptions,
             correctAnswer: "",
             explanation: "",
             evidenceSpans
@@ -2356,14 +2399,6 @@ function ReadingTestClient({
                                         return <span key={partIndex}>{part}</span>;
                                       })}
                                     </p>
-                                    {question.wordBank && question.wordBank.length > 0 ? (
-                                      <div className="mt-2 flex flex-wrap gap-1.5">
-                                        <span className="text-xs font-semibold text-muted-foreground">{t.has("wordBank") ? t("wordBank") : "Word bank"}:</span>
-                                        {question.wordBank.map((word) => (
-                                          <span key={word} className="rounded-md border border-border/70 bg-muted/30 px-2 py-0.5 text-xs text-foreground/80">{word}</span>
-                                        ))}
-                                      </div>
-                                    ) : null}
                                   </div>
                                 </div>
                               );

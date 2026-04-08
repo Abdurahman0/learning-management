@@ -300,7 +300,7 @@ function buildDefaultGroupContentJson(type: QuestionType, from: number, to: numb
       return {template_text: buildTemplateText(from, to)};
     case "summary_completion": {
       const blanks = Array.from({length: Math.max(1, to - from + 1)}, (_, index) => `{${from + index}}`).join(" ");
-      return {summary_text: `Summary: ${blanks}`.trim(), word_bank: null};
+      return {summary_text: `Summary: ${blanks}`.trim(), word_bank: ["word1"]};
     }
     case "table_completion":
       return {
@@ -329,6 +329,13 @@ function buildDefaultGroupContentJson(type: QuestionType, from: number, to: numb
           text: `Heading ${index + 1}`
         }))
       };
+    case "matching_information":
+      return {
+        options: Array.from({length: 6}, (_, index) => ({
+          key: toOptionKey(index),
+          text: `Option ${toOptionKey(index)}`
+        }))
+      };
     case "matching_features":
       return {
         categories: [
@@ -350,6 +357,23 @@ function buildDefaultGroupContentJson(type: QuestionType, from: number, to: numb
 }
 
 function resolveGroupContentForSync(group: QuestionGroup): unknown {
+  if (group.type === "summary_completion") {
+    const content = asRecord(group.groupContentJson);
+    const summaryText = toStringSafe(content.summary_text).trim();
+    const blanks = Array.from({length: Math.max(1, group.to - group.from + 1)}, (_, index) => `{${group.from + index}}`).join(" ");
+    const rawWordBank = Array.isArray(content.word_bank)
+      ? content.word_bank
+      : [];
+    const wordBank = rawWordBank
+      .map((item) => toStringSafe(item).trim())
+      .filter(Boolean);
+
+    return {
+      summary_text: summaryText || `Summary: ${blanks}`.trim(),
+      word_bank: wordBank.length ? wordBank : ["word1"]
+    };
+  }
+
   if (group.type === "matching_headings") {
     return {
       headings: (group.questions[0] as any)?.headings.map((text: string, index: number) => ({
@@ -731,6 +755,8 @@ function mapApiQuestionToBuilderQuestion(
     const groupContent = asRecord(group.group_content_json);
     const optionRows = Array.isArray(groupContent.options)
       ? groupContent.options
+      : Array.isArray(groupContent.choices)
+        ? groupContent.choices
       : Array.isArray(groupContent.labels)
         ? groupContent.labels
         : Array.isArray(groupContent.categories)
@@ -779,13 +805,56 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
     ? sourceQuestions.map((question, index) => mapApiQuestionToBuilderQuestion(type, question, group, from + index))
     : Array.from({length: Math.max(0, to - from + 1)}, (_, index) => createDefaultQuestion(type, from + index));
 
+  const groupContent = asRecord(group.group_content_json);
+  const headingRows = Array.isArray(groupContent.headings) ? groupContent.headings : [];
+  const choiceRows = Array.isArray(groupContent.choices)
+    ? groupContent.choices
+    : Array.isArray(groupContent.options)
+      ? groupContent.options
+      : Array.isArray(groupContent.labels)
+        ? groupContent.labels
+        : Array.isArray(groupContent.categories)
+          ? groupContent.categories
+          : [];
+
+  const headings = headingRows
+    .map((item) => {
+      if (typeof item === "string") return item;
+      const row = asRecord(item);
+      return toStringSafe(row.text ?? row.label ?? row.key);
+    })
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const choices = choiceRows
+    .map((item) => {
+      if (typeof item === "string") return item;
+      const row = asRecord(item);
+      return toStringSafe(row.text ?? row.label ?? row.key);
+    })
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const enrichedQuestions = questions.map((question) => {
+    if (question.type === "matching_headings" && headings.length > 0) {
+      return {...question, headings};
+    }
+    if (
+      (question.type === "matching_information" || question.type === "matching_features")
+      && choices.length > 0
+    ) {
+      return {...question, choices};
+    }
+    return question;
+  });
+
   return normalizeGroup({
     id: toStringSafe(group.id, `${type}-${from}-${to}`),
     title: buildGroupTitle(from, to),
     type,
     from,
     to,
-    questions,
+    questions: enrichedQuestions,
     variantSetId: toStringSafe(group.variant_set ?? ""),
     instructions: toStringSafe(group.instructions ?? ""),
     groupContentJson: group.group_content_json ?? null
@@ -1288,7 +1357,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     }));
   };
 
-  const handleCreateGroup = async (type: QuestionType, from: number, to: number, instructions: string) => {
+  const handleCreateGroup = async (type: QuestionType, from: number, to: number, instructions: string, groupContent?: unknown) => {
     if (!activeStructure || isPersisting) {
       return;
     }
@@ -1320,7 +1389,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         question_number_end: to,
         word_limit: null,
         number_allowed: false,
-        group_content_json: buildDefaultGroupContentJson(type, from, to),
+        group_content_json: groupContent ?? buildDefaultGroupContentJson(type, from, to),
         is_active: true,
         ...parentPayload
       };

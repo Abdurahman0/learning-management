@@ -22,7 +22,7 @@ type QuestionGroupsPanelProps = {
   groups: QuestionGroup[];
   collapsedGroups: Record<string, boolean>;
   selectedQuestionId: string | null;
-  onCreateGroup: (type: QuestionType, from: number, to: number, instructions: string) => void;
+  onCreateGroup: (type: QuestionType, from: number, to: number, instructions: string, groupContent?: unknown) => void;
   onEditGroup: (groupId: string, type: QuestionType, from: number, to: number, instructions: string) => void;
   onDuplicateGroup: (groupId: string) => void;
   onDeleteGroup: (groupId: string) => void;
@@ -219,7 +219,17 @@ export function QuestionGroupsPanel({
         ? ((group.groupContentJson as any).word_bank as string[]).join(", ") 
         : "",
       headings: (group.questions[0] as any)?.headings?.join("\n") ?? "",
-      choices: (group.questions[0] as any)?.choices?.join("\n") ?? ""
+      choices:
+        ((group.questions[0] as any)?.choices?.join("\n") || (
+          Array.isArray((group.groupContentJson as any)?.choices)
+            ? ((group.groupContentJson as any).choices as string[]).join("\n")
+            : Array.isArray((group.groupContentJson as any)?.options)
+              ? ((group.groupContentJson as any).options as Array<{text?: string; label?: string; key?: string}>)
+                  .map((item) => item?.text ?? item?.label ?? item?.key ?? "")
+                  .filter(Boolean)
+                  .join("\n")
+              : ""
+        ))
     });
   };
 
@@ -228,17 +238,21 @@ export function QuestionGroupsPanel({
       return;
     }
 
+    const groupContent = {
+      summary_text: editor.summaryText,
+      word_bank:
+        editor.type === "summary_completion"
+          ? ["word1"]
+          : editor.wordBank.split(",").map(s => s.trim()).filter(Boolean),
+      headings: editor.headings.split("\n").map(s => s.trim()).filter(Boolean),
+      choices: editor.choices.split("\n").map(s => s.trim()).filter(Boolean)
+    };
+
     if (editor.mode === "create") {
-      onCreateGroup(editor.type, editor.from, editor.to, editor.instructions);
+      onCreateGroup(editor.type, editor.from, editor.to, editor.instructions, groupContent);
     } else if (editor.groupId) {
-      // We'll need to pass summaryText and wordBank here
-      // Since the signature in props is fixed, we'll need to update the props or use a separate handle.
-      // Actually, let's see how onEditGroup is defined in props.
       (onEditGroup as any)(editor.groupId, editor.type, editor.from, editor.to, editor.instructions, {
-        summary_text: editor.summaryText,
-        word_bank: editor.wordBank.split(",").map(s => s.trim()).filter(Boolean),
-        headings: editor.headings.split("\n").map(s => s.trim()).filter(Boolean),
-        choices: editor.choices.split("\n").map(s => s.trim()).filter(Boolean)
+        ...groupContent
       });
     }
 
@@ -386,21 +400,6 @@ export function QuestionGroupsPanel({
                     className="min-h-32 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
                   />
                   <p className="text-[10px] text-muted-foreground">{t("groups.fields.summaryTextHint")}</p>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.wordBank")}</label>
-                  <Input
-                    value={editor.wordBank}
-                    onChange={(event) =>
-                      setEditor((current) => ({
-                        ...current,
-                        wordBank: event.target.value
-                      }))
-                    }
-                    placeholder={t("groups.fields.wordBankPlaceholder")}
-                    className="h-10 rounded-xl border-border/70 bg-background/50"
-                  />
-                  <p className="text-[10px] text-muted-foreground">{t("groups.fields.wordBankHint")}</p>
                 </div>
               </>
             )}

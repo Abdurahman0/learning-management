@@ -48,6 +48,10 @@ function isMatchingStyleQuestion(question: BuilderQuestion): question is Extract
   );
 }
 
+function isMatchingChoiceQuestion(question: BuilderQuestion): question is Extract<BuilderQuestion, {type: "matching_information" | "matching_features"}> {
+  return question.type === "matching_information" || question.type === "matching_features";
+}
+
 export function QuestionTypeFields({question, onChange}: QuestionTypeFieldsProps) {
   const t = useTranslations("adminTestBuilder");
   const answerValue = useMemo(() => {
@@ -179,7 +183,42 @@ export function QuestionTypeFields({question, onChange}: QuestionTypeFieldsProps
         </div>
       ) : null}
 
-      {isMatchingStyleQuestion(question) ? (
+      {isMatchingChoiceQuestion(question) ? (
+        <div className="space-y-3">
+          {(() => {
+            const matchingQuestion = question as Extract<BuilderQuestion, {type: "matching_information" | "matching_features" | "selecting_from_a_list" | "map"}>;
+            return (
+          <div className="space-y-1.5">
+            <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctAnswer")}</Label>
+            <Select
+              value={
+                matchingQuestion.correctAnswer[matchingQuestion.prompt]
+                ?? Object.values(matchingQuestion.correctAnswer).find((value) => String(value ?? "").trim().length > 0)
+                ?? ""
+              }
+              onValueChange={(value) => onChange({...matchingQuestion, correctAnswer: {[matchingQuestion.prompt]: value}})}
+            >
+              <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">
+                <SelectValue placeholder={t("questions.fields.selectChoice")} />
+              </SelectTrigger>
+              <SelectContent>
+                {matchingQuestion.choices.map((choice, index) => (
+                  <SelectItem key={`${matchingQuestion.id}-choice-${index}`} value={choice}>
+                    {choice}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[10px] text-muted-foreground">
+              {t("questions.hints.groupWide")} ({t("groups.editTitle")})
+            </p>
+          </div>
+            );
+          })()}
+        </div>
+      ) : null}
+
+      {isMatchingStyleQuestion(question) && !isMatchingChoiceQuestion(question) ? (
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.items")}</Label>
