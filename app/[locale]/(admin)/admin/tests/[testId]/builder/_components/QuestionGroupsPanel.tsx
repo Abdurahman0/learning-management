@@ -23,7 +23,7 @@ type QuestionGroupsPanelProps = {
   collapsedGroups: Record<string, boolean>;
   selectedQuestionId: string | null;
   onCreateGroup: (type: QuestionType, from: number, to: number, instructions: string, groupContent?: unknown) => void;
-  onEditGroup: (groupId: string, type: QuestionType, from: number, to: number, instructions: string) => void;
+  onEditGroup: (groupId: string, type: QuestionType, from: number, to: number, instructions: string, groupContent?: unknown) => void;
   onDuplicateGroup: (groupId: string) => void;
   onDeleteGroup: (groupId: string) => void;
   onToggleGroupCollapse: (groupId: string) => void;
@@ -44,6 +44,7 @@ type GroupEditorState = {
   to: number;
   instructions: string;
   summaryText: string;
+  completionTemplateText: string;
   wordBank: string;
   headings: string;
   choices: string;
@@ -95,6 +96,14 @@ function getGroupSpan(group: QuestionGroup) {
   return {from, to, length: numbers.length};
 }
 
+function buildTemplateText(from: number, to: number) {
+  const lines: string[] = [];
+  for (let number = from; number <= to; number += 1) {
+    lines.push(`Item ${number}: {${number}}`);
+  }
+  return lines.join("\n");
+}
+
 export function QuestionGroupsPanel({
   mode,
   module,
@@ -128,6 +137,7 @@ export function QuestionGroupsPanel({
     to: Math.min(range.from + 2, range.to),
     instructions: "",
     summaryText: "",
+    completionTemplateText: "",
     wordBank: "",
     headings: "",
     choices: ""
@@ -199,6 +209,7 @@ export function QuestionGroupsPanel({
       to: preferredRange.to,
       instructions: "",
       summaryText: "",
+      completionTemplateText: "",
       wordBank: "",
       headings: "",
       choices: ""
@@ -215,6 +226,7 @@ export function QuestionGroupsPanel({
       to: group.to,
       instructions: group.instructions ?? "",
       summaryText: (group.groupContentJson as any)?.summary_text ?? "",
+      completionTemplateText: (group.groupContentJson as any)?.template_text ?? "",
       wordBank: Array.isArray((group.groupContentJson as any)?.word_bank) 
         ? ((group.groupContentJson as any).word_bank as string[]).join(", ") 
         : "",
@@ -241,6 +253,7 @@ export function QuestionGroupsPanel({
     const parsedHeadings = editor.headings.split("\n").map((value) => value.trim()).filter(Boolean);
     const parsedChoices = editor.choices.split("\n").map((value) => value.trim()).filter(Boolean);
     const parsedWordBank = editor.wordBank.split(",").map((value) => value.trim()).filter(Boolean);
+    const parsedTemplateText = editor.completionTemplateText.trim();
 
     const groupContent =
       editor.type === "summary_completion"
@@ -250,6 +263,8 @@ export function QuestionGroupsPanel({
           }
         : editor.type === "matching_headings"
           ? {headings: parsedHeadings}
+          : (editor.type === "form_completion" || editor.type === "note_completion")
+            ? {template_text: parsedTemplateText || buildTemplateText(editor.from, editor.to)}
           : (
                 editor.type === "matching_information"
                 || editor.type === "matching_features"
@@ -262,7 +277,7 @@ export function QuestionGroupsPanel({
     if (editor.mode === "create") {
       onCreateGroup(editor.type, editor.from, editor.to, editor.instructions, groupContent);
     } else if (editor.groupId) {
-      (onEditGroup as any)(editor.groupId, editor.type, editor.from, editor.to, editor.instructions, groupContent);
+      onEditGroup(editor.groupId, editor.type, editor.from, editor.to, editor.instructions, groupContent);
     }
 
     setEditor((current) => ({...current, open: false}));
@@ -411,6 +426,24 @@ export function QuestionGroupsPanel({
                   <p className="text-[10px] text-muted-foreground">{t("groups.fields.summaryTextHint")}</p>
                 </div>
               </>
+            )}
+
+            {(editor.type === "note_completion" || editor.type === "form_completion") && (
+              <div className="space-y-1.5">
+                <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">Template Text</label>
+                <textarea
+                  value={editor.completionTemplateText}
+                  onChange={(event) =>
+                    setEditor((current) => ({
+                      ...current,
+                      completionTemplateText: event.target.value
+                    }))
+                  }
+                  placeholder={`Example:\nItem ${editor.from}: {${editor.from}}\nItem ${Math.min(editor.from + 1, editor.to)}: {${Math.min(editor.from + 1, editor.to)}}`}
+                  className="min-h-32 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                />
+                <p className="text-[10px] text-muted-foreground">Use placeholders like {'{'}{`question_number`} {'}'} for blanks.</p>
+              </div>
             )}
 
             {editor.type === "matching_headings" && (
