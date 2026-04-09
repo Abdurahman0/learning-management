@@ -41,21 +41,36 @@ function toNumberOrNull(value: unknown) {
 function normalizeQuestion(item: unknown): StudentAttemptQuestion {
   const record = asRecord(item);
   const nestedQuestion = asRecord(record?.question);
-  const attemptQuestionId = toStringSafe(record?.attempt_question_id ?? record?.attempt_question ?? record?.id);
-  const primitiveQuestionRef =
-    typeof record?.question === "string" || typeof record?.question === "number" ? toStringSafe(record.question) : "";
+  
+  // Collect all possible IDs - MUST prioritize attempt-scoped IDs
+  const rawAttemptQuestionId = toStringSafe(record?.attempt_question_id);
+  const rawAttemptQuestion = toStringSafe(record?.attempt_question);
+  const rawId = toStringSafe(record?.id);
+  const rawQuestionId = toStringSafe(record?.question_id);
   const nestedQuestionId = toStringSafe(nestedQuestion?.question_id ?? nestedQuestion?.id ?? nestedQuestion?.uuid);
-  const directQuestionId = toStringSafe(record?.question_id ?? record?.question_uuid);
-  const resolvedQuestionId = directQuestionId || nestedQuestionId || primitiveQuestionRef;
+  const primitiveQuestionRef = typeof record?.question === "string" || typeof record?.question === "number" ? toStringSafe(record.question) : "";
+  
+  // CRITICAL: Avoid using question_id as fallback for attempt_question_id
+  // They are DIFFERENT - question_id is global, attempt_question_id is scoped to THIS attempt
+  const attemptQuestionId = rawAttemptQuestionId || rawAttemptQuestion || "";
+  const directQuestionId = rawQuestionId || rawId || "";
+  
+  // Build candidates: attempt-scoped first, then global IDs
   const candidateQuestionIds = [
-    directQuestionId,
-    nestedQuestionId,
-    primitiveQuestionRef,
-    attemptQuestionId
+    attemptQuestionId,     // Attempt-scoped (good for submission)
+    directQuestionId,      // Can be generic (fallback)
+    nestedQuestionId,      // Nested reference
+    primitiveQuestionRef,  // Primitive reference
+    rawId                  // Raw ID as last resort
   ].filter((value, index, source) => Boolean(value) && source.indexOf(value) === index);
+  
+  // CRITICAL: Use attemptQuestionId if available, otherwise directQuestionId
+  // DO NOT use question_id for submission if attempt_question_id exists
+  const resolvedId = attemptQuestionId || directQuestionId || rawId || "";
+  
   return {
-    id: resolvedQuestionId || attemptQuestionId,
-    question_id: resolvedQuestionId || null,
+    id: resolvedId,
+    question_id: directQuestionId || null,
     attempt_question_id: attemptQuestionId || null,
     candidate_question_ids: candidateQuestionIds,
     question_number: toNumberSafe(record?.question_number ?? nestedQuestion?.question_number),

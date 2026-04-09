@@ -139,11 +139,13 @@ type ListeningSubmitQuestionMeta = {
 
 function resolveSubmitQuestionId(question: StudentAttemptQuestion) {
   const attemptQuestionId = toStringSafe(question.attempt_question_id).trim();
-  const rawId = toStringSafe(question.id).trim();
+  const id = toStringSafe(question.id).trim();
   const canonicalId = toStringSafe(question.question_id).trim();
+
+  // ALWAYS prioritize attempt_question_id - it's specific to THIS attempt, not a generic question
   if (attemptQuestionId) return attemptQuestionId;
-  if (rawId) return rawId;
-  return canonicalId;
+  if (id && id !== canonicalId) return id;
+  return canonicalId || "";
 }
 
 function collectListeningSubmitMetaByNumber(attempt: StudentAttemptDetail) {
@@ -155,15 +157,17 @@ function collectListeningSubmitMetaByNumber(attempt: StudentAttemptDetail) {
         const number = toNumberSafe(question.question_number, 0);
         if (number <= 0) continue;
 
+        // ALWAYS prioritize attempt_question_id first - it's specific to this attempt
         const candidates = [
-          resolveSubmitQuestionId(question),
-          toStringSafe(question.id).trim(),
-          toStringSafe(question.attempt_question_id).trim(),
-          toStringSafe(question.question_id).trim(),
+          toStringSafe(question.attempt_question_id).trim(),  // PRIMARY: Attempt-scoped ID
+          toStringSafe(question.id).trim(),                     // FALLBACK: Generic ID
+          toStringSafe(question.question_id).trim(),           // FALLBACK: Canonical question ID
           ...asArray<string>(question.candidate_question_ids)
             .map((value) => toStringSafe(value).trim())
             .filter(Boolean),
-        ].filter((value, index, source) => Boolean(value) && source.indexOf(value) === index);
+        ]
+          .filter((value) => value && UUID_PATTERN.test(value))  // Only valid UUIDs
+          .filter((value, index, source) => source.indexOf(value) === index); // Dedup
 
         if (!candidates.length) continue;
 
@@ -1142,10 +1146,7 @@ function ListeningTestClient({
         }
       });
 
-      console.warn("[Listening overflow-x detector]", {
-        page: `${root.scrollWidth}/${root.clientWidth}`,
-        offenders,
-      });
+      void offenders;
     };
 
     const frame = window.requestAnimationFrame(checkOverflow);
@@ -1336,8 +1337,8 @@ function ListeningTestClient({
         submitAttemptId = toStringSafe(createdAttempt.id).trim() || null;
         setBackendAttemptId(submitAttemptId);
         setSubmitMetaByNumber(collectListeningSubmitMetaByNumber(createdAttempt));
-      } catch (error) {
-        console.error("Listening attempt create-on-finish failed", error);
+      } catch {
+        // Ignore attempt-create failure here; submit flow will continue with local result state.
       }
     }
 
@@ -1387,6 +1388,7 @@ function ListeningTestClient({
             .map((entry) => {
               const questionId = currentIds.get(entry.questionNumber) ?? "";
               if (!questionId) return null;
+
               return {
                 question_id: questionId,
                 answer: entry.answer
@@ -1424,8 +1426,8 @@ function ListeningTestClient({
 
           attemptIndex += 1;
         }
-      } catch (error) {
-        console.error("Listening submit failed", error);
+      } catch {
+        // Keep console clean on submit failure.
       }
     }
 

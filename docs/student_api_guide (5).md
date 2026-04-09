@@ -329,6 +329,9 @@ Content-Type: application/json
           "questions": [
             {
               "id": "uuid",
+              "question_id": "uuid",
+              "attempt_question_id": "uuid",
+              "candidate_question_ids": ["question-uuid", "attempt-question-uuid"],
               "question_number": 1,
               "question_text": null,
               "options_json": { "statement": "Urban gardens are still treated only as informal hobbies." },
@@ -347,6 +350,7 @@ Content-Type: application/json
 ```
 
 **Note:** `correct_answer_json`, `explanation`, and `answer_evidence_json` are **never** returned during a test — only in review mode after submission.
+`question.id` and `question.question_id` are the canonical question UUID. `question.attempt_question_id` is the attempt-specific `QuestionAnswer` UUID for the same rendered question.
 
 ### Resume an Attempt
 
@@ -369,12 +373,14 @@ Content-Type: application/json
   "answers": [
     {
       "question_id": "uuid",
+      "attempt_question_id": "uuid",
       "answer": { "answer": "TRUE" },
       "is_flagged": false,
       "time_spent_seconds": 30
     },
     {
       "question_id": "uuid",
+      "attempt_question_id": "uuid",
       "answer": null,
       "is_flagged": true
     }
@@ -382,7 +388,7 @@ Content-Type: application/json
 }
 ```
 
-Send `"answer": null` to mark a question as skipped/unanswered. Only questions whose `question_id` appears in the list are updated — other questions are unaffected.
+Send `"answer": null` to mark a question as skipped/unanswered. Only questions whose `question_id` or `attempt_question_id` appears in the list are updated — other questions are unaffected. For safest frontend integration, send both when available.
 
 **Response:**
 ```json
@@ -402,8 +408,8 @@ Content-Type: application/json
 {
   "time_used_seconds": 3540,
   "answers": [
-    { "question_id": "uuid", "answer": { "answer": "FALSE" }, "is_flagged": false },
-    { "question_id": "uuid", "answer": null }
+    { "question_id": "uuid", "attempt_question_id": "uuid", "answer": { "answer": "FALSE" }, "is_flagged": false },
+    { "question_id": "uuid", "attempt_question_id": "uuid", "answer": null }
   ]
 }
 ```
@@ -648,7 +654,7 @@ GET /api/v1/student/review-center/
   "stats": {
     "total_to_review": 5,
     "most_difficult_type": "MATCHING_HEADINGS",
-    "weakest_module": "Writing",
+    "weakest_module": "Reading",
     "accuracy_trend": "+6%"
   },
   "mistakes_by_type": [

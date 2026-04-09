@@ -263,13 +263,13 @@ function buildEvidencePhrase(prompt: string, fallbackNumber: number) {
 }
 
 function resolveSubmitQuestionId(question: StudentAttemptQuestion) {
-  const attemptId = toStringSafe(question.id).trim();
+  const attemptQuestionId = toStringSafe(question.attempt_question_id).trim();
+  const id = toStringSafe(question.id).trim();
   const canonicalId = toStringSafe(question.question_id).trim();
-  const tryAttemptQuestionId = toStringSafe(question.attempt_question_id).trim();
 
-  // Prefer attempt_question_id if present, otherwise try default id
-  if (tryAttemptQuestionId) return tryAttemptQuestionId;
-  if (attemptId) return attemptId;
+  // ALWAYS prioritize attempt_question_id - it's specific to THIS attempt, not a generic question
+  if (attemptQuestionId) return attemptQuestionId;
+  if (id && id !== canonicalId) return id;
   return canonicalId || "";
 }
 
@@ -282,6 +282,7 @@ function extractValidationAnswerQuestionIdFailures(error: unknown) {
   const payloadError = asRecord(raw?.error);
   const details = asRecord(payloadError?.details);
   const answers = asRecord(details?.answers);
+
   if (!answers) {
     return new Set<string>();
   }
@@ -319,13 +320,15 @@ function collectAttemptSubmitCandidatesByNumber(attempt: StudentAttemptDetail) {
         if (number <= 0) continue;
 
         const candidates = [
-          toStringSafe(question.id).trim(),
           toStringSafe(question.attempt_question_id).trim(),
+          toStringSafe(question.id).trim(),
           toStringSafe(question.question_id).trim(),
           ...asArray<string>(question.candidate_question_ids)
             .map((value) => toStringSafe(value).trim())
             .filter(Boolean)
-        ].filter((value, index, source) => Boolean(value) && source.indexOf(value) === index);
+        ]
+          .filter((value) => value && UUID_PATTERN.test(value))
+          .filter((value, index, source) => source.indexOf(value) === index);
 
         if (candidates.length > 0) {
           byNumber.set(number, candidates);
@@ -357,47 +360,65 @@ function collectUuidStrings(value: unknown, maxDepth = 4): string[] {
 
 function collectAttemptRawSubmitCandidatesByNumber(rawAttempt: unknown) {
   const result = new Map<number, string[]>();
-  const root = asRecord(rawAttempt);
-  const passages = asArray<unknown>(root?.reading_passages);
+  const visited = new Set<unknown>();
 
-  for (const passage of passages) {
-    const passageRecord = asRecord(passage);
-    const groups = asArray<unknown>(passageRecord?.question_groups);
-    for (const group of groups) {
-      const groupRecord = asRecord(group);
-      const questions = asArray<unknown>(groupRecord?.questions);
-      for (const question of questions) {
-        const row = asRecord(question);
-        if (!row) continue;
+  const mergeCandidates = (number: number, candidates: string[]) => {
+    if (number <= 0 || !candidates.length) return;
+    const previous = result.get(number) ?? [];
+    result.set(
+      number,
+      [...previous, ...candidates]
+        .filter((value) => UUID_PATTERN.test(value))
+        .filter((value, index, source) => source.indexOf(value) === index)
+    );
+  };
 
-        const nestedQuestion = asRecord(row.question);
-        const number = toNumberSafe(row.question_number ?? nestedQuestion?.question_number, 0);
-        if (number <= 0) continue;
+  const walk = (value: unknown, depth = 0) => {
+    if (depth > 8 || value === null || value === undefined) return;
+    if (typeof value !== "object") return;
+    if (visited.has(value)) return;
+    visited.add(value);
 
-        // Prefer attempt-scoped identifiers first; canonical question ids can fail validation on save.
-        const prioritized = [
-          toStringSafe(row.attempt_question_id).trim(),
-          toStringSafe(row.attempt_question).trim(),
-          toStringSafe(row.id).trim(),
-          toStringSafe(row.question_answer_id).trim(),
-          toStringSafe(row.question_answer).trim(),
-          toStringSafe(row.question_id).trim(),
-          typeof row.question === "string" ? row.question.trim() : "",
-          toStringSafe(nestedQuestion?.id).trim(),
-          toStringSafe(nestedQuestion?.question_id).trim()
-        ].filter(Boolean);
-        const scanned = collectUuidStrings(row, 4);
-        const combined = [...prioritized, ...scanned].filter(
-          (value, index, source) => Boolean(value) && source.indexOf(value) === index
-        );
-
-        if (combined.length > 0) {
-          result.set(number, combined);
-        }
-      }
+    if (Array.isArray(value)) {
+      value.forEach((item) => walk(item, depth + 1));
+      return;
     }
-  }
 
+    const row = asRecord(value);
+    if (!row) return;
+
+    const nestedQuestion = asRecord(row.question);
+    const number = toNumberSafe(
+      row.question_number
+      ?? row.number
+      ?? nestedQuestion?.question_number
+      ?? asRecord(row.question_meta)?.question_number,
+      0
+    );
+
+    if (number > 0) {
+      const prioritized = [
+        toStringSafe(row.attempt_question_id).trim(),
+        toStringSafe(row.attempt_question).trim(),
+        toStringSafe(row.question_answer_id).trim(),
+        toStringSafe(row.question_answer).trim(),
+        toStringSafe(row.id).trim(),
+        toStringSafe(row.question_id).trim(),
+        typeof row.question === "string" ? row.question.trim() : "",
+        toStringSafe(nestedQuestion?.id).trim(),
+        toStringSafe(nestedQuestion?.question_id).trim()
+      ].filter(Boolean);
+      const scanned = collectUuidStrings(row, 5);
+      mergeCandidates(
+        number,
+        [...prioritized, ...scanned].filter((item, index, source) => source.indexOf(item) === index)
+      );
+    }
+
+    Object.values(row).forEach((child) => walk(child, depth + 1));
+  };
+
+  walk(rawAttempt, 0);
   return result;
 }
 
@@ -786,7 +807,7 @@ type ReadingTestClientProps = {
 
 function ReadingTestClient({
   test,
-  backendAttemptId = null,
+  backendAttemptId: initialBackendAttemptId = null,
   restartRequested = false,
   requestedMode = null
 }: ReadingTestClientProps) {
@@ -819,6 +840,7 @@ function ReadingTestClient({
   });
   const [isSubmittingResult, setIsSubmittingResult] = useState(false);
   const [backendReviewData, setBackendReviewData] = useState<AdaptedReadingBackendReview | null>(null);
+  const [backendAttemptId, setBackendAttemptId] = useState<string | null>(initialBackendAttemptId);
   const splitStorageKey = "readingSplitPct";
   const [splitPct, setSplitPct] = useState(() => {
     if (typeof window === "undefined") return DEFAULT_SPLIT;
@@ -856,6 +878,8 @@ function ReadingTestClient({
   const initDoneRef = useRef(false);
   const backendSaveChainRef = useRef<Promise<void>>(Promise.resolve());
   const initialBackendSaveAttemptRef = useRef<string | null>(null);
+  const backendRecoveryInFlightRef = useRef(false);
+  const lastBackendRecoveryAtRef = useRef(0);
   const leaveWarningMessage = t.has("leaveWarning")
     ? t("leaveWarning")
     : "Are you sure you want to quit this test? Your results will not be saved.";
@@ -1112,6 +1136,10 @@ function ReadingTestClient({
   }, [activePassageId, reviewMode]);
 
   useEffect(() => {
+    setBackendAttemptId(initialBackendAttemptId);
+  }, [initialBackendAttemptId, test.id]);
+
+  useEffect(() => {
     if (!attemptId || !attemptMode) return;
     saveAttemptProgress({
       attemptId,
@@ -1165,9 +1193,10 @@ function ReadingTestClient({
           : [];
         const currentIds = new Map<string, string>();
         activeEntries.forEach((entry) => {
-          const initialId = entry.candidateIds[0] ?? "";
-          if (initialId) {
-            currentIds.set(entry.questionKey, initialId);
+          const possiblyAttemptScoped = entry.candidateIds.find((id) => id.length > 0);
+          const selectedId = possiblyAttemptScoped ?? entry.candidateIds[0] ?? "";
+          if (selectedId) {
+            currentIds.set(entry.questionKey, selectedId);
           }
         });
 
@@ -1189,8 +1218,15 @@ function ReadingTestClient({
             })
             .filter(
               (item): item is {question_id: string; answer: {answer: string} | {answers: string[]} | null; is_flagged: boolean} =>
-                item !== null
+                item !== null && !!item.question_id
             );
+
+          if (includeAnswers && activeEntries.length > 0 && payloadAnswers.length === 0) {
+            if (strict) {
+              throw new Error("No valid attempt question IDs resolved for current answers.");
+            }
+            return;
+          }
 
           try {
             await studentAttemptsService.save(backendAttemptId, {
@@ -1208,20 +1244,12 @@ function ReadingTestClient({
             for (const entry of activeEntries) {
               const currentId = currentIds.get(entry.questionKey) ?? "";
               if (!currentId || !failedQuestionIds.has(currentId)) continue;
+
               const nextCandidate = entry.candidateIds.find((candidate) => candidate && candidate !== currentId);
               if (nextCandidate) {
                 currentIds.set(entry.questionKey, nextCandidate);
                 changed = true;
               }
-            }
-
-            if (!changed) {
-              const before = activeEntries.length;
-              activeEntries = activeEntries.filter((entry) => {
-                const currentId = currentIds.get(entry.questionKey) ?? "";
-                return !currentId || !failedQuestionIds.has(currentId);
-              });
-              changed = activeEntries.length < before;
             }
 
             if (!changed) {
@@ -1237,14 +1265,16 @@ function ReadingTestClient({
                 if (!currentId || !failedQuestionIds.has(currentId)) continue;
 
                 const freshPool = [
-                  ...(freshRawByNumber.get(entry.questionNumber) ?? []),
-                  ...(freshByNumber.get(entry.questionNumber) ?? [])
-                ].filter((value, index, source) => Boolean(value) && source.indexOf(value) === index);
+                  ...(freshByNumber.get(entry.questionNumber) ?? []),
+                  ...(freshRawByNumber.get(entry.questionNumber) ?? [])
+                ]
+                  .filter((value) => UUID_PATTERN.test(value))
+                  .filter((value, index, source) => source.indexOf(value) === index);
 
                 if (!freshPool.length) continue;
-                entry.candidateIds = [...entry.candidateIds, ...freshPool].filter(
-                  (value, index, source) => Boolean(value) && source.indexOf(value) === index
-                );
+                entry.candidateIds = [...entry.candidateIds, ...freshPool]
+                  .filter((value) => UUID_PATTERN.test(value))
+                  .filter((value, index, source) => source.indexOf(value) === index);
 
                 const nextCandidate = entry.candidateIds.find((candidate) => candidate && candidate !== currentId);
                 if (nextCandidate) {
@@ -1255,7 +1285,49 @@ function ReadingTestClient({
             }
 
             if (!changed) {
-              throw error;
+              if (strict) {
+                throw error;
+              }
+              const now = Date.now();
+              const recoveryCooldownMs = 15_000;
+              if (
+                includeAnswers
+                && attemptMode
+                && !backendRecoveryInFlightRef.current
+                && now - lastBackendRecoveryAtRef.current >= recoveryCooldownMs
+              ) {
+                backendRecoveryInFlightRef.current = true;
+                lastBackendRecoveryAtRef.current = now;
+                try {
+                  try {
+                    await studentAttemptsService.submit(backendAttemptId, {
+                      time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+                      answers: []
+                    });
+                  } catch {
+                    // Ignore and continue recovery create attempt path.
+                  }
+                  const createdAttempt = await studentAttemptsService.create({
+                    practice_test: test.id,
+                    mode: attemptMode === "real" ? "REAL" : "PRACTICE"
+                  });
+                  const hydratedAttempt = hasAttemptQuestionData(createdAttempt)
+                    ? createdAttempt
+                    : await studentAttemptsService.getById(String(createdAttempt.id));
+                  const nextAttemptId = String(hydratedAttempt.id);
+                  if (nextAttemptId === backendAttemptId) {
+                    return;
+                  }
+                  setBackendAttemptId(nextAttemptId);
+                  initialBackendSaveAttemptRef.current = null;
+                } catch {
+                  // Ignore autosave recovery error to avoid breaking the UI flow.
+                } finally {
+                  backendRecoveryInFlightRef.current = false;
+                }
+                return;
+              }
+              return;
             }
           }
 
@@ -1270,15 +1342,9 @@ function ReadingTestClient({
         return run;
       }
 
-      return run.catch((error) => {
-        console.warn("[reading save] save failed", {
-          attemptId: backendAttemptId,
-          context,
-          error: error instanceof Error ? error.message : String(error)
-        });
-      });
+      return run.catch(() => undefined);
     },
-    [answers, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, test.questions]
+    [answers, attemptMode, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, test.id, test.questions]
   );
 
   useEffect(() => {
@@ -1591,8 +1657,8 @@ function ReadingTestClient({
       setReviewMode(true);
       setFinishOpen(false);
       setTimerRunning(false);
-    } catch (error) {
-      console.error("Reading submit failed", error);
+    } catch {
+      // Keep submit failure silent in UI logs.
     } finally {
       setIsSubmittingResult(false);
     }
