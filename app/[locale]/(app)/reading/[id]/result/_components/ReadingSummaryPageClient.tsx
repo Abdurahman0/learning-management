@@ -5,13 +5,18 @@ import {useEffect, useMemo, useState} from "react";
 import {useParams, useSearchParams} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
 
+import {getReadingReviewData} from "@/data/review-reading";
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
 import {gradeTest, type GradeableQuestion} from "@/lib/grading";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
 import type {StudentAttemptDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
 import {QuestionTypePerformance, type QuestionTypePerformanceItem} from "./QuestionTypePerformance";
+import {ReviewAiCoachCard} from "./ReviewAiCoachCard";
 import {ReviewHeader} from "./ReviewHeader";
+import {ReviewMistakeHeatmap} from "./ReviewMistakeHeatmap";
+import {ReviewNextActions} from "./ReviewNextActions";
+import {ReviewVideoLessonCard} from "./ReviewVideoLessonCard";
 import {adaptReadingBackendReview, type AdaptedReadingBackendReview} from "./backendReviewAdapters";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -50,6 +55,8 @@ export function ReadingSummaryPageClient() {
   const [attemptDetail, setAttemptDetail] = useState<StudentAttemptDetail | null>(null);
   const [backendReview, setBackendReview] = useState<AdaptedReadingBackendReview | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(resolvedBackendAttemptId));
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const tReadingReview = useTranslations("readingReview");
 
   useEffect(() => {
     let active = true;
@@ -133,6 +140,8 @@ export function ReadingSummaryPageClient() {
     }));
   }, [grading, gradingQuestions]);
 
+  const reviewData = useMemo(() => getReadingReviewData(testId), [testId]);
+
   if (!resolvedBackendAttemptId) {
     return (
       <div className="mx-auto mt-8 max-w-3xl px-4">
@@ -180,6 +189,52 @@ export function ReadingSummaryPageClient() {
   const testTitle = attemptDetail?.practice_test_title || reviewPayload?.test_title || "Reading Test";
   const questionTypeStats = attemptDetail?.question_type_stats_json ?? null;
   const passageStats = attemptDetail?.passage_stats_json ?? null;
+  const dynamicMistakeBreakdown = accuracyByType.length
+    ? [...accuracyByType]
+        .sort((a, b) => a.percent - b.percent)
+        .map((item) => ({
+          id: item.type,
+          label: tReadingResult(`questionTypes.${item.type}`),
+          successRate: item.percent
+        }))
+    : reviewData.mistakeBreakdown;
+  const dynamicHeatmap = passageStats
+    ? Object.entries(passageStats).map(([label, stats], index) => {
+        const row = (stats && typeof stats === "object" ? (stats as Record<string, unknown>) : {}) ?? {};
+        const correct = typeof row.correct === "number" ? row.correct : 0;
+        const total = typeof row.total === "number" ? row.total : 0;
+        const ratio = total > 0 ? correct / total : 0;
+        const level = ratio >= 0.75 ? "excellent" : ratio >= 0.5 ? "average" : "critical";
+        return {
+          passageId: `p${index + 1}`,
+          label: `P${index + 1}`,
+          level,
+          answeredCorrectly: correct,
+          total
+        } as const;
+      })
+    : reviewData.heatmap;
+  const weakestQuestionType = dynamicMistakeBreakdown[0]?.label ?? reviewData.aiCoach.weakestQuestionType;
+  const weakestPassage = [...dynamicHeatmap]
+    .sort((a, b) => {
+      const ratioA = a.total > 0 ? a.answeredCorrectly / a.total : 0;
+      const ratioB = b.total > 0 ? b.answeredCorrectly / b.total : 0;
+      return ratioA - ratioB;
+    })[0]?.label ?? reviewData.aiCoach.weakestPassage;
+  const dynamicCoach = {
+    ...reviewData.aiCoach,
+    score: `${correctCount}/${totalQuestions}`,
+    accuracy: `${scorePercent}%`,
+    timeUsed: `${minutes}:${seconds}`,
+    weakestQuestionType,
+    weakestPassage
+  };
+
+  useEffect(() => {
+    if (!actionNotice) return;
+    const timer = window.setTimeout(() => setActionNotice(null), 2200);
+    return () => window.clearTimeout(timer);
+  }, [actionNotice]);
 
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
@@ -249,10 +304,30 @@ export function ReadingSummaryPageClient() {
         </Card>
       ) : null}
 
-      {/* Mock-backed reading AI/video/action widgets are temporarily hidden until backend endpoints are finalized. */}
-      <Card className="rounded-3xl border-border/70 bg-card/80 p-4 text-sm text-muted-foreground">
-        Extra coaching widgets are temporarily hidden while backend-only integration is in progress.
-      </Card>
+      {actionNotice ? (
+        <Card className="border-blue-300/70 bg-blue-100/70 p-3 text-sm text-blue-700 dark:border-blue-500/35 dark:bg-blue-500/10 dark:text-blue-100">
+          {actionNotice}
+        </Card>
+      ) : null}
+
+      <ReviewVideoLessonCard
+        lesson={reviewData.videoLesson}
+        onAction={(message) => setActionNotice(tReadingReview("actionPlaceholder", {action: message}))}
+      />
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <ReviewAiCoachCard
+          coach={dynamicCoach}
+          mistakeBreakdown={dynamicMistakeBreakdown}
+          onAction={(message) => setActionNotice(tReadingReview("actionPlaceholder", {action: message}))}
+        />
+        <ReviewMistakeHeatmap items={dynamicHeatmap} />
+      </div>
+
+      <ReviewNextActions
+        actions={reviewData.nextActions}
+        onAction={(message) => setActionNotice(tReadingReview("actionPlaceholder", {action: message}))}
+      />
     </section>
   );
 }
