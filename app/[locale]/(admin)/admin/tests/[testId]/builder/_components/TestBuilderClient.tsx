@@ -182,6 +182,7 @@ function mapApiQuestionTypeToBuilder(value: string): QuestionType {
   if (normalized === "MCQ_SINGLE" || normalized === "MCQ_MULTIPLE") return "multiple_choice";
   if (normalized === "MATCHING_HEADINGS") return "matching_headings";
   if (normalized === "MATCH_PARA_INFO" || normalized === "MATCHING_INFORMATION") return "matching_information";
+  if (normalized === "MATCHING") return "matching_information";
   if (normalized === "CLASSIFICATION" || normalized === "MATCHING_FEATURES") return "matching_features";
   if (normalized === "LIST_SELECTION" || normalized === "SELECTING_FROM_A_LIST") return "selecting_from_a_list";
   if (normalized === "PLAN_MAP_DIAGRAM") return "map";
@@ -364,7 +365,13 @@ function buildDefaultGroupContentJson(type: QuestionType, from: number, to: numb
   }
 }
 
-function ensureGroupContentForApi(type: QuestionType, from: number, to: number, input: unknown): unknown {
+function ensureGroupContentForApi(
+  type: QuestionType,
+  from: number,
+  to: number,
+  input: unknown,
+  module?: "reading" | "listening"
+): unknown {
   const fallback = buildDefaultGroupContentJson(type, from, to);
   const content = asRecord(input);
 
@@ -373,6 +380,28 @@ function ensureGroupContentForApi(type: QuestionType, from: number, to: number, 
   }
 
   if (type === "matching_information") {
+    if (module === "listening") {
+      const sourceRows = Array.isArray(content.options)
+        ? content.options
+        : Array.isArray(content.choices)
+          ? content.choices
+          : [];
+      const options = sourceRows
+        .map((item) => {
+          if (typeof item === "string") return item;
+          const row = asRecord(item);
+          return toStringSafe(row.text ?? row.label ?? row.key);
+        })
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      return {
+        options: options.map((text, index) => ({
+          key: toOptionKey(index),
+          text
+        }))
+      };
+    }
     return null;
   }
 
@@ -515,13 +544,17 @@ function ensureGroupContentForApi(type: QuestionType, from: number, to: number, 
   return input;
 }
 
-function resolveGroupContentForSync(group: QuestionGroup): unknown {
-  if (group.type === "multiple_choice" || group.type === "matching_information") {
+function resolveGroupContentForSync(group: QuestionGroup, module: "reading" | "listening"): unknown {
+  if (group.type === "multiple_choice") {
+    return null;
+  }
+
+  if (group.type === "matching_information" && module !== "listening") {
     return null;
   }
 
   if (group.type === "summary_completion") {
-    return ensureGroupContentForApi(group.type, group.from, group.to, group.groupContentJson);
+    return ensureGroupContentForApi(group.type, group.from, group.to, group.groupContentJson, module);
   }
 
   if (group.type === "matching_headings") {
@@ -562,7 +595,7 @@ function resolveGroupContentForSync(group: QuestionGroup): unknown {
     };
   }
 
-  return ensureGroupContentForApi(group.type, group.from, group.to, group.groupContentJson);
+  return ensureGroupContentForApi(group.type, group.from, group.to, group.groupContentJson, module);
 }
 
 function mapBuilderQuestionTypeToApi(value: QuestionType, questionCount: number) {
@@ -597,8 +630,16 @@ function resolveMcqModeFromGroupContent(groupContent: unknown): "single" | "mult
   return toStringSafe(content.mcq_mode).trim().toLowerCase() === "multiple" ? "multiple" : "single";
 }
 
-function resolveApiQuestionTypeForGroup(type: QuestionType, questionCount: number, groupContent?: unknown) {
+function resolveApiQuestionTypeForGroup(
+  type: QuestionType,
+  questionCount: number,
+  groupContent?: unknown,
+  module?: "reading" | "listening"
+) {
   if (type !== "multiple_choice") {
+    if (type === "matching_information" && module === "listening") {
+      return "MATCHING";
+    }
     return mapBuilderQuestionTypeToApi(type, questionCount);
   }
   return resolveMcqModeFromGroupContent(groupContent) === "multiple" ? "MCQ_MULTIPLE" : "MCQ_SINGLE";
@@ -767,7 +808,7 @@ function mapBuilderQuestionToBulkPayload(question: BuilderQuestion, apiType: str
 
     return {
       ...base,
-      options_json: question.type === "matching_information" ? {statement: prompt} : null,
+      options_json: question.type === "matching_information" && apiType !== "MATCHING" ? {statement: prompt} : null,
       correct_answer_json: {answer: String(mappedAnswer).trim()}
     };
   }
@@ -1583,8 +1624,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           ? ({listening_part: activeStructure.id} satisfies Pick<QuestionGroupPayload, "listening_part">)
           : ({reading_passage: activeStructure.id} satisfies Pick<QuestionGroupPayload, "reading_passage">);
 
-      const resolvedGroupContent = ensureGroupContentForApi(type, from, to, groupContent);
-      const apiQuestionType = resolveApiQuestionTypeForGroup(type, Math.max(1, to - from + 1), groupContent);
+      const resolvedGroupContent = ensureGroupContentForApi(type, from, to, groupContent, test.module);
+      const apiQuestionType = resolveApiQuestionTypeForGroup(type, Math.max(1, to - from + 1), groupContent, test.module);
 
       const payload: QuestionGroupPayload = {
         question_type: apiQuestionType,
@@ -2114,7 +2155,12 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         for (let index = 0; index < localGroups.length; index += 1) {
           const group = localGroups[index];
           const normalizedLocalQuestions = [...group.questions].sort((left, right) => left.number - right.number);
-          const apiQuestionType = resolveApiQuestionTypeForGroup(group.type, normalizedLocalQuestions.length, group.groupContentJson);
+          const apiQuestionType = resolveApiQuestionTypeForGroup(
+            group.type,
+            normalizedLocalQuestions.length,
+            group.groupContentJson,
+            test.module
+          );
           const commonPayload = {
             question_type: apiQuestionType,
             group_order: index + 1,
@@ -2123,7 +2169,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             question_number_end: group.to,
             word_limit: null,
             number_allowed: false,
-            group_content_json: resolveGroupContentForSync(group),
+            group_content_json: resolveGroupContentForSync(group, test.module),
             is_active: true
           } satisfies Partial<QuestionGroupPayload>;
 

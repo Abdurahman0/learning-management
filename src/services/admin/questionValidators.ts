@@ -30,6 +30,12 @@ const MATCHING_TYPES = new Set([
   "map"
 ]);
 
+const MATCHING_TYPES_REQUIRING_STATEMENT_OPTIONS = new Set([
+  "matching_information",
+  "match_para_info",
+  "matching_paragraph_info"
+]);
+
 function normalizeQuestionType(value: string) {
   return String(value ?? "")
     .trim()
@@ -159,8 +165,12 @@ function validateOne(questionType: string, item: QuestionBulkItemPayload, index:
   }
 
   if (MATCHING_TYPES.has(normalizedType)) {
-    if (normalizedType !== "matching_headings" && !isNonEmptyArray(item.options_json) && !isNonEmptyObject(item.options_json)) {
-      throw new AdminApiError(`${label}: options_json is required for matching question types.`, 400);
+    if (
+      MATCHING_TYPES_REQUIRING_STATEMENT_OPTIONS.has(normalizedType)
+      && !isNonEmptyArray(item.options_json)
+      && !isNonEmptyObject(item.options_json)
+    ) {
+      throw new AdminApiError(`${label}: options_json with statement is required for matching paragraph information.`, 400);
     }
     if (!isNonEmptyObject(item.correct_answer_json) && !isNonEmptyArray(item.correct_answer_json) && !hasText(item.correct_answer_json)) {
       throw new AdminApiError(`${label}: correct_answer_json mapping is required for matching question types.`, 400);
