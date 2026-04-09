@@ -1153,6 +1153,7 @@
                                            },
                              "validation":  {
                                                 "publishQuestionCount":  "Hozircha nashr qilib bolmaydi. Jami savollar {required} bolishi va har bir passage/qism aniq toldirilgan bolishi kerak. Hozirgi jami: {current}.",
+                                                "syncing":  "O'zgarishlar serverga saqlanmoqda...",
                                                 "overlapIssue":  "kesishuv bor",
                                                 "outOfRangeIssue":  "diapazondan tashqarida"
                                             },

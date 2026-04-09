@@ -1153,6 +1153,7 @@
                                            },
                              "validation":  {
                                                 "publishQuestionCount":  "Cannot publish yet. Total questions must be {required} and each passage/part must be filled exactly. Current total: {current}.",
+                                                "syncing":  "Saving your changes to the server...",
                                                 "overlapIssue":  "overlap",
                                                 "outOfRangeIssue":  "out of range"
                                             },

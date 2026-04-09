@@ -372,6 +372,117 @@ function ensureGroupContentForApi(type: QuestionType, from: number, to: number, 
     return null;
   }
 
+  if (type === "matching_information") {
+    return null;
+  }
+
+  if (type === "matching_headings") {
+    const sourceRows = Array.isArray(content.headings) ? content.headings : [];
+    const headings = sourceRows
+      .map((item) => {
+        if (typeof item === "string") return item;
+        const row = asRecord(item);
+        return toStringSafe(row.text ?? row.label ?? row.key);
+      })
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (headings.length > 0) {
+      return {
+        headings: headings.map((text, index) => ({
+          key: toRoman(index),
+          text
+        }))
+      };
+    }
+
+    return fallback;
+  }
+
+  if (type === "matching_features") {
+    const sourceRows = Array.isArray(content.categories)
+      ? content.categories
+      : Array.isArray(content.choices)
+        ? content.choices
+        : [];
+    const categories = sourceRows
+      .map((item) => {
+        if (typeof item === "string") return item;
+        const row = asRecord(item);
+        return toStringSafe(row.label ?? row.text ?? row.key);
+      })
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (categories.length > 0) {
+      return {
+        categories: categories.map((label, index) => ({
+          key: toOptionKey(index),
+          label
+        }))
+      };
+    }
+
+    return fallback;
+  }
+
+  if (type === "selecting_from_a_list") {
+    const sourceRows = Array.isArray(content.options)
+      ? content.options
+      : Array.isArray(content.choices)
+        ? content.choices
+        : [];
+    const options = sourceRows
+      .map((item) => {
+        if (typeof item === "string") return item;
+        const row = asRecord(item);
+        return toStringSafe(row.text ?? row.label ?? row.key);
+      })
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    if (options.length > 0) {
+      return {
+        options: options.map((text, index) => ({
+          key: toOptionKey(index),
+          text
+        }))
+      };
+    }
+
+    return fallback;
+  }
+
+  if (type === "map") {
+    const fallbackRecord = asRecord(fallback);
+    const image = toStringSafe(content.image ?? fallbackRecord.image).trim() || toStringSafe(fallbackRecord.image);
+    const sourceRows = Array.isArray(content.labels)
+      ? content.labels
+      : Array.isArray(content.options)
+        ? content.options
+        : Array.isArray(content.choices)
+          ? content.choices
+          : [];
+    const labels = sourceRows
+      .map((item) => {
+        if (typeof item === "string") return item;
+        const row = asRecord(item);
+        return toStringSafe(row.text ?? row.label ?? row.key);
+      })
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    return {
+      image,
+      labels: labels.length > 0
+        ? labels.map((text, index) => ({
+            key: toOptionKey(index),
+            text
+          }))
+        : (Array.isArray(fallbackRecord.labels) ? fallbackRecord.labels : [])
+    };
+  }
+
   if (type === "form_completion" || type === "note_completion") {
     const templateText = toStringSafe(content.template_text).trim();
     if (templateText.length > 0) {
@@ -405,7 +516,7 @@ function ensureGroupContentForApi(type: QuestionType, from: number, to: number, 
 }
 
 function resolveGroupContentForSync(group: QuestionGroup): unknown {
-  if (group.type === "multiple_choice") {
+  if (group.type === "multiple_choice" || group.type === "matching_information") {
     return null;
   }
 
@@ -422,15 +533,29 @@ function resolveGroupContentForSync(group: QuestionGroup): unknown {
     };
   }
 
-  const isMatchingStyle =
-    group.type === "matching_information" ||
-    group.type === "matching_features" ||
-    group.type === "selecting_from_a_list" ||
-    group.type === "map";
+  if (group.type === "matching_features") {
+    return {
+      categories: (group.questions[0] as any)?.choices.map((text: string, index: number) => ({
+        key: toOptionKey(index),
+        label: text
+      })) || []
+    };
+  }
 
-  if (isMatchingStyle) {
+  if (group.type === "selecting_from_a_list") {
     return {
       options: (group.questions[0] as any)?.choices.map((text: string, index: number) => ({
+        key: toOptionKey(index),
+        text: text
+      })) || []
+    };
+  }
+
+  if (group.type === "map") {
+    const groupContent = asRecord(group.groupContentJson);
+    return {
+      image: toStringSafe(groupContent.image).trim() || "/media/diagrams/placeholder-map.png",
+      labels: (group.questions[0] as any)?.choices.map((text: string, index: number) => ({
         key: toOptionKey(index),
         text: text
       })) || []
@@ -642,7 +767,7 @@ function mapBuilderQuestionToBulkPayload(question: BuilderQuestion, apiType: str
 
     return {
       ...base,
-      options_json: {statement: prompt},
+      options_json: question.type === "matching_information" ? {statement: prompt} : null,
       correct_answer_json: {answer: String(mappedAnswer).trim()}
     };
   }
@@ -774,15 +899,15 @@ function mapApiQuestionToBuilderQuestion(
   if (builderQuestion.type === "multiple_choice") {
     const options = extractOptions(question.options_json);
     if (options.length) {
-      builderQuestion.options = [...options, ...Array.from({length: Math.max(0, 4 - options.length)}, () => "")].slice(0, 4);
+      builderQuestion.options = options.length >= 2 ? [...options] : [...options, ...Array.from({length: 2 - options.length}, () => "")];
     }
     const normalizedSingle = answer.answer.toUpperCase();
     const normalizedMultiple = answer.answers
       .map((value) => value.toUpperCase())
-      .filter((value) => value === "A" || value === "B" || value === "C" || value === "D");
+      .filter((value) => /^[A-Z]+$/.test(value));
     builderQuestion.correctAnswer = normalizedMultiple.length
       ? [...new Set(normalizedMultiple)].join(", ")
-      : (normalizedSingle === "A" || normalizedSingle === "B" || normalizedSingle === "C" || normalizedSingle === "D" ? normalizedSingle : "");
+      : (/^[A-Z]+$/.test(normalizedSingle) ? normalizedSingle : "");
     return builderQuestion;
   }
 
@@ -2148,61 +2273,67 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
               message={t("validation.syncing") ?? "Saving your changes to the server..."} 
             />
 
-            <section className="grid min-w-0 gap-4 xl:grid-cols-[280px_minmax(0,1fr)_460px]">
-              <TestStructurePanel
-                module={test.module}
-                structures={test.structures}
-                activeStructureId={activeStructure.id}
-                questionProgressByStructureId={questionProgressByStructureId}
-                onSelect={(nextId) => {
-                  setActiveStructureId(nextId);
-                  setSelectedQuestion(null);
-                  setQuestionEditorOpen(false);
-                }}
-                onRename={handleRenameStructure}
-              />
+            <section className="grid min-w-0 gap-4 xl:grid-cols-[280px_minmax(0,1fr)] 2xl:grid-cols-[280px_minmax(0,1fr)_420px]">
+              <div className="min-w-0">
+                <TestStructurePanel
+                  module={test.module}
+                  structures={test.structures}
+                  activeStructureId={activeStructure.id}
+                  questionProgressByStructureId={questionProgressByStructureId}
+                  onSelect={(nextId) => {
+                    setActiveStructureId(nextId);
+                    setSelectedQuestion(null);
+                    setQuestionEditorOpen(false);
+                  }}
+                  onRename={handleRenameStructure}
+                />
+              </div>
 
-              <PassageEditor
-                mode={mode}
-                module={test.module}
-                structure={activeStructure}
-                selectedQuestionLabel={selectedQuestionLabel}
-                contentBankPassages={availableContentBankPassages}
-                selectedPassageId={activeStructure.linkedPassageId ?? ""}
-                onSelectContentBankPassage={handleSelectContentBankPassage}
-                variantSets={availableVariantSets}
-                hasAnyVariantSets={passageVariantSets.length > 0}
-                requiredQuestionCount={slotRequiredQuestions}
-                selectedVariantSetId={activeStructure.linkedVariantSetId ?? ""}
-                selectedVariantSetName={selectedVariantSet?.name ?? null}
-                onSelectVariantSet={handleSelectVariantSet}
-                onUpdateContent={handleUpdateStructureContent}
-                selectedAudioFileName={audioFilesByStructureId[activeStructure.id]?.name ?? undefined}
-                removeCurrentAudio={Boolean(removeAudioByStructureId[activeStructure.id])}
-                onSelectAudioFile={(file) => handleSelectAudioFile(activeStructure.id, file)}
-                onToggleRemoveCurrentAudio={(remove) => handleToggleRemoveAudio(activeStructure.id, remove)}
-                onAttachEvidence={handleAttachEvidence}
-              />
+              <div className="min-w-0">
+                <PassageEditor
+                  mode={mode}
+                  module={test.module}
+                  structure={activeStructure}
+                  selectedQuestionLabel={selectedQuestionLabel}
+                  contentBankPassages={availableContentBankPassages}
+                  selectedPassageId={activeStructure.linkedPassageId ?? ""}
+                  onSelectContentBankPassage={handleSelectContentBankPassage}
+                  variantSets={availableVariantSets}
+                  hasAnyVariantSets={passageVariantSets.length > 0}
+                  requiredQuestionCount={slotRequiredQuestions}
+                  selectedVariantSetId={activeStructure.linkedVariantSetId ?? ""}
+                  selectedVariantSetName={selectedVariantSet?.name ?? null}
+                  onSelectVariantSet={handleSelectVariantSet}
+                  onUpdateContent={handleUpdateStructureContent}
+                  selectedAudioFileName={audioFilesByStructureId[activeStructure.id]?.name ?? undefined}
+                  removeCurrentAudio={Boolean(removeAudioByStructureId[activeStructure.id])}
+                  onSelectAudioFile={(file) => handleSelectAudioFile(activeStructure.id, file)}
+                  onToggleRemoveCurrentAudio={(remove) => handleToggleRemoveAudio(activeStructure.id, remove)}
+                  onAttachEvidence={handleAttachEvidence}
+                />
+              </div>
 
-              <QuestionGroupsPanel
-                mode={mode}
-                module={test.module}
-                activeStructure={activeStructure}
-                groups={activeGroups}
-                collapsedGroups={collapsedGroups}
-                selectedQuestionId={selectedQuestion?.questionId ?? null}
-                onCreateGroup={handleCreateGroup}
-                onEditGroup={handleEditGroup}
-                onDuplicateGroup={handleDuplicateGroup}
-                onDeleteGroup={handleDeleteGroup}
-                onToggleGroupCollapse={(groupId) => setCollapsedGroups((current) => ({...current, [groupId]: !current[groupId]}))}
-                onAddQuestion={handleAddQuestion}
-                onOpenQuestionEditor={openQuestionEditor}
-                onSelectQuestion={(groupId, questionId) => setSelectedQuestion({groupId, questionId})}
-                onMoveQuestion={handleMoveQuestion}
-                onDuplicateQuestion={handleDuplicateQuestion}
-                onDeleteQuestion={handleDeleteQuestion}
-              />
+              <div className="min-w-0 xl:col-span-2 2xl:col-span-1">
+                <QuestionGroupsPanel
+                  mode={mode}
+                  module={test.module}
+                  activeStructure={activeStructure}
+                  groups={activeGroups}
+                  collapsedGroups={collapsedGroups}
+                  selectedQuestionId={selectedQuestion?.questionId ?? null}
+                  onCreateGroup={handleCreateGroup}
+                  onEditGroup={handleEditGroup}
+                  onDuplicateGroup={handleDuplicateGroup}
+                  onDeleteGroup={handleDeleteGroup}
+                  onToggleGroupCollapse={(groupId) => setCollapsedGroups((current) => ({...current, [groupId]: !current[groupId]}))}
+                  onAddQuestion={handleAddQuestion}
+                  onOpenQuestionEditor={openQuestionEditor}
+                  onSelectQuestion={(groupId, questionId) => setSelectedQuestion({groupId, questionId})}
+                  onMoveQuestion={handleMoveQuestion}
+                  onDuplicateQuestion={handleDuplicateQuestion}
+                  onDeleteQuestion={handleDeleteQuestion}
+                />
+              </div>
             </section>
           </main>
         </div>
