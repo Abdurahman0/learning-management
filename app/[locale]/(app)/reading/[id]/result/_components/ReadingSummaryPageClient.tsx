@@ -9,7 +9,7 @@ import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
 import {gradeTest, type GradeableQuestion} from "@/lib/grading";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
-import type {StudentAttemptReviewResponse} from "@/src/services/student/types";
+import type {StudentAttemptDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
 import {QuestionTypePerformance, type QuestionTypePerformanceItem} from "./QuestionTypePerformance";
 import {ReviewHeader} from "./ReviewHeader";
 import {adaptReadingBackendReview, type AdaptedReadingBackendReview} from "./backendReviewAdapters";
@@ -47,6 +47,7 @@ export function ReadingSummaryPageClient() {
   const attemptId = searchParams.get("attempt")?.trim() ?? "";
   const resolvedBackendAttemptId = isUuid(attemptId) ? attemptId : "";
   const [reviewPayload, setReviewPayload] = useState<StudentAttemptReviewResponse | null>(null);
+  const [attemptDetail, setAttemptDetail] = useState<StudentAttemptDetail | null>(null);
   const [backendReview, setBackendReview] = useState<AdaptedReadingBackendReview | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(resolvedBackendAttemptId));
 
@@ -63,13 +64,18 @@ export function ReadingSummaryPageClient() {
     const loadBackendReview = async () => {
       setIsLoading(true);
       try {
-        const response = await studentAttemptsService.review(resolvedBackendAttemptId);
+        const [reviewResponse, attemptResponse] = await Promise.all([
+          studentAttemptsService.review(resolvedBackendAttemptId),
+          studentAttemptsService.getById(resolvedBackendAttemptId)
+        ]);
         if (!active) return;
-        setReviewPayload(response);
-        setBackendReview(adaptReadingBackendReview(response));
+        setReviewPayload(reviewResponse);
+        setAttemptDetail(attemptResponse);
+        setBackendReview(adaptReadingBackendReview(reviewResponse));
       } catch {
         if (!active) return;
         setReviewPayload(null);
+        setAttemptDetail(null);
         setBackendReview(null);
       } finally {
         if (active) {
@@ -163,28 +169,85 @@ export function ReadingSummaryPageClient() {
     );
   }
 
-  const timeUsedSeconds = Math.max(0, reviewPayload?.time_used_seconds ?? 0);
+  const totalQuestions = Math.max(0, attemptDetail?.total_questions ?? grading.total);
+  const correctCount = Math.max(0, attemptDetail?.correct_count ?? grading.correctCount);
+  const incorrectCount = Math.max(0, attemptDetail?.incorrect_count ?? grading.incorrectCount);
+  const unansweredCount = Math.max(0, attemptDetail?.unanswered_count ?? grading.unansweredCount);
+  const scorePercent = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : grading.scorePercent;
+  const timeUsedSeconds = Math.max(0, attemptDetail?.time_used_seconds ?? reviewPayload?.time_used_seconds ?? 0);
   const minutes = Math.floor(timeUsedSeconds / 60).toString().padStart(2, "0");
   const seconds = (timeUsedSeconds % 60).toString().padStart(2, "0");
-  const testTitle = reviewPayload?.test_title || "Reading Test";
+  const testTitle = attemptDetail?.practice_test_title || reviewPayload?.test_title || "Reading Test";
+  const questionTypeStats = attemptDetail?.question_type_stats_json ?? null;
+  const passageStats = attemptDetail?.passage_stats_json ?? null;
 
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
       <ReviewHeader
         testId={testId}
         testTitle={testTitle}
-        correct={grading.correctCount}
-        incorrect={grading.incorrectCount}
-        unanswered={grading.unansweredCount}
-        total={grading.total}
-        scorePercent={grading.scorePercent}
+        correct={correctCount}
+        incorrect={incorrectCount}
+        unanswered={unansweredCount}
+        total={totalQuestions}
+        scorePercent={scorePercent}
         minutes={minutes}
         seconds={seconds}
-        timerUsed={Boolean(reviewPayload?.time_used_seconds)}
+        timerUsed={Boolean(timeUsedSeconds)}
         reviewHref={`/${locale}/reading/${testId}/review?attempt=${resolvedBackendAttemptId}`}
       />
 
+      <Card className="rounded-3xl border-border/70 bg-card/80 p-4 text-sm">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div><span className="text-muted-foreground">Attempt ID:</span> {attemptDetail?.id ?? resolvedBackendAttemptId}</div>
+          <div><span className="text-muted-foreground">Status:</span> {attemptDetail?.status ?? "UNKNOWN"}</div>
+          <div><span className="text-muted-foreground">Score:</span> {attemptDetail?.score ?? correctCount}</div>
+          <div><span className="text-muted-foreground">Band Score:</span> {attemptDetail?.band_score ?? "-"}</div>
+          <div><span className="text-muted-foreground">Mode:</span> {attemptDetail?.mode ?? "-"}</div>
+          <div><span className="text-muted-foreground">Time Used:</span> {timeUsedSeconds}s</div>
+        </div>
+      </Card>
+
       <QuestionTypePerformance items={accuracyByType} />
+
+      {questionTypeStats ? (
+        <Card className="rounded-3xl border-border/70 bg-card/80 p-4 text-sm">
+          <h3 className="mb-3 text-base font-semibold">Question Type Stats</h3>
+          <div className="space-y-2">
+            {Object.entries(questionTypeStats).map(([type, stats]) => {
+              const row = (stats && typeof stats === "object" ? stats as Record<string, unknown> : {}) ?? {};
+              const correct = typeof row.correct === "number" ? row.correct : 0;
+              const total = typeof row.total === "number" ? row.total : 0;
+              const accuracy = typeof row.accuracy_percent === "number" ? row.accuracy_percent : 0;
+              return (
+                <div key={type} className="flex items-center justify-between rounded-xl border border-border/60 px-3 py-2">
+                  <span>{type}</span>
+                  <span className="text-muted-foreground">{correct}/{total} ({accuracy}%)</span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      ) : null}
+
+      {passageStats ? (
+        <Card className="rounded-3xl border-border/70 bg-card/80 p-4 text-sm">
+          <h3 className="mb-3 text-base font-semibold">Passage Stats</h3>
+          <div className="space-y-2">
+            {Object.entries(passageStats).map(([passage, stats]) => {
+              const row = (stats && typeof stats === "object" ? stats as Record<string, unknown> : {}) ?? {};
+              const correct = typeof row.correct === "number" ? row.correct : 0;
+              const total = typeof row.total === "number" ? row.total : 0;
+              return (
+                <div key={passage} className="flex items-center justify-between rounded-xl border border-border/60 px-3 py-2">
+                  <span>{passage}</span>
+                  <span className="text-muted-foreground">{correct}/{total}</span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      ) : null}
 
       {/* Mock-backed reading AI/video/action widgets are temporarily hidden until backend endpoints are finalized. */}
       <Card className="rounded-3xl border-border/70 bg-card/80 p-4 text-sm text-muted-foreground">
