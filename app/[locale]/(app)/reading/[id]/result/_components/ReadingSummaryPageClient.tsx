@@ -204,11 +204,10 @@ export function ReadingSummaryPageClient() {
           successRate: item.percent
         }))
     : reviewData.mistakeBreakdown;
-  const dynamicHeatmap = passageStats
-    ? Object.entries(passageStats).map(([label, stats], index) => {
-        const row = (stats && typeof stats === "object" ? (stats as Record<string, unknown>) : {}) ?? {};
-        const correct = typeof row.correct === "number" ? row.correct : 0;
-        const total = typeof row.total === "number" ? row.total : 0;
+  const dynamicHeatmap = (reviewPayload?.passages?.length
+    ? reviewPayload.passages.map((passage, index) => {
+        const correct = typeof passage.correct_count === "number" ? passage.correct_count : 0;
+        const total = typeof passage.total_count === "number" ? passage.total_count : (typeof passage.max_questions === "number" ? passage.max_questions : 0);
         const ratio = total > 0 ? correct / total : 0;
         const level = ratio >= 0.75 ? "excellent" : ratio >= 0.5 ? "average" : "critical";
         return {
@@ -219,7 +218,22 @@ export function ReadingSummaryPageClient() {
           total
         } as const;
       })
-    : reviewData.heatmap;
+    : passageStats
+      ? Object.entries(passageStats).map(([, stats], index) => {
+          const row = (stats && typeof stats === "object" ? (stats as Record<string, unknown>) : {}) ?? {};
+          const correct = typeof row.correct === "number" ? row.correct : 0;
+          const total = typeof row.total === "number" ? row.total : 0;
+          const ratio = total > 0 ? correct / total : 0;
+          const level = ratio >= 0.75 ? "excellent" : ratio >= 0.5 ? "average" : "critical";
+          return {
+            passageId: `p${index + 1}`,
+            label: `P${index + 1}`,
+            level,
+            answeredCorrectly: correct,
+            total
+          } as const;
+        })
+      : reviewData.heatmap);
   const weakestQuestionType = dynamicMistakeBreakdown[0]?.label ?? reviewData.aiCoach.weakestQuestionType;
   const weakestPassage = [...dynamicHeatmap]
     .sort((a, b) => {
