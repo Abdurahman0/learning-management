@@ -4,6 +4,7 @@ export type ListeningAudioMeta = {
   nowPlayingLabel: string;
   durationSec: number;
   currentTrackTitle: string;
+  audioUrl?: string | null;
 };
 
 export type NoteFormBlock = {
@@ -41,6 +42,7 @@ export type McqGroupBlock = {
 export type MatchingBlock = {
   type: "matching";
   title: string;
+  instruction?: string;
   options: string[];
   items: Array<{
     questionNumber: number;
@@ -63,6 +65,7 @@ export type SummaryCompletionBlock = {
   type: "summaryCompletion";
   title: string;
   instruction: string;
+  templateText?: string;
   lines: Array<{
     before: string;
     questionNumber: number;
@@ -70,13 +73,17 @@ export type SummaryCompletionBlock = {
   }>;
 };
 
-export type ListeningBlock =
+export type ListeningBlock = (
   | NoteFormBlock
   | TableCompletionBlock
   | McqGroupBlock
   | MatchingBlock
   | DiagramLabelingBlock
-  | SummaryCompletionBlock;
+  | SummaryCompletionBlock
+) & {
+  groupRangeLabel?: string;
+  groupInstruction?: string;
+};
 
 export type ListeningSectionFull = {
   id: ListeningSectionId;

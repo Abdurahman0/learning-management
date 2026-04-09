@@ -125,12 +125,20 @@ function normalizeReadingPassage(item: unknown): StudentAttemptReadingPassage {
 
 function normalizeListeningPart(item: unknown): StudentAttemptListeningPart {
   const record = asRecord(item);
+  const audioFileUrl =
+    typeof record?.audio_file_url === "string"
+      ? record.audio_file_url
+      : typeof record?.audio_url === "string"
+        ? record.audio_url
+        : typeof record?.audio_file === "string"
+          ? record.audio_file
+          : null;
   return {
     id: toStringSafe(record?.id),
     part_number: toStringSafe(record?.part_number),
     title: toStringSafe(record?.title),
     transcript_text: toStringSafe(record?.transcript_text),
-    audio_file_url: typeof record?.audio_file_url === "string" ? record.audio_file_url : null,
+    audio_file_url: audioFileUrl,
     max_questions: toNumberSafe(record?.max_questions),
     answered_count: toNumberSafe(record?.answered_count),
     question_groups: toArray(record?.question_groups).map(normalizeQuestionGroup)
@@ -224,12 +232,20 @@ function normalizeReviewPassage(data: unknown) {
 
 function normalizeReviewPart(data: unknown) {
   const record = asRecord(data);
+  const audioFileUrl =
+    typeof record?.audio_file_url === "string"
+      ? record.audio_file_url
+      : typeof record?.audio_url === "string"
+        ? record.audio_url
+        : typeof record?.audio_file === "string"
+          ? record.audio_file
+          : null;
   return {
     id: toStringSafe(record?.id),
     part_number: toStringSafe(record?.part_number),
     title: toStringSafe(record?.title),
     transcript_text: toStringSafe(record?.transcript_text),
-    audio_file_url: typeof record?.audio_file_url === "string" ? record.audio_file_url : null,
+    audio_file_url: audioFileUrl,
     max_questions: toNumberSafe(record?.max_questions),
     correct_count: toNumberOrNull(record?.correct_count),
     total_count: toNumberOrNull(record?.total_count),

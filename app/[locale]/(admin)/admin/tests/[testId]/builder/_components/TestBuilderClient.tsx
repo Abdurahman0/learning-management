@@ -294,6 +294,49 @@ function toOptionKey(index: number) {
   return result || "A";
 }
 
+function normalizeMcqAnswerTokens(rawValue: string, optionCount: number) {
+  const validKeys = new Set(Array.from({length: Math.max(0, optionCount)}, (_, index) => toOptionKey(index)));
+  const rawTokens = rawValue
+    .split(",")
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean);
+
+  const normalized = rawTokens
+    .map((token) => {
+      if (validKeys.has(token)) {
+        return token;
+      }
+
+      const prefixedMatch = token.match(/^([A-Z]+)[\)\].:\-\s]/);
+      if (prefixedMatch && validKeys.has(prefixedMatch[1])) {
+        return prefixedMatch[1];
+      }
+
+      const compact = token.replace(/[^A-Z]/g, "");
+      if (validKeys.has(compact)) {
+        return compact;
+      }
+
+      return "";
+    })
+    .filter(Boolean);
+
+  return [...new Set(normalized)];
+}
+
+function extractSharedMcqOptions(groupContent: unknown) {
+  const content = asRecord(groupContent);
+  const rows = Array.isArray(content.options) ? content.options : [];
+  return rows
+    .map((item) => {
+      if (typeof item === "string") return item;
+      const row = asRecord(item);
+      return toStringSafe(row.text ?? row.label ?? row.key);
+    })
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function buildTemplateText(from: number, to: number) {
   const lines: string[] = [];
   for (let number = from; number <= to; number += 1) {
@@ -703,7 +746,9 @@ function isQuestionReadyForSync(question: BuilderQuestion) {
   }
 
   if (question.type === "multiple_choice") {
-    return Boolean(prompt) && question.options.some((option) => option.trim().length > 0) && Boolean(question.correctAnswer.trim());
+    const nonEmptyOptions = question.options.filter((option) => option.trim().length > 0);
+    const normalizedAnswers = normalizeMcqAnswerTokens(question.correctAnswer, nonEmptyOptions.length);
+    return Boolean(prompt) && nonEmptyOptions.length > 0 && normalizedAnswers.length > 0;
   }
 
   if (question.type === "matching_headings") {
@@ -773,10 +818,7 @@ function mapBuilderQuestionToBulkPayload(question: BuilderQuestion, apiType: str
     const optionRows = question.options
       .map((text, index) => ({key: toOptionKey(index), text: text.trim()}))
       .filter((item) => item.text.length > 0);
-    const normalizedAnswers = question.correctAnswer
-      .split(",")
-      .map((value) => value.trim().toUpperCase())
-      .filter((value) => /^[A-Z]+$/.test(value));
+    const normalizedAnswers = normalizeMcqAnswerTokens(question.correctAnswer, optionRows.length);
     const normalizedAnswer = normalizedAnswers[0] ?? "";
     return {
       ...base,
@@ -2155,9 +2197,20 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         for (let index = 0; index < localGroups.length; index += 1) {
           const group = localGroups[index];
           const normalizedLocalQuestions = [...group.questions].sort((left, right) => left.number - right.number);
+          const sharedMcqOptions = extractSharedMcqOptions(group.groupContentJson);
+          const questionsForSync = normalizedLocalQuestions.map((question) => {
+            if (
+              question.type === "multiple_choice"
+              && question.options.every((option) => option.trim().length === 0)
+              && sharedMcqOptions.length > 0
+            ) {
+              return {...question, options: [...sharedMcqOptions]};
+            }
+            return question;
+          });
           const apiQuestionType = resolveApiQuestionTypeForGroup(
             group.type,
-            normalizedLocalQuestions.length,
+            questionsForSync.length,
             group.groupContentJson,
             test.module
           );
@@ -2186,6 +2239,18 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
           const persistedGroupId = toStringSafe(persistedGroup.id);
           if (persistedGroupId) {
+            const readyQuestions = questionsForSync.filter((question) => isQuestionReadyForSync(question));
+            if (readyQuestions.length !== questionsForSync.length) {
+              const missingNumbers = questionsForSync
+                .filter((question) => !isQuestionReadyForSync(question))
+                .map((question) => question.number)
+                .join(", ");
+              throw new AdminApiError(
+                `Group ${group.from}-${group.to} has incomplete questions: ${missingNumbers}. Fill prompt/options/correct answer before saving.`,
+                400
+              );
+            }
+
             const existingQuestions = await questionsService.list({
               question_group: persistedGroupId,
               page: 1,
@@ -2199,7 +2264,6 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
               await questionsService.remove(remoteQuestionId);
             }
 
-            const readyQuestions = normalizedLocalQuestions.filter((question) => isQuestionReadyForSync(question));
             if (readyQuestions.length > 0) {
               await questionsService.bulkCreate(
                 persistedGroupId,
@@ -2218,6 +2282,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
               ...group,
               id: persistedGroupId || group.id,
               variantSetId: toStringSafe(persistedGroup.variant_set ?? group.variantSetId ?? ""),
+              questions: questionsForSync,
               instructions: commonPayload.instructions,
               groupContentJson: group.type === "multiple_choice" ? group.groupContentJson : commonPayload.group_content_json
             })

@@ -51,7 +51,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import { createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress, saveAttemptResult, type AttemptMode } from "@/lib/test-attempt-storage";
@@ -119,6 +118,58 @@ function toStringSafe(value: unknown, fallback = "") {
 function toNumberSafe(value: unknown, fallback = 0) {
   const parsed = typeof value === "number" ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function resolvePlayableAudioUrl(rawUrl: string) {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) return trimmed;
+  const configuredApiOrigin = (() => {
+    const value = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ?? "";
+    if (!value) return "";
+    try {
+      return new URL(value).origin;
+    } catch {
+      return "";
+    }
+  })();
+
+  const toProxyPath = (studentApiPath: string) => {
+    const suffix = studentApiPath.replace(/^\/api\/v1\/student\/?/, "");
+    return `/api/student-proxy/${suffix}`;
+  };
+
+  if (trimmed.startsWith("/api/v1/student/")) {
+    return toProxyPath(trimmed);
+  }
+
+  if (trimmed.startsWith("/media/")) {
+    const params = new URLSearchParams();
+    if (configuredApiOrigin) {
+      params.set("__origin", configuredApiOrigin);
+    }
+    const query = params.toString();
+    return `/api/student-media-proxy${trimmed}${query ? `?${query}` : ""}`;
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.pathname.startsWith("/api/v1/student/")) {
+        return `/api/student-proxy/${parsed.pathname.replace(/^\/api\/v1\/student\/?/, "")}${parsed.search}`;
+      }
+      if (parsed.pathname.startsWith("/media/")) {
+        const params = new URLSearchParams(parsed.search);
+        params.set("__origin", parsed.origin);
+        return `/api/student-media-proxy${parsed.pathname}?${params.toString()}`;
+      }
+      return trimmed;
+    } catch {
+      return trimmed;
+    }
+  }
+
+  return trimmed;
 }
 
 function extractQuestionPrompt(question: StudentAttemptQuestion) {
@@ -219,7 +270,18 @@ function extractOptionTexts(value: unknown) {
       const text = toStringSafe(row?.text).trim();
       const label = toStringSafe(row?.label).trim();
       const key = toStringSafe(row?.key).trim();
-      if (key && text) return `${key}. ${text}`;
+      if (key && text) {
+        if (text.toUpperCase() === key.toUpperCase()) {
+          return key;
+        }
+        const cleanedText = text
+          .replace(new RegExp(`^${key}[\\)\\].:\\-\\s]+`, "i"), "")
+          .trim();
+        if (!cleanedText || cleanedText.toUpperCase() === key.toUpperCase()) {
+          return key;
+        }
+        return `${key}. ${cleanedText}`;
+      }
       return text || label || key;
     })
     .filter(Boolean);
@@ -303,11 +365,22 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
   const type = toStringSafe(group.question_type).trim().toUpperCase();
   const content = asRecord(group.group_content_json);
   const questions = group.questions.slice().sort((a, b) => a.question_number - b.question_number);
+  const minQuestion = questions.length ? questions[0].question_number : 0;
+  const maxQuestion = questions.length ? questions[questions.length - 1].question_number : minQuestion;
+  const groupRangeLabel = minQuestion > 0 && maxQuestion > 0
+    ? `Questions ${minQuestion}-${maxQuestion}`
+    : undefined;
+  const groupInstruction = toStringSafe(group.instructions).trim() || undefined;
+  const withGroupMeta = <T extends ListeningBlock>(block: T, instructionOverride?: string): T => ({
+    ...block,
+    groupRangeLabel,
+    groupInstruction: instructionOverride ?? groupInstruction
+  });
 
   if (type === "MCQ_SINGLE" || type === "MCQ_MULTIPLE") {
-    return [{
+    return [withGroupMeta({
       type: "mcqGroup",
-      title: toStringSafe(group.instructions).trim() || "Choose the correct answer.",
+      title: "Multiple Choice",
       allowMultiple: type === "MCQ_MULTIPLE",
       questions: questions.map((question) => {
         const options = asRecord(question.options_json);
@@ -318,33 +391,34 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
           options: optionTexts.length ? optionTexts : ["A", "B", "C"]
         };
       })
-    }];
+    })];
   }
 
   if (type === "FORM_COMPLETION") {
     const templateText = toStringSafe(content?.template_text).trim();
-    return [{
+    return [withGroupMeta({
       type: "noteForm",
       title: "Form Completion",
-      description: toStringSafe(group.instructions).trim() || undefined,
+      description: undefined,
       fields: parseTemplateFields(templateText, questions)
-    }];
+    })];
   }
 
   if (type === "NOTE_COMPLETION") {
     const templateText = toStringSafe(content?.template_text).trim();
     const lines = parseTemplateLines(templateText, questions);
 
-    return [{
+    return [withGroupMeta({
       type: "summaryCompletion",
       title: "Note Completion",
-      instruction: toStringSafe(group.instructions).trim() || "Complete the notes below.",
+      instruction: "Complete the notes below.",
+      templateText: templateText || undefined,
       lines: lines.map((line) => ({
         before: line.before,
         questionNumber: line.questionNumber,
         after: line.after
       }))
-    }];
+    })];
   }
 
   if (type === "TABLE_COMPLETION") {
@@ -360,14 +434,14 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
         return {questionNumber, values: cells.length ? cells : [`Question ${questionNumber}`, ""]};
       });
 
-    return [{
+    return [withGroupMeta({
       type: "tableCompletion",
       title: "Table Completion",
       columns,
       rows: rows.length
         ? rows
         : questions.map((q) => ({questionNumber: q.question_number, values: [extractQuestionPrompt(q), ""]}))
-    }];
+    })];
   }
 
   if (type === "PLAN_MAP_DIAGRAM" || type === "DIAGRAM_COMPLETION") {
@@ -375,16 +449,16 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
       ? extractOptionTexts(content?.labels)
       : extractOptionTexts(content?.options);
 
-    return [{
+    return [withGroupMeta({
       type: "diagramLabeling",
       title: "Diagram",
-      description: toStringSafe(group.instructions).trim() || "Choose the correct label.",
+      description: "Choose the correct label.",
       options: labels.length ? labels : ["A", "B", "C", "D"],
       items: questions.map((q) => ({
         questionNumber: q.question_number,
         label: extractQuestionPrompt(q)
       }))
-    }];
+    })];
   }
 
   if (
@@ -401,7 +475,7 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
           ? extractOptionTexts(content?.categories)
           : extractOptionTexts(content?.labels);
 
-    return [{
+    return [withGroupMeta({
       type: "matching",
       title: "Matching",
       options: options.length ? options : ["A", "B", "C", "D"],
@@ -409,7 +483,7 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
         questionNumber: q.question_number,
         prompt: extractQuestionPrompt(q)
       }))
-    }];
+    })];
   }
 
   const summaryText = toStringSafe(content?.summary_text).trim();
@@ -431,24 +505,25 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
       };
     });
 
-    return [{
+    return [withGroupMeta({
       type: "summaryCompletion",
       title: "Summary Completion",
-      instruction: toStringSafe(group.instructions).trim() || "Complete the summary.",
+      instruction: "Complete the summary.",
+      templateText: summaryText,
       lines
-    }];
+    })];
   }
 
-  return [{
+  return [withGroupMeta({
     type: "summaryCompletion",
     title: "Completion",
-    instruction: toStringSafe(group.instructions).trim() || "Complete each item.",
+    instruction: "Complete each item.",
     lines: questions.map((question) => ({
       before: extractQuestionPrompt(question),
       questionNumber: question.question_number,
       after: ""
     }))
-  }];
+  })];
 }
 
 function mapListeningAttemptToRuntimeTest(test: StudentTestRecord, attempt: StudentAttemptDetail): ListeningFullTest {
@@ -478,7 +553,8 @@ function mapListeningAttemptToRuntimeTest(test: StudentTestRecord, attempt: Stud
       audioMeta: {
         nowPlayingLabel: `Part ${index + 1} of ${totalParts}`,
         durationSec: estimatedPartDuration,
-        currentTrackTitle: toStringSafe(part.title).trim() || `Listening Part ${index + 1}`
+        currentTrackTitle: toStringSafe(part.title).trim() || `Listening Part ${index + 1}`,
+        audioUrl: toStringSafe(part.audio_file_url).trim() || null
       },
       blocks
     };
@@ -747,8 +823,10 @@ function ListeningTestClient({
   const [attemptMode, setAttemptMode] = useState<AttemptMode | null>(null);
 
   const [audioPlaying, setAudioPlaying] = useState(false);
-  const [audioProgress, setAudioProgress] = useState(37);
+  const [audioProgress, setAudioProgress] = useState(0);
   const [audioVolume, setAudioVolume] = useState(72);
+  const [audioDurationSec, setAudioDurationSec] = useState(0);
+  const [audioCurrentSec, setAudioCurrentSec] = useState(0);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
   const [isSmallLandscape, setIsSmallLandscape] = useState(false);
@@ -765,6 +843,7 @@ function ListeningTestClient({
 
   const questionsScrollRef = useRef<HTMLDivElement | null>(null);
   const questionRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const pendingJumpRef = useRef<number | null>(null);
   const realModeAutoFinishedRef = useRef(false);
   const initDoneRef = useRef(false);
@@ -817,7 +896,9 @@ function ListeningTestClient({
     setRemainingSeconds(test.durationMinutes * 60);
     setTimerRunning(false);
     setAudioPlaying(false);
-    setAudioProgress(37);
+    setAudioProgress(0);
+    setAudioCurrentSec(0);
+    setAudioDurationSec(0);
     setPaletteOpen(false);
     setRealModeStarting(false);
     setRealModeConfirmOpen(nextMode === "real");
@@ -993,6 +1074,10 @@ function ListeningTestClient({
       test.sections[0],
     [activeSectionId, test.sections],
   );
+  const activeSectionAudioUrl = useMemo(
+    () => resolvePlayableAudioUrl(toStringSafe(activeSection.audioMeta.audioUrl)),
+    [activeSection.audioMeta.audioUrl]
+  );
 
   const answeredCount = useMemo(() => {
     return Object.values(answers).filter((value) => isAnswered(value)).length;
@@ -1082,6 +1167,10 @@ function ListeningTestClient({
   const resolvedActiveSectionId = test.sections.some((section) => section.id === activeSectionId)
     ? activeSectionId
     : (test.sections[0]?.id ?? "s1");
+  const effectiveAudioDurationSec = Math.max(
+    0,
+    Math.round(audioDurationSec > 0 ? audioDurationSec : activeSection.audioMeta.durationSec)
+  );
 
   useEffect(() => {
     if (!attemptId || !attemptMode) return;
@@ -1176,6 +1265,54 @@ function ListeningTestClient({
   }, [timerRunning, remainingSeconds]);
 
   useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const volume = Math.min(1, Math.max(0, audioVolume / 100));
+    audio.volume = volume;
+  }, [audioVolume]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (!activeSectionAudioUrl) {
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      setAudioPlaying(false);
+      setAudioCurrentSec(0);
+      setAudioDurationSec(0);
+      setAudioProgress(0);
+      return;
+    }
+
+    audio.src = activeSectionAudioUrl;
+    audio.load();
+    setAudioPlaying(false);
+    setAudioCurrentSec(0);
+    setAudioDurationSec(0);
+    setAudioProgress(0);
+  }, [activeSectionAudioUrl]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (!activeSectionAudioUrl) {
+      setAudioPlaying(false);
+      return;
+    }
+
+    if (audioPlaying) {
+      void audio.play().catch(() => {
+        setAudioPlaying(false);
+      });
+      return;
+    }
+
+    audio.pause();
+  }, [activeSectionAudioUrl, audioPlaying]);
+
+  useEffect(() => {
     questionsScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeSectionId]);
 
@@ -1238,6 +1375,21 @@ function ListeningTestClient({
     setActiveQuestionNumber(number);
     setAnswers((prev) => ({ ...prev, [number]: value }));
   };
+
+  const toggleAudioPlayback = useCallback(() => {
+    if (isRealMode || !activeSectionAudioUrl) return;
+    const media = audioRef.current;
+    if (!media) return;
+
+    if (media.paused) {
+      void media.play().catch(() => {
+        setAudioPlaying(false);
+      });
+      return;
+    }
+
+    media.pause();
+  }, [activeSectionAudioUrl, isRealMode]);
 
   const chooseAttemptMode = (mode: AttemptMode) => {
     realModeAutoFinishedRef.current = false;
@@ -1499,6 +1651,24 @@ function ListeningTestClient({
       ? "border-l-4 border-l-amber-400 bg-amber-50/40 dark:bg-amber-500/10"
       : "";
 
+  const deriveBlockRangeLabel = (block: ListeningBlock) => {
+    if (block.groupRangeLabel?.trim()) return block.groupRangeLabel.trim();
+    const numbers = getQuestionNumbersFromBlock(block).filter((value) => Number.isFinite(value));
+    if (!numbers.length) return "";
+    const min = Math.min(...numbers);
+    const max = Math.max(...numbers);
+    return min === max ? `Question ${min}` : `Questions ${min}-${max}`;
+  };
+
+  const deriveBlockInstruction = (block: ListeningBlock) => {
+    if (block.groupInstruction?.trim()) return block.groupInstruction.trim();
+    if (block.type === "mcqGroup") return block.title?.trim() ?? "";
+    if (block.type === "summaryCompletion") return block.instruction?.trim() ?? "";
+    if (block.type === "noteForm") return block.description?.trim() ?? "";
+    if (block.type === "diagramLabeling") return block.description?.trim() ?? "";
+    return "";
+  };
+
   const renderBlock = (block: ListeningBlock) => {
     if (block.type === "noteForm") {
       return (
@@ -1640,106 +1810,223 @@ function ListeningTestClient({
     }
 
     if (block.type === "mcqGroup") {
+      const renderMcqQuestion = (question: typeof block.questions[number], grouped = false) => (
+        <article
+          key={question.questionNumber}
+          id={`q-${question.questionNumber}`}
+          ref={(el) => {
+            if (!el) {
+              questionRefs.current.delete(question.questionNumber);
+              return;
+            }
+            questionRefs.current.set(question.questionNumber, el);
+          }}
+          className={cn(
+            grouped
+              ? "min-w-0 scroll-mt-24 px-1 py-3 first:pt-1"
+              : "test-panel min-w-0 rounded-lg border border-border bg-card p-4 scroll-mt-24 overflow-hidden",
+            markedQuestionClass(question.questionNumber),
+          )}
+          onClick={() => setActiveQuestionNumber(question.questionNumber)}
+        >
+          <p className="wrap-break-word text-sm font-medium">
+            <span className="mr-2 inline-flex align-middle">
+              <QuestionChip
+                number={question.questionNumber}
+                active={activeQuestionNumber === question.questionNumber}
+              />
+            </span>
+            {question.prompt}
+          </p>
+          <div className="mt-2 space-y-2">
+            {question.options.map((option, optionIndex) => {
+              const choice = parseOptionChoice(option, optionIndex);
+              const selectedSet = new Set(
+                (answers[question.questionNumber] ?? "")
+                  .split(",")
+                  .map((item) => item.trim().toUpperCase())
+                  .filter(Boolean)
+              );
+              const selected = selectedSet.has(choice.key);
+
+              return (
+              <label
+                key={`${question.questionNumber}-${choice.key}`}
+                className="flex min-w-0 items-start gap-2 text-sm"
+              >
+                <input
+                  type={block.allowMultiple ? "checkbox" : "radio"}
+                  name={`q-${question.questionNumber}`}
+                  value={choice.key}
+                  checked={block.allowMultiple ? selected : answers[question.questionNumber] === choice.key}
+                  onChange={(e) => {
+                    if (!block.allowMultiple) {
+                      setAnswer(question.questionNumber, e.target.value);
+                      return;
+                    }
+
+                    const current = new Set(
+                      (answers[question.questionNumber] ?? "")
+                        .split(",")
+                        .map((item) => item.trim().toUpperCase())
+                        .filter(Boolean)
+                    );
+                    if (current.has(choice.key)) {
+                      current.delete(choice.key);
+                    } else {
+                      current.add(choice.key);
+                    }
+                    setAnswer(question.questionNumber, [...current].join(", "));
+                  }}
+                  onFocus={() =>
+                    setActiveQuestionNumber(question.questionNumber)
+                  }
+                  className="mt-0.5"
+                />
+                <span className="wrap-break-word">{choice.label}</span>
+              </label>
+              );
+            })}
+          </div>
+        </article>
+      );
+
+      const shouldGroupMcq = Boolean(block.allowMultiple && block.questions.length > 1);
+
       return (
         <div className="space-y-3">
-          {block.title ? (
+          {block.title && !deriveBlockInstruction(block) ? (
             <p className="test-muted-copy text-sm font-medium text-muted-foreground">
-              {block.title}
+              <FormattedInstructionText text={block.title} />
             </p>
           ) : null}
-          {block.questions.map((question) => (
-            <article
-              key={question.questionNumber}
-              id={`q-${question.questionNumber}`}
-              ref={(el) => {
-                if (!el) {
-                  questionRefs.current.delete(question.questionNumber);
-                  return;
-                }
-                questionRefs.current.set(question.questionNumber, el);
-              }}
-              className={cn("test-panel min-w-0 rounded-lg border border-border bg-card p-4 scroll-mt-24 overflow-hidden", markedQuestionClass(question.questionNumber))}
-              onClick={() => setActiveQuestionNumber(question.questionNumber)}
-            >
-              <p className="wrap-break-word text-sm font-medium">
-                <span className="mr-2 inline-flex align-middle">
-                  <QuestionChip
-                    number={question.questionNumber}
-                    active={activeQuestionNumber === question.questionNumber}
-                  />
-                </span>
-                {question.prompt}
-              </p>
-              <div className="mt-2 space-y-2">
-                {question.options.map((option, optionIndex) => {
-                  const choice = parseOptionChoice(option, optionIndex);
-                  const selectedSet = new Set(
-                    (answers[question.questionNumber] ?? "")
-                      .split(",")
-                      .map((item) => item.trim().toUpperCase())
-                      .filter(Boolean)
-                  );
-                  const selected = selectedSet.has(choice.key);
+          {shouldGroupMcq ? (
+            <Card className="test-panel min-w-0 gap-0 rounded-lg border border-border bg-card p-4 overflow-hidden">
+              {(() => {
+                const questionNumbers = block.questions.map((question) => question.questionNumber);
+                const firstNumber = questionNumbers[0];
+                const lastNumber = questionNumbers[questionNumbers.length - 1];
+                const prompt =
+                  block.questions.map((question) => question.prompt.trim()).find(Boolean)
+                  || `Questions ${firstNumber}-${lastNumber}`;
+                const sharedOptions = block.questions[0]?.options ?? [];
+                const selectedSet = new Set(
+                  questionNumbers
+                    .flatMap((number) =>
+                      (answers[number] ?? "")
+                        .split(",")
+                        .map((item) => item.trim().toUpperCase())
+                        .filter(Boolean)
+                    )
+                );
+                const maxSelections = Math.max(1, questionNumbers.length);
 
-                  return (
-                  <label
-                    key={`${question.questionNumber}-${choice.key}`}
-                    className="flex min-w-0 items-start gap-2 text-sm"
-                  >
-                    <input
-                      type={block.allowMultiple ? "checkbox" : "radio"}
-                      name={`q-${question.questionNumber}`}
-                      value={choice.key}
-                      checked={block.allowMultiple ? selected : answers[question.questionNumber] === choice.key}
-                      onChange={(e) => {
-                        if (!block.allowMultiple) {
-                          setAnswer(question.questionNumber, e.target.value);
-                          return;
-                        }
-
-                        const current = new Set(
-                          (answers[question.questionNumber] ?? "")
-                            .split(",")
-                            .map((item) => item.trim().toUpperCase())
-                            .filter(Boolean)
-                        );
-                        if (current.has(choice.key)) {
-                          current.delete(choice.key);
+                return (
+                  <div
+                    ref={(el) => {
+                      for (const number of questionNumbers) {
+                        if (!el) {
+                          questionRefs.current.delete(number);
                         } else {
-                          current.add(choice.key);
+                          questionRefs.current.set(number, el);
                         }
-                        setAnswer(question.questionNumber, [...current].join(", "));
-                      }}
-                      onFocus={() =>
-                        setActiveQuestionNumber(question.questionNumber)
                       }
-                      className="mt-0.5"
-                    />
-                    <span className="wrap-break-word">{choice.label}</span>
-                  </label>
-                  );
-                })}
-              </div>
-            </article>
-          ))}
+                    }}
+                    className="space-y-4 scroll-mt-24"
+                    onClick={() => setActiveQuestionNumber(firstNumber)}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      {questionNumbers.map((number) => (
+                        <QuestionChip
+                          key={`group-q-${number}`}
+                          number={number}
+                          active={activeQuestionNumber === number}
+                          subtle={activeQuestionNumber !== number}
+                        />
+                      ))}
+                      <p className="wrap-break-word text-sm font-medium">{prompt}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      {sharedOptions.map((option, optionIndex) => {
+                        const choice = parseOptionChoice(option, optionIndex);
+                        const selected = selectedSet.has(choice.key);
+
+                        return (
+                          <label
+                            key={`group-${firstNumber}-${lastNumber}-${choice.key}`}
+                            className="flex min-w-0 items-start gap-2 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              name={`q-group-${firstNumber}-${lastNumber}`}
+                              value={choice.key}
+                              checked={selected}
+                              onChange={() => {
+                                const current = new Set(selectedSet);
+                                if (current.has(choice.key)) {
+                                  current.delete(choice.key);
+                                } else if (current.size < maxSelections) {
+                                  current.add(choice.key);
+                                } else {
+                                  return;
+                                }
+
+                                const orderedSelected = sharedOptions
+                                  .map((rowOption, rowIndex) => parseOptionChoice(rowOption, rowIndex).key)
+                                  .filter((key) => current.has(key));
+                                const value = orderedSelected.join(", ");
+
+                                setAnswers((prev) => {
+                                  const next = { ...prev };
+                                  for (const number of questionNumbers) {
+                                    next[number] = value;
+                                  }
+                                  return next;
+                                });
+                              }}
+                              onFocus={() => setActiveQuestionNumber(firstNumber)}
+                              className="mt-0.5"
+                            />
+                            <span className="wrap-break-word">{choice.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+            </Card>
+          ) : (
+            block.questions.map((question) => renderMcqQuestion(question))
+          )}
         </div>
       );
     }
 
     if (block.type === "matching") {
+      const parsedOptions = block.options.map((option, optionIndex) => parseOptionChoice(option, optionIndex));
+      const matchingInstructionText = deriveBlockInstruction(block);
+      const resolveAnswerKey = (rawValue: string | undefined) => {
+        const normalized = (rawValue ?? "").trim();
+        if (!normalized) return "";
+        const upper = normalized.toUpperCase();
+        const byKey = parsedOptions.find((option) => option.key.toUpperCase() === upper);
+        if (byKey) return byKey.key;
+        const byLabel = parsedOptions.find((option) => option.label.toUpperCase() === upper);
+        if (byLabel) return byLabel.key;
+        const byRawOption = block.options.findIndex((option) => option.trim().toUpperCase() === upper);
+        if (byRawOption >= 0) return parsedOptions[byRawOption]?.key ?? "";
+        return "";
+      };
+
       return (
         <Card className="test-panel min-w-0 gap-0 rounded-lg border border-border bg-card p-4 overflow-hidden">
-          <h4 className="text-sm font-semibold">{block.title}</h4>
-          <div className="test-soft-surface mt-3 rounded-lg border border-border bg-muted/20 p-3 text-sm">
-            <p className="font-medium">{t("options")}</p>
-            <ul className="mt-1 space-y-1">
-              {block.options.map((option) => (
-                <li key={option} className="wrap-break-word">
-                  {option}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {matchingInstructionText ? (
+            <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-sm wrap-break-word">
+              <FormattedInstructionText text={matchingInstructionText} />
+            </p>
+          ) : null}
 
           <div className="mt-4 space-y-3">
             {block.items.map((item) => (
@@ -1754,22 +2041,18 @@ function ListeningTestClient({
                   questionRefs.current.set(item.questionNumber, el);
                 }}
                 className={cn(
-                  "grid min-w-0 grid-cols-1 items-center gap-2 scroll-mt-24",
-                  !isSmallLandscape &&
-                    "md:grid-cols-[32px_minmax(0,1fr)_minmax(0,220px)]",
+                  "flex min-w-0 flex-wrap items-center gap-2 scroll-mt-24",
                   markedQuestionClass(item.questionNumber),
                 )}
                 onClick={() => setActiveQuestionNumber(item.questionNumber)}
               >
-                <div className="flex items-center gap-2 md:contents">
-                  <QuestionChip
-                    number={item.questionNumber}
-                    active={activeQuestionNumber === item.questionNumber}
-                  />
-                  <p className="wrap-break-word text-sm">{item.prompt}</p>
-                </div>
+                <QuestionChip
+                  number={item.questionNumber}
+                  active={activeQuestionNumber === item.questionNumber}
+                />
+                <p className="wrap-break-word text-sm">{item.prompt}</p>
                 <Select
-                  value={answers[item.questionNumber] ?? ""}
+                  value={resolveAnswerKey(answers[item.questionNumber])}
                   onValueChange={(value) =>
                     setAnswer(item.questionNumber, value)
                   }
@@ -1778,17 +2061,16 @@ function ListeningTestClient({
                     aria-label={`Question ${item.questionNumber}`}
                     onFocus={() => setActiveQuestionNumber(item.questionNumber)}
                     className={cn(
-                      "test-input-surface w-full h-10",
+                      "test-input-surface h-10 w-28 shrink-0",
                       isSmallLandscape && "h-11",
-                      !isSmallLandscape && "md:max-w-55",
                     )}
                   >
-                    <SelectValue placeholder={t("selectOption")} />
+                    <SelectValue placeholder="-" />
                   </SelectTrigger>
                   <SelectContent>
-                    {block.options.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
+                    {parsedOptions.map((option) => (
+                      <SelectItem key={option.key} value={option.key}>
+                        {option.key}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1896,13 +2178,71 @@ function ListeningTestClient({
       );
     }
 
+    if (block.templateText?.trim()) {
+      const parts = block.templateText.split(/(\{\d+\})/g);
+
+      return (
+        <Card className="test-panel test-soft-surface min-w-0 gap-0 rounded-lg border border-border bg-muted/20 p-4 overflow-hidden">
+          <div className="rounded-lg border border-border/60 bg-muted/15 p-3">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+              {parts.map((part, partIndex) => {
+                const match = part.match(/^\{(\d+)\}$/);
+                if (match) {
+                  const num = Number(match[1]);
+                  const isCurrent = activeQuestionNumber === num;
+
+                  return (
+                    <span
+                      key={`summary-token-${partIndex}`}
+                      id={`q-${num}`}
+                      ref={(el) => {
+                        if (!el) {
+                          questionRefs.current.delete(num);
+                          return;
+                        }
+                        questionRefs.current.set(num, el);
+                      }}
+                      className={cn(
+                        "mx-0.5 inline-flex items-baseline gap-1 scroll-mt-24 align-baseline",
+                        markedQuestionClass(num),
+                      )}
+                      onClick={() => setActiveQuestionNumber(num)}
+                    >
+                      <QuestionChip number={num} active={isCurrent} />
+                      <Input
+                        aria-label={`Question ${num}`}
+                        value={answers[num] ?? ""}
+                        onChange={(e) => setAnswer(num, e.target.value)}
+                        onFocus={() => setActiveQuestionNumber(num)}
+                        placeholder="..."
+                        className={cn(
+                          "test-input-surface inline-block h-8 w-28 rounded-md px-2 text-sm transition-all sm:w-36",
+                          isCurrent
+                            ? "border-blue-400 bg-blue-50/60 ring-1 ring-blue-400/30 dark:bg-blue-900/20"
+                            : "",
+                        )}
+                      />
+                    </span>
+                  );
+                }
+
+                return (
+                  <FormattedInstructionText
+                    key={`summary-token-${partIndex}`}
+                    text={part}
+                    className="wrap-break-word"
+                  />
+                );
+              })}
+            </p>
+          </div>
+        </Card>
+      );
+    }
+
     return (
       <Card className="test-panel test-soft-surface min-w-0 gap-0 rounded-lg border border-border bg-muted/20 p-4 overflow-hidden">
-        <h4 className="text-base font-semibold">{block.title}</h4>
-        <p className="test-muted-copy mt-1 text-sm text-muted-foreground">
-          <FormattedInstructionText text={block.instruction} />
-        </p>
-        <div className="mt-3 space-y-3 text-sm leading-7">
+        <div className="space-y-3 text-sm leading-7">
           {block.lines.map((line) => (
             <div
               key={line.questionNumber}
@@ -1917,7 +2257,10 @@ function ListeningTestClient({
               className={cn("flex flex-wrap items-center gap-2 scroll-mt-24", markedQuestionClass(line.questionNumber))}
               onClick={() => setActiveQuestionNumber(line.questionNumber)}
             >
-              <span className="wrap-break-word">{line.before}</span>
+              <FormattedInstructionText
+                text={line.before}
+                className="wrap-break-word"
+              />
               <QuestionChip
                 number={line.questionNumber}
                 active={activeQuestionNumber === line.questionNumber}
@@ -1933,7 +2276,10 @@ function ListeningTestClient({
                   isSmallLandscape && "h-11",
                 )}
               />
-              <span className="wrap-break-word">{line.after}</span>
+              <FormattedInstructionText
+                text={line.after}
+                className="wrap-break-word"
+              />
             </div>
           ))}
         </div>
@@ -2069,6 +2415,37 @@ function ListeningTestClient({
         </div>
       </header>
 
+      <audio
+        ref={audioRef}
+        preload="metadata"
+        className="hidden"
+        onPlay={() => setAudioPlaying(true)}
+        onPause={() => setAudioPlaying(false)}
+        onLoadedMetadata={(event) => {
+          const media = event.currentTarget;
+          const duration = Number.isFinite(media.duration) ? media.duration : 0;
+          setAudioDurationSec(duration);
+          const progress = duration > 0 ? (media.currentTime / duration) * 100 : 0;
+          setAudioProgress(progress);
+          setAudioCurrentSec(media.currentTime || 0);
+        }}
+        onTimeUpdate={(event) => {
+          const media = event.currentTarget;
+          const duration = Number.isFinite(media.duration) ? media.duration : 0;
+          const current = media.currentTime || 0;
+          setAudioCurrentSec(current);
+          const progress = duration > 0 ? (current / duration) * 100 : 0;
+          setAudioProgress(progress);
+        }}
+        onEnded={() => {
+          setAudioPlaying(false);
+          setAudioProgress(100);
+        }}
+        onError={() => {
+          setAudioPlaying(false);
+        }}
+      />
+
       {!reviewMode ? (
       <div
         className={cn(
@@ -2081,17 +2458,24 @@ function ListeningTestClient({
             type="button"
             variant="secondary"
             size="icon"
-            disabled={isRealMode}
+            disabled={isRealMode || !activeSectionAudioUrl}
             className={cn(
               "h-9 w-9 rounded-full shrink-0",
               isSmallLandscape && "h-8 w-8",
-              isRealMode && "cursor-not-allowed opacity-60",
+              (isRealMode || !activeSectionAudioUrl) && "cursor-not-allowed opacity-60",
             )}
             onClick={() => {
-              if (isRealMode) return;
-              setAudioPlaying((prev) => !prev);
+              toggleAudioPlayback();
             }}
-            aria-label={isRealMode ? realModeLockedAudioLabel : audioPlaying ? t("pauseAudio") : t("playAudio")}
+            aria-label={
+              isRealMode
+                ? realModeLockedAudioLabel
+                : !activeSectionAudioUrl
+                  ? (t.has("audioUnavailable") ? t("audioUnavailable") : "Audio unavailable")
+                  : audioPlaying
+                    ? t("pauseAudio")
+                    : t("playAudio")
+            }
           >
             {audioPlaying ? (
               <Pause className="size-4" />
@@ -2107,7 +2491,7 @@ function ListeningTestClient({
                 {activeSection.audioMeta.currentTrackTitle}
               </p>
               <p className={cn("test-muted-copy shrink-0", isSmallLandscape && "text-[10px]")}>
-                30:00
+                {`${formatTime(Math.round(audioCurrentSec))} / ${formatTime(effectiveAudioDurationSec)}`}
               </p>
             </div>
             {realModeStarting ? (
@@ -2126,13 +2510,21 @@ function ListeningTestClient({
                 min={0}
                 max={100}
                 value={audioProgress}
-                disabled={isRealMode}
+                disabled={isRealMode || !activeSectionAudioUrl}
                 onChange={(e) => {
-                  if (isRealMode) return;
-                  setAudioProgress(Number(e.target.value));
+                  if (isRealMode || !activeSectionAudioUrl) return;
+                  const nextProgress = Number(e.target.value);
+                  const media = audioRef.current;
+                  if (media) {
+                    const duration = Number.isFinite(media.duration) ? media.duration : 0;
+                    if (duration > 0) {
+                      media.currentTime = (nextProgress / 100) * duration;
+                    }
+                  }
+                  setAudioProgress(nextProgress);
                 }}
                 aria-label={isRealMode ? realModeProgressLockedLabel : t("audioProgress")}
-                className={cn("h-1.5 w-full min-w-0", isRealMode && "cursor-not-allowed opacity-60")}
+                className={cn("h-1.5 w-full min-w-0", (isRealMode || !activeSectionAudioUrl) && "cursor-not-allowed opacity-60")}
               />
               <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden">
                 <Volume2 className="size-3.5 shrink-0 text-muted-foreground" />
@@ -2216,73 +2608,6 @@ function ListeningTestClient({
         ) : (
         <section className="min-h-0 min-w-0">
           <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden border border-border/70 bg-background/45">
-            <div className="border-b border-border/70 px-3 py-2 sm:px-4">
-              {isSmallLandscape ? (
-                <Select
-                  value={activeSectionId}
-                  onValueChange={handleSectionChange}
-                >
-                  <SelectTrigger
-                    className="h-9 w-full min-w-0"
-                    aria-label={t("sectionTab", {
-                      index: Number(activeSectionId.slice(1)),
-                    })}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {test.sections.map((section, index) => (
-                      <SelectItem key={section.id} value={section.id}>
-                        {t("sectionTab", { index: index + 1 })}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Tabs
-                  value={activeSectionId}
-                  onValueChange={handleSectionChange}
-                >
-                  <div className="w-full min-w-0 overflow-x-auto [scrollbar-width:none]">
-                    <TabsList className="inline-flex h-10 w-max min-w-full flex-nowrap whitespace-nowrap bg-transparent p-0">
-                      {test.sections.map((section, index) => (
-                        <TabsTrigger
-                          key={section.id}
-                          value={section.id}
-                          className="inline-flex h-9 shrink-0 rounded-lg px-3"
-                          aria-label={section.title}
-                        >
-                          {t("sectionTab", { index: index + 1 })}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </div>
-                </Tabs>
-              )}
-
-              <div className="mt-2 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-                <div className="min-w-0">
-                  <p className="text-[11px] tracking-[0.16em] text-blue-700 uppercase dark:text-blue-300">
-                    {t("sectionTab", { index: Number(activeSectionId.slice(1)) })}
-                  </p>
-                  <h2 className="mt-1 wrap-break-word text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                    {activeSection.title}
-                  </h2>
-                  <p className="mt-1 wrap-break-word text-sm font-medium text-muted-foreground">
-                    {activeSection.questionRangeLabel}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border/70 bg-background/75 px-3 py-2 text-xs text-muted-foreground sm:max-w-85">
-                  <p className="font-semibold tracking-[0.12em] uppercase">{activeSection.audioMeta.nowPlayingLabel}</p>
-                  <p className="mt-1 wrap-break-word text-sm text-foreground">{activeSection.audioMeta.currentTrackTitle}</p>
-                </div>
-              </div>
-
-              <p className="mt-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-sm wrap-break-word">
-                <FormattedInstructionText text={activeSection.instructions} />
-              </p>
-            </div>
-
             <div
               ref={questionsScrollRef}
               className={cn(
@@ -2302,7 +2627,17 @@ function ListeningTestClient({
                 )}
               >
                 {activeSection.blocks.map((block, index) => (
-                  <div key={`${activeSection.id}-${block.type}-${index}`}>
+                  <div key={`${activeSection.id}-${block.type}-${index}`} className="space-y-2">
+                    {deriveBlockRangeLabel(block) ? (
+                      <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                        {deriveBlockRangeLabel(block)}
+                      </p>
+                    ) : null}
+                    {deriveBlockInstruction(block) && block.type !== "matching" ? (
+                      <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-sm wrap-break-word">
+                        <FormattedInstructionText text={deriveBlockInstruction(block)} />
+                      </p>
+                    ) : null}
                     {renderBlock(block)}
                   </div>
                 ))}

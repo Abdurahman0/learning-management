@@ -94,7 +94,11 @@ function hasValidMcqCorrectAnswer(value: unknown) {
   if (hasText(value)) return true;
   if (isNonEmptyArray(value)) return true;
   if (hasTextAtPath(value, "answer")) return true;
-  return false;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  const answers = record.answers;
+  if (!Array.isArray(answers)) return false;
+  return answers.some((item) => hasText(item));
 }
 
 function hasValidCompletionAnswer(value: unknown) {
