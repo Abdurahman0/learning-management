@@ -374,16 +374,17 @@ function collectAttemptRawSubmitCandidatesByNumber(rawAttempt: unknown) {
         const number = toNumberSafe(row.question_number ?? nestedQuestion?.question_number, 0);
         if (number <= 0) continue;
 
+        // Prefer attempt-scoped identifiers first; canonical question ids can fail validation on save.
         const prioritized = [
-          toStringSafe(row.question_id).trim(),
-          typeof row.question === "string" ? row.question.trim() : "",
-          toStringSafe(nestedQuestion?.question_id).trim(),
-          toStringSafe(nestedQuestion?.id).trim(),
-          toStringSafe(row.id).trim(),
           toStringSafe(row.attempt_question_id).trim(),
           toStringSafe(row.attempt_question).trim(),
+          toStringSafe(row.id).trim(),
           toStringSafe(row.question_answer_id).trim(),
-          toStringSafe(row.question_answer).trim()
+          toStringSafe(row.question_answer).trim(),
+          toStringSafe(row.question_id).trim(),
+          typeof row.question === "string" ? row.question.trim() : "",
+          toStringSafe(nestedQuestion?.id).trim(),
+          toStringSafe(nestedQuestion?.question_id).trim()
         ].filter(Boolean);
         const scanned = collectUuidStrings(row, 4);
         const combined = [...prioritized, ...scanned].filter(
@@ -419,10 +420,12 @@ function collectBackendAttemptAnswerEntries(params: {
     .map((question) => {
       const answer = toSubmitAnswer(params.answers[question.id]);
       const isFlagged = params.marked.has(question.id);
-      const candidateIds =
-        params.rawSubmitCandidatesByNumber.get(question.number)
-        ?? params.submitCandidatesByNumber.get(question.number)
-        ?? resolveSubmitCandidateIds(question);
+      const fromAttempt = params.submitCandidatesByNumber.get(question.number) ?? [];
+      const fromRaw = params.rawSubmitCandidatesByNumber.get(question.number) ?? [];
+      const fromQuestion = resolveSubmitCandidateIds(question);
+      const candidateIds = [...fromAttempt, ...fromRaw, ...fromQuestion].filter(
+        (value, index, source) => Boolean(value) && source.indexOf(value) === index
+      );
       if (!candidateIds.length || (answer === null && !isFlagged)) {
         return null;
       }
@@ -1222,6 +1225,36 @@ function ReadingTestClient({
             }
 
             if (!changed) {
+              const [freshSnapshot, freshRawSnapshot] = await Promise.all([
+                studentAttemptsService.getById(backendAttemptId),
+                studentAttemptsService.getByIdRaw(backendAttemptId)
+              ]);
+              const freshByNumber = collectAttemptSubmitCandidatesByNumber(freshSnapshot);
+              const freshRawByNumber = collectAttemptRawSubmitCandidatesByNumber(freshRawSnapshot);
+
+              for (const entry of activeEntries) {
+                const currentId = currentIds.get(entry.questionKey) ?? "";
+                if (!currentId || !failedQuestionIds.has(currentId)) continue;
+
+                const freshPool = [
+                  ...(freshRawByNumber.get(entry.questionNumber) ?? []),
+                  ...(freshByNumber.get(entry.questionNumber) ?? [])
+                ].filter((value, index, source) => Boolean(value) && source.indexOf(value) === index);
+
+                if (!freshPool.length) continue;
+                entry.candidateIds = [...entry.candidateIds, ...freshPool].filter(
+                  (value, index, source) => Boolean(value) && source.indexOf(value) === index
+                );
+
+                const nextCandidate = entry.candidateIds.find((candidate) => candidate && candidate !== currentId);
+                if (nextCandidate) {
+                  currentIds.set(entry.questionKey, nextCandidate);
+                  changed = true;
+                }
+              }
+            }
+
+            if (!changed) {
               throw error;
             }
           }
@@ -1319,6 +1352,13 @@ function ReadingTestClient({
       };
     });
   }, [answers, questionsByNumber, test.passages, test.questions]);
+  const activePassagePaletteSection = useMemo(
+    () =>
+      passagePaletteSections.find((section) => section.passageId === activePassageId)
+      ?? passagePaletteSections[0]
+      ?? null,
+    [activePassageId, passagePaletteSections]
+  );
   const activePassage = useMemo(
     () => test.passages.find((passage) => passage.id === activePassageId),
     [activePassageId, test.passages]
@@ -1883,27 +1923,16 @@ function ReadingTestClient({
               {t.has("clearHighlights") ? t("clearHighlights") : "Clear highlights"}
             </Button>
             {reviewMode ? (
-              <>
-                <Button
-                  type="button"
-                  asChild
-                  className="h-9 rounded-xl bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90 sm:h-10 sm:px-6"
-                >
-                  <Link href={`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId ?? attemptId}`}>
-                    {tReadingResult("resultsButton")}
-                  </Link>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  aria-label={t.has("restartTest") ? t("restartTest") : "Restart test"}
-                  onClick={handleRestartTest}
-                  className="h-9 rounded-xl px-3 text-xs sm:h-10 sm:px-4 sm:text-sm"
-                >
-                  <RotateCcw className="size-4" />
-                  {t.has("restartTest") ? t("restartTest") : "Restart test"}
-                </Button>
-              </>
+              <Button
+                type="button"
+                variant="outline"
+                aria-label={t.has("restartTest") ? t("restartTest") : "Restart test"}
+                onClick={handleRestartTest}
+                className="h-9 rounded-xl px-3 text-xs sm:h-10 sm:px-4 sm:text-sm"
+              >
+                <RotateCcw className="size-4" />
+                {t.has("restartTest") ? t("restartTest") : "Restart test"}
+              </Button>
             ) : (
               <Button
                 aria-label={t("finishTest")}
@@ -2439,7 +2468,7 @@ function ReadingTestClient({
 
       {!reviewMode ? (
         <div className="border-t border-border/75 bg-background/95 px-3 backdrop-blur sm:px-4 lg:px-5">
-          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 pt-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 pt-1.5">
             <Button
               type="button"
               variant="ghost"
@@ -2503,15 +2532,15 @@ function ReadingTestClient({
             </Button>
           </div>
 
-          <div className="mt-2 min-w-0 overflow-x-auto [scrollbar-width:thin]">
-            <div className="inline-grid min-w-max grid-flow-col auto-cols-[minmax(220px,1fr)] gap-2 pr-1 lg:grid-flow-row lg:auto-cols-auto lg:grid-cols-3 lg:min-w-0 lg:w-full">
+          <div className="mt-1.5 min-w-0 overflow-x-auto [scrollbar-width:thin]">
+            <div className="inline-grid min-w-max grid-flow-col auto-cols-[minmax(220px,1fr)] gap-1.5 pr-1 lg:grid-flow-row lg:auto-cols-auto lg:grid-cols-3 lg:min-w-0 lg:w-full">
               {passagePaletteSections.map((section) => {
                 const isActivePassage = section.passageId === activePassageId;
                 return (
                   <div
                     key={`palette-${section.passageId}`}
                     className={cn(
-                      "rounded-xl border p-2 transition-colors",
+                      "rounded-xl border p-1.5 transition-colors",
                       isActivePassage
                         ? "border-blue-400/60 bg-blue-500/10"
                         : "cursor-pointer border-border/70 bg-background/70 hover:border-blue-300/50 hover:bg-muted/40"
@@ -2522,47 +2551,55 @@ function ReadingTestClient({
                       }
                     }}
                   >
-                    <button
-                      type="button"
-                      className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
-                      onClick={() => handlePassageChange(section.passageId)}
-                    >
-                      <span className="text-sm font-semibold">
-                        {t("passageLabel", { index: section.index })}
-                      </span>
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {section.answered}/{section.numbers.length}
-                      </span>
-                    </button>
-
                     {isActivePassage ? (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {section.numbers.map((number) => {
-                          const question = questionsByNumber.get(number);
-                          const answered = question ? isAnswered(answers[question.id]) : false;
-                          const isMarked = question ? marked.has(question.id) : false;
-                          const isCurrent = number === activeQuestionNumber;
-                          return (
-                            <Button
-                              key={`${activePassageId}-${number}`}
-                              type="button"
-                              variant="outline"
-                              aria-label={t("goToQuestion", { number })}
-                              className={cn(
-                                "relative h-6 min-w-6 rounded-md border px-1 text-[11px] font-semibold shadow-none",
-                                isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
-                                !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
-                                !isCurrent && !answered && "border-border bg-background text-foreground/85",
-                                isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
-                              )}
-                              onClick={() => goToQuestion(number)}
-                            >
-                              {number}
-                              {isMarked ? <span className="absolute right-1 top-1 size-1 rounded-full bg-amber-500" aria-hidden="true" /> : null}
-                            </Button>
-                          );
-                        })}
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
+                          <div className="flex w-max gap-1 pr-1">
+                            {section.numbers.map((number) => {
+                              const question = questionsByNumber.get(number);
+                              const answered = question ? isAnswered(answers[question.id]) : false;
+                              const isMarked = question ? marked.has(question.id) : false;
+                              const isCurrent = number === activeQuestionNumber;
+                              return (
+                                <Button
+                                  key={`${activePassageId}-${number}`}
+                                  type="button"
+                                  variant="outline"
+                                  aria-label={t("goToQuestion", { number })}
+                                  className={cn(
+                                    "relative h-5 min-w-5 rounded-md border px-1 text-[10px] font-semibold shadow-none",
+                                    isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                                    !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
+                                    !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                                    isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                                  )}
+                                  onClick={() => goToQuestion(number)}
+                                >
+                                  {number}
+                                  {isMarked ? <span className="absolute right-1 top-1 size-1 rounded-full bg-amber-500" aria-hidden="true" /> : null}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
+                          {section.answered}/{section.numbers.length}
+                        </span>
                       </div>
+                    ) : null}
+                    {!isActivePassage ? (
+                      <button
+                        type="button"
+                        className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+                        onClick={() => handlePassageChange(section.passageId)}
+                      >
+                        <span className="text-xs font-semibold sm:text-sm">
+                          {t("passageLabel", { index: section.index })}
+                        </span>
+                        <span className="text-[11px] font-medium text-muted-foreground">
+                          {section.answered}/{section.numbers.length}
+                        </span>
+                      </button>
                     ) : null}
                   </div>
                 );
@@ -2580,79 +2617,54 @@ function ReadingTestClient({
           </SheetHeader>
 
           <ScrollArea className="h-[calc(100vh-9rem)] px-6 pb-6 md:h-[calc(100vh-8rem)]">
-            <div className="space-y-3 py-4">
-              {passagePaletteSections.map((section) => {
-                const isActivePassage = section.passageId === activePassageId;
-                return (
-                  <div
-                    key={`sheet-palette-${section.passageId}`}
-                    className={cn(
-                      "rounded-xl border p-2.5 transition-colors",
-                      isActivePassage
-                        ? "border-blue-400/60 bg-blue-500/10"
-                        : "cursor-pointer border-border/70 bg-background/70 hover:border-blue-300/50 hover:bg-muted/40"
-                    )}
-                    onClick={() => {
-                      if (!isActivePassage) {
-                        handlePassageChange(section.passageId);
-                      }
-                    }}
-                  >
-                    <button
+            <div className="py-4">
+              <div className="grid grid-cols-5 gap-2">
+                {(activePassagePaletteSection?.numbers ?? []).map((num) => {
+                  const q = questionsByNumber.get(num);
+                  const answered = q ? isAnswered(answers[q.id]) : false;
+                  const isMarked = q ? marked.has(q.id) : false;
+                  const isCurrent = num === activeQuestionNumber;
+
+                  return (
+                    <Button
+                      key={num}
                       type="button"
-                      className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
-                      onClick={() => handlePassageChange(section.passageId)}
+                      variant="outline"
+                      aria-label={t("goToQuestion", { number: num })}
+                      className={cn(
+                        "relative h-9 rounded-md border text-sm",
+                        isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                        !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
+                        !isCurrent && !answered && "border-border bg-card",
+                        isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-400 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                      )}
+                      onClick={() => {
+                        goToQuestion(num);
+                        if (isCompact) {
+                          setPaletteOpen(false);
+                        }
+                      }}
                     >
-                      <span className="text-sm font-semibold">
-                        {t("passageLabel", { index: section.index })}
-                      </span>
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {section.answered}/{section.numbers.length}
-                      </span>
-                    </button>
-
-                    {isActivePassage ? (
-                      <div className="mt-2 grid grid-cols-5 gap-2">
-                        {section.numbers.map((num) => {
-                          const q = questionsByNumber.get(num);
-                          const answered = q ? isAnswered(answers[q.id]) : false;
-                          const isMarked = q ? marked.has(q.id) : false;
-                          const isCurrent = num === activeQuestionNumber;
-
-                          return (
-                            <Button
-                              key={num}
-                              type="button"
-                              variant="outline"
-                              aria-label={t("goToQuestion", { number: num })}
-                              className={cn(
-                                "relative h-9 rounded-md border text-sm",
-                                isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
-                                !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
-                                !isCurrent && !answered && "border-border bg-card",
-                                isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-400 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
-                              )}
-                              onClick={() => {
-                                goToQuestion(num);
-                                if (isCompact) {
-                                  setPaletteOpen(false);
-                                }
-                              }}
-                            >
-                              {num}
-                              {isMarked ? <span className="absolute right-1 top-1 size-1.5 rounded-full bg-amber-500" aria-hidden="true" /> : null}
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
+                      {num}
+                      {isMarked ? <span className="absolute right-1 top-1 size-1.5 rounded-full bg-amber-500" aria-hidden="true" /> : null}
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
           </ScrollArea>
         </SheetContent>
       </Sheet>
+
+      {reviewMode ? (
+        <div className="fixed bottom-4 right-4 z-50 sm:bottom-5 sm:right-5">
+          <Button asChild className="h-10 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-lg hover:bg-blue-600/90">
+            <Link href={`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId ?? attemptId}`}>
+              Analyze
+            </Link>
+          </Button>
+        </div>
+      ) : null}
 
       <TestOptionsSheet
         open={optionsOpen}

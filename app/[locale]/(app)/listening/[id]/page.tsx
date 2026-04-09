@@ -131,6 +131,82 @@ function extractQuestionPrompt(question: StudentAttemptQuestion) {
   );
 }
 
+type ListeningSubmitQuestionMeta = {
+  questionId: string;
+  candidateIds: string[];
+  questionType: string;
+};
+
+function resolveSubmitQuestionId(question: StudentAttemptQuestion) {
+  const attemptQuestionId = toStringSafe(question.attempt_question_id).trim();
+  const rawId = toStringSafe(question.id).trim();
+  const canonicalId = toStringSafe(question.question_id).trim();
+  if (attemptQuestionId) return attemptQuestionId;
+  if (rawId) return rawId;
+  return canonicalId;
+}
+
+function collectListeningSubmitMetaByNumber(attempt: StudentAttemptDetail) {
+  const byNumber = new Map<number, ListeningSubmitQuestionMeta>();
+
+  for (const part of attempt.listening_parts) {
+    for (const group of part.question_groups) {
+      for (const question of group.questions) {
+        const number = toNumberSafe(question.question_number, 0);
+        if (number <= 0) continue;
+
+        const candidates = [
+          resolveSubmitQuestionId(question),
+          toStringSafe(question.id).trim(),
+          toStringSafe(question.attempt_question_id).trim(),
+          toStringSafe(question.question_id).trim(),
+          ...asArray<string>(question.candidate_question_ids)
+            .map((value) => toStringSafe(value).trim())
+            .filter(Boolean),
+        ].filter((value, index, source) => Boolean(value) && source.indexOf(value) === index);
+
+        if (!candidates.length) continue;
+
+        byNumber.set(number, {
+          questionId: candidates[0],
+          candidateIds: candidates,
+          questionType: toStringSafe(question.question_type).trim().toUpperCase(),
+        });
+      }
+    }
+  }
+
+  return byNumber;
+}
+
+function extractValidationAnswerQuestionIdFailures(error: unknown) {
+  if (!(error instanceof StudentApiError)) {
+    return new Set<string>();
+  }
+
+  const raw = asRecord(error.raw);
+  const payloadError = asRecord(raw?.error);
+  const details = asRecord(payloadError?.details);
+  const answers = asRecord(details?.answers);
+  if (!answers) {
+    return new Set<string>();
+  }
+
+  const failed = new Set<string>();
+  for (const [questionId, detail] of Object.entries(answers)) {
+    const row = asRecord(detail);
+    const messages = asArray<unknown>(row?.question_id)
+      .map((message) => toStringSafe(message).toLowerCase())
+      .filter(Boolean);
+    const hasBelongMessage = messages.some((message) => message.includes("does not belong to this attempt"));
+    if (hasBelongMessage) {
+      failed.add(questionId);
+    }
+  }
+
+  return failed;
+}
+
 function extractOptionTexts(value: unknown) {
   return asArray<unknown>(value)
     .map((item) => {
@@ -485,6 +561,8 @@ export default function ListeningTestPage() {
   const [resolvedTestId, setResolvedTestId] = useState<string>(testId);
   const [loadingBackendTest, setLoadingBackendTest] = useState(false);
   const [backendLoadError, setBackendLoadError] = useState<string | null>(null);
+  const [initialBackendAttemptId, setInitialBackendAttemptId] = useState<string | null>(null);
+  const [initialSubmitMetaByNumber, setInitialSubmitMetaByNumber] = useState<Map<number, ListeningSubmitQuestionMeta>>(new Map());
 
   useEffect(() => {
     let active = true;
@@ -494,6 +572,8 @@ export default function ListeningTestPage() {
       setResolvedTestId(testId);
       setLoadingBackendTest(false);
       setBackendLoadError(null);
+      setInitialBackendAttemptId(null);
+      setInitialSubmitMetaByNumber(new Map());
       return () => {
         active = false;
       };
@@ -503,6 +583,8 @@ export default function ListeningTestPage() {
       setResolvedTestId(testId);
       setLoadingBackendTest(false);
       setBackendLoadError(null);
+      setInitialBackendAttemptId(null);
+      setInitialSubmitMetaByNumber(new Map());
       return () => {
         active = false;
       };
@@ -527,12 +609,15 @@ export default function ListeningTestPage() {
         const finalAttempt = createdAttempt.listening_parts?.length
           ? createdAttempt
           : await studentAttemptsService.getById(String(createdAttempt.id));
+        const nextSubmitMetaByNumber = collectListeningSubmitMetaByNumber(finalAttempt);
 
         const mapped = mapListeningAttemptToRuntimeTest(matched, finalAttempt);
         saveRuntimeListeningTest(mapped);
 
         if (!active) return;
         setResolvedTestId(mapped.id);
+        setInitialBackendAttemptId(toStringSafe(finalAttempt.id).trim() || null);
+        setInitialSubmitMetaByNumber(nextSubmitMetaByNumber);
       } catch (error) {
         if (!active) return;
         const message =
@@ -579,10 +664,28 @@ export default function ListeningTestPage() {
     );
   }
 
-  return <ListeningTestClient key={test.id} testId={test.id} requestedMode={requestedMode} />;
+  return (
+    <ListeningTestClient
+      key={test.id}
+      testId={test.id}
+      requestedMode={requestedMode}
+      initialBackendAttemptId={initialBackendAttemptId}
+      initialSubmitMetaByNumber={initialSubmitMetaByNumber}
+    />
+  );
 }
 
-function ListeningTestClient({ testId, requestedMode = null }: { testId: string; requestedMode?: AttemptMode | null }) {
+function ListeningTestClient({
+  testId,
+  requestedMode = null,
+  initialBackendAttemptId = null,
+  initialSubmitMetaByNumber = new Map(),
+}: {
+  testId: string;
+  requestedMode?: AttemptMode | null;
+  initialBackendAttemptId?: string | null;
+  initialSubmitMetaByNumber?: Map<number, ListeningSubmitQuestionMeta>;
+}) {
   const searchParams = useSearchParams();
   const t = useTranslations("listeningTest");
   const tListeningResult = useTranslations("listeningResult");
@@ -621,6 +724,8 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
     "s1" | "s2" | "s3" | "s4"
   >("s1");
   const [attemptId, setAttemptId] = useState("");
+  const [backendAttemptId, setBackendAttemptId] = useState<string | null>(initialBackendAttemptId);
+  const [submitMetaByNumber, setSubmitMetaByNumber] = useState<Map<number, ListeningSubmitQuestionMeta>>(() => new Map(initialSubmitMetaByNumber));
   const [startedAt, setStartedAt] = useState(0);
   const [finishOpen, setFinishOpen] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
@@ -692,6 +797,8 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
     const freshAttemptId = createAttemptId();
     setAttemptId(freshAttemptId);
+    setBackendAttemptId(null);
+    setSubmitMetaByNumber(new Map());
     setStartedAt(Date.now());
     setAttemptMode(nextMode);
     setFinishOpen(false);
@@ -756,6 +863,11 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
       const hydrateTimer = window.setTimeout(() => {
         setAttemptId(saved.attemptId);
+        const restoredBackendAttemptId =
+          toStringSafe(saved.backendAttemptId).trim()
+          || toStringSafe(initialBackendAttemptId).trim()
+          || null;
+        setBackendAttemptId(restoredBackendAttemptId);
         setStartedAt(saved.startedAt);
         setAnswers(restoredAnswers);
         setMarked(new Set(saved.markedQuestionIds.map((id) => Number(id.replace(`${test.id}-q`, ""))).filter((v) => Number.isFinite(v))));
@@ -770,6 +882,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
     const initTimer = window.setTimeout(() => {
       setAttemptId(createAttemptId());
+      setBackendAttemptId(null);
       setStartedAt(Date.now());
       setAttemptMode(null);
       setTimerRunning(false);
@@ -794,6 +907,32 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
     return () => window.clearTimeout(resetTimer);
   }, [attemptMode, requestedMode, restartRequested]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!backendAttemptId || submitMetaByNumber.size > 0) {
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadSubmitMeta = async () => {
+      try {
+        const snapshot = await studentAttemptsService.getById(backendAttemptId);
+        if (!active) return;
+        setSubmitMetaByNumber(collectListeningSubmitMetaByNumber(snapshot));
+      } catch {
+        if (!active) return;
+      }
+    };
+
+    void loadSubmitMeta();
+
+    return () => {
+      active = false;
+    };
+  }, [backendAttemptId, submitMetaByNumber.size]);
 
   const sectionByQuestion = useMemo(() => {
     const map = new Map<number, ListeningSectionFull["id"]>();
@@ -836,6 +975,13 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
       };
     });
   }, [answers, sectionQuestionNumbers, test.sections]);
+  const activeSectionPaletteSection = useMemo(
+    () =>
+      sectionPaletteSections.find((section) => section.sectionId === activeSectionId)
+      ?? sectionPaletteSections[0]
+      ?? null,
+    [activeSectionId, sectionPaletteSections]
+  );
 
   const activeSection = useMemo(
     () =>
@@ -940,6 +1086,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
     );
     saveAttemptProgress({
       attemptId,
+      backendAttemptId: backendAttemptId ?? undefined,
       module: "listening",
       testId: test.id,
       mode: attemptMode,
@@ -949,7 +1096,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
       timeRemainingSec: remainingSeconds,
       timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
     });
-  }, [answers, attemptId, attemptMode, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
+  }, [answers, attemptId, attemptMode, backendAttemptId, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
 
   useEffect(() => {
     const compactMedia = window.matchMedia("(max-width: 1024px)");
@@ -1162,15 +1309,129 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
     }, 120);
   }, []);
 
-  const finishTest = useCallback(() => {
+  const resolveTimeUsedSeconds = useCallback((finishedAtMs?: number) => {
+    const finishedAt = typeof finishedAtMs === "number" ? finishedAtMs : Date.now();
+    const timerUsed = timerRunning || remainingSeconds !== test.durationMinutes * 60;
+    const timerSpentSeconds = Math.max(0, test.durationMinutes * 60 - remainingSeconds);
+    const elapsedSeconds = Math.max(0, Math.floor((finishedAt - startedAt) / 1000));
+    return timerUsed ? timerSpentSeconds : elapsedSeconds;
+  }, [remainingSeconds, startedAt, test.durationMinutes, timerRunning]);
+
+  const finishTest = useCallback(async () => {
     if (!attemptId) return;
     const finishedAt = Date.now();
+    const timerUsed = timerRunning || remainingSeconds !== test.durationMinutes * 60;
+    const timeUsedSeconds = resolveTimeUsedSeconds(finishedAt);
     const persistedAnswers = Object.fromEntries(
       Object.entries(answers).map(([number, value]) => [`${test.id}-q${number}`, value])
     );
 
+    let submitAttemptId = backendAttemptId;
+    if (!submitAttemptId && UUID_PATTERN.test(test.id)) {
+      try {
+        const createdAttempt = await studentAttemptsService.create({
+          practice_test: test.id,
+          mode: attemptMode === "real" ? "REAL" : "PRACTICE"
+        });
+        submitAttemptId = toStringSafe(createdAttempt.id).trim() || null;
+        setBackendAttemptId(submitAttemptId);
+        setSubmitMetaByNumber(collectListeningSubmitMetaByNumber(createdAttempt));
+      } catch (error) {
+        console.error("Listening attempt create-on-finish failed", error);
+      }
+    }
+
+    if (submitAttemptId) {
+      try {
+        const activeEntries = Object.entries(answers)
+          .map(([rawNumber, rawValue]) => {
+            const questionNumber = Number(rawNumber);
+            if (!Number.isFinite(questionNumber)) return null;
+            const normalizedRaw = toStringSafe(rawValue).trim();
+            if (!normalizedRaw) return null;
+
+            const submitMeta = submitMetaByNumber.get(questionNumber);
+            if (!submitMeta?.candidateIds?.length) return null;
+
+            const answerPayload = submitMeta.questionType === "MCQ_MULTIPLE"
+              ? {
+                  answers: normalizedRaw
+                    .split(",")
+                    .map((item) => item.trim())
+                    .filter(Boolean)
+                }
+              : {
+                  answer: normalizedRaw
+                };
+
+            return {
+              questionNumber,
+              candidateIds: submitMeta.candidateIds,
+              answer: answerPayload
+            };
+          })
+          .filter(Boolean) as Array<{questionNumber: number; candidateIds: string[]; answer: {answer: string} | {answers: string[]}}>;
+
+        const currentIds = new Map<number, string>();
+        activeEntries.forEach((entry) => {
+          const initialId = entry.candidateIds[0] ?? "";
+          if (initialId) {
+            currentIds.set(entry.questionNumber, initialId);
+          }
+        });
+
+        let attemptIndex = 0;
+        const maxAttempts = 12;
+        while (attemptIndex < maxAttempts) {
+          const backendAnswers = activeEntries
+            .map((entry) => {
+              const questionId = currentIds.get(entry.questionNumber) ?? "";
+              if (!questionId) return null;
+              return {
+                question_id: questionId,
+                answer: entry.answer
+              };
+            })
+            .filter((item): item is {question_id: string; answer: {answer: string} | {answers: string[]}} => item !== null);
+
+          try {
+            await studentAttemptsService.submit(submitAttemptId, {
+              time_used_seconds: timeUsedSeconds,
+              answers: backendAnswers
+            });
+            break;
+          } catch (error) {
+            const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
+            if (!failedQuestionIds.size) {
+              throw error;
+            }
+
+            let changed = false;
+            for (const entry of activeEntries) {
+              const currentId = currentIds.get(entry.questionNumber) ?? "";
+              if (!currentId || !failedQuestionIds.has(currentId)) continue;
+              const nextCandidate = entry.candidateIds.find((candidate) => candidate && candidate !== currentId);
+              if (nextCandidate) {
+                currentIds.set(entry.questionNumber, nextCandidate);
+                changed = true;
+              }
+            }
+
+            if (!changed) {
+              throw error;
+            }
+          }
+
+          attemptIndex += 1;
+        }
+      } catch (error) {
+        console.error("Listening submit failed", error);
+      }
+    }
+
     saveAttemptResult({
       attemptId,
+      backendAttemptId: submitAttemptId ?? backendAttemptId ?? undefined,
       module: "listening",
       testId: test.id,
       mode: attemptMode ?? "practice",
@@ -1179,7 +1440,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
       startedAt,
       finishedAt,
       timeRemainingSec: remainingSeconds,
-      timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
+      timerUsed,
     });
 
     setFinishOpen(false);
@@ -1192,9 +1453,12 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
     answers,
     attemptId,
     attemptMode,
+    backendAttemptId,
     marked,
     remainingSeconds,
+    resolveTimeUsedSeconds,
     startedAt,
+    submitMetaByNumber,
     test.durationMinutes,
     test.id,
     timerRunning,
@@ -1781,20 +2045,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
             >
               <Menu className="size-4" />
             </Button>
-            {reviewMode ? (
-              <Button
-                asChild
-                className={cn(
-                  "h-9 shrink-0 rounded-xl bg-blue-600 px-2 text-sm font-semibold hover:bg-blue-600/90 sm:px-4",
-                  isSmallLandscape && "h-8 px-2 text-xs",
-                )}
-                aria-label={tListeningResult("resultsButton")}
-              >
-                <Link href={`/${locale}/listening/${test.id}/result?attempt=${attemptId}`}>
-                  {tListeningResult("resultsButton")}
-                </Link>
-              </Button>
-            ) : (
+            {reviewMode ? null : (
               <Button
                 className={cn(
                   "h-9 shrink-0 rounded-xl bg-blue-600 px-2 text-sm font-semibold hover:bg-blue-600/90 sm:px-4",
@@ -2062,7 +2313,7 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
       {!reviewMode ? (
         <div className="border-t border-border/75 bg-background/95 px-3 backdrop-blur sm:px-4 lg:px-5">
-          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 py-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 py-1.5">
             <Button
               type="button"
               variant="ghost"
@@ -2127,15 +2378,15 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
             </Button>
           </div>
 
-          <div className="mt-2 min-w-0 overflow-x-auto [scrollbar-width:thin]">
-            <div className="inline-grid min-w-max grid-flow-col auto-cols-[minmax(220px,1fr)] gap-2 pr-1 lg:grid-flow-row lg:auto-cols-auto lg:grid-cols-4 lg:min-w-0 lg:w-full">
+          <div className="mt-1.5 min-w-0 overflow-x-auto [scrollbar-width:thin]">
+            <div className="inline-grid min-w-max grid-flow-col auto-cols-[minmax(220px,1fr)] gap-1.5 pr-1 lg:grid-flow-row lg:auto-cols-auto lg:grid-cols-4 lg:min-w-0 lg:w-full">
               {sectionPaletteSections.map((section) => {
                 const isActiveSection = section.sectionId === activeSectionId;
                 return (
                   <div
                     key={`palette-${section.sectionId}`}
                     className={cn(
-                      "rounded-xl border p-2 transition-colors",
+                      "rounded-xl border p-1.5 transition-colors",
                       isActiveSection
                         ? "border-blue-400/60 bg-blue-500/10"
                         : "cursor-pointer border-border/70 bg-background/70 hover:border-blue-300/50 hover:bg-muted/40"
@@ -2146,51 +2397,59 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
                       }
                     }}
                   >
-                    <button
-                      type="button"
-                      className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
-                      onClick={() => handleSectionChange(section.sectionId)}
-                    >
-                      <span className="text-sm font-semibold">
-                        {t("sectionTab", { index: section.index })}
-                      </span>
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {section.answered}/{section.numbers.length}
-                      </span>
-                    </button>
-
                     {isActiveSection ? (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {section.numbers.map((number) => {
-                          const answered = isAnswered(answers[number]);
-                          const isMarked = marked.has(number);
-                          const isCurrent = activeQuestionNumber === number;
-                          return (
-                            <Button
-                              key={number}
-                              type="button"
-                              variant="outline"
-                              aria-label={getJumpToQuestionLabel(number)}
-                              onClick={() => jumpToQuestion(number)}
-                              className={cn(
-                                "relative h-6 min-w-6 rounded-md border px-1 text-[11px] font-semibold shadow-none",
-                                isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
-                                !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
-                                !isCurrent && !answered && "border-border bg-background text-foreground/85",
-                                isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
-                              )}
-                            >
-                              {number}
-                              {isMarked ? (
-                                <span
-                                  className="absolute right-1 top-1 size-1 rounded-full bg-amber-500"
-                                  aria-hidden="true"
-                                />
-                              ) : null}
-                            </Button>
-                          );
-                        })}
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
+                          <div className="flex w-max gap-1 pr-1">
+                            {section.numbers.map((number) => {
+                              const answered = isAnswered(answers[number]);
+                              const isMarked = marked.has(number);
+                              const isCurrent = activeQuestionNumber === number;
+                              return (
+                                <Button
+                                  key={number}
+                                  type="button"
+                                  variant="outline"
+                                  aria-label={getJumpToQuestionLabel(number)}
+                                  onClick={() => jumpToQuestion(number)}
+                                  className={cn(
+                                    "relative h-5 min-w-5 rounded-md border px-1 text-[10px] font-semibold shadow-none",
+                                    isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                                    !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
+                                    !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                                    isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                                  )}
+                                >
+                                  {number}
+                                  {isMarked ? (
+                                    <span
+                                      className="absolute right-1 top-1 size-1 rounded-full bg-amber-500"
+                                      aria-hidden="true"
+                                    />
+                                  ) : null}
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
+                          {section.answered}/{section.numbers.length}
+                        </span>
                       </div>
+                    ) : null}
+                    {!isActiveSection ? (
+                      <button
+                        type="button"
+                        className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+                        onClick={() => handleSectionChange(section.sectionId)}
+                      >
+                        <span className="text-xs font-semibold sm:text-sm">
+                          {t("sectionTab", { index: section.index })}
+                        </span>
+                        <span className="text-[11px] font-medium text-muted-foreground">
+                          {section.answered}/{section.numbers.length}
+                        </span>
+                      </button>
                     ) : null}
                   </div>
                 );
@@ -2217,78 +2476,43 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
 
           <ScrollArea className="h-[calc(100vh-9rem)] px-5 pb-6 md:h-[calc(100vh-8rem)]">
             <div className="space-y-4 py-4">
-              {sectionPaletteSections.map((section) => {
-                const isActiveSection = section.sectionId === activeSectionId;
-                return (
-                  <div
-                    key={`sheet-palette-${section.sectionId}`}
-                    className={cn(
-                      "rounded-xl border p-2.5 transition-colors",
-                      isActiveSection
-                        ? "border-blue-400/60 bg-blue-500/10"
-                        : "cursor-pointer border-border/70 bg-background/70 hover:border-blue-300/50 hover:bg-muted/40"
-                    )}
-                    onClick={() => {
-                      if (!isActiveSection) {
-                        handleSectionChange(section.sectionId);
-                      }
-                    }}
-                  >
-                    <button
+              <div className="grid grid-cols-5 gap-2">
+                {(activeSectionPaletteSection?.numbers ?? []).map((number) => {
+                  const answered = isAnswered(answers[number]);
+                  const isMarked = marked.has(number);
+                  const isCurrent = activeQuestionNumber === number;
+
+                  return (
+                    <Button
+                      key={number}
                       type="button"
-                      className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
-                      onClick={() => handleSectionChange(section.sectionId)}
+                      variant="outline"
+                      aria-label={getJumpToQuestionLabel(number)}
+                      onClick={() => {
+                        jumpToQuestion(number);
+                        if (isCompact) {
+                          setPaletteOpen(false);
+                        }
+                      }}
+                      className={cn(
+                        "relative h-8 rounded-xl px-0 text-xs font-semibold shadow-none",
+                        isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                        !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
+                        !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                        isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                      )}
                     >
-                      <span className="text-sm font-semibold">
-                        {t("sectionTab", { index: section.index })}
-                      </span>
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {section.answered}/{section.numbers.length}
-                      </span>
-                    </button>
-
-                    {isActiveSection ? (
-                      <div className="mt-2 grid grid-cols-5 gap-2">
-                        {section.numbers.map((number) => {
-                          const answered = isAnswered(answers[number]);
-                          const isMarked = marked.has(number);
-                          const isCurrent = activeQuestionNumber === number;
-
-                          return (
-                            <Button
-                              key={number}
-                              type="button"
-                              variant="outline"
-                              aria-label={getJumpToQuestionLabel(number)}
-                              onClick={() => {
-                                jumpToQuestion(number);
-                                if (isCompact) {
-                                  setPaletteOpen(false);
-                                }
-                              }}
-                              className={cn(
-                                "relative h-8 rounded-xl px-0 text-xs font-semibold shadow-none",
-                                isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
-                                !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
-                                !isCurrent && !answered && "border-border bg-background text-foreground/85",
-                                isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
-                              )}
-                            >
-                              {number}
-                              {isMarked ? (
-                                <span
-                                  className="absolute right-1 top-1 size-1.5 rounded-full bg-amber-500"
-                                  aria-hidden="true"
-                                />
-                              ) : null}
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
+                      {number}
+                      {isMarked ? (
+                        <span
+                          className="absolute right-1 top-1 size-1.5 rounded-full bg-amber-500"
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                    </Button>
+                  );
+                })}
+              </div>
 
               <Separator className="my-2" />
 
@@ -2404,6 +2628,16 @@ function ListeningTestClient({ testId, requestedMode = null }: { testId: string;
               <Button onClick={finishTest}>{t("confirmFinish")}</Button>
             </div>
           </Card>
+        </div>
+      ) : null}
+
+      {reviewMode ? (
+        <div className="fixed bottom-4 right-4 z-50 sm:bottom-5 sm:right-5">
+          <Button asChild className="h-10 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-lg hover:bg-blue-600/90">
+            <Link href={`/${locale}/listening/${test.id}/result?attempt=${backendAttemptId ?? attemptId}`}>
+              Analyze
+            </Link>
+          </Button>
         </div>
       ) : null}
     </section>
