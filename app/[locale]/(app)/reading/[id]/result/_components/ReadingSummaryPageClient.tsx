@@ -142,6 +142,12 @@ export function ReadingSummaryPageClient() {
 
   const reviewData = useMemo(() => getReadingReviewData(testId), [testId]);
 
+  useEffect(() => {
+    if (!actionNotice) return;
+    const timer = window.setTimeout(() => setActionNotice(null), 2200);
+    return () => window.clearTimeout(timer);
+  }, [actionNotice]);
+
   if (!resolvedBackendAttemptId) {
     return (
       <div className="mx-auto mt-8 max-w-3xl px-4">
@@ -229,12 +235,6 @@ export function ReadingSummaryPageClient() {
     weakestQuestionType,
     weakestPassage
   };
-
-  useEffect(() => {
-    if (!actionNotice) return;
-    const timer = window.setTimeout(() => setActionNotice(null), 2200);
-    return () => window.clearTimeout(timer);
-  }, [actionNotice]);
 
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
