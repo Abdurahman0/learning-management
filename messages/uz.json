@@ -1019,6 +1019,8 @@
     "adminTestBuilder":  {
                              "topbar":  {
                                             "title":  "Test Builder",
+                                            "testTitleLabel":  "To'liq test nomi",
+                                            "testTitlePlaceholder":  "To'liq test nomini kiriting",
                                             "breadcrumb":  {
                                                                "tests":  "Testlar",
                                                                "builder":  {

@@ -42,6 +42,7 @@ import {QuestionEditorModal} from "./QuestionEditorModal";
 import {QuestionGroupsPanel} from "./QuestionGroupsPanel";
 import {TestStructurePanel} from "./TestStructurePanel";
 import {LoadingModal} from "@/components/ui/loading-modal";
+import {SiteToast, type SiteToastNotice} from "@/components/ui/site-toast";
 
 
 type TestBuilderClientProps = {
@@ -1297,7 +1298,16 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   const [audioFilesByStructureId, setAudioFilesByStructureId] = useState<Record<string, File | null>>({});
   const [removeAudioByStructureId, setRemoveAudioByStructureId] = useState<Record<string, boolean>>({});
   const [isPersisting, setIsPersisting] = useState(false);
-  const [apiNotice, setApiNotice] = useState<string | null>(null);
+  const [apiNotice, setApiNotice] = useState<SiteToastNotice | null>(null);
+
+  useEffect(() => {
+    if (!apiNotice) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setApiNotice(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [apiNotice]);
 
   useEffect(() => {
     let active = true;
@@ -1432,7 +1442,11 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       } catch (error) {
         if (!active) return;
         const message = error instanceof AdminApiError ? error.message : t("validation.genericError");
-        setApiNotice(message);
+        setApiNotice({
+          title: "Failed to load builder data.",
+          description: message,
+          tone: "error"
+        });
         setContentBankPassages([]);
         setContentBankVariants([]);
       }
@@ -1727,10 +1741,17 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         };
       });
       setCollapsedGroups((current) => ({...current, [createdGroup.id]: false}));
-      setApiNotice("Saved.");
+      setApiNotice({
+        title: "Saved.",
+        tone: "success"
+      });
     } catch (error) {
       const message = error instanceof AdminApiError ? error.message : "Failed to create question group.";
-      setApiNotice(message);
+      setApiNotice({
+        title: "Could not create question group.",
+        description: message,
+        tone: "error"
+      });
     } finally {
       setIsPersisting(false);
     }
@@ -1870,7 +1891,10 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     setApiNotice(null);
     try {
       await questionGroupsService.remove(groupId);
-      setApiNotice("Deleted.");
+      setApiNotice({
+        title: "Deleted.",
+        tone: "success"
+      });
     } catch (error) {
       setTest((current) => ({
         ...current,
@@ -1880,7 +1904,11 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         }
       }));
       const message = error instanceof AdminApiError ? error.message : "Failed to delete question group.";
-      setApiNotice(message);
+      setApiNotice({
+        title: "Could not delete question group.",
+        description: message,
+        tone: "error"
+      });
     } finally {
       setIsPersisting(false);
     }
@@ -2023,6 +2051,14 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     }
   };
 
+  const handleTestTitleChange = (title: string) => {
+    setTest((current) => ({
+      ...current,
+      name: title,
+      book: title
+    }));
+  };
+
   const handleToggleRemoveAudio = (structureId: string, remove: boolean) => {
     setRemoveAudioByStructureId((current) => ({...current, [structureId]: remove}));
     if (remove) {
@@ -2126,11 +2162,13 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       return;
     }
 
+    const normalizedTitle = test.name.trim() || test.book.trim() || "Practice Test";
     setIsPersisting(true);
     setApiNotice(null);
 
     try {
       await practiceTestsService.patch(test.id, {
+        title: normalizedTitle,
         is_active: nextStatus === "published"
       });
 
@@ -2294,6 +2332,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
       setTest((current) => ({
         ...current,
+        name: normalizedTitle,
+        book: normalizedTitle,
         status: nextStatus,
         structures: current.structures.map((structure) =>
           structure.id in nextAudioLabelByStructureId
@@ -2307,10 +2347,17 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       }));
       setAudioFilesByStructureId({});
       setRemoveAudioByStructureId({});
-      setApiNotice("Saved.");
+      setApiNotice({
+        title: "Saved.",
+        tone: "success"
+      });
     } catch (error) {
       const message = error instanceof AdminApiError ? error.message : "Failed to save changes.";
-      setApiNotice(message);
+      setApiNotice({
+        title: "Could not save changes.",
+        description: message,
+        tone: "error"
+      });
     } finally {
       setIsPersisting(false);
     }
@@ -2355,30 +2402,28 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SiteToast notice={apiNotice} />
       <div className="flex min-h-screen">
         <AdminSidebar />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <BuilderTopbar
-            bookName={test.book}
+            bookName={test.name.trim() || test.book.trim() || "Practice Test"}
+            testTitle={test.name}
             module={test.module}
             mode={mode}
             status={test.status}
             questionProgressLabel={`${totalAssignedQuestions}/${totalRequiredQuestions}`}
             publishDisabled={!canPublishByQuestionCount}
+            isPersisting={isPersisting}
             mobileNav={<AdminSidebarMobileNav />}
+            onTestTitleChange={handleTestTitleChange}
             onModeChange={setMode}
             onSaveDraft={handleSaveDraft}
             onPublish={handlePublish}
           />
 
           <main className="mx-auto min-w-0 w-full max-w-[1760px] overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">
-            {apiNotice ? (
-              <div className="mb-4 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
-                {apiNotice}
-              </div>
-            ) : null}
-
             <LoadingModal 
               open={isPersisting} 
               message={t("validation.syncing") ?? "Saving your changes to the server..."} 

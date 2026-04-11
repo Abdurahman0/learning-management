@@ -6,16 +6,20 @@ import type {ReactNode} from "react";
 
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
 import type {BuilderMode, BuilderStatus, TestModule} from "@/data/admin-test-builder";
 
 type BuilderTopbarProps = {
   bookName: string;
+  testTitle: string;
   module: TestModule;
   mode: BuilderMode;
   status: BuilderStatus;
   questionProgressLabel?: string;
   publishDisabled?: boolean;
+  isPersisting?: boolean;
   mobileNav?: ReactNode;
+  onTestTitleChange: (title: string) => void;
   onModeChange: (mode: BuilderMode) => void;
   onSaveDraft: () => void;
   onPublish: () => void;
@@ -23,12 +27,15 @@ type BuilderTopbarProps = {
 
 export function BuilderTopbar({
   bookName,
+  testTitle,
   module,
   mode,
   status,
   questionProgressLabel,
   publishDisabled = false,
+  isPersisting = false,
   mobileNav,
+  onTestTitleChange,
   onModeChange,
   onSaveDraft,
   onPublish
@@ -59,6 +66,17 @@ export function BuilderTopbar({
               </Badge>
             ) : null}
           </div>
+
+          <div className="max-w-2xl pt-1">
+            <Input
+              value={testTitle}
+              onChange={(event) => onTestTitleChange(event.target.value)}
+              placeholder={t("topbar.testTitlePlaceholder")}
+              aria-label={t("topbar.testTitleLabel")}
+              className="h-9 bg-card/70"
+              disabled={isPersisting}
+            />
+          </div>
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -69,6 +87,7 @@ export function BuilderTopbar({
               variant={mode === "editor" ? "secondary" : "ghost"}
               className="h-8 rounded-lg"
               onClick={() => onModeChange("editor")}
+              disabled={isPersisting}
             >
               {t("topbar.mode.editor")}
             </Button>
@@ -78,15 +97,22 @@ export function BuilderTopbar({
               variant={mode === "preview" ? "secondary" : "ghost"}
               className="h-8 rounded-lg"
               onClick={() => onModeChange("preview")}
+              disabled={isPersisting}
             >
               {t("topbar.mode.preview")}
             </Button>
           </div>
 
-          <Button type="button" variant="outline" className="h-9 rounded-xl border-border/70 bg-card/50" onClick={onSaveDraft}>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 rounded-xl border-border/70 bg-card/50"
+            onClick={onSaveDraft}
+            disabled={isPersisting}
+          >
             {t("topbar.actions.saveDraft")}
           </Button>
-          <Button type="button" className="h-9 rounded-xl" onClick={onPublish} disabled={publishDisabled}>
+          <Button type="button" className="h-9 rounded-xl" onClick={onPublish} disabled={publishDisabled || isPersisting}>
             {t("topbar.actions.publish")}
           </Button>
         </div>

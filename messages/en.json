@@ -1019,6 +1019,8 @@
     "adminTestBuilder":  {
                              "topbar":  {
                                             "title":  "Test Builder",
+                                            "testTitleLabel":  "Full test title",
+                                            "testTitlePlaceholder":  "Enter full test title",
                                             "breadcrumb":  {
                                                                "tests":  "Tests",
                                                                "builder":  {
