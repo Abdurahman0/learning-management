@@ -205,7 +205,7 @@ export function TestsManagementClient() {
       setQuestionTypesByTestId((current) => {
         const next = {...current};
         for (const [testId, types] of entries) {
-          next[testId] = types;
+          next[testId] = [...types];
         }
         return next;
       });

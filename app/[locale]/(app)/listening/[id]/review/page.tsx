@@ -278,6 +278,7 @@ export default function ListeningReviewPage() {
             answerMetaByQuestionId={answerMetaByQuestionId}
             grading={grading}
             expanded={expanded}
+            scrollResetKey={resolvedActiveSectionId}
             onToggleExplanation={(questionId) => {
               setExpanded((previous) => {
                 const next = new Set(previous);

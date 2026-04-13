@@ -247,6 +247,40 @@ function extractSummaryInfo(group: StudentAttemptQuestionGroup): { summaryText: 
   return { summaryText, wordBank: wordBank && wordBank.length ? wordBank : null };
 }
 
+function extractTableInfo(group: StudentAttemptQuestionGroup): { columns: string[]; rows: string[][] } {
+  const content = asRecord(group.group_content_json);
+
+  const columns = asArray<unknown>(content?.columns)
+    .map((item) => {
+      if (typeof item === "string") return item;
+      const row = asRecord(item);
+      return toStringSafe(row?.text ?? row?.label ?? row?.key);
+    })
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const rowsRaw = asArray<unknown>(content?.rows);
+  const rows = rowsRaw
+    .map((row) => (Array.isArray(row) ? row : []))
+    .map((row) =>
+      row
+        .map((cell) => toStringSafe(cell).trim())
+        .filter((cell) => cell.length > 0)
+    )
+    .filter((row) => row.length > 0);
+
+  const fallbackRows = group.questions
+    .slice()
+    .sort((left, right) => left.question_number - right.question_number)
+    .map((question) => [extractQuestionPrompt(question), `{${question.question_number}}`]);
+
+  const resolvedRows = rows.length ? rows : fallbackRows;
+  const maxColumns = Math.max(0, ...resolvedRows.map((row) => row.length));
+  const resolvedColumns = columns.length ? columns : Array.from({length: Math.max(maxColumns, 2)}, (_, index) => `Column ${index + 1}`);
+
+  return {columns: resolvedColumns, rows: resolvedRows};
+}
+
 function buildGroupTitle(group: StudentAttemptQuestionGroup) {
   const from = toNumberSafe(group.question_number_start, 0);
   const to = toNumberSafe(group.question_number_end, 0);
@@ -604,6 +638,28 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
             prompt: prompt || toStringSafe(question.question_text, `Question ${number}`),
             summaryText: summaryInfo.summaryText,
             wordBank: summaryInfo.wordBank,
+            correctAnswer: "",
+            acceptableAnswers: [],
+            explanation: "",
+            evidenceSpans
+          });
+          continue;
+        }
+
+        if (qType === "TABLE_COMPLETION") {
+          const tableInfo = extractTableInfo(group);
+          questions.push({
+            id: questionId,
+            number,
+            passageId,
+            type: "tableCompletion",
+            backendQuestionId: submitQuestionId || undefined,
+            backendQuestionCandidateIds: submitQuestionCandidates.length ? submitQuestionCandidates : undefined,
+            groupTitle,
+            groupInstruction: instruction,
+            prompt: prompt || toStringSafe(question.question_text, `Question ${number}`),
+            tableColumns: tableInfo.columns,
+            tableRows: tableInfo.rows,
             correctAnswer: "",
             acceptableAnswers: [],
             explanation: "",
@@ -2229,7 +2285,7 @@ function ReadingTestClient({
             <div ref={questionsScrollRef} className="min-h-0 flex-1 min-w-0 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5 lg:py-6 [scrollbar-color:hsl(var(--border))_transparent]">
               <div className="space-y-7 pb-8">
                 {groupedQuestions.map((group) => {
-                  const renderedSummariesInGroup = new Set<string>();
+                  const renderedSharedBlocksInGroup = new Set<string>();
 
                   return (
                     <section key={group.title} className="space-y-4">
@@ -2269,12 +2325,18 @@ function ReadingTestClient({
                               : [];
 
                           const isSummary = question.type === "summaryCompletion";
-                          const isDuplicateSummary = isSummary && renderedSummariesInGroup.has(question.summaryText);
-                          if (isDuplicateSummary) {
+                          const isTable = question.type === "tableCompletion";
+                          const sharedBlockKey = isSummary
+                            ? `summary:${question.summaryText}`
+                            : isTable
+                              ? `table:${JSON.stringify({columns: question.tableColumns, rows: question.tableRows})}`
+                              : "";
+                          const isDuplicateSharedBlock = Boolean(sharedBlockKey) && renderedSharedBlocksInGroup.has(sharedBlockKey);
+                          if (isDuplicateSharedBlock) {
                             return null;
                           }
-                          if (isSummary) {
-                            renderedSummariesInGroup.add(question.summaryText);
+                          if (sharedBlockKey) {
+                            renderedSharedBlocksInGroup.add(sharedBlockKey);
                           }
 
                           return (
@@ -2298,10 +2360,10 @@ function ReadingTestClient({
                                   return;
                                 }
                                 questionRefs.current.set(question.number, el);
-                                // If this is a summary completion, link all questions in this group to this element
-                                if (question.type === "summaryCompletion") {
+                                // Summary/table blocks render once but carry multiple questions.
+                                if (question.type === "summaryCompletion" || question.type === "tableCompletion") {
                                   group.questions.forEach((q) => {
-                                    if (q.type === "summaryCompletion") {
+                                    if (q.type === "summaryCompletion" || q.type === "tableCompletion") {
                                       questionRefs.current.set(q.number, el);
                                     }
                                   });
@@ -2310,14 +2372,14 @@ function ReadingTestClient({
                             >
                               <div className="mb-2 flex items-start justify-between gap-2">
                                 <p className="min-w-0 wrap-break-word text-base font-medium leading-relaxed text-foreground">
-                                  {isSummary ? (
+                                  {isSummary || isTable ? (
                                     <>
                                       {group.questions[0]?.number}-{group.questions[group.questions.length - 1]?.number}.{" "}
                                     </>
                                   ) : (
                                     <>{question.number}.{" "}</>
                                   )}
-                                   {!isSummary && (
+                                   {!isSummary && !isTable && (
                                     <HighlightableText
                                       text={question.prompt}
                                       userHighlights={getQuestionLocalHighlights(question.id, promptStart, question.prompt.length)}
@@ -2483,6 +2545,86 @@ function ReadingTestClient({
                                   placeholder={t("oneWordOnly")}
                                   className="test-input-surface max-w-sm bg-background/70 placeholder:text-muted-foreground/80 dark:bg-muted/30"
                                 />
+                              ) : null}
+
+                              {question.type === "tableCompletion" ? (
+                                <div className="space-y-3">
+                                  <div className="overflow-x-auto rounded-lg border border-border/70 bg-background/70 dark:bg-muted/20">
+                                    <table className="min-w-full border-collapse text-sm">
+                                      <thead>
+                                        <tr className="bg-muted/40">
+                                          {question.tableColumns.map((column, columnIndex) => (
+                                            <th key={`${question.id}-th-${columnIndex}`} className="border border-border/60 px-3 py-2 text-left font-semibold text-foreground/90">
+                                              {column}
+                                            </th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {question.tableRows.map((row, rowIndex) => (
+                                          <tr key={`${question.id}-row-${rowIndex}`} className="align-top">
+                                            {row.map((cell, cellIndex) => (
+                                              <td key={`${question.id}-cell-${rowIndex}-${cellIndex}`} className="border border-border/60 px-3 py-2 text-foreground/90">
+                                                <div className="flex flex-wrap items-baseline gap-1.5">
+                                                  {cell.split(/(\{\d+\})/g).map((part, partIndex) => {
+                                                    const tokenMatch = part.match(/^\{(\d+)\}$/);
+                                                    if (!tokenMatch) {
+                                                      return part ? <span key={`${question.id}-cell-text-${rowIndex}-${cellIndex}-${partIndex}`}>{part}</span> : null;
+                                                    }
+
+                                                    const targetNumber = Number(tokenMatch[1]);
+                                                    const targetQuestion = questionsByNumber.get(targetNumber);
+                                                    if (!targetQuestion) {
+                                                      return (
+                                                        <span key={`${question.id}-cell-missing-${rowIndex}-${cellIndex}-${partIndex}`} className="text-xs text-muted-foreground">
+                                                          {part}
+                                                        </span>
+                                                      );
+                                                    }
+
+                                                    const targetValue = answers[targetQuestion.id];
+                                                    const isActiveBlank = activeQuestionNumber === targetNumber;
+
+                                                    return (
+                                                      <span key={`${question.id}-cell-input-${rowIndex}-${cellIndex}-${partIndex}`} className="inline-flex items-baseline gap-1">
+                                                        <span
+                                                          className={cn(
+                                                            "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white",
+                                                            isActiveBlank ? "bg-blue-600" : "bg-muted-foreground/50"
+                                                          )}
+                                                        >
+                                                          {targetNumber}
+                                                        </span>
+                                                        <Input
+                                                          aria-label={`Question ${targetNumber}`}
+                                                          value={typeof targetValue === "string" ? targetValue : ""}
+                                                          disabled={reviewMode}
+                                                          onFocus={() => {
+                                                            if (activeQuestionNumber !== targetNumber) {
+                                                              setActiveQuestionNumber(targetNumber);
+                                                            }
+                                                          }}
+                                                          onChange={(event) => setAnswers((prev) => ({...prev, [targetQuestion.id]: event.target.value}))}
+                                                          placeholder="..."
+                                                          className={cn(
+                                                            "test-input-surface h-8 w-28 rounded-md px-2 text-sm sm:w-36",
+                                                            isActiveBlank
+                                                              ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-400/30 dark:bg-blue-900/20"
+                                                              : "border-blue-300/40 bg-background/80 dark:bg-muted/30"
+                                                          )}
+                                                        />
+                                                      </span>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </td>
+                                            ))}
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
                               ) : null}
 
                               {question.type === "summaryCompletion" ? (() => {

@@ -1135,7 +1135,13 @@
                                                            "wordBankPlaceholder":  "word1, word2, word3...",
                                                            "wordBankHint":  "Comma-separated list of words to show as options.",
                                                            "headingOptions":  "Heading Options",
-                                                           "choices":  "Choices / Options"
+                                                           "choices":  "Choices / Options",
+                                                           "tableColumns":  "Table Columns",
+                                                           "tableColumnsPlaceholder":  "Stepwells\u000aDate\u000aFeatures\u000aOther notes",
+                                                           "tableColumnsHint":  "One column name per line.",
+                                                           "tableRows":  "Table Rows",
+                                                           "tableRowsPlaceholder":  "Rani Ki Vav | Late 11th century | As many as 500 sculptures decorate the monument | Excellent condition, despite the {from} of 2001.",
+                                                           "tableRowsHint":  "Use one row per line. Split columns with | and use placeholders like '{9}' for blanks."
                                                        },
                                             "validationRange":  "Please choose a valid range inside the active passage/part.",
                                             "validationOverlap":  "This range overlaps existing question numbers. Choose unused numbers only.",

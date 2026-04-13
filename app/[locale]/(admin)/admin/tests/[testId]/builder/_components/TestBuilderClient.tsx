@@ -590,6 +590,33 @@ function ensureGroupContentForApi(
     };
   }
 
+  if (type === "table_completion") {
+    const fallbackRecord = asRecord(fallback);
+    const sourceColumns = Array.isArray(content.columns) ? content.columns : [];
+    const sourceRows = Array.isArray(content.rows) ? content.rows : [];
+
+    const columns = sourceColumns
+      .map((item) => {
+        if (typeof item === "string") return item;
+        const row = asRecord(item);
+        return toStringSafe(row.text ?? row.label ?? row.key);
+      })
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const rows = sourceRows
+      .map((row) => (Array.isArray(row) ? row : []))
+      .map((row) => row.map((cell) => toStringSafe(cell).trim()).filter((cell) => cell.length > 0))
+      .filter((row) => row.length > 0);
+
+    return {
+      columns: columns.length ? columns : (Array.isArray(fallbackRecord.columns) ? fallbackRecord.columns : ["Field", "Value"]),
+      rows: rows.length
+        ? rows
+        : (Array.isArray(fallbackRecord.rows) ? fallbackRecord.rows : Array.from({length: Math.max(1, to - from + 1)}, (_, index) => [`Item ${from + index}`, `{${from + index}}`]))
+    };
+  }
+
   if (input === undefined || input === null) {
     return fallback ?? null;
   }

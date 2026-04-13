@@ -1135,7 +1135,13 @@
                                                            "wordBankPlaceholder":  "so\u0027z1, so\u0027z2, so\u0027z3...",
                                                            "wordBankHint":  "Tanlov variantlari sifatida ko\u0027rsatiladigan vergul bilan ajratilgan so\u0027zlar ro\u0027yxati.",
                                                            "headingOptions":  "Sarlavha variantlari",
-                                                           "choices":  "Tanlovlar"
+                                                           "choices":  "Tanlovlar",
+                                                           "tableColumns":  "Jadval ustunlari",
+                                                           "tableColumnsPlaceholder":  "Stepwells\u000aDate\u000aFeatures\u000aOther notes",
+                                                           "tableColumnsHint":  "Har bir qatorda bitta ustun nomini kiriting.",
+                                                           "tableRows":  "Jadval qatorlari",
+                                                           "tableRowsPlaceholder":  "Rani Ki Vav | Late 11th century | As many as 500 sculptures decorate the monument | Excellent condition, despite the {from} of 2001.",
+                                                           "tableRowsHint":  "Har qatorni yangi satrda yozing. Ustunlarni | bilan ajrating, bo\u0027sh joylar uchun '{9}' kabi placeholder ishlating."
                                                        },
                                             "validationRange":  "Faol passage/qism ichida togri diapazon tanlang.",
                                             "validationOverlap":  "Bu diapazon mavjud savol raqamlari bilan kesishmoqda. Faqat bo\u0027sh raqamlarni tanlang.",

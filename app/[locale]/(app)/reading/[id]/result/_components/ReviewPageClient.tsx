@@ -260,6 +260,7 @@ export function ReviewPageClient() {
           answers={attempt.answers}
           grading={grading}
           expanded={expanded}
+          scrollResetKey={activePassageId}
           onToggleExplanation={(questionId) => {
             setExpanded((previous) => {
               const next = new Set(previous);

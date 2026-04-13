@@ -50,6 +50,8 @@ type GroupEditorState = {
   wordBank: string;
   headings: string;
   choices: string;
+  tableColumns: string;
+  tableRows: string;
 };
 
 type SlotRange = {
@@ -106,6 +108,21 @@ function buildTemplateText(from: number, to: number) {
   return lines.join("\n");
 }
 
+function toLineJoinedValues(value: unknown) {
+  return Array.isArray(value) ? value.map((item) => String(item ?? "").trim()).filter(Boolean).join("\n") : "";
+}
+
+function toTableRowsText(value: unknown) {
+  if (!Array.isArray(value)) return "";
+  return value
+    .map((row) => {
+      if (!Array.isArray(row)) return "";
+      return row.map((cell) => String(cell ?? "").trim()).join(" | ");
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function QuestionGroupsPanel({
   mode,
   module,
@@ -144,7 +161,9 @@ export function QuestionGroupsPanel({
     mcqOptions: "",
     wordBank: "",
     headings: "",
-    choices: ""
+    choices: "",
+    tableColumns: "",
+    tableRows: ""
   });
 
   const assignedCount = useMemo(() => {
@@ -218,7 +237,9 @@ export function QuestionGroupsPanel({
       mcqOptions: "",
       wordBank: "",
       headings: "",
-      choices: ""
+      choices: "",
+      tableColumns: "",
+      tableRows: ""
     });
   };
 
@@ -244,7 +265,7 @@ export function QuestionGroupsPanel({
       wordBank: Array.isArray((group.groupContentJson as any)?.word_bank) 
         ? ((group.groupContentJson as any).word_bank as string[]).join(", ") 
         : "",
-      headings: (group.questions[0] as any)?.headings?.join("\n") ?? "",
+      headings: (group.questions[0] as any)?.headings?.join("\n") ?? toLineJoinedValues((group.groupContentJson as any)?.headings),
       choices:
         ((group.questions[0] as any)?.choices?.join("\n") || (
           Array.isArray((group.groupContentJson as any)?.choices)
@@ -255,7 +276,9 @@ export function QuestionGroupsPanel({
                   .filter(Boolean)
                   .join("\n")
               : ""
-        ))
+        )),
+      tableColumns: toLineJoinedValues((group.groupContentJson as any)?.columns),
+      tableRows: toTableRowsText((group.groupContentJson as any)?.rows)
     });
   };
 
@@ -269,6 +292,12 @@ export function QuestionGroupsPanel({
     const parsedWordBank = editor.wordBank.split(",").map((value) => value.trim()).filter(Boolean);
     const parsedTemplateText = editor.completionTemplateText.trim();
     const parsedMcqOptions = editor.mcqOptions.split("\n").map((value) => value.trim()).filter(Boolean);
+    const parsedTableColumns = editor.tableColumns.split("\n").map((value) => value.trim()).filter(Boolean);
+    const parsedTableRows = editor.tableRows
+      .split("\n")
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .map((row) => row.split("|").map((cell) => cell.trim()));
 
     const groupContent =
       editor.type === "multiple_choice" && module === "listening"
@@ -288,6 +317,16 @@ export function QuestionGroupsPanel({
           ? {headings: parsedHeadings}
           : (editor.type === "form_completion" || editor.type === "note_completion")
             ? {template_text: parsedTemplateText || buildTemplateText(editor.from, editor.to)}
+          : editor.type === "table_completion"
+            ? {
+                columns: parsedTableColumns.length ? parsedTableColumns : ["Field", "Value"],
+                rows: parsedTableRows.length
+                  ? parsedTableRows
+                  : Array.from({length: Math.max(1, editor.to - editor.from + 1)}, (_, index) => [
+                      `Item ${editor.from + index}`,
+                      `{${editor.from + index}}`
+                    ])
+              }
           : (
                 editor.type === "matching_information"
                 || editor.type === "matching_features"
@@ -502,6 +541,31 @@ export function QuestionGroupsPanel({
                 />
                 <p className="text-[10px] text-muted-foreground">Use placeholders like {'{'}{`question_number`} {'}'} for blanks.</p>
               </div>
+            )}
+
+            {editor.type === "table_completion" && (
+              <>
+                <div className="space-y-1.5">
+                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.tableColumns")}</label>
+                  <textarea
+                    value={editor.tableColumns}
+                    onChange={(event) => setEditor((current) => ({...current, tableColumns: event.target.value}))}
+                    placeholder={t("groups.fields.tableColumnsPlaceholder")}
+                    className="min-h-24 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                  />
+                  <p className="text-[10px] text-muted-foreground">{t("groups.fields.tableColumnsHint")}</p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.tableRows")}</label>
+                  <textarea
+                    value={editor.tableRows}
+                    onChange={(event) => setEditor((current) => ({...current, tableRows: event.target.value}))}
+                    placeholder={t("groups.fields.tableRowsPlaceholder", {from: editor.from})}
+                    className="min-h-36 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                  />
+                  <p className="text-[10px] text-muted-foreground">{t("groups.fields.tableRowsHint")}</p>
+                </div>
+              </>
             )}
 
             {editor.type === "matching_headings" && (

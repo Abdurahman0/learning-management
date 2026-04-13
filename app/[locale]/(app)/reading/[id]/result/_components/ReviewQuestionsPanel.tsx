@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, ChevronDown, ChevronUp, CircleDashed, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -18,6 +18,7 @@ type ReviewQuestionsPanelProps = {
   expanded: Set<string>;
   onToggleExplanation: (questionId: string) => void;
   onJumpEvidence: (questionId: string) => void;
+  scrollResetKey?: string;
 };
 
 type QuestionStatus = "correct" | "incorrect" | "skipped";
@@ -71,9 +72,16 @@ export function ReviewQuestionsPanel({
   expanded,
   onToggleExplanation,
   onJumpEvidence,
+  scrollResetKey,
 }: ReviewQuestionsPanelProps) {
   const t = useTranslations("readingResult");
   const [answersVisible, setAnswersVisible] = useState(false);
+  const questionsContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!scrollResetKey) return;
+    questionsContainerRef.current?.scrollTo({top: 0, behavior: "smooth"});
+  }, [scrollResetKey]);
 
   return (
     <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none">
@@ -123,7 +131,7 @@ export function ReviewQuestionsPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3.5 pb-4 pt-3 [scrollbar-width:thin] sm:px-4">
+      <div ref={questionsContainerRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3.5 pb-4 pt-3 [scrollbar-width:thin] sm:px-4">
         {questions.map((question) => {
           const status = getQuestionStatus(grading, question.id);
           const statusStyles = getStatusStyles(status);

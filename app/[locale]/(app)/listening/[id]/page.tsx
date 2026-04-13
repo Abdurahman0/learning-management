@@ -2613,6 +2613,7 @@ function ListeningTestClient({
                   answerMetaByQuestionId={reviewAnswerMetaByQuestionId}
                   grading={grading}
                   expanded={expandedReviewQuestions}
+                  scrollResetKey={resolvedActiveSectionId}
                   onToggleExplanation={(questionId) => {
                     setExpandedReviewQuestions((previous) => {
                       const next = new Set(previous);
