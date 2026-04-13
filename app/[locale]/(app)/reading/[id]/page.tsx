@@ -875,6 +875,7 @@ function ReadingTestClient({
   const [attemptId, setAttemptId] = useState<string>("");
   const [startedAt, setStartedAt] = useState<number>(0);
   const [finishOpen, setFinishOpen] = useState(false);
+  const [restartOpen, setRestartOpen] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
   const [expandedExplanations, setExpandedExplanations] = useState<Set<string>>(new Set());
   const [activePassageId, setActivePassageId] = useState<"p1" | "p2" | "p3">("p1");
@@ -1970,12 +1971,11 @@ function ReadingTestClient({
   }, [finishTest, isRealMode, remainingSeconds, reviewMode]);
 
   const handleRestartTest = () => {
-    const confirmMessage = t.has("restartConfirm")
-      ? t("restartConfirm")
-      : "Restart this test? Your current answers will be cleared.";
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+    setRestartOpen(true);
+  };
+
+  const confirmRestartTest = () => {
+    setRestartOpen(false);
     restartNeedsFreshBackendAttemptRef.current = true;
     setBackendAttemptId(null);
     initialBackendSaveAttemptRef.current = null;
@@ -2267,6 +2267,7 @@ function ReadingTestClient({
               answers={reviewAnswers}
               grading={grading}
               expanded={expandedExplanations}
+              showTopQuestionNavigator={false}
               onToggleExplanation={(questionId) => {
                 setExpandedExplanations((prev) => {
                   const next = new Set(prev);
@@ -3071,6 +3072,27 @@ function ReadingTestClient({
               <Button variant="ghost" onClick={() => setFinishOpen(false)}>{t("cancel")}</Button>
               <Button onClick={finishTest} disabled={isSubmittingResult}>
                 {t("confirmFinish")}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
+
+      {restartOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-5">
+            <h3 className="text-lg font-semibold">{t.has("restartTest") ? t("restartTest") : "Restart test"}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t.has("restartConfirm")
+                ? t("restartConfirm")
+                : "Restart this test? Your current answers will be cleared."}
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setRestartOpen(false)}>
+                {t("cancel")}
+              </Button>
+              <Button onClick={confirmRestartTest}>
+                {t.has("restartTest") ? t("restartTest") : "Restart test"}
               </Button>
             </div>
           </Card>

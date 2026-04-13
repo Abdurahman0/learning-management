@@ -27,6 +27,7 @@ type ListeningQuestionAnalysisPanelProps = {
   onToggleExplanation: (questionId: string) => void;
   onJumpEvidence: (questionId: string) => void;
   scrollResetKey?: string;
+  showTopQuestionNavigator?: boolean;
 };
 
 type QuestionStatus = "correct" | "incorrect" | "skipped";
@@ -82,6 +83,7 @@ export function ListeningQuestionAnalysisPanel({
   onToggleExplanation,
   onJumpEvidence,
   scrollResetKey,
+  showTopQuestionNavigator = true,
 }: ListeningQuestionAnalysisPanelProps) {
   const t = useTranslations("listeningResult");
   const [answersVisible, setAnswersVisible] = useState(false);
@@ -116,31 +118,35 @@ export function ListeningQuestionAnalysisPanel({
               </Button>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {t("questionNavigator")}
-          </p>
+          {showTopQuestionNavigator ? (
+            <>
+              <p className="text-xs text-muted-foreground">
+                {t("questionNavigator")}
+              </p>
 
-          <div className="overflow-x-scroll max-w-[calc(80vw)] pb-1 [scrollbar-width:thin]">
-            <div className="inline-flex items-center gap-1 pr-2">
-              {questions.map((question) => {
-                const status = getQuestionStatus(grading, question.id);
-                const styles = getStatusStyles(status);
+              <div className="overflow-x-scroll max-w-[calc(80vw)] pb-1 [scrollbar-width:thin]">
+                <div className="inline-flex items-center gap-1 pr-2">
+                  {questions.map((question) => {
+                    const status = getQuestionStatus(grading, question.id);
+                    const styles = getStatusStyles(status);
 
-                return (
-                  <a
-                    key={`quick-${question.id}`}
-                    href={`#review-question-${question.id}`}
-                    className={cn(
-                      "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
-                      styles.nav,
-                    )}
-                  >
-                    {question.number}
-                  </a>
-                );
-              })}
-            </div>
-          </div>
+                    return (
+                      <a
+                        key={`quick-${question.id}`}
+                        href={`#review-question-${question.id}`}
+                        className={cn(
+                          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors",
+                          styles.nav,
+                        )}
+                      >
+                        {question.number}
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
 

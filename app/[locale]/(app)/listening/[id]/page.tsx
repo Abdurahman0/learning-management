@@ -848,7 +848,9 @@ function ListeningTestClient({
 
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
+  const [audioBufferedProgress, setAudioBufferedProgress] = useState(0);
   const [audioVolume, setAudioVolume] = useState(72);
+  const [audioSpeed, setAudioSpeed] = useState<1 | 1.5 | 2>(1);
   const [audioDurationSec, setAudioDurationSec] = useState(0);
   const [audioCurrentSec, setAudioCurrentSec] = useState(0);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -868,6 +870,9 @@ function ListeningTestClient({
   const questionsScrollRef = useRef<HTMLDivElement | null>(null);
   const questionRefs = useRef<Map<number, HTMLElement>>(new Map());
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioShouldPlayRef = useRef(false);
+  const suppressAudioAutoPlayRef = useRef(false);
+  const bufferingPauseRef = useRef(false);
   const pendingJumpRef = useRef<number | null>(null);
   const realModeAutoFinishedRef = useRef(false);
   const initDoneRef = useRef(false);
@@ -921,8 +926,10 @@ function ListeningTestClient({
     setTimerRunning(false);
     setAudioPlaying(false);
     setAudioProgress(0);
+    setAudioBufferedProgress(0);
     setAudioCurrentSec(0);
     setAudioDurationSec(0);
+    setAudioSpeed(1);
     setPaletteOpen(false);
     setRealModeStarting(false);
     setRealModeConfirmOpen(nextMode === "real");
@@ -1195,6 +1202,15 @@ function ListeningTestClient({
     0,
     Math.round(audioDurationSec > 0 ? audioDurationSec : activeSection.audioMeta.durationSec)
   );
+  const safePlayedProgress = Math.max(0, Math.min(100, audioProgress));
+  const safeBufferedProgress = Math.max(0, Math.min(100, audioBufferedProgress));
+  const bufferedStop = Math.max(safePlayedProgress, safeBufferedProgress);
+  const audioProgressTrackStyle = {
+    background: `linear-gradient(to right, #2563eb 0%, #2563eb ${safePlayedProgress}%, #7dd3fc ${safePlayedProgress}%, #7dd3fc ${bufferedStop}%, #d1d5db ${bufferedStop}%, #d1d5db 100%)`,
+  };
+  const volumeTrackStyle = {
+    background: `linear-gradient(to right, #16a34a 0%, #16a34a ${audioVolume}%, #d1d5db ${audioVolume}%, #d1d5db 100%)`,
+  };
 
   useEffect(() => {
     if (!attemptId || !attemptMode) return;
@@ -1298,30 +1314,93 @@ function ListeningTestClient({
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+    audio.playbackRate = audioSpeed;
+  }, [audioSpeed]);
+
+  const updateBufferedProgress = useCallback(() => {
+    const media = audioRef.current;
+    if (!media) return;
+    const duration = Number.isFinite(media.duration) ? media.duration : 0;
+    if (duration <= 0 || media.buffered.length === 0) {
+      setAudioBufferedProgress(0);
+      return;
+    }
+    try {
+      const bufferedEnd = media.buffered.end(media.buffered.length - 1);
+      const ratio = bufferedEnd / duration;
+      const nextBuffered = ratio >= 0.995 ? 100 : Math.max(0, Math.min(100, ratio * 100));
+      setAudioBufferedProgress(nextBuffered);
+    } catch {
+      setAudioBufferedProgress(0);
+    }
+  }, []);
+
+  const getBufferedEndForCurrentTime = useCallback((media: HTMLAudioElement) => {
+    if (media.buffered.length === 0) {
+      return 0;
+    }
+    const current = media.currentTime || 0;
+    for (let index = 0; index < media.buffered.length; index += 1) {
+      const start = media.buffered.start(index);
+      const end = media.buffered.end(index);
+      if (current >= start && current <= end) {
+        return end;
+      }
+    }
+    return media.buffered.end(media.buffered.length - 1);
+  }, []);
+
+  const stopSectionAudioPlayback = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.currentTime = 0;
+    audioShouldPlayRef.current = false;
+    bufferingPauseRef.current = false;
+    setAudioPlaying(false);
+    setAudioCurrentSec(0);
+    setAudioProgress(0);
+  }, []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
 
     if (!activeSectionAudioUrl) {
       audio.pause();
       audio.removeAttribute("src");
       audio.load();
+      audioShouldPlayRef.current = false;
+      bufferingPauseRef.current = false;
       setAudioPlaying(false);
       setAudioCurrentSec(0);
       setAudioDurationSec(0);
       setAudioProgress(0);
+      setAudioBufferedProgress(0);
       return;
     }
 
     audio.src = activeSectionAudioUrl;
     audio.load();
+    bufferingPauseRef.current = false;
     setAudioPlaying(false);
     setAudioCurrentSec(0);
     setAudioDurationSec(0);
     setAudioProgress(0);
+    setAudioBufferedProgress(0);
   }, [activeSectionAudioUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     if (!activeSectionAudioUrl) {
+      setAudioPlaying(false);
+      return;
+    }
+
+    if (suppressAudioAutoPlayRef.current) {
+      suppressAudioAutoPlayRef.current = false;
+      audio.pause();
       setAudioPlaying(false);
       return;
     }
@@ -1339,6 +1418,11 @@ function ListeningTestClient({
   useEffect(() => {
     questionsScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeSectionId]);
+
+  useEffect(() => {
+    // Always stop and rewind when changing part, even if URL is shared.
+    stopSectionAudioPlayback();
+  }, [activeSectionId, stopSectionAudioPlayback]);
 
   useEffect(() => {
     const pending = pendingJumpRef.current;
@@ -1363,6 +1447,8 @@ function ListeningTestClient({
     const nextNumbers = sectionQuestionNumbers.get(nextSectionId) ?? [];
     const first = nextNumbers[0] ?? 1;
 
+    suppressAudioAutoPlayRef.current = true;
+    stopSectionAudioPlayback();
     setActiveSectionId(nextSectionId);
     setActiveQuestionNumber(first);
   };
@@ -1377,6 +1463,8 @@ function ListeningTestClient({
 
     if (sectionId !== activeSectionId) {
       pendingJumpRef.current = questionNumber;
+      suppressAudioAutoPlayRef.current = true;
+      stopSectionAudioPlayback();
       setActiveSectionId(sectionId);
       if (isCompact) {
         setPaletteOpen(false);
@@ -1406,12 +1494,15 @@ function ListeningTestClient({
     if (!media) return;
 
     if (media.paused) {
+      audioShouldPlayRef.current = true;
       void media.play().catch(() => {
         setAudioPlaying(false);
       });
       return;
     }
 
+    audioShouldPlayRef.current = false;
+    bufferingPauseRef.current = false;
     media.pause();
   }, [activeSectionAudioUrl, isRealMode]);
 
@@ -2443,8 +2534,16 @@ function ListeningTestClient({
         ref={audioRef}
         preload="metadata"
         className="hidden"
-        onPlay={() => setAudioPlaying(true)}
-        onPause={() => setAudioPlaying(false)}
+        onPlay={() => {
+          bufferingPauseRef.current = false;
+          setAudioPlaying(true);
+        }}
+        onPause={() => {
+          if (!bufferingPauseRef.current) {
+            audioShouldPlayRef.current = false;
+          }
+          setAudioPlaying(false);
+        }}
         onLoadedMetadata={(event) => {
           const media = event.currentTarget;
           const duration = Number.isFinite(media.duration) ? media.duration : 0;
@@ -2452,6 +2551,7 @@ function ListeningTestClient({
           const progress = duration > 0 ? (media.currentTime / duration) * 100 : 0;
           setAudioProgress(progress);
           setAudioCurrentSec(media.currentTime || 0);
+          updateBufferedProgress();
         }}
         onTimeUpdate={(event) => {
           const media = event.currentTarget;
@@ -2460,13 +2560,52 @@ function ListeningTestClient({
           setAudioCurrentSec(current);
           const progress = duration > 0 ? (current / duration) * 100 : 0;
           setAudioProgress(progress);
+          updateBufferedProgress();
+          if (!media.paused && duration > 0) {
+            const bufferedEnd = getBufferedEndForCurrentTime(media);
+            if (current > 0 && bufferedEnd > 0 && current >= bufferedEnd - 0.12) {
+              bufferingPauseRef.current = true;
+              media.pause();
+            }
+          }
+        }}
+        onProgress={() => {
+          updateBufferedProgress();
+          const media = audioRef.current;
+          if (!media) return;
+          const bufferedEnd = getBufferedEndForCurrentTime(media);
+          const current = media.currentTime || 0;
+          if (audioShouldPlayRef.current && bufferingPauseRef.current && bufferedEnd - current > 0.45) {
+            bufferingPauseRef.current = false;
+            void media.play().catch(() => {
+              setAudioPlaying(false);
+            });
+          }
+        }}
+        onCanPlay={updateBufferedProgress}
+        onCanPlayThrough={() => {
+          setAudioBufferedProgress(100);
+          const media = audioRef.current;
+          if (!media) return;
+          if (audioShouldPlayRef.current && bufferingPauseRef.current) {
+            bufferingPauseRef.current = false;
+            void media.play().catch(() => {
+              setAudioPlaying(false);
+            });
+          }
         }}
         onEnded={() => {
+          audioShouldPlayRef.current = false;
+          bufferingPauseRef.current = false;
           setAudioPlaying(false);
           setAudioProgress(100);
+          setAudioBufferedProgress(100);
         }}
         onError={() => {
+          audioShouldPlayRef.current = false;
+          bufferingPauseRef.current = false;
           setAudioPlaying(false);
+          setAudioBufferedProgress(0);
         }}
       />
 
@@ -2523,44 +2662,90 @@ function ListeningTestClient({
                 {realModeCountdownLabel}
               </p>
             ) : null}
-            <div
-              className={cn(
-                "grid w-full min-w-0 grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_120px] sm:gap-3",
-                isSmallLandscape && "sm:grid-cols-[minmax(0,1fr)_96px] gap-1",
-              )}
-            >
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={audioProgress}
-                disabled={isRealMode || !activeSectionAudioUrl}
-                onChange={(e) => {
-                  if (isRealMode || !activeSectionAudioUrl) return;
-                  const nextProgress = Number(e.target.value);
-                  const media = audioRef.current;
-                  if (media) {
-                    const duration = Number.isFinite(media.duration) ? media.duration : 0;
-                    if (duration > 0) {
-                      media.currentTime = (nextProgress / 100) * duration;
-                    }
-                  }
-                  setAudioProgress(nextProgress);
-                }}
-                aria-label={isRealMode ? realModeProgressLockedLabel : t("audioProgress")}
-                className={cn("h-1.5 w-full min-w-0", (isRealMode || !activeSectionAudioUrl) && "cursor-not-allowed opacity-60")}
-              />
-              <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden">
-                <Volume2 className="size-3.5 shrink-0 text-muted-foreground" />
+            <div className={cn("grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2", isSmallLandscape && "gap-1")}>
+              <div className="min-w-0">
                 <input
                   type="range"
                   min={0}
                   max={100}
-                  value={audioVolume}
-                  onChange={(e) => setAudioVolume(Number(e.target.value))}
-                  aria-label={t("audioVolume")}
-                  className="h-1.5 w-full min-w-0"
+                  value={audioProgress}
+                  disabled={isRealMode || !activeSectionAudioUrl}
+                  onChange={(e) => {
+                    if (isRealMode || !activeSectionAudioUrl) return;
+                    const nextProgress = Number(e.target.value);
+                    const media = audioRef.current;
+                    if (media) {
+                      const duration = Number.isFinite(media.duration) ? media.duration : 0;
+                      if (duration > 0) {
+                        media.currentTime = (nextProgress / 100) * duration;
+                      }
+                    }
+                    setAudioProgress(nextProgress);
+                  }}
+                  aria-label={isRealMode ? realModeProgressLockedLabel : t("audioProgress")}
+                  className={cn(
+                    "h-1.5 w-full min-w-0 cursor-pointer appearance-none rounded-full outline-none",
+                    "[&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full",
+                    "[&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/70 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:shadow",
+                    "[&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent",
+                    "[&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-white/70 [&::-moz-range-thumb]:bg-blue-600",
+                    (isRealMode || !activeSectionAudioUrl) && "cursor-not-allowed opacity-60"
+                  )}
+                  style={audioProgressTrackStyle}
                 />
+                <div className="mt-1 flex justify-between text-[10px] text-muted-foreground">
+                  <span>{t.has("downloaded") ? t("downloaded") : "Buffered"}</span>
+                  <span>{Math.round(safeBufferedProgress)}%</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  {[1, 1.5, 2].map((speed) => {
+                    const isActive = audioSpeed === speed;
+                    return (
+                      <button
+                        key={`speed-${speed}`}
+                        type="button"
+                        disabled={isRealMode}
+                        onClick={() => {
+                          if (isRealMode) return;
+                          setAudioSpeed(speed as 1 | 1.5 | 2);
+                        }}
+                        className={cn(
+                          "h-6 rounded-md border px-1.5 text-[10px] font-semibold leading-none transition-colors",
+                          isActive
+                            ? "border-primary/50 bg-primary/15 text-primary"
+                            : "border-border/70 bg-background/55 text-muted-foreground",
+                          isRealMode && "cursor-not-allowed opacity-60"
+                        )}
+                      >
+                        {speed}x
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex w-26 items-center gap-1.5">
+                  <Volume2 className="size-3.5 shrink-0 text-muted-foreground" />
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={audioVolume}
+                    disabled={isRealMode}
+                    onChange={(e) => setAudioVolume(Number(e.target.value))}
+                    aria-label={t("audioVolume")}
+                    className={cn(
+                      "h-1.5 w-full min-w-0 cursor-pointer appearance-none rounded-full outline-none",
+                      "[&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:rounded-full",
+                      "[&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/70 [&::-webkit-slider-thumb]:bg-emerald-600 [&::-webkit-slider-thumb]:shadow",
+                      "[&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent",
+                      "[&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-white/70 [&::-moz-range-thumb]:bg-emerald-600",
+                      isRealMode && "cursor-not-allowed opacity-60"
+                    )}
+                    style={volumeTrackStyle}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -2613,6 +2798,7 @@ function ListeningTestClient({
                   answerMetaByQuestionId={reviewAnswerMetaByQuestionId}
                   grading={grading}
                   expanded={expandedReviewQuestions}
+                  showTopQuestionNavigator={false}
                   scrollResetKey={resolvedActiveSectionId}
                   onToggleExplanation={(questionId) => {
                     setExpandedReviewQuestions((previous) => {

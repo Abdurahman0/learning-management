@@ -19,6 +19,7 @@ type ReviewQuestionsPanelProps = {
   onToggleExplanation: (questionId: string) => void;
   onJumpEvidence: (questionId: string) => void;
   scrollResetKey?: string;
+  showTopQuestionNavigator?: boolean;
 };
 
 type QuestionStatus = "correct" | "incorrect" | "skipped";
@@ -73,6 +74,7 @@ export function ReviewQuestionsPanel({
   onToggleExplanation,
   onJumpEvidence,
   scrollResetKey,
+  showTopQuestionNavigator = true,
 }: ReviewQuestionsPanelProps) {
   const t = useTranslations("readingResult");
   const [answersVisible, setAnswersVisible] = useState(false);
@@ -107,27 +109,31 @@ export function ReviewQuestionsPanel({
               </Button>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">{t("questionNavigator")}</p>
-          <div className="overflow-x-auto pb-1 [scrollbar-width:thin]">
-            <div className="inline-flex items-center gap-1 pr-2">
-              {questions.map((question) => {
-                const status = getQuestionStatus(grading, question.id);
-                const styles = getStatusStyles(status);
-                return (
-                  <a
-                    key={`quick-${question.id}`}
-                    href={`#review-question-${question.id}`}
-                    className={cn(
-                      "inline-flex h-8 min-w-8 items-center justify-center rounded-full border px-1.5 text-xs font-semibold transition-colors",
-                      styles.nav
-                    )}
-                  >
-                    {question.number}
-                  </a>
-                );
-              })}
-            </div>
-          </div>
+          {showTopQuestionNavigator ? (
+            <>
+              <p className="text-xs text-muted-foreground">{t("questionNavigator")}</p>
+              <div className="overflow-x-auto pb-1 [scrollbar-width:thin]">
+                <div className="inline-flex items-center gap-1 pr-2">
+                  {questions.map((question) => {
+                    const status = getQuestionStatus(grading, question.id);
+                    const styles = getStatusStyles(status);
+                    return (
+                      <a
+                        key={`quick-${question.id}`}
+                        href={`#review-question-${question.id}`}
+                        className={cn(
+                          "inline-flex h-8 min-w-8 items-center justify-center rounded-full border px-1.5 text-xs font-semibold transition-colors",
+                          styles.nav
+                        )}
+                      >
+                        {question.number}
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
 
