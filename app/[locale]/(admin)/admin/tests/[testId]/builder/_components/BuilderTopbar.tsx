@@ -7,11 +7,13 @@ import type {ReactNode} from "react";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
-import type {BuilderMode, BuilderStatus, TestModule} from "@/data/admin-test-builder";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import type {BuilderMode, BuilderStatus, TestDifficulty, TestModule} from "@/data/admin-test-builder";
 
 type BuilderTopbarProps = {
   bookName: string;
   testTitle: string;
+  testDifficulty: TestDifficulty;
   module: TestModule;
   mode: BuilderMode;
   status: BuilderStatus;
@@ -20,6 +22,7 @@ type BuilderTopbarProps = {
   isPersisting?: boolean;
   mobileNav?: ReactNode;
   onTestTitleChange: (title: string) => void;
+  onTestDifficultyChange: (value: TestDifficulty) => void;
   onModeChange: (mode: BuilderMode) => void;
   onSaveDraft: () => void;
   onPublish: () => void;
@@ -28,6 +31,7 @@ type BuilderTopbarProps = {
 export function BuilderTopbar({
   bookName,
   testTitle,
+  testDifficulty,
   module,
   mode,
   status,
@@ -36,6 +40,7 @@ export function BuilderTopbar({
   isPersisting = false,
   mobileNav,
   onTestTitleChange,
+  onTestDifficultyChange,
   onModeChange,
   onSaveDraft,
   onPublish
@@ -76,6 +81,26 @@ export function BuilderTopbar({
               className="h-9 bg-card/70"
               disabled={isPersisting}
             />
+          </div>
+
+          <div className="max-w-2xl pt-1">
+            <p className="mb-1 text-[11px] font-medium tracking-[0.1em] text-muted-foreground uppercase">
+              {t("topbar.difficultyLabel")}
+            </p>
+            <Select
+              value={testDifficulty}
+              onValueChange={(value) => onTestDifficultyChange(value as TestDifficulty)}
+              disabled={isPersisting}
+            >
+              <SelectTrigger className="h-9 w-[220px] rounded-xl border-border/70 bg-card/70">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginner">{t("difficulty.beginner")}</SelectItem>
+                <SelectItem value="intermediate">{t("difficulty.intermediate")}</SelectItem>
+                <SelectItem value="advanced">{t("difficulty.advanced")}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

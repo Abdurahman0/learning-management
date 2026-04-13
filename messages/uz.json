@@ -906,6 +906,7 @@
                        "filters":  {
                                        "moduleLabel":  "Modul",
                                        "difficultyLabel":  "Daraja",
+                                       "questionTypeLabel":  "Savol turi",
                                        "statusLabel":  "Holat",
                                        "sortLabel":  "Saralash",
                                        "reset":  "Filtrlarni tozalash",
@@ -920,6 +921,28 @@
                                                           "intermediate":  "O\u0027rta",
                                                           "advanced":  "Yuqori"
                                                       },
+                                       "questionType":  {
+                                                            "all":  "Barcha turlar",
+                                                            "tfng":  "True/False/Not Given",
+                                                            "ynng":  "Yes/No/Not Given",
+                                                            "mcqSingle":  "MCQ Single",
+                                                            "mcqMultiple":  "MCQ Multiple",
+                                                            "matchingHeadings":  "Matching Headings",
+                                                            "matchParaInfo":  "Matching Paragraph Info",
+                                                            "classification":  "Classification",
+                                                            "listSelection":  "List Selection",
+                                                            "choosingTitle":  "Choosing Title",
+                                                            "matchSentEndings":  "Match Sentence Endings",
+                                                            "planMapDiagram":  "Plan/Map/Diagram",
+                                                            "sentenceCompletion":  "Sentence Completion",
+                                                            "summaryCompletion":  "Summary Completion",
+                                                            "tableCompletion":  "Table Completion",
+                                                            "flowChartCompletion":  "Flow Chart Completion",
+                                                            "diagramCompletion":  "Diagram Completion",
+                                                            "formCompletion":  "Form Completion",
+                                                            "noteCompletion":  "Note Completion",
+                                                            "shortAnswer":  "Short Answer"
+                                                        },
                                        "status":  {
                                                       "all":  "Barcha holatlar",
                                                       "published":  "Nashr qilingan",
@@ -1021,6 +1044,7 @@
                                             "title":  "Test Builder",
                                             "testTitleLabel":  "To'liq test nomi",
                                             "testTitlePlaceholder":  "To'liq test nomini kiriting",
+                                            "difficultyLabel":  "Qiyinlik",
                                             "breadcrumb":  {
                                                                "tests":  "Testlar",
                                                                "builder":  {
@@ -1041,6 +1065,11 @@
                                             "draft":  "Qoralama",
                                             "published":  "Nashr qilingan"
                                         },
+                             "difficulty":  {
+                                                "beginner":  "Boshlang\u0027ich",
+                                                "intermediate":  "O\u0027rta",
+                                                "advanced":  "Yuqori"
+                                            },
                              "contentBankPassage":  "Content Bank passage",
                              "selectPassagePlaceholder":  "Passage tanlang",
                              "variantSet":  "Variant to\u0027plam",

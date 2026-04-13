@@ -9,6 +9,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import type {
   DifficultyFilterValue,
   ModuleFilterValue,
+  QuestionTypeFilterValue,
   StatusFilterValue,
   TestSort
 } from "@/data/admin-tests";
@@ -21,14 +22,17 @@ type Option<Value extends string> = {
 type TestsFiltersProps = {
   moduleValue: ModuleFilterValue;
   difficultyValue: DifficultyFilterValue;
+  questionTypeValue: QuestionTypeFilterValue;
   statusValue: StatusFilterValue;
   sortValue: TestSort;
   moduleOptions: Option<ModuleFilterValue>[];
   difficultyOptions: Option<DifficultyFilterValue>[];
+  questionTypeOptions: Option<QuestionTypeFilterValue>[];
   statusOptions: Option<StatusFilterValue>[];
   sortOptions: Option<TestSort>[];
   onModuleChange: (value: ModuleFilterValue) => void;
   onDifficultyChange: (value: DifficultyFilterValue) => void;
+  onQuestionTypeChange: (value: QuestionTypeFilterValue) => void;
   onStatusChange: (value: StatusFilterValue) => void;
   onSortChange: (value: TestSort) => void;
   onReset: () => void;
@@ -69,14 +73,17 @@ function FilterSelect<Value extends string>({
 export function TestsFilters({
   moduleValue,
   difficultyValue,
+  questionTypeValue,
   statusValue,
   sortValue,
   moduleOptions,
   difficultyOptions,
+  questionTypeOptions,
   statusOptions,
   sortOptions,
   onModuleChange,
   onDifficultyChange,
+  onQuestionTypeChange,
   onStatusChange,
   onSortChange,
   onReset
@@ -85,7 +92,7 @@ export function TestsFilters({
 
   return (
     <Card className="rounded-3xl border-border/70 bg-card/70 py-0">
-      <CardContent className="grid gap-3 px-4 py-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_auto] xl:items-end">
+      <CardContent className="grid gap-3 px-4 py-4 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_auto] xl:items-end">
         <FilterSelect
           label={t("filters.moduleLabel")}
           value={moduleValue}
@@ -97,6 +104,12 @@ export function TestsFilters({
           value={difficultyValue}
           options={difficultyOptions}
           onValueChange={onDifficultyChange}
+        />
+        <FilterSelect
+          label={t("filters.questionTypeLabel")}
+          value={questionTypeValue}
+          options={questionTypeOptions}
+          onValueChange={onQuestionTypeChange}
         />
         <FilterSelect label={t("filters.statusLabel")} value={statusValue} options={statusOptions} onValueChange={onStatusChange} />
         <FilterSelect label={t("filters.sortLabel")} value={sortValue} options={sortOptions} onValueChange={onSortChange} />

@@ -22,7 +22,7 @@ export function QuestionEditorModal({open, question, module = "reading", mcqMode
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full max-w-[560px] overflow-y-auto border-l border-border/70 bg-background/95 p-0">
+      <SheetContent side="right" className="max-h-screen w-full max-w-[560px] overflow-y-auto overscroll-y-contain border-l border-border/70 bg-background/95 p-0">
         <SheetHeader className="border-b border-border/70 p-5">
           <div className="flex items-center gap-2">
             <SheetTitle className="text-base">{t("questions.editorTitle")}</SheetTitle>

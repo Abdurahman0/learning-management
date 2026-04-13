@@ -166,6 +166,19 @@ function toNumberSafe(value: unknown, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function mapApiDifficultyToBuilder(value: unknown): AdminBuilderTest["difficulty"] {
+  const normalized = toStringSafe(value).trim().toUpperCase();
+  if (normalized === "BEGINNER") return "beginner";
+  if (normalized === "ADVANCED") return "advanced";
+  return "intermediate";
+}
+
+function mapBuilderDifficultyToApi(value: AdminBuilderTest["difficulty"]) {
+  if (value === "beginner") return "BEGINNER";
+  if (value === "advanced") return "ADVANCED";
+  return "INTERMEDIATE";
+}
+
 const DEFAULT_READING_SLOT_QUESTION_COUNTS = [13, 13, 14] as const;
 const DEFAULT_LISTENING_SLOT_QUESTION_COUNTS = [10, 10, 10, 10] as const;
 
@@ -1273,6 +1286,7 @@ function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDeta
     name: toStringSafe(detail.title, "Practice Test"),
     book: toStringSafe(detail.title, "Practice Test"),
     module: moduleType,
+    difficulty: mapApiDifficultyToBuilder(detail.difficulty_level),
     status: detail.is_active ? "published" : "draft",
     structures,
     questionGroupsByStructure
@@ -2059,6 +2073,13 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     }));
   };
 
+  const handleTestDifficultyChange = (difficulty: AdminBuilderTest["difficulty"]) => {
+    setTest((current) => ({
+      ...current,
+      difficulty
+    }));
+  };
+
   const handleToggleRemoveAudio = (structureId: string, remove: boolean) => {
     setRemoveAudioByStructureId((current) => ({...current, [structureId]: remove}));
     if (remove) {
@@ -2169,6 +2190,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     try {
       await practiceTestsService.patch(test.id, {
         title: normalizedTitle,
+        difficulty_level: mapBuilderDifficultyToApi(test.difficulty),
         is_active: nextStatus === "published"
       });
 
@@ -2410,6 +2432,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           <BuilderTopbar
             bookName={test.name.trim() || test.book.trim() || "Practice Test"}
             testTitle={test.name}
+            testDifficulty={test.difficulty}
             module={test.module}
             mode={mode}
             status={test.status}
@@ -2418,6 +2441,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             isPersisting={isPersisting}
             mobileNav={<AdminSidebarMobileNav />}
             onTestTitleChange={handleTestTitleChange}
+            onTestDifficultyChange={handleTestDifficultyChange}
             onModeChange={setMode}
             onSaveDraft={handleSaveDraft}
             onPublish={handlePublish}

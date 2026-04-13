@@ -356,7 +356,7 @@ export function QuestionGroupsPanel({
       </CardContent>
 
       <Sheet open={editor.open} onOpenChange={(open) => setEditor((current) => ({...current, open}))}>
-        <SheetContent side="right" className="w-full max-w-[420px] border-l border-border/70 bg-background/95">
+        <SheetContent side="right" className="max-h-screen w-full max-w-[420px] overflow-y-auto overscroll-y-contain border-l border-border/70 bg-background/95">
           <SheetHeader>
             <SheetTitle>{editor.mode === "create" ? t("groups.createTitle") : t("groups.editTitle")}</SheetTitle>
             <SheetDescription>{t("groups.editorDescription", {from: range.from, to: range.to})}</SheetDescription>

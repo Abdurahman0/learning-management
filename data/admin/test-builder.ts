@@ -8,12 +8,14 @@ import type {
   MultipleChoiceAnswer,
   QuestionType as AdminQuestionType,
   TFNGAnswer,
+  TestDifficulty,
   YesNoNotGivenAnswer,
   TextAnswerBuilderQuestion,
   TestModule
 } from "@/types/admin";
 
 export type {TestModule};
+export type {TestDifficulty};
 export type BuilderMode = "editor" | "preview";
 export type BuilderStatus = "draft" | "published";
 export type QuestionType = AdminQuestionType;
@@ -39,6 +41,7 @@ export type AdminBuilderTest = {
   name: string;
   book: string;
   module: TestModule;
+  difficulty: TestDifficulty;
   status: BuilderStatus;
   structures: BuilderStructureItem[];
   questionGroupsByStructure: Record<string, QuestionGroup[]>;
@@ -292,6 +295,7 @@ function createBuilderFromTest(testId: string): AdminBuilderTest | null {
     name: test.name,
     book: test.book,
     module: test.module,
+    difficulty: "intermediate",
     status: test.status,
     structures,
     questionGroupsByStructure
@@ -325,6 +329,7 @@ function createCustomBuilderTest(testId: string): AdminBuilderTest {
     name: targetModule === "reading" ? "Custom Reading Test" : "Custom Listening Test",
     book: "Custom",
     module: targetModule,
+    difficulty: "intermediate",
     status: "draft",
     structures,
     questionGroupsByStructure: createEmptyGroupsByStructure(structures)

@@ -880,6 +880,7 @@ function ReadingTestClient({
   const initialBackendSaveAttemptRef = useRef<string | null>(null);
   const backendRecoveryInFlightRef = useRef(false);
   const lastBackendRecoveryAtRef = useRef(0);
+  const restartNeedsFreshBackendAttemptRef = useRef(false);
   const leaveWarningMessage = t.has("leaveWarning")
     ? t("leaveWarning")
     : "Are you sure you want to quit this test? Your results will not be saved.";
@@ -1352,6 +1353,45 @@ function ReadingTestClient({
       initialBackendSaveAttemptRef.current = null;
     }
   }, [backendAttemptId]);
+
+  useEffect(() => {
+    if (!attemptMode || reviewMode) {
+      return;
+    }
+    if (!restartNeedsFreshBackendAttemptRef.current) {
+      return;
+    }
+
+    restartNeedsFreshBackendAttemptRef.current = false;
+    let active = true;
+
+    const createFreshAttemptAfterRestart = async () => {
+      try {
+        const createdAttempt = await studentAttemptsService.create({
+          practice_test: test.id,
+          mode: attemptMode === "real" ? "REAL" : "PRACTICE"
+        });
+        if (!active) return;
+
+        const hydratedAttempt = hasAttemptQuestionData(createdAttempt)
+          ? createdAttempt
+          : await studentAttemptsService.getById(String(createdAttempt.id));
+        if (!active) return;
+
+        setBackendAttemptId(String(hydratedAttempt.id));
+        initialBackendSaveAttemptRef.current = null;
+      } catch {
+        if (!active) return;
+        setBackendAttemptId(null);
+      }
+    };
+
+    void createFreshAttemptAfterRestart();
+
+    return () => {
+      active = false;
+    };
+  }, [attemptMode, reviewMode, test.id]);
 
   useEffect(() => {
     setBackendReviewData(null);
@@ -1880,6 +1920,9 @@ function ReadingTestClient({
     if (!window.confirm(confirmMessage)) {
       return;
     }
+    restartNeedsFreshBackendAttemptRef.current = true;
+    setBackendAttemptId(null);
+    initialBackendSaveAttemptRef.current = null;
     resetAttemptState();
   };
 

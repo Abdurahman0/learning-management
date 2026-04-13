@@ -906,6 +906,7 @@
                        "filters":  {
                                        "moduleLabel":  "Module",
                                        "difficultyLabel":  "Difficulty",
+                                       "questionTypeLabel":  "Question Type",
                                        "statusLabel":  "Status",
                                        "sortLabel":  "Sort By",
                                        "reset":  "Reset filters",
@@ -920,6 +921,28 @@
                                                           "intermediate":  "Intermediate",
                                                           "advanced":  "Advanced"
                                                       },
+                                       "questionType":  {
+                                                            "all":  "All Types",
+                                                            "tfng":  "True/False/Not Given",
+                                                            "ynng":  "Yes/No/Not Given",
+                                                            "mcqSingle":  "MCQ Single",
+                                                            "mcqMultiple":  "MCQ Multiple",
+                                                            "matchingHeadings":  "Matching Headings",
+                                                            "matchParaInfo":  "Matching Paragraph Info",
+                                                            "classification":  "Classification",
+                                                            "listSelection":  "List Selection",
+                                                            "choosingTitle":  "Choosing Title",
+                                                            "matchSentEndings":  "Match Sentence Endings",
+                                                            "planMapDiagram":  "Plan/Map/Diagram",
+                                                            "sentenceCompletion":  "Sentence Completion",
+                                                            "summaryCompletion":  "Summary Completion",
+                                                            "tableCompletion":  "Table Completion",
+                                                            "flowChartCompletion":  "Flow Chart Completion",
+                                                            "diagramCompletion":  "Diagram Completion",
+                                                            "formCompletion":  "Form Completion",
+                                                            "noteCompletion":  "Note Completion",
+                                                            "shortAnswer":  "Short Answer"
+                                                        },
                                        "status":  {
                                                       "all":  "All Status",
                                                       "published":  "Published",
@@ -1021,6 +1044,7 @@
                                             "title":  "Test Builder",
                                             "testTitleLabel":  "Full test title",
                                             "testTitlePlaceholder":  "Enter full test title",
+                                            "difficultyLabel":  "Difficulty",
                                             "breadcrumb":  {
                                                                "tests":  "Tests",
                                                                "builder":  {
@@ -1041,6 +1065,11 @@
                                             "draft":  "Draft",
                                             "published":  "Published"
                                         },
+                             "difficulty":  {
+                                                "beginner":  "Beginner",
+                                                "intermediate":  "Intermediate",
+                                                "advanced":  "Advanced"
+                                            },
                              "contentBankPassage":  "Content Bank Passage",
                              "selectPassagePlaceholder":  "Select a passage",
                              "variantSet":  "Variant Set",

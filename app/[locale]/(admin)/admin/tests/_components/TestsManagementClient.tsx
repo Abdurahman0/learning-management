@@ -16,12 +16,14 @@ import {
   type AdminTest,
   type DifficultyFilterValue,
   type ModuleFilterValue,
+  type QuestionTypeFilterValue,
+  TEST_QUESTION_TYPE_OPTIONS,
   type StatusFilterValue,
   type TestModule,
   type TestSort
 } from "@/data/admin-tests";
 import {practiceTestsService} from "@/src/services/admin/practiceTests.service";
-import type {PracticeTestRecord} from "@/src/services/admin/types";
+import type {PracticeTestDetailRecord, PracticeTestRecord} from "@/src/services/admin/types";
 
 import {AdminProfileMenu} from "../../_components/AdminProfileMenu";
 import {AdminSidebar, AdminSidebarMobileNav} from "../../_components/AdminSidebar";
@@ -59,6 +61,33 @@ const TEST_SORT_OPTIONS: Option<TestSort>[] = [
   {value: "alphabetical", labelKey: "filters.sort.alphabetical"}
 ];
 
+function collectQuestionTypes(detail: PracticeTestDetailRecord) {
+  const types = new Set<string>();
+
+  const addType = (value: unknown) => {
+    const normalized = String(value ?? "").trim().toUpperCase();
+    if (normalized) {
+      types.add(normalized);
+    }
+  };
+
+  (detail.question_groups ?? []).forEach((group) => {
+    if (group && typeof group === "object") {
+      addType((group as {question_type?: unknown}).question_type);
+    }
+  });
+
+  (detail.reading_passages ?? []).forEach((passage) => {
+    (passage.question_groups ?? []).forEach((group) => addType(group.question_type));
+  });
+
+  (detail.listening_parts ?? []).forEach((part) => {
+    (part.question_groups ?? []).forEach((group) => addType(group.question_type));
+  });
+
+  return [...types];
+}
+
 function mapDifficulty(value: string): AdminTest["difficulty"] {
   const normalized = String(value ?? "").trim().toUpperCase();
   if (normalized.includes("BEGINNER")) return "beginner";
@@ -71,23 +100,23 @@ function mapStatus(isActive: boolean): AdminTest["status"] {
 }
 
 function mapPracticeTestToAdminTest(item: PracticeTestRecord): AdminTest {
-  const module = String(item.test_type ?? "").trim().toUpperCase().includes("LISTENING") ? "listening" : "reading";
+  const testModule = String(item.test_type ?? "").trim().toUpperCase().includes("LISTENING") ? "listening" : "reading";
   const readingCount = Number(item.reading_passages_count ?? 0);
   const listeningCount = Number(item.listening_parts_count ?? 0);
-  const sectionsCount = module === "reading" ? Math.max(readingCount, 3) : Math.max(listeningCount, 4);
-  const questionsPerSection = module === "reading" ? [13, 13, 14] : [10, 10, 10, 10];
+  const sectionsCount = testModule === "reading" ? Math.max(readingCount, 3) : Math.max(listeningCount, 4);
+  const questionsPerSection = testModule === "reading" ? [13, 13, 14] : [10, 10, 10, 10];
 
   return {
     id: String(item.id),
     name: item.title || "Untitled Test",
-    module,
+    module: testModule,
     book: "Custom Practice",
     questions: Number(item.total_questions ?? 0),
     difficulty: mapDifficulty(item.difficulty_level),
     status: mapStatus(Boolean(item.is_active)),
     createdAt: String(item.created_at ?? item.updated_at ?? new Date().toISOString()).slice(0, 10),
     passages:
-      module === "reading"
+      testModule === "reading"
         ? Array.from({length: sectionsCount}, (_, index) => ({
             id: `${item.id}-p-${index + 1}`,
             title: `Passage ${index + 1}`,
@@ -96,7 +125,7 @@ function mapPracticeTestToAdminTest(item: PracticeTestRecord): AdminTest {
           }))
         : undefined,
     sections:
-      module === "listening"
+      testModule === "listening"
         ? Array.from({length: sectionsCount}, (_, index) => ({
             id: `${item.id}-s-${index + 1}`,
             title: `Section ${index + 1}`,
@@ -115,8 +144,10 @@ export function TestsManagementClient() {
   const [searchValue, setSearchValue] = useState("");
   const [moduleFilter, setModuleFilter] = useState<ModuleFilterValue>("all");
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyFilterValue>("all");
+  const [questionTypeFilter, setQuestionTypeFilter] = useState<QuestionTypeFilterValue>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("all");
   const [sortBy, setSortBy] = useState<TestSort>("newest");
+  const [questionTypesByTestId, setQuestionTypesByTestId] = useState<Record<string, string[]>>({});
   const [page, setPage] = useState(1);
   const [expandedTestIds, setExpandedTestIds] = useState<Set<string>>(() => new Set());
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -145,6 +176,48 @@ export function TestsManagementClient() {
     };
   }, []);
 
+  useEffect(() => {
+    if (questionTypeFilter === "all" || tests.length === 0) {
+      return;
+    }
+
+    const missingTestIds = tests.map((item) => item.id).filter((id) => !(id in questionTypesByTestId));
+    if (!missingTestIds.length) {
+      return;
+    }
+
+    let active = true;
+
+    const loadQuestionTypesForTests = async () => {
+      const entries = await Promise.all(
+        missingTestIds.map(async (testId) => {
+          try {
+            const detail = await practiceTestsService.getById(testId);
+            return [testId, collectQuestionTypes(detail)] as const;
+          } catch {
+            return [testId, []] as const;
+          }
+        })
+      );
+
+      if (!active) return;
+
+      setQuestionTypesByTestId((current) => {
+        const next = {...current};
+        for (const [testId, types] of entries) {
+          next[testId] = types;
+        }
+        return next;
+      });
+    };
+
+    void loadQuestionTypesForTests();
+
+    return () => {
+      active = false;
+    };
+  }, [questionTypeFilter, questionTypesByTestId, tests]);
+
   const filteredTests = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
 
@@ -161,6 +234,13 @@ export function TestsManagementClient() {
         return false;
       }
 
+      if (questionTypeFilter !== "all") {
+        const testTypes = questionTypesByTestId[item.id] ?? [];
+        if (!testTypes.includes(questionTypeFilter)) {
+          return false;
+        }
+      }
+
       if (!query) {
         return true;
       }
@@ -171,7 +251,7 @@ export function TestsManagementClient() {
         item.module.toLowerCase().includes(query)
       );
     });
-  }, [tests, searchValue, moduleFilter, difficultyFilter, statusFilter]);
+  }, [tests, searchValue, moduleFilter, difficultyFilter, questionTypeFilter, questionTypesByTestId, statusFilter]);
 
   const sortedTests = useMemo(() => {
     const copy = [...filteredTests];
@@ -208,13 +288,16 @@ export function TestsManagementClient() {
     }
 
     if (!importableTests.length) {
-      setSelectedImportTestId("");
-      return;
+      const timer = window.setTimeout(() => setSelectedImportTestId(""), 0);
+      return () => window.clearTimeout(timer);
     }
 
     if (!importableTests.some((item) => item.id === selectedImportTestId)) {
-      setSelectedImportTestId(importableTests[0].id);
+      const timer = window.setTimeout(() => setSelectedImportTestId(importableTests[0].id), 0);
+      return () => window.clearTimeout(timer);
     }
+
+    return () => undefined;
   }, [importDialogOpen, importableTests, selectedImportTestId]);
 
   useEffect(() => {
@@ -346,6 +429,7 @@ export function TestsManagementClient() {
     setSearchValue("");
     setModuleFilter("all");
     setDifficultyFilter("all");
+    setQuestionTypeFilter("all");
     setStatusFilter("all");
     setSortBy("newest");
     setPage(1);
@@ -451,10 +535,12 @@ export function TestsManagementClient() {
             <TestsFilters
               moduleValue={moduleFilter}
               difficultyValue={difficultyFilter}
+              questionTypeValue={questionTypeFilter}
               statusValue={statusFilter}
               sortValue={sortBy}
               moduleOptions={TEST_MODULE_OPTIONS}
               difficultyOptions={TEST_DIFFICULTY_OPTIONS}
+              questionTypeOptions={TEST_QUESTION_TYPE_OPTIONS}
               statusOptions={TEST_STATUS_OPTIONS}
               sortOptions={TEST_SORT_OPTIONS}
               onModuleChange={(value) => {
@@ -463,6 +549,10 @@ export function TestsManagementClient() {
               }}
               onDifficultyChange={(value) => {
                 setDifficultyFilter(value);
+                setPage(1);
+              }}
+              onQuestionTypeChange={(value) => {
+                setQuestionTypeFilter(value);
                 setPage(1);
               }}
               onStatusChange={(value) => {

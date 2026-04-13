@@ -3,6 +3,27 @@ import type {TestDifficulty, TestModule, TestStatus} from "@/types/admin";
 
 export type {TestStatus, TestDifficulty, TestModule};
 export type TestSort = "newest" | "oldest" | "alphabetical";
+export type QuestionTypeFilterValue =
+  | "all"
+  | "TFNG"
+  | "YNNG"
+  | "MCQ_SINGLE"
+  | "MCQ_MULTIPLE"
+  | "MATCHING_HEADINGS"
+  | "MATCH_PARA_INFO"
+  | "CLASSIFICATION"
+  | "LIST_SELECTION"
+  | "CHOOSING_TITLE"
+  | "MATCH_SENT_ENDINGS"
+  | "PLAN_MAP_DIAGRAM"
+  | "SENTENCE_COMPLETION"
+  | "SUMMARY_COMPLETION"
+  | "TABLE_COMPLETION"
+  | "FLOW_CHART_COMPLETION"
+  | "DIAGRAM_COMPLETION"
+  | "FORM_COMPLETION"
+  | "NOTE_COMPLETION"
+  | "SHORT_ANSWER";
 
 export type TestPassage = {
   id: string;
@@ -64,5 +85,28 @@ export const TEST_SORT_OPTIONS = [
   {value: "oldest", labelKey: "filters.sort.oldest"},
   {value: "alphabetical", labelKey: "filters.sort.alphabetical"}
 ] satisfies FilterOption<TestSort>[];
+
+export const TEST_QUESTION_TYPE_OPTIONS = [
+  {value: "all", labelKey: "filters.questionType.all"},
+  {value: "TFNG", labelKey: "filters.questionType.tfng"},
+  {value: "YNNG", labelKey: "filters.questionType.ynng"},
+  {value: "MCQ_SINGLE", labelKey: "filters.questionType.mcqSingle"},
+  {value: "MCQ_MULTIPLE", labelKey: "filters.questionType.mcqMultiple"},
+  {value: "MATCHING_HEADINGS", labelKey: "filters.questionType.matchingHeadings"},
+  {value: "MATCH_PARA_INFO", labelKey: "filters.questionType.matchParaInfo"},
+  {value: "CLASSIFICATION", labelKey: "filters.questionType.classification"},
+  {value: "LIST_SELECTION", labelKey: "filters.questionType.listSelection"},
+  {value: "CHOOSING_TITLE", labelKey: "filters.questionType.choosingTitle"},
+  {value: "MATCH_SENT_ENDINGS", labelKey: "filters.questionType.matchSentEndings"},
+  {value: "PLAN_MAP_DIAGRAM", labelKey: "filters.questionType.planMapDiagram"},
+  {value: "SENTENCE_COMPLETION", labelKey: "filters.questionType.sentenceCompletion"},
+  {value: "SUMMARY_COMPLETION", labelKey: "filters.questionType.summaryCompletion"},
+  {value: "TABLE_COMPLETION", labelKey: "filters.questionType.tableCompletion"},
+  {value: "FLOW_CHART_COMPLETION", labelKey: "filters.questionType.flowChartCompletion"},
+  {value: "DIAGRAM_COMPLETION", labelKey: "filters.questionType.diagramCompletion"},
+  {value: "FORM_COMPLETION", labelKey: "filters.questionType.formCompletion"},
+  {value: "NOTE_COMPLETION", labelKey: "filters.questionType.noteCompletion"},
+  {value: "SHORT_ANSWER", labelKey: "filters.questionType.shortAnswer"}
+] satisfies FilterOption<QuestionTypeFilterValue>[];
 
 export const ADMIN_TESTS = getTestsManagementRows() satisfies TestsRow[];

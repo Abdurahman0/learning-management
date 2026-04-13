@@ -686,9 +686,33 @@ export default function ListeningTestPage() {
           practice_test: matched.id,
           mode: "PRACTICE"
         });
-        const finalAttempt = createdAttempt.listening_parts?.length
+        let finalAttempt = createdAttempt.listening_parts?.length
           ? createdAttempt
           : await studentAttemptsService.getById(String(createdAttempt.id));
+
+        // If backend resumed an empty in-progress attempt, recycle it so we pick up
+        // the latest listening-part media (including newly uploaded per-part audio).
+        if (
+          String(finalAttempt.status ?? "").toUpperCase() === "IN_PROGRESS"
+          && Number(finalAttempt.answered_count ?? 0) === 0
+        ) {
+          try {
+            await studentAttemptsService.submit(String(finalAttempt.id), {
+              time_used_seconds: 0,
+              answers: []
+            });
+            const refreshedAttempt = await studentAttemptsService.create({
+              practice_test: matched.id,
+              mode: "PRACTICE"
+            });
+            finalAttempt = refreshedAttempt.listening_parts?.length
+              ? refreshedAttempt
+              : await studentAttemptsService.getById(String(refreshedAttempt.id));
+          } catch {
+            // Keep the original attempt if recycle fails.
+          }
+        }
+
         const nextSubmitMetaByNumber = collectListeningSubmitMetaByNumber(finalAttempt);
 
         const mapped = mapListeningAttemptToRuntimeTest(matched, finalAttempt);
