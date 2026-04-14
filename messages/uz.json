@@ -635,7 +635,8 @@
                                                 "matchingHeadings":  "Matching Headings",
                                                 "mcq":  "MCQ",
                                                 "sentenceCompletion":  "Gapni to\u0027ldirish",
-                                                "matchingInfo":  "Matching Information"
+                                                "matchingInfo":  "Matching Information",
+                                                "tableCompletion":  "Jadvalni to\u0027ldirish"
                                             }
                       },
     "listeningResult":  {

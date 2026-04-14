@@ -850,7 +850,7 @@ function ListeningTestClient({
   const [audioProgress, setAudioProgress] = useState(0);
   const [audioBufferedProgress, setAudioBufferedProgress] = useState(0);
   const [audioVolume, setAudioVolume] = useState(72);
-  const [audioSpeed, setAudioSpeed] = useState<1 | 1.5 | 2>(1);
+  const [audioSpeed, setAudioSpeed] = useState<1 | 1.25 | 1.5 | 1.75 | 2>(1);
   const [audioDurationSec, setAudioDurationSec] = useState(0);
   const [audioCurrentSec, setAudioCurrentSec] = useState(0);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -2416,23 +2416,29 @@ function ListeningTestClient({
           )}
         >
           <div className="flex flex-1 min-w-0 items-center gap-1.5 sm:gap-3">
-            <span
-              className={cn(
-                "flex shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-sm",
-                isSmallLandscape ? "size-7" : "size-8",
-              )}
+            <Link
+              href={`/${locale}`}
+              aria-label="Go to home"
+              className="flex min-w-0 items-center gap-1.5 sm:gap-3 rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
             >
-              <BookOpen className="size-4.5" aria-hidden="true" />
-            </span>
-            <p
-              className={cn(
-                "min-w-0 text-sm font-semibold sm:text-lg leading-tight",
-                isSmallLandscape && "text-xs",
-                "max-[420px]:text-[11px]",
-              )}
-            >
-              IELTS <span className="max-[420px]:block">MASTER</span>
-            </p>
+              <span
+                className={cn(
+                  "flex shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-sm",
+                  isSmallLandscape ? "size-7" : "size-8",
+                )}
+              >
+                <BookOpen className="size-4.5" aria-hidden="true" />
+              </span>
+              <p
+                className={cn(
+                  "min-w-0 text-sm font-semibold sm:text-lg leading-tight",
+                  isSmallLandscape && "text-xs",
+                  "max-[420px]:text-[11px]",
+                )}
+              >
+                IELTS <span className="max-[420px]:block">MASTER</span>
+              </p>
+            </Link>
             <Separator orientation="vertical" className="hidden h-5 md:block" />
             <p
               className={cn(
@@ -2700,30 +2706,32 @@ function ListeningTestClient({
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  {[1, 1.5, 2].map((speed) => {
-                    const isActive = audioSpeed === speed;
-                    return (
-                      <button
-                        key={`speed-${speed}`}
-                        type="button"
-                        disabled={isRealMode}
-                        onClick={() => {
-                          if (isRealMode) return;
-                          setAudioSpeed(speed as 1 | 1.5 | 2);
-                        }}
-                        className={cn(
-                          "h-6 rounded-md border px-1.5 text-[10px] font-semibold leading-none transition-colors",
-                          isActive
-                            ? "border-primary/50 bg-primary/15 text-primary"
-                            : "border-border/70 bg-background/55 text-muted-foreground",
-                          isRealMode && "cursor-not-allowed opacity-60"
-                        )}
-                      >
-                        {speed}x
-                      </button>
-                    );
-                  })}
+                <div className="rounded-lg border border-border/70 bg-background/55 p-1 shadow-sm">
+                  <div className="flex items-center gap-1">
+                    {[1, 1.25, 1.5, 1.75, 2].map((speed) => {
+                      const isActive = audioSpeed === speed;
+                      return (
+                        <button
+                          key={`speed-${speed}`}
+                          type="button"
+                          disabled={isRealMode}
+                          onClick={() => {
+                            if (isRealMode) return;
+                            setAudioSpeed(speed as 1 | 1.25 | 1.5 | 1.75 | 2);
+                          }}
+                          className={cn(
+                            "h-7 rounded-md border px-2 text-[10px] font-semibold leading-none transition-colors",
+                            isActive
+                              ? "border-primary/45 bg-primary/15 text-primary shadow-sm"
+                              : "border-transparent bg-transparent text-muted-foreground hover:border-border/70 hover:bg-background/70",
+                            isRealMode && "cursor-not-allowed opacity-60"
+                          )}
+                        >
+                          {speed}x
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className="flex w-26 items-center gap-1.5">
                   <Volume2 className="size-3.5 shrink-0 text-muted-foreground" />

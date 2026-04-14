@@ -635,7 +635,8 @@
                                                 "matchingHeadings":  "Matching Headings",
                                                 "mcq":  "MCQ",
                                                 "sentenceCompletion":  "Sentence Completion",
-                                                "matchingInfo":  "Matching Information"
+                                                "matchingInfo":  "Matching Information",
+                                                "tableCompletion":  "Table Completion"
                                             }
                       },
     "listeningResult":  {

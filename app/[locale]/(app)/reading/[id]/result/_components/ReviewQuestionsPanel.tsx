@@ -181,7 +181,9 @@ export function ReviewQuestionsPanel({
                     )}
                   </p>
                   <Badge variant="outline" className={cn("rounded-full text-[11px]", statusStyles.badge)}>
-                    {t(`questionTypes.${question.type}`)}
+                    {t.has(`questionTypes.${question.type}`)
+                      ? t(`questionTypes.${question.type}`)
+                      : question.type}
                   </Badge>
                 </div>
 

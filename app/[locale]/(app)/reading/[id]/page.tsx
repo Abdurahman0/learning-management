@@ -113,6 +113,14 @@ function toBackendAnswerPayload(value: string | string[] | null): {answer: strin
   return null;
 }
 
+function normalizeTfngAnswerForBackend(value: string) {
+  const normalized = value.trim().toUpperCase().replace(/\s+/g, "_");
+  if (normalized === "TRUE") return "TRUE";
+  if (normalized === "FALSE") return "FALSE";
+  if (normalized === "NOT_GIVEN" || normalized === "NOTGIVEN") return "NOT_GIVEN";
+  return value.trim();
+}
+
 type HighlightItem = {
   questionNumber: number;
   phrase: string;
@@ -474,14 +482,23 @@ function collectBackendAttemptAnswerEntries(params: {
   return params.questions
     .map((question) => {
       const answer = toSubmitAnswer(params.answers[question.id]);
+      const normalizedAnswer =
+        question.type === "tfng" && typeof answer === "string"
+          ? normalizeTfngAnswerForBackend(answer)
+          : answer;
       const isFlagged = params.marked.has(question.id);
       const fromAttempt = params.submitCandidatesByNumber.get(question.number) ?? [];
       const fromRaw = params.rawSubmitCandidatesByNumber.get(question.number) ?? [];
       const fromQuestion = resolveSubmitCandidateIds(question);
-      const candidateIds = [...fromAttempt, ...fromRaw, ...fromQuestion].filter(
-        (value, index, source) => Boolean(value) && source.indexOf(value) === index
-      );
-      if (!candidateIds.length || (answer === null && !isFlagged)) {
+      const attemptScopedCandidateIds = [...fromAttempt, ...fromRaw]
+        .map((value) => toStringSafe(value).trim())
+        .filter((value) => value && UUID_PATTERN.test(value));
+      const fallbackCandidateIds = fromQuestion
+        .map((value) => toStringSafe(value).trim())
+        .filter((value) => value && UUID_PATTERN.test(value));
+      const candidateIds = (attemptScopedCandidateIds.length ? attemptScopedCandidateIds : fallbackCandidateIds)
+        .filter((value, index, source) => source.indexOf(value) === index);
+      if (!candidateIds.length || (normalizedAnswer === null && !isFlagged)) {
         return null;
       }
 
@@ -489,7 +506,7 @@ function collectBackendAttemptAnswerEntries(params: {
         questionKey: question.id,
         questionNumber: question.number,
         candidateIds,
-        answer,
+        answer: normalizedAnswer,
         is_flagged: isFlagged
       } satisfies BackendAttemptAnswerEntry;
     })
@@ -1343,6 +1360,20 @@ function ReadingTestClient({
             }
 
             if (!changed) {
+              if (!strict) {
+                const failedQuestionKeys = activeEntries
+                  .filter((entry) => failedQuestionIds.has(currentIds.get(entry.questionKey) ?? ""))
+                  .map((entry) => entry.questionKey);
+                if (failedQuestionKeys.length) {
+                  const failedKeySet = new Set(failedQuestionKeys);
+                  activeEntries = activeEntries.filter((entry) => !failedKeySet.has(entry.questionKey));
+                  failedQuestionKeys.forEach((questionKey) => currentIds.delete(questionKey));
+                  changed = true;
+                }
+              }
+            }
+
+            if (!changed) {
               if (strict) {
                 throw error;
               }
@@ -2018,10 +2049,16 @@ function ReadingTestClient({
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
         <div className="relative flex min-h-16 flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-4 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
-              <BookOpen className="size-4.5" aria-hidden="true" />
-            </span>
-            <p className="truncate text-base font-semibold sm:text-lg">EnglishLabs</p>
+            <Link
+              href={`/${locale}`}
+              aria-label="Go to home"
+              className="flex min-w-0 items-center gap-3 rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
+                <BookOpen className="size-4.5" aria-hidden="true" />
+              </span>
+              <p className="truncate text-base font-semibold sm:text-lg">EnglishLabs</p>
+            </Link>
             <Separator orientation="vertical" className="hidden h-6 md:block" />
             <p className="hidden truncate text-sm text-muted-foreground md:block">{t("title")}</p>
           </div>
@@ -2600,6 +2637,12 @@ function ReadingTestClient({
                                                           aria-label={`Question ${targetNumber}`}
                                                           value={typeof targetValue === "string" ? targetValue : ""}
                                                           disabled={reviewMode}
+                                                          onPointerDown={(event) => {
+                                                            event.stopPropagation();
+                                                          }}
+                                                          onClick={(event) => {
+                                                            event.stopPropagation();
+                                                          }}
                                                           onFocus={() => {
                                                             if (activeQuestionNumber !== targetNumber) {
                                                               setActiveQuestionNumber(targetNumber);
