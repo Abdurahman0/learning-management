@@ -108,6 +108,13 @@ export function ReadingAnalysisPageClient() {
     if (!gradeableQuestions.length) return null;
     return gradeTest(gradeableQuestions, gradingAnswers);
   }, [gradeableQuestions, gradingAnswers]);
+  const reviewStartQuestionId = useMemo(
+    () =>
+      gradingQuestions
+        .filter((question) => question.passageId === activePassageId)
+        .sort((left, right) => left.number - right.number)[0]?.id ?? null,
+    [activePassageId, gradingQuestions]
+  );
 
   useEffect(() => {
     if (!highlightedParagraphId) return;
@@ -199,6 +206,8 @@ export function ReadingAnalysisPageClient() {
           answers={gradingAnswers}
           grading={grading}
           expanded={expanded}
+          scrollResetKey={activePassageId}
+          scrollToQuestionId={reviewStartQuestionId ?? undefined}
           onToggleExplanation={(questionId) => {
             setExpanded((previous) => {
               const next = new Set(previous);

@@ -216,6 +216,13 @@ export default function ListeningReviewPage() {
   const resolvedActiveSectionId = reviewSections.some((section) => section.sectionId === activeSectionId)
     ? activeSectionId
     : (reviewSections[0]?.sectionId ?? "s1");
+  const reviewStartQuestionId = useMemo(
+    () =>
+      (backendReview?.questions ?? [])
+        .filter((question) => question.sectionId === resolvedActiveSectionId)
+        .sort((left, right) => left.number - right.number)[0]?.id ?? null,
+    [backendReview?.questions, resolvedActiveSectionId]
+  );
 
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
@@ -279,6 +286,7 @@ export default function ListeningReviewPage() {
             grading={grading}
             expanded={expanded}
             scrollResetKey={resolvedActiveSectionId}
+            scrollToQuestionId={reviewStartQuestionId ?? undefined}
             onToggleExplanation={(questionId) => {
               setExpanded((previous) => {
                 const next = new Set(previous);

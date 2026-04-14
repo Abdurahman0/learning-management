@@ -1198,6 +1198,13 @@ function ListeningTestClient({
   const resolvedActiveSectionId = test.sections.some((section) => section.id === activeSectionId)
     ? activeSectionId
     : (test.sections[0]?.id ?? "s1");
+  const reviewStartQuestionId = useMemo(
+    () =>
+      flatQuestions
+        .filter((question) => question.sectionId === resolvedActiveSectionId)
+        .sort((left, right) => left.number - right.number)[0]?.id ?? null,
+    [flatQuestions, resolvedActiveSectionId]
+  );
   const effectiveAudioDurationSec = Math.max(
     0,
     Math.round(audioDurationSec > 0 ? audioDurationSec : activeSection.audioMeta.durationSec)
@@ -2808,6 +2815,7 @@ function ListeningTestClient({
                   expanded={expandedReviewQuestions}
                   showTopQuestionNavigator={false}
                   scrollResetKey={resolvedActiveSectionId}
+                  scrollToQuestionId={reviewStartQuestionId ?? undefined}
                   onToggleExplanation={(questionId) => {
                     setExpandedReviewQuestions((previous) => {
                       const next = new Set(previous);

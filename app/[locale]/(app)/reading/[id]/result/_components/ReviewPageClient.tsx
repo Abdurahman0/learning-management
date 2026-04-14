@@ -76,6 +76,13 @@ export function ReviewPageClient() {
   }, [test]);
 
   const reviewData = useMemo(() => getReadingReviewData(testId), [testId]);
+  const reviewStartQuestionId = useMemo(
+    () =>
+      test?.questions
+        .filter((question) => question.passageId === activePassageId)
+        .sort((left, right) => left.number - right.number)[0]?.id ?? null,
+    [activePassageId, test]
+  );
 
   const accuracyByType = useMemo(() => {
     if (!test || !grading) return [] as QuestionTypePerformanceItem[];
@@ -261,6 +268,7 @@ export function ReviewPageClient() {
           grading={grading}
           expanded={expanded}
           scrollResetKey={activePassageId}
+          scrollToQuestionId={reviewStartQuestionId ?? undefined}
           onToggleExplanation={(questionId) => {
             setExpanded((previous) => {
               const next = new Set(previous);

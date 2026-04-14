@@ -19,6 +19,7 @@ type ReviewQuestionsPanelProps = {
   onToggleExplanation: (questionId: string) => void;
   onJumpEvidence: (questionId: string) => void;
   scrollResetKey?: string;
+  scrollToQuestionId?: string;
   showTopQuestionNavigator?: boolean;
 };
 
@@ -74,6 +75,7 @@ export function ReviewQuestionsPanel({
   onToggleExplanation,
   onJumpEvidence,
   scrollResetKey,
+  scrollToQuestionId,
   showTopQuestionNavigator = true,
 }: ReviewQuestionsPanelProps) {
   const t = useTranslations("readingResult");
@@ -82,8 +84,17 @@ export function ReviewQuestionsPanel({
 
   useEffect(() => {
     if (!scrollResetKey) return;
-    questionsContainerRef.current?.scrollTo({top: 0, behavior: "smooth"});
-  }, [scrollResetKey]);
+    const container = questionsContainerRef.current;
+    if (!container) return;
+    if (scrollToQuestionId) {
+      const target = container.querySelector<HTMLElement>(`#review-question-${scrollToQuestionId}`);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+    }
+    container.scrollTo({top: 0, behavior: "smooth"});
+  }, [scrollResetKey, scrollToQuestionId]);
 
   return (
     <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none">

@@ -1143,6 +1143,13 @@ function ReadingTestClient({
     () => backendReviewData?.questions ?? test.questions,
     [backendReviewData, test.questions]
   );
+  const reviewStartQuestionId = useMemo(
+    () =>
+      reviewQuestions
+        .filter((question) => question.passageId === activePassageId)
+        .sort((left, right) => left.number - right.number)[0]?.id ?? null,
+    [activePassageId, reviewQuestions]
+  );
 
   const reviewAnswers = useMemo(
     () => (backendReviewData ? normalizeBackendReviewAnswers(backendReviewData.answers) : answers),
@@ -2305,6 +2312,8 @@ function ReadingTestClient({
               grading={grading}
               expanded={expandedExplanations}
               showTopQuestionNavigator={false}
+              scrollResetKey={activePassageId}
+              scrollToQuestionId={reviewStartQuestionId ?? undefined}
               onToggleExplanation={(questionId) => {
                 setExpandedExplanations((prev) => {
                   const next = new Set(prev);
