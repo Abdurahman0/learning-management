@@ -2437,13 +2437,47 @@ function ListeningTestClient({
 
           return (
             <div key={`review-block-${questionNumber}`} className="rounded-md border border-border/70 bg-background/60 p-2.5">
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-                  {t.has("questionPosition")
-                    ? t("questionPosition", { current: questionNumber, total: test.totalQuestions })
-                    : `Question ${questionNumber}`}
-                </p>
-                <span className={cn("text-xs font-semibold", statusClass)}>{statusText}</span>
+              <div className="mb-1 flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                    {t.has("questionPosition")
+                      ? t("questionPosition", { current: questionNumber, total: test.totalQuestions })
+                      : `Question ${questionNumber}`}
+                  </p>
+                  <span className={cn("text-xs font-semibold", statusClass)}>{statusText}</span>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 rounded-md px-2 text-[11px]"
+                    onClick={() => {
+                      setExpandedReviewQuestions((previous) => {
+                        const next = new Set(previous);
+                        if (next.has(questionId)) {
+                          next.delete(questionId);
+                        } else {
+                          next.add(questionId);
+                        }
+                        return next;
+                      });
+                    }}
+                  >
+                    {expandedReviewQuestions.has(questionId)
+                      ? tListeningResult("hideExplanation")
+                      : tListeningResult("explain")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 rounded-md border-border/70 px-2 text-[11px]"
+                    onClick={() => handleJumpEvidenceFromReview(questionId)}
+                  >
+                    {tListeningResult("jumpToEvidence")}
+                  </Button>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 {tListeningResult("yourAnswer")}:{" "}
@@ -2453,7 +2487,7 @@ function ListeningTestClient({
                 {tListeningResult("correctAnswer")}:{" "}
                 <span className="font-medium text-emerald-700 dark:text-emerald-200">{correctAnswer || tListeningResult("notAvailable")}</span>
               </p>
-              {answerMeta?.explanation ? (
+              {expandedReviewQuestions.has(questionId) && answerMeta?.explanation ? (
                 <p className="mt-1 text-xs text-muted-foreground">
                   {tListeningResult("explain")}:{" "}
                   <span className="text-foreground/85">{answerMeta.explanation}</span>

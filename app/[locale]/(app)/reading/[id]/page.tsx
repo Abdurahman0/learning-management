@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { BookOpen, Bookmark, BookmarkCheck, Clock3, Grid2x2, HelpCircle, Maximize2, Menu, Minimize2, MoveLeft, MoveRight, Play, RotateCcw, Square, User } from "lucide-react";
+import { BookOpen, Bookmark, BookmarkCheck, Clock3, Grid2x2, Maximize2, Menu, Minimize2, MoveLeft, MoveRight, Play, RotateCcw, Square, User } from "lucide-react";
 import { LoadingModal } from "@/components/ui/loading-modal";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -1724,6 +1724,24 @@ function ReadingTestClient({
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
+  const jumpToEvidenceFromReview = useCallback(
+    (questionId: string) => {
+      const question = reviewQuestions.find((item) => item.id === questionId);
+      const evidence = question?.evidenceSpans[0];
+      if (!evidence) return;
+
+      const paragraphId = `para-${evidence.passageId}-${evidence.paragraphIndex}`;
+      pendingParagraphRef.current = paragraphId;
+      if (evidence.passageId !== activePassageId) {
+        setActivePassageId(evidence.passageId);
+        return;
+      }
+      const target = document.getElementById(paragraphId);
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    },
+    [activePassageId, reviewQuestions]
+  );
+
   const finishTest = useCallback(async () => {
     if (!attemptId || isSubmittingResult) return;
     setIsSubmittingResult(true);
@@ -2404,9 +2422,31 @@ function ReadingTestClient({
                                   </Badge>
                                 ) : null}
                                 {reviewMode ? (
-                                  <span className="shrink-0 text-lg leading-none" aria-hidden="true">
-                                    {!answered ? "⏺" : isCorrect ? "✅" : "❌"}
-                                  </span>
+                                  <div className="flex shrink-0 items-start gap-1.5">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => openExplanation(question)}
+                                      className="h-7 rounded-md px-2 text-[11px]"
+                                    >
+                                      {expandedExplanations.has(question.id)
+                                        ? (t.has("hideExplanation") ? t("hideExplanation") : "Hide explanation")
+                                        : (t.has("explain") ? t("explain") : "Explain")}
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => jumpToEvidenceFromReview(question.id)}
+                                      className="h-7 rounded-md border-border/70 px-2 text-[11px]"
+                                    >
+                                      {t.has("jumpToEvidence") ? t("jumpToEvidence") : "Jump to evidence"}
+                                    </Button>
+                                    <span className="shrink-0 text-xs font-semibold leading-none text-muted-foreground" aria-hidden="true">
+                                      {!answered ? "Skipped" : isCorrect ? "Correct" : "Incorrect"}
+                                    </span>
+                                  </div>
                                 ) : null}
                               </div>
 
@@ -2690,10 +2730,6 @@ function ReadingTestClient({
 
                               {reviewMode ? (
                                 <div className="mt-3 space-y-2">
-                                  <Button type="button" size="sm" variant="ghost" onClick={() => openExplanation(question)}>
-                                    <HelpCircle className="size-4" />
-                                    {t.has("explain") ? t("explain") : "Explain"}
-                                  </Button>
                                   {expandedExplanations.has(question.id) ? (
                                     <div className="test-soft-surface rounded-md border border-border/80 bg-muted/25 p-3 text-sm">
                                       <p className="text-foreground/90">{question.explanation}</p>
@@ -3107,3 +3143,4 @@ function ReadingTestClient({
     </section>
   );
 }
+
