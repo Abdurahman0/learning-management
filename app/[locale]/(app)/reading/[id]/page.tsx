@@ -1715,6 +1715,8 @@ function ReadingTestClient({
   const currentQuestion = questionsByNumber.get(activeQuestionNumber);
   const answeredCount = answeredNumbers.size;
   const unansweredCount = test.totalQuestions - answeredCount;
+  const reviewCorrectCount = grading.correctCount;
+  const reviewTotalCount = grading.total;
   const timeSpent = test.durationMinutes * 60 - remainingSeconds;
   const isRealMode = attemptMode === "real";
   const realModeLocked = isRealMode && !reviewMode && realModeInterruption !== null;
@@ -2336,6 +2338,13 @@ function ReadingTestClient({
             >
               {t.has("clearHighlights") ? t("clearHighlights") : "Clear highlights"}
             </Button>
+            {reviewMode ? (
+              <Badge variant="secondary" className="h-9 rounded-xl border border-emerald-300/60 bg-emerald-100/80 px-3 text-xs font-semibold text-emerald-900 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-100 sm:h-10 sm:text-sm">
+                {t.has("correctOutOfTotal")
+                  ? t("correctOutOfTotal", { correct: reviewCorrectCount, total: reviewTotalCount })
+                  : `Correct: ${reviewCorrectCount}/${reviewTotalCount}`}
+              </Badge>
+            ) : null}
             {reviewMode ? (
               <Button
                 type="button"
@@ -3088,36 +3097,36 @@ function ReadingTestClient({
         </div>
       </main>
 
-      {!reviewMode ? (
-        <div className="border-t border-border/75 bg-background/95 px-3 backdrop-blur sm:px-4 lg:px-5">
-          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 pt-1.5">
-            <Button
-              type="button"
-              variant="ghost"
-              aria-label={t("previous")}
-              disabled={activeQuestionNumber <= 1}
-              onClick={() => goToQuestion(Math.max(1, activeQuestionNumber - 1))}
-              className="h-8 rounded-lg px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
-            >
-              <MoveLeft className="size-4" />
-              {t("previous")}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              aria-label={t("next")}
-              disabled={activeQuestionNumber >= test.totalQuestions}
-              onClick={() => goToQuestion(Math.min(test.totalQuestions, activeQuestionNumber + 1))}
-              className="h-8 rounded-lg px-2.5 text-xs text-blue-700 hover:text-blue-700 dark:text-blue-300 sm:h-9 sm:px-3 sm:text-sm"
-            >
-              {t("next")}
-              <MoveRight className="size-4" />
-            </Button>
+      <div className="border-t border-border/75 bg-background/95 px-3 backdrop-blur sm:px-4 lg:px-5">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 pt-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={t("previous")}
+            disabled={activeQuestionNumber <= 1}
+            onClick={() => goToQuestion(Math.max(1, activeQuestionNumber - 1))}
+            className="h-8 rounded-lg px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
+          >
+            <MoveLeft className="size-4" />
+            {t("previous")}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            aria-label={t("next")}
+            disabled={activeQuestionNumber >= test.totalQuestions}
+            onClick={() => goToQuestion(Math.min(test.totalQuestions, activeQuestionNumber + 1))}
+            className="h-8 rounded-lg px-2.5 text-xs text-blue-700 hover:text-blue-700 dark:text-blue-300 sm:h-9 sm:px-3 sm:text-sm"
+          >
+            {t("next")}
+            <MoveRight className="size-4" />
+          </Button>
 
-            <p className="ml-auto text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase sm:text-xs">
-              Question {activeQuestionNumber} / {test.totalQuestions}
-            </p>
+          <p className="ml-auto text-[11px] font-semibold tracking-[0.12em] text-muted-foreground uppercase sm:text-xs">
+            Question {activeQuestionNumber} / {test.totalQuestions}
+          </p>
 
+          {!reviewMode ? (
             <Toggle
               aria-label={t("markForReview")}
               variant="outline"
@@ -3141,95 +3150,95 @@ function ReadingTestClient({
                 ? (t.has("unmark") ? t("unmark") : "Unmark")
                 : t("markForReview")}
             </Toggle>
+          ) : null}
 
-            <Button
-              type="button"
-              variant="secondary"
-              aria-label={t("questionPalette")}
-              onClick={() => setPaletteOpen(true)}
-              className="h-8 rounded-lg px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm lg:hidden"
-            >
-              <Grid2x2 className="size-4" />
-              {t("questionPalette")}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            aria-label={t("questionPalette")}
+            onClick={() => setPaletteOpen(true)}
+            className="h-8 rounded-lg px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm lg:hidden"
+          >
+            <Grid2x2 className="size-4" />
+            {t("questionPalette")}
+          </Button>
+        </div>
 
-          <div className="mt-1.5 min-w-0 overflow-x-auto [scrollbar-width:thin]">
-            <div className="inline-grid min-w-max grid-flow-col auto-cols-[minmax(220px,1fr)] gap-1.5 pr-1 lg:grid-flow-row lg:auto-cols-auto lg:grid-cols-3 lg:min-w-0 lg:w-full">
-              {passagePaletteSections.map((section) => {
-                const isActivePassage = section.passageId === activePassageId;
-                return (
-                  <div
-                    key={`palette-${section.passageId}`}
-                    className={cn(
-                      "rounded-xl border p-1.5 transition-colors",
-                      isActivePassage
-                        ? "border-blue-400/60 bg-blue-500/10"
-                        : "cursor-pointer border-border/70 bg-background/70 hover:border-blue-300/50 hover:bg-muted/40"
-                    )}
-                    onClick={() => {
-                      if (!isActivePassage) {
-                        handlePassageChange(section.passageId);
-                      }
-                    }}
-                  >
-                    {isActivePassage ? (
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
-                          <div className="flex w-max gap-1 pr-1">
-                            {section.numbers.map((number) => {
-                              const question = questionsByNumber.get(number);
-                              const answered = question ? isAnswered(answers[question.id]) : false;
-                              const isMarked = question ? marked.has(question.id) : false;
-                              const isCurrent = number === activeQuestionNumber;
-                              return (
-                                <Button
-                                  key={`${activePassageId}-${number}`}
-                                  type="button"
-                                  variant="outline"
-                                  aria-label={t("goToQuestion", { number })}
-                                  className={cn(
-                                    "relative h-5 min-w-5 rounded-md border px-1 text-[10px] font-semibold shadow-none",
-                                    isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
-                                    !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
-                                    !isCurrent && !answered && "border-border bg-background text-foreground/85",
-                                    isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
-                                  )}
-                                  onClick={() => goToQuestion(number)}
-                                >
-                                  {number}
-                                  {isMarked ? <span className="absolute right-1 top-1 size-1 rounded-full bg-amber-500" aria-hidden="true" /> : null}
-                                </Button>
-                              );
-                            })}
-                          </div>
+        <div className="mt-1.5 min-w-0 overflow-x-auto [scrollbar-width:thin]">
+          <div className="inline-grid min-w-max grid-flow-col auto-cols-[minmax(220px,1fr)] gap-1.5 pr-1 lg:grid-flow-row lg:auto-cols-auto lg:grid-cols-3 lg:min-w-0 lg:w-full">
+            {passagePaletteSections.map((section) => {
+              const isActivePassage = section.passageId === activePassageId;
+              return (
+                <div
+                  key={`palette-${section.passageId}`}
+                  className={cn(
+                    "rounded-xl border p-1.5 transition-colors",
+                    isActivePassage
+                      ? "border-blue-400/60 bg-blue-500/10"
+                      : "cursor-pointer border-border/70 bg-background/70 hover:border-blue-300/50 hover:bg-muted/40"
+                  )}
+                  onClick={() => {
+                    if (!isActivePassage) {
+                      handlePassageChange(section.passageId);
+                    }
+                  }}
+                >
+                  {isActivePassage ? (
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <div className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:thin]">
+                        <div className="flex w-max gap-1 pr-1">
+                          {section.numbers.map((number) => {
+                            const question = questionsByNumber.get(number);
+                            const answered = question ? isAnswered(answers[question.id]) : false;
+                            const isMarked = question ? marked.has(question.id) : false;
+                            const isCurrent = number === activeQuestionNumber;
+                            return (
+                              <Button
+                                key={`${activePassageId}-${number}`}
+                                type="button"
+                                variant="outline"
+                                aria-label={t("goToQuestion", { number })}
+                                className={cn(
+                                  "relative h-5 min-w-5 rounded-md border px-1 text-[10px] font-semibold shadow-none",
+                                  isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                                  !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
+                                  !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                                  isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
+                                )}
+                                onClick={() => goToQuestion(number)}
+                              >
+                                {number}
+                                {isMarked ? <span className="absolute right-1 top-1 size-1 rounded-full bg-amber-500" aria-hidden="true" /> : null}
+                              </Button>
+                            );
+                          })}
                         </div>
-                        <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
-                          {section.answered}/{section.numbers.length}
-                        </span>
                       </div>
-                    ) : null}
-                    {!isActivePassage ? (
-                      <button
-                        type="button"
-                        className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
-                        onClick={() => handlePassageChange(section.passageId)}
-                      >
-                        <span className="text-xs font-semibold sm:text-sm">
-                          {t("passageLabel", { index: section.index })}
-                        </span>
-                        <span className="text-[11px] font-medium text-muted-foreground">
-                          {section.answered}/{section.numbers.length}
-                        </span>
-                      </button>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
+                      <span className="shrink-0 text-[11px] font-medium text-muted-foreground">
+                        {section.answered}/{section.numbers.length}
+                      </span>
+                    </div>
+                  ) : null}
+                  {!isActivePassage ? (
+                    <button
+                      type="button"
+                      className="flex w-full cursor-pointer items-center justify-between gap-2 text-left"
+                      onClick={() => handlePassageChange(section.passageId)}
+                    >
+                      <span className="text-xs font-semibold sm:text-sm">
+                        {t("passageLabel", { index: section.index })}
+                      </span>
+                      <span className="text-[11px] font-medium text-muted-foreground">
+                        {section.answered}/{section.numbers.length}
+                      </span>
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         </div>
-      ) : null}
+      </div>
 
       <Sheet open={paletteOpen} onOpenChange={setPaletteOpen}>
         <SheetContent side={isCompact ? "bottom" : "right"} className="p-0 sm:max-w-md">
