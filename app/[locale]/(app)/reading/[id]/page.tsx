@@ -1150,13 +1150,6 @@ function ReadingTestClient({
     () => new Map(reviewQuestions.map((question) => [question.number, question])),
     [reviewQuestions]
   );
-  const gradingByNumber = useMemo(() => {
-    const map = new Map<number, (typeof grading.byQuestion)[string]>();
-    reviewQuestions.forEach((question) => {
-      map.set(question.number, grading.byQuestion[question.id]);
-    });
-    return map;
-  }, [grading.byQuestion, reviewQuestions]);
   const reviewAnswers = useMemo(
     () => (backendReviewData ? normalizeBackendReviewAnswers(backendReviewData.answers) : answers),
     [answers, backendReviewData]
@@ -1175,6 +1168,13 @@ function ReadingTestClient({
   );
 
   const grading = useMemo(() => gradeTest(gradeableQuestions, reviewAnswers), [gradeableQuestions, reviewAnswers]);
+  const gradingByNumber = useMemo(() => {
+    const map = new Map<number, (typeof grading.byQuestion)[string]>();
+    reviewQuestions.forEach((question) => {
+      map.set(question.number, grading.byQuestion[question.id]);
+    });
+    return map;
+  }, [grading.byQuestion, reviewQuestions]);
 
   const highlightsForPassage = useMemo(() => {
     if (!reviewMode) return [] as HighlightItem[];
