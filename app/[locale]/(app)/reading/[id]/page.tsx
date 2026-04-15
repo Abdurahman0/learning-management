@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { type CSSProperties, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type CSSProperties, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { BookOpen, Bookmark, BookmarkCheck, Clock3, Grid2x2, Maximize2, Menu, Minimize2, MoveLeft, MoveRight, Play, RotateCcw, Square, User } from "lucide-react";
 import { LoadingModal } from "@/components/ui/loading-modal";
@@ -50,8 +50,10 @@ import { StudentApiError } from "@/src/services/student/types";
 import type { StudentAttemptDetail, StudentAttemptQuestion, StudentAttemptQuestionGroup, StudentAttemptReadingPassage, StudentTestRecord } from "@/src/services/student/types";
 
 const DEFAULT_SPLIT = 50;
+const HEADING_DND_MIME = "application/x-reading-heading";
 
 type AnswerValue = string | string[];
+type MatchingHeadingsQuestion = Extract<ReadingQuestion, { type: "matchingHeadings" }>;
 
 function formatTime(seconds: number) {
   const safe = Math.max(0, seconds);
@@ -112,12 +114,136 @@ function toBackendAnswerPayload(value: string | string[] | null): {answer: strin
   return null;
 }
 
+function extractParagraphHeaderLetter(paragraph: string) {
+  const trimmed = paragraph.trim();
+  if (!trimmed) return null;
+
+  const boldOnly = trimmed.match(/^\*\*([A-Z])\*\*$/);
+  if (boldOnly) return boldOnly[1];
+
+  const plainOnly = trimmed.match(/^([A-Z])$/);
+  if (plainOnly) return plainOnly[1];
+
+  const boldPrefix = trimmed.match(/^\*\*([A-Z])\*\*\s+/);
+  if (boldPrefix) return boldPrefix[1];
+
+  const plainPrefix = trimmed.match(/^([A-Z])\s+/);
+  if (plainPrefix) return plainPrefix[1];
+
+  return null;
+}
+
+function extractMatchingHeadingTargetLetter(text: string) {
+  const normalized = text.trim();
+  if (!normalized) return null;
+  const paragraphMatch = normalized.match(/paragraph\s+([A-Z])/i);
+  if (paragraphMatch) return paragraphMatch[1].toUpperCase();
+  const directMatch = normalized.match(/\b([A-Z])\b/);
+  return directMatch ? directMatch[1].toUpperCase() : null;
+}
+
+function parseMatchingHeadingsFromInstruction(instruction?: string | null) {
+  if (!instruction) return new Map<string, string>();
+  const map = new Map<string, string>();
+  const lines = instruction
+    .split("\n")
+    .map((line) => line.replace(/\*\*/g, "").trim())
+    .filter(Boolean);
+
+  for (const line of lines) {
+    const match = line.match(/^([ivxlcdm]+)\s+(.+)$/i);
+    if (!match) continue;
+    const key = match[1].toLowerCase();
+    const text = match[2].trim();
+    if (!text || map.has(key)) continue;
+    map.set(key, text);
+  }
+  return map;
+}
+
+function parseMatchingHeadingOption(rawOption: string) {
+  const cleaned = rawOption.replace(/\*\*/g, "").replace(/\*/g, "").trim();
+  if (!cleaned) return { key: "", label: "" };
+  const match = cleaned.match(/^([ivxlcdm]+)\s+(.+)$/i);
+  if (!match) {
+    return { key: cleaned.toLowerCase(), label: "" };
+  }
+  return {
+    key: match[1].toLowerCase(),
+    label: match[2].trim(),
+  };
+}
+
 function normalizeTfngAnswerForBackend(value: string) {
   const normalized = value.trim().toUpperCase().replace(/\s+/g, "_");
   if (normalized === "TRUE") return "TRUE";
   if (normalized === "FALSE") return "FALSE";
   if (normalized === "NOT_GIVEN" || normalized === "NOTGIVEN") return "NOT_GIVEN";
   return value.trim();
+}
+
+type MatchingHeadingsBankProps = {
+  options: Array<{ value: string; label: string }>;
+  selectedOption: string | null;
+  draggingOption: string | null;
+  disabled: boolean;
+  onSelectOption: (option: string) => void;
+  onDragStartOption: (event: ReactDragEvent<HTMLButtonElement>, option: string) => void;
+  onDragEndOption: () => void;
+  hintText: string;
+};
+
+function MatchingHeadingsBank({
+  options,
+  selectedOption,
+  draggingOption,
+  disabled,
+  onSelectOption,
+  onDragStartOption,
+  onDragEndOption,
+  hintText,
+}: MatchingHeadingsBankProps) {
+  if (!options.length) return null;
+
+  return (
+    <div className="rounded-xl border border-border/70 bg-card/80 p-3">
+      <p className="text-sm font-semibold text-foreground">List of Headings</p>
+      <p className="mt-1 text-xs text-muted-foreground">{hintText}</p>
+      <div className="mt-3 space-y-1.5">
+        {options.map((option) => {
+          const isSelected = selectedOption === option.value;
+          const isDragging = draggingOption === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              draggable={!disabled}
+              onClick={() => {
+                if (disabled) return;
+                onSelectOption(option.value);
+              }}
+              onDragStart={(event) => {
+                if (disabled) return;
+                onDragStartOption(event, option.value);
+              }}
+              onDragEnd={onDragEndOption}
+              className={cn(
+                "flex w-full items-start gap-2 rounded-md border px-2.5 py-2 text-left text-sm transition-colors",
+                isSelected
+                  ? "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                  : "border-border/70 bg-background/70 text-foreground/90 hover:border-blue-300/60",
+                isDragging && "opacity-70",
+                disabled && "cursor-not-allowed opacity-70"
+              )}
+            >
+              <span className="mt-0.5 w-9 shrink-0 font-semibold text-muted-foreground">{option.value}</span>
+              <span className="min-w-0 flex-1 text-foreground/95">{option.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 type HighlightItem = {
@@ -901,6 +1027,8 @@ function ReadingTestClient({
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<"passage" | "questions">("passage");
+  const [selectedHeadingOption, setSelectedHeadingOption] = useState<string | null>(null);
+  const [draggingHeadingOption, setDraggingHeadingOption] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(test.durationMinutes * 60);
   const [timerRunning, setTimerRunning] = useState(false);
   const [attemptMode, setAttemptMode] = useState<AttemptMode | null>(null);
@@ -982,6 +1110,8 @@ function ReadingTestClient({
     setMarked(new Set());
     setPaletteOpen(false);
     setMobilePanel("passage");
+    setSelectedHeadingOption(null);
+    setDraggingHeadingOption(null);
     setRemainingSeconds(test.durationMinutes * 60);
     setTimerRunning(nextMode === "real");
     setHighlights([]);
@@ -1137,6 +1267,22 @@ function ReadingTestClient({
     }
     return groups;
   }, [passageQuestions]);
+
+  const passageMatchingHeadingQuestions = useMemo(
+    () => passageQuestions.filter((question): question is MatchingHeadingsQuestion => question.type === "matchingHeadings"),
+    [passageQuestions]
+  );
+
+  const matchingHeadingQuestionByLetter = useMemo(() => {
+    const map = new Map<string, MatchingHeadingsQuestion>();
+    passageMatchingHeadingQuestions
+      .forEach((question) => {
+        const letter = extractMatchingHeadingTargetLetter(question.target ?? question.prompt);
+        if (!letter || map.has(letter)) return;
+        map.set(letter, question);
+      });
+    return map;
+  }, [passageMatchingHeadingQuestions]);
 
   const reviewQuestions = useMemo(
     () => backendReviewData?.questions ?? test.questions,
@@ -1577,6 +1723,7 @@ function ReadingTestClient({
     return paragraphs.map((paragraph, index) => ({
       paragraph,
       index,
+      headerLetter: extractParagraphHeaderLetter(paragraph),
       start: paragraphs
         .slice(0, index)
         .reduce((total, item) => total + item.length + 2, 0),
@@ -1700,6 +1847,17 @@ function ReadingTestClient({
     setActivePassageId(target.passageId);
     setActiveQuestionNumber(number);
   };
+
+  const assignMatchingHeading = useCallback((questionId: string, headingValue: string) => {
+    const normalized = headingValue.trim();
+    if (!normalized) return;
+    setAnswers((prev) => ({ ...prev, [questionId]: normalized }));
+    setSelectedHeadingOption(null);
+  }, []);
+
+  const clearMatchingHeading = useCallback((questionId: string) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: "" }));
+  }, []);
 
   const handlePassageChange = (value: string) => {
     const nextPassage = value as "p1" | "p2" | "p3";
@@ -2244,7 +2402,7 @@ function ReadingTestClient({
                     }
                   />
                 </h2>
-                {passageParagraphs.map(({ paragraph, index, start: paragraphStart }) => {
+                {passageParagraphs.map(({ paragraph, index, start: paragraphStart, headerLetter }) => {
                   const paragraphId = `para-${activePassageId}-${index}`;
                   const paragraphHighlights = highlightsForPassage.filter((span) => span.paragraphIndex === index);
                   const matches = findParagraphMatches(paragraph, paragraphHighlights);
@@ -2254,32 +2412,116 @@ function ReadingTestClient({
                     end: match.end,
                     questionNumber: match.questionNumber,
                   }));
+                  const headingQuestion = headerLetter ? matchingHeadingQuestionByLetter.get(headerLetter) : null;
+                  const headingAnswerValue = headingQuestion ? answers[headingQuestion.id] : undefined;
+                  const headingAnswer = typeof headingAnswerValue === "string" ? headingAnswerValue : "";
+                  const headingOptions = headingQuestion
+                    ? headingQuestion.headingOptions
+                        .map((option) => parseMatchingHeadingOption(option))
+                        .filter((option) => Boolean(option.key))
+                    : [];
+                  const headingOptionLabelByKey = new Map<string, string>();
+                  const headingInstructionLabels = parseMatchingHeadingsFromInstruction(headingQuestion?.groupInstruction);
+                  headingOptions.forEach((option) => {
+                    const labelFromInstruction = headingInstructionLabels.get(option.key);
+                    headingOptionLabelByKey.set(option.key, labelFromInstruction ?? option.label ?? option.key);
+                  });
+                  const headingAnswerKey = headingAnswer ? parseMatchingHeadingOption(headingAnswer).key || headingAnswer : "";
+                  const headingAnswerLabel = headingAnswerKey ? headingOptionLabelByKey.get(headingAnswerKey) ?? "" : "";
+                  const headingAnswerDisplay = headingAnswerKey
+                    ? headingAnswerLabel && headingAnswerLabel !== headingAnswerKey
+                      ? `${headingAnswerKey} - ${headingAnswerLabel}`
+                      : headingAnswerKey
+                    : "";
+                  const headingOptionKeys = headingOptions.map((option) => option.key);
 
                   return (
-                    <p id={paragraphId} key={paragraphId} className="test-body-copy wrap-break-word text-foreground/90">
-                      <HighlightableText
-                        text={paragraph}
-                        enableMarkdownBold
-                        userHighlights={getPassageLocalHighlights(paragraphStart, paragraph.length)}
-                        notesStorageKey={`reading:${test.id}:notes`}
-                        noteScopeKey={`passage:${activePassageId}:paragraph:${index}`}
-                        answerHighlights={reviewMode ? answerLocalHighlights : []}
-                        interactive={!reviewMode}
-                        showAnswerBadges={reviewMode}
-                        markLabel={t.has("markText") ? t("markText") : "Mark"}
-                        unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
-                        onToggle={({ start, end, color, action }) =>
-                          toggleHighlight({
-                            scope: "passage",
-                            passageId: activePassageId,
-                            start: paragraphStart + start,
-                            end: paragraphStart + end,
-                            color,
-                            action,
-                          })
-                        }
-                      />
-                    </p>
+                    <div id={paragraphId} key={paragraphId} className="space-y-2">
+                      {headingQuestion && headerLetter ? (
+                        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/15 px-2.5 py-2">
+                          <Badge variant="outline" className="rounded-md px-2 py-0.5 text-[11px] font-semibold">
+                            {headerLetter}
+                          </Badge>
+                          <div
+                            role="button"
+                            tabIndex={reviewMode ? -1 : 0}
+                            aria-label={`Paragraph ${headerLetter} heading drop zone`}
+                            onClick={() => {
+                              if (reviewMode || !selectedHeadingOption) return;
+                              if (!headingOptionKeys.includes(selectedHeadingOption)) return;
+                              assignMatchingHeading(headingQuestion.id, selectedHeadingOption);
+                            }}
+                            onKeyDown={(event) => {
+                              if (reviewMode || !selectedHeadingOption) return;
+                              if (event.key !== "Enter" && event.key !== " ") return;
+                              event.preventDefault();
+                              if (!headingOptionKeys.includes(selectedHeadingOption)) return;
+                              assignMatchingHeading(headingQuestion.id, selectedHeadingOption);
+                            }}
+                            onDragOver={(event) => {
+                              if (reviewMode) return;
+                              event.preventDefault();
+                              event.dataTransfer.dropEffect = "move";
+                            }}
+                            onDrop={(event) => {
+                              if (reviewMode) return;
+                              event.preventDefault();
+                              const raw =
+                                event.dataTransfer.getData(HEADING_DND_MIME)
+                                || event.dataTransfer.getData("text/plain");
+                              const dropped = raw.trim();
+                              if (!dropped || !headingOptionKeys.includes(dropped)) return;
+                              assignMatchingHeading(headingQuestion.id, dropped);
+                            }}
+                            className={cn(
+                              "min-w-36 flex-1 rounded-md border-2 border-dashed px-2.5 py-1.5 text-xs transition-colors",
+                              headingAnswer
+                                ? "border-blue-400/80 bg-blue-50/50 text-foreground dark:bg-blue-900/20"
+                                : "border-border/80 bg-background/80 text-muted-foreground",
+                              !reviewMode && "cursor-pointer hover:border-blue-300/70"
+                            )}
+                          >
+                            {headingAnswerDisplay || (t.has("selectHeading") ? t("selectHeading") : "Select heading")}
+                          </div>
+                          {headingAnswer && !reviewMode ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => clearMatchingHeading(headingQuestion.id)}
+                              className="h-6 rounded-md px-2 text-[11px]"
+                            >
+                              {t.has("clearSelection") ? t("clearSelection") : "Clear"}
+                            </Button>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      <p className="test-body-copy wrap-break-word text-foreground/90">
+                        <HighlightableText
+                          text={paragraph}
+                          enableMarkdownBold
+                          userHighlights={getPassageLocalHighlights(paragraphStart, paragraph.length)}
+                          notesStorageKey={`reading:${test.id}:notes`}
+                          noteScopeKey={`passage:${activePassageId}:paragraph:${index}`}
+                          answerHighlights={reviewMode ? answerLocalHighlights : []}
+                          interactive={!reviewMode}
+                          showAnswerBadges={reviewMode}
+                          markLabel={t.has("markText") ? t("markText") : "Mark"}
+                          unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
+                          onToggle={({ start, end, color, action }) =>
+                            toggleHighlight({
+                              scope: "passage",
+                              passageId: activePassageId,
+                              start: paragraphStart + start,
+                              end: paragraphStart + end,
+                              color,
+                              action,
+                            })
+                          }
+                        />
+                      </p>
+                    </div>
                   );
                 })}
               </div>
@@ -2320,6 +2562,24 @@ function ReadingTestClient({
             <div ref={questionsScrollRef} className="min-h-0 flex-1 min-w-0 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5 lg:py-6 [scrollbar-color:hsl(var(--border))_transparent]">
               <div className="space-y-7 pb-8">
                 {groupedQuestions.map((group) => {
+                  const matchingHeadingGroupQuestions = group.questions.filter(
+                    (question): question is MatchingHeadingsQuestion => question.type === "matchingHeadings"
+                  );
+                  const visibleGroupQuestions = group.questions.filter((question) => question.type !== "matchingHeadings");
+                  const matchingHeadingGroupOptionsRaw = matchingHeadingGroupQuestions
+                    .flatMap((question) => question.headingOptions)
+                    .map((option) => parseMatchingHeadingOption(option))
+                    .filter((option) => Boolean(option.key))
+                    .filter((option, index, source) => source.findIndex((item) => item.key === option.key) === index);
+                  const matchingHeadingDescriptions = parseMatchingHeadingsFromInstruction(group.instruction);
+                  const matchingHeadingGroupOptions = matchingHeadingGroupOptionsRaw.map((option) => ({
+                    value: option.key,
+                    label: matchingHeadingDescriptions.get(option.key) ?? option.label ?? option.key,
+                  }));
+
+                  if (!visibleGroupQuestions.length && !matchingHeadingGroupQuestions.length) {
+                    return null;
+                  }
                   const renderedSharedBlocksInGroup = new Set<string>();
 
                   return (
@@ -2333,8 +2593,33 @@ function ReadingTestClient({
                         ) : null}
                       </div>
 
+                      {matchingHeadingGroupQuestions.length ? (
+                        <MatchingHeadingsBank
+                          options={matchingHeadingGroupOptions}
+                          selectedOption={selectedHeadingOption}
+                          draggingOption={draggingHeadingOption}
+                          disabled={reviewMode}
+                          hintText={
+                            t.has("dragHeadingHint")
+                              ? t("dragHeadingHint")
+                              : "Drag a heading and drop it onto a paragraph header. On mobile, tap a heading then tap a header drop zone."
+                          }
+                          onSelectOption={(optionValue) =>
+                            setSelectedHeadingOption((prev) => (prev === optionValue ? null : optionValue))
+                          }
+                          onDragStartOption={(event, optionValue) => {
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData(HEADING_DND_MIME, optionValue);
+                            event.dataTransfer.setData("text/plain", optionValue);
+                            setDraggingHeadingOption(optionValue);
+                            setSelectedHeadingOption(optionValue);
+                          }}
+                          onDragEndOption={() => setDraggingHeadingOption(null)}
+                        />
+                      ) : null}
+
                       <div className="space-y-3">
-                        {group.questions.map((question) => {
+                        {visibleGroupQuestions.map((question) => {
                           const reviewedQuestion =
                             reviewQuestionById.get(question.id)
                             ?? reviewQuestionByNumber.get(question.number)
@@ -2368,7 +2653,6 @@ function ReadingTestClient({
                                   question.options.slice(0, optionIndex).reduce((sum, option) => sum + option.length + 1, 0)
                                 )
                               : [];
-
                           const isSummary = question.type === "summaryCompletion";
                           const isTable = question.type === "tableCompletion";
                           const sharedBlockKey = isSummary
@@ -2407,7 +2691,7 @@ function ReadingTestClient({
                                 questionRefs.current.set(question.number, el);
                                 // Summary/table blocks render once but carry multiple questions.
                                 if (question.type === "summaryCompletion" || question.type === "tableCompletion") {
-                                  group.questions.forEach((q) => {
+                                  visibleGroupQuestions.forEach((q) => {
                                     if (q.type === "summaryCompletion" || q.type === "tableCompletion") {
                                       questionRefs.current.set(q.number, el);
                                     }
@@ -2419,7 +2703,7 @@ function ReadingTestClient({
                                 <p className="min-w-0 wrap-break-word text-base font-medium leading-relaxed text-foreground">
                                   {isSummary || isTable ? (
                                     <>
-                                      {group.questions[0]?.number}-{group.questions[group.questions.length - 1]?.number}.{" "}
+                                      {visibleGroupQuestions[0]?.number}-{visibleGroupQuestions[visibleGroupQuestions.length - 1]?.number}.{" "}
                                     </>
                                   ) : (
                                     <>{question.number}.{" "}</>
@@ -2567,23 +2851,6 @@ function ReadingTestClient({
                                     </label>
                                   ))}
                                 </div>
-                              ) : null}
-
-                              {question.type === "matchingHeadings" ? (
-                                <Select
-                                  value={typeof value === "string" ? value : ""}
-                                  disabled={reviewMode}
-                                  onValueChange={(nextValue) => setAnswers((prev) => ({ ...prev, [question.id]: nextValue }))}
-                                >
-                                  <SelectTrigger className="test-input-surface max-w-70 bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
-                                    <SelectValue placeholder={t("selectHeading")} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {question.headingOptions.map((option) => (
-                                      <SelectItem key={option} value={option}>{option}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
                               ) : null}
 
                               {question.type === "matchingInfo" ? (
