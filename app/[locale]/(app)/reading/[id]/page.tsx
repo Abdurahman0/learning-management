@@ -507,6 +507,27 @@ function collectAttemptSubmitCandidatesByNumber(attempt: StudentAttemptDetail) {
   return byNumber;
 }
 
+function collectAttemptScopedIdPool(attempt: StudentAttemptDetail) {
+  const pool = new Set<string>();
+  for (const passage of attempt.reading_passages) {
+    for (const group of passage.question_groups) {
+      for (const question of group.questions) {
+        const attemptQuestionId = toStringSafe(question.attempt_question_id).trim();
+        if (attemptQuestionId && UUID_PATTERN.test(attemptQuestionId)) {
+          pool.add(attemptQuestionId);
+        }
+        for (const candidate of asArray<string>(question.candidate_question_ids)) {
+          const normalized = toStringSafe(candidate).trim();
+          if (normalized && UUID_PATTERN.test(normalized)) {
+            pool.add(normalized);
+          }
+        }
+      }
+    }
+  }
+  return pool;
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function collectUuidStrings(value: unknown, maxDepth = 4): string[] {
@@ -603,6 +624,7 @@ function collectBackendAttemptAnswerEntries(params: {
   marked: Set<string>;
   submitCandidatesByNumber: Map<number, string[]>;
   rawSubmitCandidatesByNumber: Map<number, string[]>;
+  allowedAttemptScopedIds?: Set<string>;
 }) {
   return params.questions
     .map((question) => {
@@ -617,7 +639,13 @@ function collectBackendAttemptAnswerEntries(params: {
       const fromQuestion = resolveSubmitCandidateIds(question);
       const attemptScopedCandidateIds = [...fromAttempt, ...fromRaw]
         .map((value) => toStringSafe(value).trim())
-        .filter((value) => value && UUID_PATTERN.test(value));
+        .filter((value) => value && UUID_PATTERN.test(value))
+        .filter((value) => {
+          if (!params.allowedAttemptScopedIds || params.allowedAttemptScopedIds.size === 0) {
+            return true;
+          }
+          return params.allowedAttemptScopedIds.has(value);
+        });
       const fallbackCandidateIds = fromQuestion
         .map((value) => toStringSafe(value).trim())
         .filter((value) => value && UUID_PATTERN.test(value));
@@ -1415,6 +1443,7 @@ function ReadingTestClient({
         ]);
         const submitCandidatesByNumber = collectAttemptSubmitCandidatesByNumber(snapshot);
         const rawSubmitCandidatesByNumber = collectAttemptRawSubmitCandidatesByNumber(rawSnapshot);
+        const allowedAttemptScopedIds = collectAttemptScopedIdPool(snapshot);
 
         let activeEntries = includeAnswers
           ? collectBackendAttemptAnswerEntries({
@@ -1422,7 +1451,8 @@ function ReadingTestClient({
               answers,
               marked,
               submitCandidatesByNumber,
-              rawSubmitCandidatesByNumber
+              rawSubmitCandidatesByNumber,
+              allowedAttemptScopedIds
             })
           : [];
         const currentIds = new Map<string, string>();
@@ -1493,6 +1523,7 @@ function ReadingTestClient({
               ]);
               const freshByNumber = collectAttemptSubmitCandidatesByNumber(freshSnapshot);
               const freshRawByNumber = collectAttemptRawSubmitCandidatesByNumber(freshRawSnapshot);
+              const freshAllowedAttemptScopedIds = collectAttemptScopedIdPool(freshSnapshot);
 
               for (const entry of activeEntries) {
                 const currentId = currentIds.get(entry.questionKey) ?? "";
@@ -1503,6 +1534,7 @@ function ReadingTestClient({
                   ...(freshRawByNumber.get(entry.questionNumber) ?? [])
                 ]
                   .filter((value) => UUID_PATTERN.test(value))
+                  .filter((value) => freshAllowedAttemptScopedIds.size === 0 || freshAllowedAttemptScopedIds.has(value))
                   .filter((value, index, source) => source.indexOf(value) === index);
 
                 if (!freshPool.length) continue;
