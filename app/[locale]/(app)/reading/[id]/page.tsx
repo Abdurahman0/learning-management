@@ -488,11 +488,7 @@ function collectAttemptSubmitCandidatesByNumber(attempt: StudentAttemptDetail) {
 
         const candidates = [
           toStringSafe(question.attempt_question_id).trim(),
-          toStringSafe(question.id).trim(),
-          toStringSafe(question.question_id).trim(),
-          ...asArray<string>(question.candidate_question_ids)
-            .map((value) => toStringSafe(value).trim())
-            .filter(Boolean)
+          toStringSafe(question.id).trim()
         ]
           .filter((value) => value && UUID_PATTERN.test(value))
           .filter((value, index, source) => source.indexOf(value) === index);
@@ -516,11 +512,9 @@ function collectAttemptScopedIdPool(attempt: StudentAttemptDetail) {
         if (attemptQuestionId && UUID_PATTERN.test(attemptQuestionId)) {
           pool.add(attemptQuestionId);
         }
-        for (const candidate of asArray<string>(question.candidate_question_ids)) {
-          const normalized = toStringSafe(candidate).trim();
-          if (normalized && UUID_PATTERN.test(normalized)) {
-            pool.add(normalized);
-          }
+        const fallbackId = toStringSafe(question.id).trim();
+        if (fallbackId && UUID_PATTERN.test(fallbackId)) {
+          pool.add(fallbackId);
         }
       }
     }
@@ -623,7 +617,6 @@ function collectBackendAttemptAnswerEntries(params: {
   answers: Record<string, AnswerValue>;
   marked: Set<string>;
   submitCandidatesByNumber: Map<number, string[]>;
-  rawSubmitCandidatesByNumber: Map<number, string[]>;
   allowedAttemptScopedIds?: Set<string>;
 }) {
   return params.questions
@@ -635,9 +628,8 @@ function collectBackendAttemptAnswerEntries(params: {
           : answer;
       const isFlagged = params.marked.has(question.id);
       const fromAttempt = params.submitCandidatesByNumber.get(question.number) ?? [];
-      const fromRaw = params.rawSubmitCandidatesByNumber.get(question.number) ?? [];
       const fromQuestion = resolveSubmitCandidateIds(question);
-      const attemptScopedCandidateIds = [...fromAttempt, ...fromRaw]
+      const attemptScopedCandidateIds = [...fromAttempt]
         .map((value) => toStringSafe(value).trim())
         .filter((value) => value && UUID_PATTERN.test(value))
         .filter((value) => {
@@ -1437,12 +1429,8 @@ function ReadingTestClient({
       const runSave = async () => {
         if (!backendAttemptId || reviewMode) return;
 
-        const [snapshot, rawSnapshot] = await Promise.all([
-          studentAttemptsService.getById(backendAttemptId),
-          studentAttemptsService.getByIdRaw(backendAttemptId)
-        ]);
+        const snapshot = await studentAttemptsService.getById(backendAttemptId);
         const submitCandidatesByNumber = collectAttemptSubmitCandidatesByNumber(snapshot);
-        const rawSubmitCandidatesByNumber = collectAttemptRawSubmitCandidatesByNumber(rawSnapshot);
         const allowedAttemptScopedIds = collectAttemptScopedIdPool(snapshot);
 
         let activeEntries = includeAnswers
@@ -1451,7 +1439,6 @@ function ReadingTestClient({
               answers,
               marked,
               submitCandidatesByNumber,
-              rawSubmitCandidatesByNumber,
               allowedAttemptScopedIds
             })
           : [];
@@ -1517,12 +1504,8 @@ function ReadingTestClient({
             }
 
             if (!changed) {
-              const [freshSnapshot, freshRawSnapshot] = await Promise.all([
-                studentAttemptsService.getById(backendAttemptId),
-                studentAttemptsService.getByIdRaw(backendAttemptId)
-              ]);
+              const freshSnapshot = await studentAttemptsService.getById(backendAttemptId);
               const freshByNumber = collectAttemptSubmitCandidatesByNumber(freshSnapshot);
-              const freshRawByNumber = collectAttemptRawSubmitCandidatesByNumber(freshRawSnapshot);
               const freshAllowedAttemptScopedIds = collectAttemptScopedIdPool(freshSnapshot);
 
               for (const entry of activeEntries) {
@@ -1530,8 +1513,7 @@ function ReadingTestClient({
                 if (!currentId || !failedQuestionIds.has(currentId)) continue;
 
                 const freshPool = [
-                  ...(freshByNumber.get(entry.questionNumber) ?? []),
-                  ...(freshRawByNumber.get(entry.questionNumber) ?? [])
+                  ...(freshByNumber.get(entry.questionNumber) ?? [])
                 ]
                   .filter((value) => UUID_PATTERN.test(value))
                   .filter((value) => freshAllowedAttemptScopedIds.size === 0 || freshAllowedAttemptScopedIds.has(value))
