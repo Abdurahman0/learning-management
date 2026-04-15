@@ -458,6 +458,7 @@ function extractValidationAnswerQuestionIdFailures(error: unknown) {
   for (const [questionId, detail] of Object.entries(answers)) {
     const row = asRecord(detail);
     const messages = asArray<unknown>(row?.question_id)
+      .concat(asArray<unknown>(row?.attempt_question_id))
       .map((message) => toStringSafe(message).toLowerCase())
       .filter(Boolean);
     const hasBelongMessage = messages.some((message) => message.includes("does not belong to this attempt"));
@@ -1463,12 +1464,18 @@ function ReadingTestClient({
               }
               return {
                 question_id: questionId,
+                attempt_question_id: questionId,
                 answer: answerPayload,
                 is_flagged: entry.is_flagged
               };
             })
             .filter(
-              (item): item is {question_id: string; answer: {answer: string} | {answers: string[]} | null; is_flagged: boolean} =>
+              (item): item is {
+                question_id: string;
+                attempt_question_id: string;
+                answer: {answer: string} | {answers: string[]} | null;
+                is_flagged: boolean;
+              } =>
                 item !== null && !!item.question_id
             );
 

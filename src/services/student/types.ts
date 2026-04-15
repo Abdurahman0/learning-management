@@ -156,6 +156,7 @@ export type StudentAttemptDetail = {
 
 export type StudentAttemptAnswerPayloadItem = {
   question_id: string;
+  attempt_question_id?: string;
   answer: unknown | null;
   is_flagged?: boolean;
   time_spent_seconds?: number;
