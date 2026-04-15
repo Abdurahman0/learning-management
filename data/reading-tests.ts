@@ -10,6 +10,8 @@ export type ReadingEvidenceSpan = {
   phrase: string;
 };
 
+type BinaryGivenOptions = ["TRUE", "FALSE", "NOT GIVEN"] | ["YES", "NO", "NOT GIVEN"];
+
 type BaseQuestion = {
   id: string;
   backendQuestionId?: string;
@@ -26,7 +28,7 @@ type BaseQuestion = {
 };
 
 export type ReadingQuestion =
-  | (BaseQuestion & { type: "tfng"; options: ["TRUE", "FALSE", "NOT GIVEN"] })
+  | (BaseQuestion & { type: "tfng"; options: BinaryGivenOptions })
   | (BaseQuestion & { type: "mcq"; options: string[] })
   | (BaseQuestion & { type: "matchingHeadings"; target: string; headingOptions: string[] })
   | (BaseQuestion & { type: "sentenceCompletion"; blanks: number })

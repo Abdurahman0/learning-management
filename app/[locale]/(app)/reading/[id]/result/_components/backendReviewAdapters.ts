@@ -141,7 +141,12 @@ function parseOptionTexts(optionsJson: unknown) {
 
 function normalizeQuestionType(value: string): ReadingQuestion["type"] {
   const normalized = value.toLowerCase();
-  if (normalized.includes("tfng") || normalized.includes("not_given") || normalized.includes("true_false")) {
+  if (
+    normalized.includes("tfng")
+    || normalized.includes("ynng")
+    || normalized.includes("not_given")
+    || normalized.includes("true_false")
+  ) {
     return "tfng";
   }
   if (normalized.includes("heading")) return "matchingHeadings";
@@ -290,6 +295,11 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
 
         let readingQuestion: ReadingQuestion;
         if (questionType === "tfng") {
+          const rawType = toStringSafe(question.question_type, "").toUpperCase();
+          const tfngOptions: ["TRUE", "FALSE", "NOT GIVEN"] | ["YES", "NO", "NOT GIVEN"] =
+            rawType === "YNNG"
+              ? ["YES", "NO", "NOT GIVEN"]
+              : ["TRUE", "FALSE", "NOT GIVEN"];
           readingQuestion = {
             id: question.id,
             number: questionNumber,
@@ -298,7 +308,7 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
             prompt,
             groupTitle,
             groupInstruction: group.instructions ?? undefined,
-            options: ["TRUE", "FALSE", "NOT GIVEN"],
+            options: tfngOptions,
             correctAnswer: typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] ?? "",
             acceptableAnswers: toAcceptableAnswers(typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] ?? ""),
             explanation: toStringSafe(question.explanation, ""),

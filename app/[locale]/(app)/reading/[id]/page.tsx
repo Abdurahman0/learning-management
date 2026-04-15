@@ -51,6 +51,8 @@ import type { StudentAttemptDetail, StudentAttemptQuestion, StudentAttemptQuesti
 
 const DEFAULT_SPLIT = 50;
 const HEADING_DND_MIME = "application/x-reading-heading";
+const TFNG_OPTIONS: ["TRUE", "FALSE", "NOT GIVEN"] = ["TRUE", "FALSE", "NOT GIVEN"];
+const YNNG_OPTIONS: ["YES", "NO", "NOT GIVEN"] = ["YES", "NO", "NOT GIVEN"];
 
 type AnswerValue = string | string[];
 type MatchingHeadingsQuestion = Extract<ReadingQuestion, { type: "matchingHeadings" }>;
@@ -174,8 +176,20 @@ function parseMatchingHeadingOption(rawOption: string) {
   };
 }
 
-function normalizeTfngAnswerForBackend(value: string) {
+function normalizeTfngAnswerForBackend(value: string, options?: readonly string[]) {
   const normalized = value.trim().toUpperCase().replace(/\s+/g, "_");
+  const usesYesNo = Array.isArray(options) && options.some((option) => {
+    const token = option.trim().toUpperCase();
+    return token === "YES" || token === "NO";
+  });
+
+  if (usesYesNo) {
+    if (normalized === "YES") return "YES";
+    if (normalized === "NO") return "NO";
+    if (normalized === "NOT_GIVEN" || normalized === "NOTGIVEN") return "NOT_GIVEN";
+    return value.trim();
+  }
+
   if (normalized === "TRUE") return "TRUE";
   if (normalized === "FALSE") return "FALSE";
   if (normalized === "NOT_GIVEN" || normalized === "NOTGIVEN") return "NOT_GIVEN";
@@ -625,7 +639,7 @@ function collectBackendAttemptAnswerEntries(params: {
       const answer = toSubmitAnswer(params.answers[question.id]);
       const normalizedAnswer =
         question.type === "tfng" && typeof answer === "string"
-          ? normalizeTfngAnswerForBackend(answer)
+          ? normalizeTfngAnswerForBackend(answer, question.options)
           : answer;
       const isFlagged = params.marked.has(question.id);
       const fromAttempt = params.submitCandidatesByNumber.get(question.number) ?? [];
@@ -691,7 +705,8 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
         const qType = toStringSafe(question.question_type).toUpperCase();
         const evidenceSpans = [{ passageId, paragraphIndex: 0, phrase: buildEvidencePhrase(prompt, number) }];
 
-        if (qType === "TFNG") {
+        if (qType === "TFNG" || qType === "YNNG") {
+          const options = qType === "YNNG" ? YNNG_OPTIONS : TFNG_OPTIONS;
           questions.push({
             id: questionId,
             number,
@@ -702,7 +717,7 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
             groupTitle,
             groupInstruction: instruction,
             prompt,
-            options: ["TRUE", "FALSE", "NOT GIVEN"],
+            options,
             correctAnswer: "",
             explanation: "",
             evidenceSpans
