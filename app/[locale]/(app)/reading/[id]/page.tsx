@@ -43,7 +43,6 @@ import {
 import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
 import { useTestAppearance } from "@/lib/test-appearance";
 import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
-import { ReviewQuestionsPanel } from "./result/_components/ReviewQuestionsPanel";
 import { adaptReadingBackendReview, type AdaptedReadingBackendReview } from "./result/_components/backendReviewAdapters";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
 import { studentTestsService } from "@/src/services/student/tests.service";
@@ -1143,14 +1142,6 @@ function ReadingTestClient({
     () => backendReviewData?.questions ?? test.questions,
     [backendReviewData, test.questions]
   );
-  const reviewStartQuestionId = useMemo(
-    () =>
-      reviewQuestions
-        .filter((question) => question.passageId === activePassageId)
-        .sort((left, right) => left.number - right.number)[0]?.id ?? null,
-    [activePassageId, reviewQuestions]
-  );
-
   const reviewAnswers = useMemo(
     () => (backendReviewData ? normalizeBackendReviewAnswers(backendReviewData.answers) : answers),
     [answers, backendReviewData]
@@ -1733,24 +1724,6 @@ function ReadingTestClient({
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  const jumpToEvidenceFromReview = useCallback(
-    (questionId: string) => {
-      const question = reviewQuestions.find((item) => item.id === questionId);
-      const evidence = question?.evidenceSpans[0];
-      if (!evidence) return;
-
-      const paragraphId = `para-${evidence.passageId}-${evidence.paragraphIndex}`;
-      pendingParagraphRef.current = paragraphId;
-      if (evidence.passageId !== activePassageId) {
-        setActivePassageId(evidence.passageId);
-        return;
-      }
-      const target = document.getElementById(paragraphId);
-      target?.scrollIntoView({ behavior: "smooth", block: "center" });
-    },
-    [activePassageId, reviewQuestions]
-  );
-
   const finishTest = useCallback(async () => {
     if (!attemptId || isSubmittingResult) return;
     setIsSubmittingResult(true);
@@ -2305,29 +2278,6 @@ function ReadingTestClient({
         />
 
         <div className={cn("min-h-0 min-w-0", isCompact && mobilePanel !== "questions" && "hidden")}>
-          {reviewMode ? (
-            <ReviewQuestionsPanel
-              questions={reviewQuestions}
-              answers={reviewAnswers}
-              grading={grading}
-              expanded={expandedExplanations}
-              showTopQuestionNavigator={false}
-              scrollResetKey={activePassageId}
-              scrollToQuestionId={reviewStartQuestionId ?? undefined}
-              onToggleExplanation={(questionId) => {
-                setExpandedExplanations((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(questionId)) {
-                    next.delete(questionId);
-                  } else {
-                    next.add(questionId);
-                  }
-                  return next;
-                });
-              }}
-              onJumpEvidence={jumpToEvidenceFromReview}
-            />
-          ) : (
           <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background/45">
             <div ref={questionsScrollRef} className="min-h-0 flex-1 min-w-0 overflow-y-auto px-3 py-4 sm:px-4 lg:px-5 lg:py-6 [scrollbar-color:hsl(var(--border))_transparent]">
               <div className="space-y-7 pb-8">
@@ -2766,7 +2716,6 @@ function ReadingTestClient({
             </div>
 
           </div>
-          )}
         </div>
       </main>
 

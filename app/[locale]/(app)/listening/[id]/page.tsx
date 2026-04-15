@@ -2408,6 +2408,64 @@ function ListeningTestClient({
       </Card>
     );
   };
+  const renderBlockReviewSummary = (block: ListeningBlock) => {
+    if (!reviewMode) return null;
+    const numbers = getQuestionNumbersFromBlock(block);
+    if (!numbers.length) return null;
+
+    return (
+      <Card className="test-panel min-w-0 gap-2 rounded-lg border border-border bg-card/80 p-3">
+        {numbers.map((questionNumber) => {
+          const questionId = `${test.id}-q${questionNumber}`;
+          const answerMeta = reviewAnswerMetaByQuestionId[questionId];
+          const graded = grading.byQuestion[questionId];
+          const userAnswer = answers[questionNumber] ?? "";
+          const normalizedUser = String(userAnswer ?? "").trim();
+          const correctAnswer = Array.isArray(answerMeta?.correctAnswer)
+            ? answerMeta.correctAnswer.join(", ")
+            : (answerMeta?.correctAnswer ?? "");
+          const statusText = !graded?.normalizedUser
+            ? tListeningResult("skippedStatus")
+            : graded.isCorrect
+              ? tListeningResult("correctStatus")
+              : tListeningResult("incorrectStatus");
+          const statusClass = !graded?.normalizedUser
+            ? "text-muted-foreground"
+            : graded.isCorrect
+              ? "text-emerald-600 dark:text-emerald-300"
+              : "text-rose-600 dark:text-rose-300";
+
+          return (
+            <div key={`review-block-${questionNumber}`} className="rounded-md border border-border/70 bg-background/60 p-2.5">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                  {t.has("questionPosition")
+                    ? t("questionPosition", { current: questionNumber, total: test.totalQuestions })
+                    : `Question ${questionNumber}`}
+                </p>
+                <span className={cn("text-xs font-semibold", statusClass)}>{statusText}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {tListeningResult("yourAnswer")}:{" "}
+                <span className="font-medium text-foreground">{normalizedUser || tListeningResult("noAnswer")}</span>
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {tListeningResult("correctAnswer")}:{" "}
+                <span className="font-medium text-emerald-700 dark:text-emerald-200">{correctAnswer || tListeningResult("notAvailable")}</span>
+              </p>
+              {answerMeta?.explanation ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {tListeningResult("explain")}:{" "}
+                  <span className="text-foreground/85">{answerMeta.explanation}</span>
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
+      </Card>
+    );
+  };
+  const showAnalyticsReviewLayout = false;
 
   return (
     <section
@@ -2769,7 +2827,7 @@ function ListeningTestClient({
       ) : null}
 
       <main className="test-scaleable grid min-h-0 min-w-0 w-full max-w-full flex-1 grid-cols-1 gap-3 px-2 py-2 sm:px-3 sm:py-3 lg:gap-4 lg:px-5 lg:py-4">
-        {reviewMode ? (
+        {showAnalyticsReviewLayout && reviewMode ? (
           <section className="min-h-0 min-w-0 w-full max-w-full space-y-3">
             {isCompact ? (
               <div className="grid grid-cols-2 rounded-xl border border-border bg-card/70 p-1">
@@ -2866,6 +2924,7 @@ function ListeningTestClient({
                       </p>
                     ) : null}
                     {renderBlock(block)}
+                    {renderBlockReviewSummary(block)}
                   </div>
                 ))}
               </Highlightable>
@@ -2875,7 +2934,7 @@ function ListeningTestClient({
         )}
       </main>
 
-      {!reviewMode ? (
+      {
         <div className="border-t border-border/75 bg-background/95 px-3 backdrop-blur sm:px-4 lg:px-5">
           <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 py-1.5">
             <Button
@@ -3021,7 +3080,7 @@ function ListeningTestClient({
             </div>
           </div>
         </div>
-      ) : null}
+      }
 
       <Sheet open={paletteOpen} onOpenChange={setPaletteOpen}>
         <SheetContent
