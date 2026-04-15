@@ -1150,6 +1150,13 @@ function ReadingTestClient({
     () => new Map(reviewQuestions.map((question) => [question.number, question])),
     [reviewQuestions]
   );
+  const gradingByNumber = useMemo(() => {
+    const map = new Map<number, (typeof grading.byQuestion)[string]>();
+    reviewQuestions.forEach((question) => {
+      map.set(question.number, grading.byQuestion[question.id]);
+    });
+    return map;
+  }, [grading.byQuestion, reviewQuestions]);
   const reviewAnswers = useMemo(
     () => (backendReviewData ? normalizeBackendReviewAnswers(backendReviewData.answers) : answers),
     [answers, backendReviewData]
@@ -2334,7 +2341,7 @@ function ReadingTestClient({
                             ?? question;
                           const active = activeQuestionNumber === question.number;
                           const value = answers[question.id];
-                          const result = grading.byQuestion[question.id];
+                          const result = gradingByNumber.get(question.number) ?? grading.byQuestion[question.id];
                           const answered = isAnswered(value);
                           const isCorrect = result?.isCorrect;
                           const isMarked = marked.has(question.id);
