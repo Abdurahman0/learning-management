@@ -1146,6 +1146,10 @@ function ReadingTestClient({
     () => new Map(reviewQuestions.map((question) => [question.id, question])),
     [reviewQuestions]
   );
+  const reviewQuestionByNumber = useMemo(
+    () => new Map(reviewQuestions.map((question) => [question.number, question])),
+    [reviewQuestions]
+  );
   const reviewAnswers = useMemo(
     () => (backendReviewData ? normalizeBackendReviewAnswers(backendReviewData.answers) : answers),
     [answers, backendReviewData]
@@ -1730,7 +1734,12 @@ function ReadingTestClient({
 
   const jumpToEvidenceFromReview = useCallback(
     (questionId: string) => {
-      const question = reviewQuestions.find((item) => item.id === questionId);
+      const baseQuestion = test.questions.find((item) => item.id === questionId);
+      const question =
+        reviewQuestionById.get(questionId)
+        ?? (baseQuestion ? reviewQuestionByNumber.get(baseQuestion.number) : null)
+        ?? baseQuestion
+        ?? null;
       const evidence = question?.evidenceSpans[0];
       if (!evidence) return;
 
@@ -1743,7 +1752,7 @@ function ReadingTestClient({
       const target = document.getElementById(paragraphId);
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
     },
-    [activePassageId, reviewQuestions]
+    [activePassageId, reviewQuestionById, reviewQuestionByNumber, test.questions]
   );
 
   const finishTest = useCallback(async () => {
@@ -2319,7 +2328,10 @@ function ReadingTestClient({
 
                       <div className="space-y-3">
                         {group.questions.map((question) => {
-                          const reviewedQuestion = reviewQuestionById.get(question.id) ?? question;
+                          const reviewedQuestion =
+                            reviewQuestionById.get(question.id)
+                            ?? reviewQuestionByNumber.get(question.number)
+                            ?? question;
                           const active = activeQuestionNumber === question.number;
                           const value = answers[question.id];
                           const result = grading.byQuestion[question.id];
