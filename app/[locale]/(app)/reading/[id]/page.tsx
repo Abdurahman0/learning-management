@@ -1142,6 +1142,10 @@ function ReadingTestClient({
     () => backendReviewData?.questions ?? test.questions,
     [backendReviewData, test.questions]
   );
+  const reviewQuestionById = useMemo(
+    () => new Map(reviewQuestions.map((question) => [question.id, question])),
+    [reviewQuestions]
+  );
   const reviewAnswers = useMemo(
     () => (backendReviewData ? normalizeBackendReviewAnswers(backendReviewData.answers) : answers),
     [answers, backendReviewData]
@@ -2315,12 +2319,19 @@ function ReadingTestClient({
 
                       <div className="space-y-3">
                         {group.questions.map((question) => {
+                          const reviewedQuestion = reviewQuestionById.get(question.id) ?? question;
                           const active = activeQuestionNumber === question.number;
                           const value = answers[question.id];
                           const result = grading.byQuestion[question.id];
                           const answered = isAnswered(value);
                           const isCorrect = result?.isCorrect;
                           const isMarked = marked.has(question.id);
+                          const reviewedCorrectAnswer = Array.isArray(reviewedQuestion.correctAnswer)
+                            ? reviewedQuestion.correctAnswer.join(", ")
+                            : reviewedQuestion.correctAnswer;
+                          const reviewedExplanation = reviewedQuestion.explanation?.trim()
+                            ? reviewedQuestion.explanation
+                            : (t.has("notAvailable") ? t("notAvailable") : "Not available");
                           const promptStart = 0;
                           const tfngOptionStarts =
                             question.type === "tfng"
@@ -2453,7 +2464,7 @@ function ReadingTestClient({
                               {reviewMode ? (
                                 <p className="test-muted-copy mb-3 text-xs text-muted-foreground">
                                   {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
-                                  {Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : question.correctAnswer}
+                                  {reviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
                                 </p>
                               ) : null}
 
@@ -2732,10 +2743,10 @@ function ReadingTestClient({
                                 <div className="mt-3 space-y-2">
                                   {expandedExplanations.has(question.id) ? (
                                     <div className="test-soft-surface rounded-md border border-border/80 bg-muted/25 p-3 text-sm">
-                                      <p className="text-foreground/90">{question.explanation}</p>
+                                      <p className="text-foreground/90">{reviewedExplanation}</p>
                                       <p className="test-muted-copy mt-2 text-xs text-muted-foreground">
                                         {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
-                                        {Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : question.correctAnswer}
+                                        {reviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
                                       </p>
                                     </div>
                                   ) : null}
