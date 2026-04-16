@@ -19,6 +19,8 @@ export function getQuestionNumbersFromListeningBlock(block: ListeningBlock) {
       return block.questions.map((question) => question.questionNumber);
     case "matching":
       return block.items.map((item) => item.questionNumber);
+    case "listSelection":
+      return block.questionNumbers;
     case "diagramLabeling":
       return block.items.map((item) => item.questionNumber);
     case "summaryCompletion":
@@ -58,6 +60,20 @@ export function flattenListeningQuestions(
             sectionId: section.id,
             sectionTitle: section.title,
             prompt: item.prompt,
+            type: "matching",
+          });
+        }
+        continue;
+      }
+
+      if (block.type === "listSelection") {
+        for (const questionNumber of block.questionNumbers) {
+          items.push({
+            id: `${testId}-q${questionNumber}`,
+            number: questionNumber,
+            sectionId: section.id,
+            sectionTitle: section.title,
+            prompt: block.prompt,
             type: "matching",
           });
         }

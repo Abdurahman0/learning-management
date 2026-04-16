@@ -89,6 +89,8 @@ function getQuestionNumbersFromBlock(block: ListeningBlock): number[] {
       return block.questions.map((question) => question.questionNumber);
     case "matching":
       return block.items.map((item) => item.questionNumber);
+    case "listSelection":
+      return block.questionNumbers;
     case "diagramLabeling":
       return block.items.map((item) => item.questionNumber);
     case "summaryCompletion":
@@ -461,10 +463,33 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
     })];
   }
 
+  if (type === "LIST_SELECTION") {
+    const options = extractOptionTexts(content?.options).length
+      ? extractOptionTexts(content?.options)
+      : extractOptionTexts(content?.choices).length
+        ? extractOptionTexts(content?.choices)
+        : extractOptionTexts(content?.categories).length
+          ? extractOptionTexts(content?.categories)
+          : extractOptionTexts(content?.labels);
+
+    const prompt = questions
+      .map((q) => extractQuestionPrompt(q))
+      .find((value) => value.trim().length > 0)
+      ?? "Select the correct options.";
+
+    return [withGroupMeta({
+      type: "listSelection",
+      title: "List Selection",
+      instruction: groupInstruction,
+      prompt,
+      options: options.length ? options : ["A", "B", "C", "D"],
+      questionNumbers: questions.map((q) => q.question_number)
+    })];
+  }
+
   if (
     type === "MATCHING"
     || type === "CLASSIFICATION"
-    || type === "LIST_SELECTION"
     || type === "MATCH_PARA_INFO"
   ) {
     const options = extractOptionTexts(content?.options).length
@@ -592,14 +617,37 @@ function parseOptionChoice(option: string, index: number) {
   if (match) {
     return {
       key: match[1].toUpperCase(),
+      text: match[2].trim(),
       label: `${match[1].toUpperCase()}. ${match[2].trim()}`
     };
   }
 
   return {
     key: toOptionKey(index),
+    text: option,
     label: option
   };
+}
+
+function resolveChoiceKeyFromRawValue(
+  rawValue: string | undefined,
+  parsedOptions: Array<{key: string; label: string}>,
+  rawOptions: string[]
+) {
+  const normalized = (rawValue ?? "").trim();
+  if (!normalized) return "";
+
+  const upper = normalized.toUpperCase();
+  const byKey = parsedOptions.find((option) => option.key.toUpperCase() === upper);
+  if (byKey) return byKey.key;
+
+  const byLabel = parsedOptions.find((option) => option.label.toUpperCase() === upper);
+  if (byLabel) return byLabel.key;
+
+  const byRawOption = rawOptions.findIndex((option) => option.trim().toUpperCase() === upper);
+  if (byRawOption >= 0) return parsedOptions[byRawOption]?.key ?? "";
+
+  return "";
 }
 
 function QuestionChip({
@@ -1785,6 +1833,7 @@ function ListeningTestClient({
   const deriveBlockInstruction = (block: ListeningBlock) => {
     if (block.groupInstruction?.trim()) return block.groupInstruction.trim();
     if (block.type === "mcqGroup") return block.title?.trim() ?? "";
+    if (block.type === "listSelection") return block.instruction?.trim() ?? "";
     if (block.type === "summaryCompletion") return block.instruction?.trim() ?? "";
     if (block.type === "noteForm") return block.description?.trim() ?? "";
     if (block.type === "diagramLabeling") return block.description?.trim() ?? "";
@@ -2126,21 +2175,101 @@ function ListeningTestClient({
       );
     }
 
+    if (block.type === "listSelection") {
+      const parsedOptions = block.options.map((option, optionIndex) => parseOptionChoice(option, optionIndex));
+      const orderedOptionKeys = parsedOptions.map((option) => option.key);
+      const selectedByNumber = block.questionNumbers
+        .map((questionNumber) => resolveChoiceKeyFromRawValue(answers[questionNumber], parsedOptions, block.options))
+        .filter(Boolean);
+      const selectedSet = new Set(selectedByNumber);
+      const maxSelections = Math.max(1, block.questionNumbers.length);
+
+      return (
+        <Card className="test-panel min-w-0 gap-0 rounded-lg border border-border bg-card p-4 overflow-hidden">
+          <div
+            ref={(el) => {
+              for (const number of block.questionNumbers) {
+                if (!el) {
+                  questionRefs.current.delete(number);
+                } else {
+                  questionRefs.current.set(number, el);
+                }
+              }
+            }}
+            className="space-y-4 scroll-mt-24"
+            onClick={() => setActiveQuestionNumber(block.questionNumbers[0] ?? 1)}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              {block.questionNumbers.map((number) => (
+                <QuestionChip
+                  key={`list-selection-q-${number}`}
+                  number={number}
+                  active={activeQuestionNumber === number}
+                  subtle={activeQuestionNumber !== number}
+                />
+              ))}
+              <p className="wrap-break-word text-sm font-medium">{block.prompt}</p>
+            </div>
+
+            <div className="space-y-2">
+              {parsedOptions.map((choice) => {
+                const selected = selectedSet.has(choice.key);
+                return (
+                  <label
+                    key={`list-selection-${choice.key}`}
+                    className="flex min-w-0 items-start gap-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      name={`list-selection-${block.questionNumbers[0] ?? 1}`}
+                      value={choice.key}
+                      checked={selected}
+                      onChange={() => {
+                        const current = new Set(selectedSet);
+                        if (current.has(choice.key)) {
+                          current.delete(choice.key);
+                        } else if (current.size < maxSelections) {
+                          current.add(choice.key);
+                        } else {
+                          return;
+                        }
+
+                        const orderedSelected = orderedOptionKeys.filter((key) => current.has(key));
+                        setAnswers((prev) => {
+                          const next = {...prev};
+                          block.questionNumbers.forEach((questionNumber, index) => {
+                            next[questionNumber] = orderedSelected[index] ?? "";
+                          });
+                          return next;
+                        });
+
+                        const focusIndex = Math.min(
+                          Math.max(orderedSelected.indexOf(choice.key), 0),
+                          block.questionNumbers.length - 1
+                        );
+                        setActiveQuestionNumber(block.questionNumbers[focusIndex] ?? (block.questionNumbers[0] ?? 1));
+                      }}
+                      onFocus={() => setActiveQuestionNumber(block.questionNumbers[0] ?? 1)}
+                      className="mt-0.5"
+                    />
+                    <span className="inline-flex items-center gap-2 wrap-break-word">
+                      <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border/70 bg-muted/35 px-2 text-xs font-semibold text-foreground">
+                        {choice.key}
+                      </span>
+                      <span>{choice.text ?? choice.label}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
+      );
+    }
+
     if (block.type === "matching") {
       const parsedOptions = block.options.map((option, optionIndex) => parseOptionChoice(option, optionIndex));
       const matchingInstructionText = deriveBlockInstruction(block);
-      const resolveAnswerKey = (rawValue: string | undefined) => {
-        const normalized = (rawValue ?? "").trim();
-        if (!normalized) return "";
-        const upper = normalized.toUpperCase();
-        const byKey = parsedOptions.find((option) => option.key.toUpperCase() === upper);
-        if (byKey) return byKey.key;
-        const byLabel = parsedOptions.find((option) => option.label.toUpperCase() === upper);
-        if (byLabel) return byLabel.key;
-        const byRawOption = block.options.findIndex((option) => option.trim().toUpperCase() === upper);
-        if (byRawOption >= 0) return parsedOptions[byRawOption]?.key ?? "";
-        return "";
-      };
 
       return (
         <Card className="test-panel min-w-0 gap-0 rounded-lg border border-border bg-card p-4 overflow-hidden">
@@ -2174,7 +2303,7 @@ function ListeningTestClient({
                 />
                 <p className="wrap-break-word text-sm">{item.prompt}</p>
                 <Select
-                  value={resolveAnswerKey(answers[item.questionNumber])}
+                  value={resolveChoiceKeyFromRawValue(answers[item.questionNumber], parsedOptions, block.options)}
                   onValueChange={(value) =>
                     setAnswer(item.questionNumber, value)
                   }

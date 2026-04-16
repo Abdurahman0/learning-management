@@ -50,6 +50,15 @@ export type MatchingBlock = {
   }>;
 };
 
+export type ListSelectionBlock = {
+  type: "listSelection";
+  title: string;
+  instruction?: string;
+  prompt: string;
+  options: string[];
+  questionNumbers: number[];
+};
+
 export type DiagramLabelingBlock = {
   type: "diagramLabeling";
   title: string;
@@ -78,6 +87,7 @@ export type ListeningBlock = (
   | TableCompletionBlock
   | McqGroupBlock
   | MatchingBlock
+  | ListSelectionBlock
   | DiagramLabelingBlock
   | SummaryCompletionBlock
 ) & {

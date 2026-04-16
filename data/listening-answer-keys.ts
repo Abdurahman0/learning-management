@@ -38,6 +38,8 @@ function numbersFromBlock(block: ListeningBlock) {
       return block.questions.map((question) => question.questionNumber);
     case "matching":
       return block.items.map((item) => item.questionNumber);
+    case "listSelection":
+      return block.questionNumbers;
     case "diagramLabeling":
       return block.items.map((item) => item.questionNumber);
     case "summaryCompletion":
@@ -84,6 +86,26 @@ function buildFromBlock(testId: string, sectionId: ListeningSectionId, block: Li
           sectionId,
           transcriptQuote: item.prompt,
           timeRange: [Math.max(0, item.questionNumber * 10), item.questionNumber * 10 + 12],
+        },
+      };
+    });
+  }
+
+  if (block.type === "listSelection") {
+    return block.questionNumbers.map((questionNumber, index) => {
+      const option = block.options[index % Math.max(block.options.length, 1)] ?? "A";
+      const answer = labelToOptionLetter(option);
+      return {
+        questionId: getListeningQuestionId(testId, questionNumber),
+        questionNumber,
+        type: "matching",
+        correctAnswer: answer,
+        acceptableAnswers: [answer.toLowerCase()],
+        explanation: `This list selection item maps to option ${answer} from the provided choices.`,
+        evidence: {
+          sectionId,
+          transcriptQuote: block.prompt,
+          timeRange: [Math.max(0, questionNumber * 10), questionNumber * 10 + 12],
         },
       };
     });
