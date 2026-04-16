@@ -103,7 +103,19 @@ function normalizeGroup(group: QuestionGroup): QuestionGroup {
     return group;
   }
 
-  const questions = [...group.questions].sort((left, right) => left.number - right.number);
+  const questions = [...group.questions]
+    .sort((left, right) => left.number - right.number)
+    .map((question) => {
+      if (question.type !== "selecting_from_a_list") {
+        return question;
+      }
+
+      const autoItem = question.prompt.trim() || `Question ${question.number}`;
+      return {
+        ...question,
+        items: [autoItem]
+      };
+    });
   const from = uniqueNumbers[0];
   const to = uniqueNumbers[uniqueNumbers.length - 1];
   return {
@@ -1162,7 +1174,7 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
       return {...question, headings};
     }
     if (
-      (question.type === "matching_information" || question.type === "matching_features")
+      (question.type === "matching_information" || question.type === "matching_features" || question.type === "selecting_from_a_list")
       && choices.length > 0
     ) {
       return {...question, choices};

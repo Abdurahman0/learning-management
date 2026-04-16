@@ -2664,7 +2664,7 @@ function ListeningTestClient({
                   "max-[420px]:text-[11px]",
                 )}
               >
-                IELTS <span className="max-[420px]:block">MASTER</span>
+                EnglishLabs
               </p>
             </Link>
             <Separator orientation="vertical" className="hidden h-5 md:block" />

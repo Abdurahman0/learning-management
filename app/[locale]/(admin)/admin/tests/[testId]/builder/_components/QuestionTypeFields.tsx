@@ -69,6 +69,9 @@ function isMatchingChoiceQuestion(question: BuilderQuestion): question is Extrac
 export function QuestionTypeFields({question, module = "reading", mcqMode = "single", onChange}: QuestionTypeFieldsProps) {
   const t = useTranslations("adminTestBuilder");
   const useSharedListeningMcqOptions = module === "listening" && question.type === "multiple_choice";
+  const autoListSelectionItem = question.type === "selecting_from_a_list"
+    ? (question.prompt.trim() || `Question ${question.number}`)
+    : "";
   const answerValue = useMemo(() => {
     if (!("correctAnswer" in question)) {
       return "";
@@ -82,7 +85,28 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
         <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.prompt")}</Label>
         <textarea
           value={question.prompt}
-          onChange={(event) => onChange({...question, prompt: event.target.value})}
+          onChange={(event) => {
+            if (question.type !== "selecting_from_a_list") {
+              onChange({...question, prompt: event.target.value});
+              return;
+            }
+
+            const nextPrompt = event.target.value;
+            const previousKey = question.items[0] ?? (question.prompt.trim() || `Question ${question.number}`);
+            const nextKey = nextPrompt.trim() || `Question ${question.number}`;
+            const preservedValue =
+              question.correctAnswer[previousKey]
+              ?? question.correctAnswer[nextKey]
+              ?? Object.values(question.correctAnswer).find((value) => String(value ?? "").trim().length > 0)
+              ?? "";
+
+            onChange({
+              ...question,
+              prompt: nextPrompt,
+              items: [nextKey],
+              correctAnswer: preservedValue ? {[nextKey]: preservedValue} : {}
+            });
+          }}
           className={fieldClassName}
         />
       </div>
@@ -307,18 +331,24 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.items")}</Label>
-            <textarea
-              value={question.items.join("\n")}
-              onChange={(event) => {
-                const items = event.target.value.split("\n").map((item) => item.trim()).filter(Boolean);
-                const nextMapping: Record<string, string> = {};
-                for (const item of items) {
-                  nextMapping[item] = question.correctAnswer[item] ?? "";
-                }
-                onChange({...question, items, correctAnswer: nextMapping});
-              }}
-              className={fieldClassName}
-            />
+            {question.type === "selecting_from_a_list" ? (
+              <div className="min-h-10 rounded-xl border border-border/70 bg-background/45 px-3 py-2 text-sm text-muted-foreground">
+                {autoListSelectionItem}
+              </div>
+            ) : (
+              <textarea
+                value={question.items.join("\n")}
+                onChange={(event) => {
+                  const items = event.target.value.split("\n").map((item) => item.trim()).filter(Boolean);
+                  const nextMapping: Record<string, string> = {};
+                  for (const item of items) {
+                    nextMapping[item] = question.correctAnswer[item] ?? "";
+                  }
+                  onChange({...question, items, correctAnswer: nextMapping});
+                }}
+                className={fieldClassName}
+              />
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -333,12 +363,26 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
 
           <div className="space-y-2">
             <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.mapping")}</Label>
-            {question.items.map((item) => (
+            {(question.type === "selecting_from_a_list" ? [autoListSelectionItem] : question.items).map((item) => (
               <div key={`${question.id}-mapping-${item}`} className="grid grid-cols-[minmax(0,1fr)_120px] gap-2">
                 <input value={item} readOnly className={`${inputClassName} text-muted-foreground`} />
                 <Select
-                  value={question.correctAnswer[item] ?? ""}
-                  onValueChange={(value) => onChange({...question, correctAnswer: {...question.correctAnswer, [item]: value}})}
+                  value={
+                    question.correctAnswer[item]
+                    ?? (question.type === "selecting_from_a_list"
+                      ? Object.values(question.correctAnswer).find((value) => String(value ?? "").trim().length > 0) ?? ""
+                      : "")
+                  }
+                  onValueChange={(value) =>
+                    onChange({
+                      ...question,
+                      items: question.type === "selecting_from_a_list" ? [autoListSelectionItem] : question.items,
+                      correctAnswer: {
+                        ...question.correctAnswer,
+                        [item]: value
+                      }
+                    })
+                  }
                 >
                   <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">
                     <SelectValue placeholder={t("questions.fields.selectChoice")} />

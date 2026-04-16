@@ -178,10 +178,11 @@ export function createDefaultQuestion(type: QuestionType, number: number): Build
     type === "selecting_from_a_list" ||
     type === "map"
   ) {
+    const defaultItem = type === "selecting_from_a_list" ? [`Question ${number}`] : [];
     return {
       ...base,
       type,
-      items: [],
+      items: defaultItem,
       choices: [],
       correctAnswer: {}
     };
