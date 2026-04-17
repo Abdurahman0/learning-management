@@ -11,6 +11,13 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "EnglishLabs",
   description: "Practice IELTS Reading and Listening with realistic tests on EnglishLabs.",
+  icons: {
+    icon: [
+      { url: "/brand/englishlabs.svg", type: "image/svg+xml" },
+      { url: "/brand/englishlabs.png", type: "image/png" },
+    ],
+    apple: [{ url: "/brand/englishlabs.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -164,8 +164,13 @@ export default function ListeningReviewPage() {
     setHighlightedEvidenceQuestionId(questionId);
 
     window.setTimeout(() => {
-      const node = document.getElementById(`listening-evidence-${questionId}`);
-      node?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const node = document.getElementById(`transcript-hit-${questionId}`);
+      if (node) {
+        node.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      const transcriptTop = document.getElementById("review-main");
+      transcriptTop?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 120);
   }, [answerMetaByQuestionId]);
 

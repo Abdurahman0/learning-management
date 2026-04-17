@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Clock3, GraduationCap, User } from "lucide-react";
+import { Clock3, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { READING_TEST_DEMO } from "@/data/reading-test-demo";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { BrandIcon } from "@/components/brand/BrandIcon";
 
 import { BottomControls } from "./BottomControls";
 import { PassageTabs } from "./PassageTabs";
@@ -97,9 +98,7 @@ export function ReadingTestShell() {
       <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur">
         <div className="flex h-18 items-center justify-between gap-4 px-5 lg:px-8">
           <div className="flex items-center gap-3">
-            <span className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
-              <GraduationCap className="size-4.5" aria-hidden="true" />
-            </span>
+            <BrandIcon size={32} />
             <p className="text-xl font-semibold tracking-tight text-foreground">EnglishLabs</p>
             <Separator orientation="vertical" className="mx-1 h-6" />
             <p className="text-base font-medium text-slate-700">{t("title")}</p>

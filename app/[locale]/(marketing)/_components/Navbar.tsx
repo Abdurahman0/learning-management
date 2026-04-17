@@ -8,7 +8,6 @@ import ReactCountryFlag from "react-country-flag";
 import {
   BookOpenCheck,
   ChevronDown,
-  GraduationCap,
   Headphones,
   Lock,
   Menu,
@@ -23,6 +22,7 @@ import {
 import {Button} from "@/components/ui/button";
 import {ThemeToggle} from "@/components/theme-toggle";
 import {cn} from "@/lib/utils";
+import { BrandIcon } from "@/components/brand/BrandIcon";
 
 import {Container} from "./Container";
 
@@ -150,14 +150,7 @@ export function Navbar() {
     >
       <Container className="flex h-20 items-center justify-between gap-4">
         <Link href={homeHref} className="flex items-center gap-2.5 font-semibold text-foreground">
-          <span
-            className={cn(
-              "flex size-8 items-center justify-center rounded-xl",
-              "bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-sm"
-            )}
-          >
-            <GraduationCap className="size-4.5" aria-hidden="true" />
-          </span>
+          <BrandIcon size={32} />
           <span className="text-base tracking-tight">{t("nav.brand")}</span>
         </Link>
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type CSSProperties, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { BookOpen, Bookmark, BookmarkCheck, Clock3, Grid2x2, Maximize2, Menu, Minimize2, MoveLeft, MoveRight, Play, RotateCcw, Square, User } from "lucide-react";
+import { Bookmark, BookmarkCheck, Clock3, Grid2x2, Maximize2, Menu, Minimize2, MoveLeft, MoveRight, Play, RotateCcw, Square, User } from "lucide-react";
 import { LoadingModal } from "@/components/ui/loading-modal";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -31,6 +31,7 @@ import {
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { HighlightableText } from "@/components/test/HighlightableText";
 import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
+import { InlineBoldText } from "@/components/test/InlineBoldText";
 import {
   clampSplitPct,
   mergeRanges,
@@ -40,7 +41,6 @@ import {
   type ReadingHighlight,
   type ReadingHighlightColor,
 } from "@/lib/reading-highlights";
-import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
 import { useTestAppearance } from "@/lib/test-appearance";
 import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
 import { adaptReadingBackendReview, type AdaptedReadingBackendReview } from "./result/_components/backendReviewAdapters";
@@ -48,6 +48,9 @@ import { studentAttemptsService } from "@/src/services/student/attempts.service"
 import { studentTestsService } from "@/src/services/student/tests.service";
 import { StudentApiError } from "@/src/services/student/types";
 import type { StudentAttemptDetail, StudentAttemptQuestion, StudentAttemptQuestionGroup, StudentAttemptReadingPassage, StudentTestRecord } from "@/src/services/student/types";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { useLeaveConfirm } from "@/lib/use-leave-confirm";
+import { BrandIcon } from "@/components/brand/BrandIcon";
 
 const DEFAULT_SPLIT = 50;
 const HEADING_DND_MIME = "application/x-reading-heading";
@@ -1122,9 +1125,12 @@ function ReadingTestClient({
     ? t("leaveWarning")
     : "Are you sure you want to quit this test? Your results will not be saved.";
 
-  useTestLeaveWarning({
+  const leaveConfirm = useLeaveConfirm({
     enabled: Boolean(attemptId) && !reviewMode,
+    title: t.has("leaveTitle") ? t("leaveTitle") : "Leave test?",
     message: leaveWarningMessage,
+    confirmText: t.has("leaveConfirm") ? t("leaveConfirm") : "Quit test",
+    cancelText: t.has("cancel") ? t("cancel") : "Cancel",
   });
 
   const resetAttemptState = (nextMode: AttemptMode | null = null) => {
@@ -2268,9 +2274,7 @@ function ReadingTestClient({
               aria-label="Go to home"
               className="flex min-w-0 items-center gap-3 rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
             >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
-                <BookOpen className="size-4.5" aria-hidden="true" />
-              </span>
+              <BrandIcon size={32} />
               <p className="truncate text-base font-semibold sm:text-lg">EnglishLabs</p>
             </Link>
             <Separator orientation="vertical" className="hidden h-6 md:block" />
@@ -2934,7 +2938,7 @@ function ReadingTestClient({
                                         <tr className="bg-muted/40">
                                           {question.tableColumns.map((column, columnIndex) => (
                                             <th key={`${question.id}-th-${columnIndex}`} className="border border-border/60 px-3 py-2 text-left font-semibold text-foreground/90">
-                                              {column}
+                                              <InlineBoldText text={column} />
                                             </th>
                                           ))}
                                         </tr>
@@ -2948,7 +2952,12 @@ function ReadingTestClient({
                                                   {cell.split(/(\{\d+\})/g).map((part, partIndex) => {
                                                     const tokenMatch = part.match(/^\{(\d+)\}$/);
                                                     if (!tokenMatch) {
-                                                      return part ? <span key={`${question.id}-cell-text-${rowIndex}-${cellIndex}-${partIndex}`}>{part}</span> : null;
+                                                      return part ? (
+                                                        <InlineBoldText
+                                                          key={`${question.id}-cell-text-${rowIndex}-${cellIndex}-${partIndex}`}
+                                                          text={part}
+                                                        />
+                                                      ) : null;
                                                     }
 
                                                     const targetNumber = Number(tokenMatch[1]);
@@ -3481,6 +3490,17 @@ function ReadingTestClient({
       <LoadingModal 
         open={isSubmittingResult} 
         message={t.has("submittingTest") ? t("submittingTest") : "Submitting your test and calculating results..."} 
+      />
+
+      <ConfirmModal
+        open={leaveConfirm.open}
+        title={leaveConfirm.title}
+        description={leaveConfirm.description}
+        confirmText={leaveConfirm.confirmText}
+        cancelText={leaveConfirm.cancelText}
+        confirmVariant="destructive"
+        onConfirm={leaveConfirm.onConfirm}
+        onCancel={leaveConfirm.onCancel}
       />
     </section>
   );

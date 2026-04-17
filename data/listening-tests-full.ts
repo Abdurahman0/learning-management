@@ -101,6 +101,7 @@ export type ListeningSectionFull = {
   instructions: string;
   questionRangeLabel: string;
   audioMeta: ListeningAudioMeta;
+  transcriptText?: string | null;
   blocks: ListeningBlock[];
 };
 

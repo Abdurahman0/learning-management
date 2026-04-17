@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import {
-  BookOpen,
   Bookmark,
   BookmarkCheck,
   Clock3,
@@ -59,12 +58,15 @@ import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { flattenListeningQuestions } from "@/lib/listening-questions";
 import { Highlightable } from "@/components/test/Highlightable";
 import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
-import { useTestLeaveWarning } from "@/lib/use-test-leave-warning";
+import { InlineBoldText } from "@/components/test/InlineBoldText";
 import { useTestAppearance } from "@/lib/test-appearance";
 import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
 import { ListeningQuestionAnalysisPanel } from "./result/_components/ListeningQuestionAnalysisPanel";
-import type { ListeningBackendAnswerMeta } from "./result/_components/backendReviewAdapters";
+import { adaptListeningBackendReview, type AdaptedListeningBackendReview, type ListeningBackendAnswerMeta } from "./result/_components/backendReviewAdapters";
 import { ListeningTranscriptReviewPanel, type ListeningReviewSection } from "./result/_components/ListeningTranscriptReviewPanel";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { useLeaveConfirm } from "@/lib/use-leave-confirm";
+import { BrandIcon } from "@/components/brand/BrandIcon";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
 import { studentTestsService } from "@/src/services/student/tests.service";
 import { StudentApiError } from "@/src/services/student/types";
@@ -581,6 +583,7 @@ function mapListeningAttemptToRuntimeTest(test: StudentTestRecord, attempt: Stud
         currentTrackTitle: toStringSafe(part.title).trim() || `Listening Part ${index + 1}`,
         audioUrl: toStringSafe(part.audio_file_url).trim() || null
       },
+      transcriptText: toStringSafe(part.transcript_text).trim() || null,
       blocks
     };
   });
@@ -648,6 +651,50 @@ function resolveChoiceKeyFromRawValue(
   if (byRawOption >= 0) return parsedOptions[byRawOption]?.key ?? "";
 
   return "";
+}
+
+type TemplateToken =
+  | { kind: "text"; value: string; bold: boolean }
+  | { kind: "placeholder"; questionNumber: number; bold: boolean };
+
+function tokenizeTemplateTextWithBoldAndPlaceholders(text: string): TemplateToken[] {
+  const tokens: TemplateToken[] = [];
+  const re = /(\*\*|\{(\d+)\})/g;
+  let lastIndex = 0;
+  let bold = false;
+
+  for (const match of text.matchAll(re)) {
+    const index = match.index ?? 0;
+    if (index > lastIndex) {
+      const value = text.slice(lastIndex, index);
+      if (value) {
+        tokens.push({ kind: "text", value, bold });
+      }
+    }
+
+    const raw = match[1] ?? "";
+    if (raw === "**") {
+      bold = !bold;
+    } else {
+      const questionNumber = Number(match[2] ?? "");
+      if (Number.isFinite(questionNumber) && questionNumber > 0) {
+        tokens.push({ kind: "placeholder", questionNumber, bold });
+      } else if (raw) {
+        tokens.push({ kind: "text", value: raw, bold });
+      }
+    }
+
+    lastIndex = index + raw.length;
+  }
+
+  if (lastIndex < text.length) {
+    const value = text.slice(lastIndex);
+    if (value) {
+      tokens.push({ kind: "text", value, bold });
+    }
+  }
+
+  return tokens;
 }
 
 function QuestionChip({
@@ -881,6 +928,8 @@ function ListeningTestClient({
   const [startedAt, setStartedAt] = useState(0);
   const [finishOpen, setFinishOpen] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
+  const [backendReviewData, setBackendReviewData] = useState<AdaptedListeningBackendReview | null>(null);
+  const [isSubmittingResult, setIsSubmittingResult] = useState(false);
   const [expandedReviewQuestions, setExpandedReviewQuestions] = useState<Set<string>>(new Set());
   const [highlightedEvidenceQuestionId, setHighlightedEvidenceQuestionId] = useState<string | null>(null);
   const [reviewMobilePanel, setReviewMobilePanel] = useState<"transcript" | "questions">("transcript");
@@ -944,9 +993,12 @@ function ListeningTestClient({
     ? t("realModeStartsSoon")
     : "Audio starts in 1 second...";
 
-  useTestLeaveWarning({
+  const leaveConfirm = useLeaveConfirm({
     enabled: Boolean(attemptId) && !reviewMode,
+    title: t.has("leaveTitle") ? t("leaveTitle") : "Leave test?",
     message: leaveWarningMessage,
+    confirmText: t.has("leaveConfirm") ? t("leaveConfirm") : "Quit test",
+    cancelText: t.has("cancel") ? t("cancel") : "Cancel",
   });
 
   const resetAttemptState = (nextMode: AttemptMode | null = null) => {
@@ -963,6 +1015,8 @@ function ListeningTestClient({
     setAttemptMode(nextMode);
     setFinishOpen(false);
     setReviewMode(false);
+    setBackendReviewData(null);
+    setIsSubmittingResult(false);
     setExpandedReviewQuestions(new Set());
     setHighlightedEvidenceQuestionId(null);
     setReviewMobilePanel("transcript");
@@ -1171,14 +1225,14 @@ function ListeningTestClient({
     () => flattenListeningQuestions(test.id, test.sections),
     [test.id, test.sections]
   );
-  const persistedAnswersByQuestionId = useMemo(
+  const localAnswersByQuestionId = useMemo(
     () =>
       Object.fromEntries(
         Object.entries(answers).map(([number, value]) => [`${test.id}-q${number}`, value])
       ) as Record<string, string | string[] | null>,
     [answers, test.id]
   );
-  const gradeableQuestions = useMemo<GradeableQuestion[]>(
+  const localGradeableQuestions = useMemo<GradeableQuestion[]>(
     () =>
       flatQuestions.map((question) => {
         const meta = getListeningAnswerMeta(question.id);
@@ -1192,30 +1246,73 @@ function ListeningTestClient({
       }),
     [flatQuestions]
   );
-  const reviewAnswerMetaByQuestionId = useMemo(() => {
+
+  const reviewQuestions = useMemo(
+    () => backendReviewData?.questions ?? flatQuestions,
+    [backendReviewData, flatQuestions]
+  );
+  const reviewAnswersByQuestionId = useMemo(
+    () => backendReviewData?.answers ?? localAnswersByQuestionId,
+    [backendReviewData, localAnswersByQuestionId]
+  );
+  const reviewGradeableQuestions = useMemo<GradeableQuestion[]>(() => {
+    if (!backendReviewData) return localGradeableQuestions;
+    return backendReviewData.questions.map((question) => {
+      const meta = backendReviewData.answerMeta.find((item) => item.questionId === question.id);
+      return {
+        id: question.id,
+        number: question.number,
+        type: question.type,
+        correctAnswer: meta?.correctAnswer,
+        acceptableAnswers: meta?.acceptableAnswers,
+      };
+    });
+  }, [backendReviewData, localGradeableQuestions]);
+  const grading = useMemo(
+    () => gradeTest(reviewGradeableQuestions, reviewAnswersByQuestionId),
+    [reviewAnswersByQuestionId, reviewGradeableQuestions]
+  );
+  const reviewAnswerMetaByQuestionId = useMemo<Record<string, ListeningBackendAnswerMeta>>(() => {
+    if (backendReviewData) {
+      return backendReviewData.answerMeta.reduce<Record<string, ListeningBackendAnswerMeta>>((accumulator, item) => {
+        accumulator[item.questionId] = item;
+        return accumulator;
+      }, {});
+    }
+
     return flatQuestions.reduce<Record<string, ListeningBackendAnswerMeta>>((accumulator, question) => {
-      const meta = getListeningAnswerMeta(question.id);
+      const staticMeta = getListeningAnswerMeta(question.id);
       accumulator[question.id] = {
         questionId: question.id,
         questionNumber: question.number,
         type: question.type,
-        correctAnswer: meta?.correctAnswer ?? null,
-        acceptableAnswers: meta?.acceptableAnswers,
-        explanation: meta?.explanation ?? "",
+        correctAnswer: staticMeta?.correctAnswer ?? null,
+        acceptableAnswers: staticMeta?.acceptableAnswers,
+        explanation: toStringSafe(staticMeta?.explanation).trim(),
         evidence: {
           sectionId: question.sectionId,
-          transcriptQuote: meta?.evidence.transcriptQuote ?? question.prompt,
-          timeRange: meta?.evidence.timeRange,
+          transcriptQuote: toStringSafe(staticMeta?.evidence.transcriptQuote).trim() || question.prompt,
+          timeRange: staticMeta?.evidence.timeRange,
         },
       };
       return accumulator;
     }, {});
-  }, [flatQuestions]);
-  const grading = useMemo(
-    () => gradeTest(gradeableQuestions, persistedAnswersByQuestionId),
-    [gradeableQuestions, persistedAnswersByQuestionId]
-  );
-  const reviewSections = useMemo(() => {
+  }, [backendReviewData, flatQuestions]);
+  const reviewSections = useMemo<ListeningReviewSection[]>(() => {
+    if (backendReviewData) {
+      return backendReviewData.reviewSections.map((section, index) => ({
+        ...section,
+        label: tListeningResult("partLabel", { index: index + 1 }),
+        evidenceItems: section.evidenceItems.map((item) => {
+          const graded = grading.byQuestion[item.questionId];
+          return {
+            ...item,
+            status: !graded?.normalizedUser ? "skipped" : graded.isCorrect ? "correct" : "incorrect",
+          };
+        }),
+      }));
+    }
+
     return test.sections.map((section, index) => ({
       sectionId: section.id,
       label: tListeningResult("partLabel", { index: index + 1 }),
@@ -1223,6 +1320,7 @@ function ListeningTestClient({
       instructions: section.instructions,
       nowPlayingLabel: section.audioMeta.nowPlayingLabel,
       audioTitle: section.audioMeta.currentTrackTitle,
+      transcriptText: toStringSafe(section.transcriptText).trim(),
       evidenceItems: flatQuestions
         .filter((question) => question.sectionId === section.id)
         .map((question) => {
@@ -1232,26 +1330,22 @@ function ListeningTestClient({
             questionId: question.id,
             questionNumber: question.number,
             prompt: question.prompt,
-            quote: meta?.evidence.transcriptQuote ?? question.prompt,
+            quote: toStringSafe(meta?.evidence.transcriptQuote).trim() || question.prompt,
             timeRange: meta?.evidence.timeRange,
-            status: !graded?.normalizedUser
-              ? "skipped"
-              : graded.isCorrect
-                ? "correct"
-                : "incorrect",
+            status: !graded?.normalizedUser ? "skipped" : graded.isCorrect ? "correct" : "incorrect",
           } as const;
         }),
-    })) as ListeningReviewSection[];
-  }, [flatQuestions, grading.byQuestion, tListeningResult, test.sections]);
+    }));
+  }, [backendReviewData, flatQuestions, grading.byQuestion, tListeningResult, test.sections]);
   const resolvedActiveSectionId = test.sections.some((section) => section.id === activeSectionId)
     ? activeSectionId
     : (test.sections[0]?.id ?? "s1");
   const reviewStartQuestionId = useMemo(
     () =>
-      flatQuestions
+      reviewQuestions
         .filter((question) => question.sectionId === resolvedActiveSectionId)
         .sort((left, right) => left.number - right.number)[0]?.id ?? null,
-    [flatQuestions, resolvedActiveSectionId]
+    [reviewQuestions, resolvedActiveSectionId]
   );
   const effectiveAudioDurationSec = Math.max(
     0,
@@ -1509,6 +1603,36 @@ function ListeningTestClient({
   };
 
   const jumpToQuestion = (questionNumber: number) => {
+    // In review mode (after finishing), the question list is rendered inside the Question Analysis panel.
+    // The old `questionRefs`/`questionsScrollRef` mapping belongs to the test-taking UI, so we scroll by id.
+    if (reviewMode) {
+      const reviewQuestion = flatQuestions.find((question) => question.number === questionNumber);
+      if (!reviewQuestion) return;
+
+      const nextSectionId = reviewQuestion.sectionId as ListeningSectionFull["id"];
+      if (nextSectionId && nextSectionId !== activeSectionId) {
+        // Keep behavior consistent: switching section should stop audio and change the active part.
+        suppressAudioAutoPlayRef.current = true;
+        stopSectionAudioPlayback();
+        setActiveSectionId(nextSectionId);
+      }
+
+      setActiveQuestionNumber(questionNumber);
+      if (isCompact) {
+        setReviewMobilePanel("questions");
+      }
+
+      window.setTimeout(() => {
+        const node = document.getElementById(`review-question-${reviewQuestion.id}`);
+        node?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 80);
+
+      if (isCompact) {
+        setPaletteOpen(false);
+      }
+      return;
+    }
+
     const sectionId = sectionByQuestion.get(questionNumber);
     if (!sectionId) {
       return;
@@ -1611,18 +1735,24 @@ function ListeningTestClient({
   };
 
   const handleJumpEvidenceFromReview = useCallback((questionId: string) => {
-    const meta = getListeningAnswerMeta(questionId);
+    const reviewMeta = reviewAnswerMetaByQuestionId[questionId];
     setReviewMobilePanel("transcript");
-    if (meta?.evidence.sectionId) {
-      setActiveSectionId(meta.evidence.sectionId);
+    const nextSectionId = reviewMeta?.evidence.sectionId ?? "";
+    if (nextSectionId === "s1" || nextSectionId === "s2" || nextSectionId === "s3" || nextSectionId === "s4") {
+      setActiveSectionId(nextSectionId);
     }
     setHighlightedEvidenceQuestionId(questionId);
 
     window.setTimeout(() => {
-      const node = document.getElementById(`listening-evidence-${questionId}`);
-      node?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const node = document.getElementById(`transcript-hit-${questionId}`);
+      if (node) {
+        node.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      const transcriptTop = document.getElementById("review-main");
+      transcriptTop?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 120);
-  }, []);
+  }, [reviewAnswerMetaByQuestionId]);
 
   const handleGoToQuestionFromReview = useCallback((questionId: string) => {
     setReviewMobilePanel("questions");
@@ -1641,143 +1771,163 @@ function ListeningTestClient({
   }, [remainingSeconds, startedAt, test.durationMinutes, timerRunning]);
 
   const finishTest = useCallback(async () => {
-    if (!attemptId) return;
-    const finishedAt = Date.now();
-    const timerUsed = timerRunning || remainingSeconds !== test.durationMinutes * 60;
-    const timeUsedSeconds = resolveTimeUsedSeconds(finishedAt);
-    const persistedAnswers = Object.fromEntries(
-      Object.entries(answers).map(([number, value]) => [`${test.id}-q${number}`, value])
-    );
+    if (!attemptId || isSubmittingResult) return;
+    setIsSubmittingResult(true);
+    try {
+      const finishedAt = Date.now();
+      const timerUsed = timerRunning || remainingSeconds !== test.durationMinutes * 60;
+      const timeUsedSeconds = resolveTimeUsedSeconds(finishedAt);
+      const persistedAnswers = Object.fromEntries(
+        Object.entries(answers).map(([number, value]) => [`${test.id}-q${number}`, value])
+      );
 
-    let submitAttemptId = backendAttemptId;
-    if (!submitAttemptId && UUID_PATTERN.test(test.id)) {
-      try {
-        const createdAttempt = await studentAttemptsService.create({
-          practice_test: test.id,
-          mode: attemptMode === "real" ? "REAL" : "PRACTICE"
-        });
-        submitAttemptId = toStringSafe(createdAttempt.id).trim() || null;
-        setBackendAttemptId(submitAttemptId);
-        setSubmitMetaByNumber(collectListeningSubmitMetaByNumber(createdAttempt));
-      } catch {
-        // Ignore attempt-create failure here; submit flow will continue with local result state.
+      let submitAttemptId = backendAttemptId;
+      if (!submitAttemptId && UUID_PATTERN.test(test.id)) {
+        try {
+          const createdAttempt = await studentAttemptsService.create({
+            practice_test: test.id,
+            mode: attemptMode === "real" ? "REAL" : "PRACTICE"
+          });
+          submitAttemptId = toStringSafe(createdAttempt.id).trim() || null;
+          setBackendAttemptId(submitAttemptId);
+          setSubmitMetaByNumber(collectListeningSubmitMetaByNumber(createdAttempt));
+        } catch {
+          // Ignore attempt-create failure here; submit flow will continue with local result state.
+        }
       }
-    }
 
-    if (submitAttemptId) {
-      try {
-        const activeEntries = Object.entries(answers)
-          .map(([rawNumber, rawValue]) => {
-            const questionNumber = Number(rawNumber);
-            if (!Number.isFinite(questionNumber)) return null;
-            const normalizedRaw = toStringSafe(rawValue).trim();
-            if (!normalizedRaw) return null;
+      let submitSucceeded = false;
+      if (submitAttemptId) {
+        try {
+          const activeEntries = Object.entries(answers)
+            .map(([rawNumber, rawValue]) => {
+              const questionNumber = Number(rawNumber);
+              if (!Number.isFinite(questionNumber)) return null;
+              const normalizedRaw = toStringSafe(rawValue).trim();
+              if (!normalizedRaw) return null;
 
-            const submitMeta = submitMetaByNumber.get(questionNumber);
-            if (!submitMeta?.candidateIds?.length) return null;
+              const submitMeta = submitMetaByNumber.get(questionNumber);
+              if (!submitMeta?.candidateIds?.length) return null;
 
-            const answerPayload = submitMeta.questionType === "MCQ_MULTIPLE"
-              ? {
-                  answers: normalizedRaw
-                    .split(",")
-                    .map((item) => item.trim())
-                    .filter(Boolean)
-                }
-              : {
-                  answer: normalizedRaw
-                };
-
-            return {
-              questionNumber,
-              candidateIds: submitMeta.candidateIds,
-              answer: answerPayload
-            };
-          })
-          .filter(Boolean) as Array<{questionNumber: number; candidateIds: string[]; answer: {answer: string} | {answers: string[]}}>;
-
-        const currentIds = new Map<number, string>();
-        activeEntries.forEach((entry) => {
-          const initialId = entry.candidateIds[0] ?? "";
-          if (initialId) {
-            currentIds.set(entry.questionNumber, initialId);
-          }
-        });
-
-        let attemptIndex = 0;
-        const maxAttempts = 12;
-        while (attemptIndex < maxAttempts) {
-          const backendAnswers = activeEntries
-            .map((entry) => {
-              const questionId = currentIds.get(entry.questionNumber) ?? "";
-              if (!questionId) return null;
+              const answerPayload = submitMeta.questionType === "MCQ_MULTIPLE"
+                ? {
+                    answers: normalizedRaw
+                      .split(",")
+                      .map((item) => item.trim())
+                      .filter(Boolean)
+                  }
+                : {
+                    answer: normalizedRaw
+                  };
 
               return {
-                question_id: questionId,
-                answer: entry.answer
+                questionNumber,
+                candidateIds: submitMeta.candidateIds,
+                answer: answerPayload
               };
             })
-            .filter((item): item is {question_id: string; answer: {answer: string} | {answers: string[]}} => item !== null);
+            .filter(Boolean) as Array<{questionNumber: number; candidateIds: string[]; answer: {answer: string} | {answers: string[]}}>;
 
-          try {
-            await studentAttemptsService.submit(submitAttemptId, {
-              time_used_seconds: timeUsedSeconds,
-              answers: backendAnswers
-            });
-            break;
-          } catch (error) {
-            const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
-            if (!failedQuestionIds.size) {
-              throw error;
+          const currentIds = new Map<number, string>();
+          activeEntries.forEach((entry) => {
+            const initialId = entry.candidateIds[0] ?? "";
+            if (initialId) {
+              currentIds.set(entry.questionNumber, initialId);
             }
+          });
 
-            let changed = false;
-            for (const entry of activeEntries) {
-              const currentId = currentIds.get(entry.questionNumber) ?? "";
-              if (!currentId || !failedQuestionIds.has(currentId)) continue;
-              const nextCandidate = entry.candidateIds.find((candidate) => candidate && candidate !== currentId);
-              if (nextCandidate) {
-                currentIds.set(entry.questionNumber, nextCandidate);
-                changed = true;
+          let attemptIndex = 0;
+          const maxAttempts = 12;
+          while (attemptIndex < maxAttempts) {
+            const backendAnswers = activeEntries
+              .map((entry) => {
+                const questionId = currentIds.get(entry.questionNumber) ?? "";
+                if (!questionId) return null;
+
+                return {
+                  question_id: questionId,
+                  answer: entry.answer
+                };
+              })
+              .filter((item): item is {question_id: string; answer: {answer: string} | {answers: string[]}} => item !== null);
+
+            try {
+              await studentAttemptsService.submit(submitAttemptId, {
+                time_used_seconds: timeUsedSeconds,
+                answers: backendAnswers.map((item) => ({
+                  ...item,
+                  attempt_question_id: item.question_id
+                }))
+              });
+              submitSucceeded = true;
+              break;
+            } catch (error) {
+              const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
+              if (!failedQuestionIds.size) {
+                throw error;
+              }
+
+              let changed = false;
+              for (const entry of activeEntries) {
+                const currentId = currentIds.get(entry.questionNumber) ?? "";
+                if (!currentId || !failedQuestionIds.has(currentId)) continue;
+                const nextCandidate = entry.candidateIds.find((candidate) => candidate && candidate !== currentId);
+                if (nextCandidate) {
+                  currentIds.set(entry.questionNumber, nextCandidate);
+                  changed = true;
+                }
+              }
+
+              if (!changed) {
+                throw error;
               }
             }
 
-            if (!changed) {
-              throw error;
-            }
+            attemptIndex += 1;
           }
-
-          attemptIndex += 1;
+        } catch {
+          // Keep console clean on submit failure.
         }
-      } catch {
-        // Keep console clean on submit failure.
       }
+
+      if (submitAttemptId && submitSucceeded) {
+        try {
+          const reviewResponse = await studentAttemptsService.review(submitAttemptId);
+          setBackendReviewData(adaptListeningBackendReview(reviewResponse));
+        } catch {
+          // If review fails, keep fallback review UI (no explanations/evidence).
+        }
+      }
+
+      saveAttemptResult({
+        attemptId,
+        backendAttemptId: submitAttemptId ?? backendAttemptId ?? undefined,
+        module: "listening",
+        testId: test.id,
+        mode: attemptMode ?? "practice",
+        answers: persistedAnswers,
+        markedQuestionIds: [...marked].map((number) => `${test.id}-q${number}`),
+        startedAt,
+        finishedAt,
+        timeRemainingSec: remainingSeconds,
+        timerUsed,
+      });
+
+      setFinishOpen(false);
+      setPaletteOpen(false);
+      setTimerRunning(false);
+      setAudioPlaying(false);
+      setReviewMobilePanel("transcript");
+      setReviewMode(true);
+    } finally {
+      setIsSubmittingResult(false);
     }
-
-    saveAttemptResult({
-      attemptId,
-      backendAttemptId: submitAttemptId ?? backendAttemptId ?? undefined,
-      module: "listening",
-      testId: test.id,
-      mode: attemptMode ?? "practice",
-      answers: persistedAnswers,
-      markedQuestionIds: [...marked].map((number) => `${test.id}-q${number}`),
-      startedAt,
-      finishedAt,
-      timeRemainingSec: remainingSeconds,
-      timerUsed,
-    });
-
-    setFinishOpen(false);
-    setPaletteOpen(false);
-    setTimerRunning(false);
-    setAudioPlaying(false);
-    setReviewMobilePanel("transcript");
-    setReviewMode(true);
   }, [
     answers,
     attemptId,
     attemptMode,
     backendAttemptId,
+    isSubmittingResult,
     marked,
     remainingSeconds,
     resolveTimeUsedSeconds,
@@ -1912,7 +2062,7 @@ function ListeningTestClient({
       return (
         <Card className="test-panel min-w-0 gap-0 rounded-lg border border-border bg-card p-0 overflow-hidden">
           <h4 className="border-b border-border px-4 py-3 text-sm font-semibold">
-            {block.title}
+            <InlineBoldText text={block.title} />
           </h4>
           <div className="max-w-full overflow-x-auto">
             <table className="w-full min-w-115 text-sm">
@@ -1923,7 +2073,7 @@ function ListeningTestClient({
                       key={col}
                       className="border-b border-border px-3 py-2 text-left font-medium"
                     >
-                      {col}
+                      <InlineBoldText text={col} />
                     </th>
                   ))}
                 </tr>
@@ -1943,10 +2093,10 @@ function ListeningTestClient({
                     className={cn("scroll-mt-24", markedQuestionClass(row.questionNumber))}
                   >
                     <td className="border-b border-border px-3 py-2 wrap-break-word">
-                      {row.values[0]}
+                      <InlineBoldText text={row.values[0] ?? ""} />
                     </td>
                     <td className="border-b border-border px-3 py-2 wrap-break-word">
-                      {row.values[1]}
+                      <InlineBoldText text={row.values[1] ?? ""} />
                     </td>
                     <td className="border-b border-border px-3 py-2">
                       <div className="flex min-w-0 items-center gap-2">
@@ -2007,7 +2157,7 @@ function ListeningTestClient({
                 active={activeQuestionNumber === question.questionNumber}
               />
             </span>
-            {question.prompt}
+            <InlineBoldText text={question.prompt} />
           </p>
           <div className="mt-2 space-y-2">
             {question.options.map((option, optionIndex) => {
@@ -2115,7 +2265,9 @@ function ListeningTestClient({
                           subtle={activeQuestionNumber !== number}
                         />
                       ))}
-                      <p className="wrap-break-word text-sm font-medium">{prompt}</p>
+                      <p className="wrap-break-word text-sm font-medium">
+                        <InlineBoldText text={prompt} />
+                      </p>
                     </div>
 
                     <div className="space-y-2">
@@ -2430,21 +2582,20 @@ function ListeningTestClient({
     }
 
     if (block.templateText?.trim()) {
-      const parts = block.templateText.split(/(\{\d+\})/g);
+      const tokens = tokenizeTemplateTextWithBoldAndPlaceholders(block.templateText);
 
       return (
         <Card className="test-panel test-soft-surface min-w-0 gap-0 rounded-lg border border-border bg-muted/20 p-4 overflow-hidden">
           <div className="rounded-lg border border-border/60 bg-muted/15 p-3">
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-              {parts.map((part, partIndex) => {
-                const match = part.match(/^\{(\d+)\}$/);
-                if (match) {
-                  const num = Number(match[1]);
+              {tokens.map((token, tokenIndex) => {
+                if (token.kind === "placeholder") {
+                  const num = token.questionNumber;
                   const isCurrent = activeQuestionNumber === num;
 
                   return (
                     <span
-                      key={`summary-token-${partIndex}`}
+                      key={`summary-token-${tokenIndex}`}
                       id={`q-${num}`}
                       ref={(el) => {
                         if (!el) {
@@ -2455,6 +2606,7 @@ function ListeningTestClient({
                       }}
                       className={cn(
                         "mx-0.5 inline-flex items-baseline gap-1 scroll-mt-24 align-baseline",
+                        token.bold && "font-semibold",
                         markedQuestionClass(num),
                       )}
                       onClick={() => setActiveQuestionNumber(num)}
@@ -2468,6 +2620,7 @@ function ListeningTestClient({
                         placeholder="..."
                         className={cn(
                           "test-input-surface inline-block h-8 w-28 rounded-md px-2 text-sm transition-all sm:w-36",
+                          token.bold && "font-medium",
                           isCurrent
                             ? "border-blue-400 bg-blue-50/60 ring-1 ring-blue-400/30 dark:bg-blue-900/20"
                             : "",
@@ -2477,10 +2630,18 @@ function ListeningTestClient({
                   );
                 }
 
+                if (token.bold) {
+                  return (
+                    <strong key={`summary-token-${tokenIndex}`} className="wrap-break-word font-semibold">
+                      {token.value}
+                    </strong>
+                  );
+                }
+
                 return (
                   <FormattedInstructionText
-                    key={`summary-token-${partIndex}`}
-                    text={part}
+                    key={`summary-token-${tokenIndex}`}
+                    text={token.value}
                     className="wrap-break-word"
                   />
                 );
@@ -2628,7 +2789,7 @@ function ListeningTestClient({
       </Card>
     );
   };
-  const showAnalyticsReviewLayout = false;
+  const showAnalyticsReviewLayout = reviewMode;
 
   return (
     <section
@@ -2649,14 +2810,7 @@ function ListeningTestClient({
               aria-label="Go to home"
               className="flex min-w-0 items-center gap-1.5 sm:gap-3 rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
             >
-              <span
-                className={cn(
-                  "flex shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-sm",
-                  isSmallLandscape ? "size-7" : "size-8",
-                )}
-              >
-                <BookOpen className="size-4.5" aria-hidden="true" />
-              </span>
+              <BrandIcon size={isSmallLandscape ? 28 : 32} className={cn(isSmallLandscape ? "rounded-lg" : "")} />
               <p
                 className={cn(
                   "min-w-0 text-sm font-semibold sm:text-lg leading-tight",
@@ -2989,9 +3143,9 @@ function ListeningTestClient({
       </div>
       ) : null}
 
-      <main className="test-scaleable grid min-h-0 min-w-0 w-full max-w-full flex-1 grid-cols-1 gap-3 px-2 py-2 sm:px-3 sm:py-3 lg:gap-4 lg:px-5 lg:py-4">
+      <main className="test-scaleable grid min-h-0 min-w-0 w-full max-w-full flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)] gap-3 px-2 py-2 sm:px-3 sm:py-3 lg:gap-4 lg:px-5 lg:py-4">
         {showAnalyticsReviewLayout && reviewMode ? (
-          <section className="min-h-0 min-w-0 w-full max-w-full space-y-3">
+          <section className="min-h-0 min-w-0 w-full max-w-full flex h-full flex-col gap-3">
             {isCompact ? (
               <div className="grid grid-cols-2 rounded-xl border border-border bg-card/70 p-1">
                 <Button
@@ -3015,13 +3169,14 @@ function ListeningTestClient({
 
             <section
               id="review-main"
-              className="grid min-h-0 min-w-0 w-full max-w-full gap-4 xl:h-[calc(100vh-14.5rem)] xl:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)] xl:items-stretch"
+              className="grid min-h-0 min-w-0 w-full max-w-full flex-1 gap-4 xl:grid-cols-[minmax(0,1.04fr)_minmax(0,0.96fr)] xl:items-stretch"
             >
               <div className={cn("min-h-0 min-w-0", isCompact && reviewMobilePanel !== "transcript" && "hidden xl:block")}>
                 <ListeningTranscriptReviewPanel
                   sections={reviewSections}
                   activeSectionId={resolvedActiveSectionId}
                   highlightedQuestionId={highlightedEvidenceQuestionId}
+                  className="h-full xl:h-full"
                   onSectionChange={(sectionId) => setActiveSectionId(sectionId as "s1" | "s2" | "s3" | "s4")}
                   onGoToQuestion={handleGoToQuestionFromReview}
                 />
@@ -3029,12 +3184,13 @@ function ListeningTestClient({
 
               <div className={cn("min-h-0 min-w-0", isCompact && reviewMobilePanel !== "questions" && "hidden xl:block")}>
                 <ListeningQuestionAnalysisPanel
-                  questions={flatQuestions}
-                  answers={persistedAnswersByQuestionId}
+                  questions={reviewQuestions}
+                  answers={reviewAnswersByQuestionId}
                   answerMetaByQuestionId={reviewAnswerMetaByQuestionId}
                   grading={grading}
                   expanded={expandedReviewQuestions}
                   showTopQuestionNavigator={false}
+                  className="h-full xl:h-full"
                   scrollResetKey={resolvedActiveSectionId}
                   scrollToQuestionId={reviewStartQuestionId ?? undefined}
                   onToggleExplanation={(questionId) => {
@@ -3097,8 +3253,8 @@ function ListeningTestClient({
         )}
       </main>
 
-      {
-        <div className="border-t border-border/75 bg-background/95 px-3 backdrop-blur sm:px-4 lg:px-5">
+      <>
+      <div className="border-t border-border/75 bg-background/95 px-3 backdrop-blur sm:px-4 lg:px-5">
           <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3 py-1.5">
             <Button
               type="button"
@@ -3243,7 +3399,6 @@ function ListeningTestClient({
             </div>
           </div>
         </div>
-      }
 
       <Sheet open={paletteOpen} onOpenChange={setPaletteOpen}>
         <SheetContent
@@ -3335,6 +3490,7 @@ function ListeningTestClient({
           </ScrollArea>
         </SheetContent>
       </Sheet>
+      </>
 
       <TestOptionsSheet
         open={optionsOpen}
@@ -3410,8 +3566,8 @@ function ListeningTestClient({
             </p>
             <p className="mt-1 text-xs text-muted-foreground">{t("timeSpent", { seconds: timeSpent })}</p>
             <div className="mt-4 flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setFinishOpen(false)}>{t("cancel")}</Button>
-              <Button onClick={finishTest}>{t("confirmFinish")}</Button>
+              <Button variant="ghost" onClick={() => setFinishOpen(false)} disabled={isSubmittingResult}>{t("cancel")}</Button>
+              <Button onClick={finishTest} disabled={isSubmittingResult}>{t("confirmFinish")}</Button>
             </div>
           </Card>
         </div>
@@ -3426,6 +3582,22 @@ function ListeningTestClient({
           </Button>
         </div>
       ) : null}
+
+      <LoadingModal
+        open={isSubmittingResult}
+        message={t.has("submittingTest") ? t("submittingTest") : "Submitting your test and loading review..."}
+      />
+
+      <ConfirmModal
+        open={leaveConfirm.open}
+        title={leaveConfirm.title}
+        description={leaveConfirm.description}
+        confirmText={leaveConfirm.confirmText}
+        cancelText={leaveConfirm.cancelText}
+        confirmVariant="destructive"
+        onConfirm={leaveConfirm.onConfirm}
+        onCancel={leaveConfirm.onCancel}
+      />
     </section>
   );
 }

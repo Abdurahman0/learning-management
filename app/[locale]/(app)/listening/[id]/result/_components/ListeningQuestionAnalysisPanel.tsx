@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { InlineBoldText } from "@/components/test/InlineBoldText";
 import type { FlattenedListeningQuestion } from "@/lib/listening-questions";
 import type { GradeTestResult } from "@/lib/grading";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,7 @@ type ListeningQuestionAnalysisPanelProps = {
   scrollResetKey?: string;
   scrollToQuestionId?: string;
   showTopQuestionNavigator?: boolean;
+  className?: string;
 };
 
 type QuestionStatus = "correct" | "incorrect" | "skipped";
@@ -86,6 +88,7 @@ export function ListeningQuestionAnalysisPanel({
   scrollResetKey,
   scrollToQuestionId,
   showTopQuestionNavigator = true,
+  className,
 }: ListeningQuestionAnalysisPanelProps) {
   const t = useTranslations("listeningResult");
   const [answersVisible, setAnswersVisible] = useState(false);
@@ -106,7 +109,12 @@ export function ListeningQuestionAnalysisPanel({
   }, [scrollResetKey, scrollToQuestionId]);
 
   return (
-    <Card className="flex h-[80vh] min-h-0 w-full max-w-full flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-[85vh]">
+    <Card
+      className={cn(
+        "flex h-[80vh] min-h-0 w-full max-w-full flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-[85vh]",
+        className
+      )}
+    >
       <div className="sticky top-0 z-20 min-w-0 max-w-full border-b border-slate-200/90 bg-white/95 px-3.5 py-3 backdrop-blur dark:border-border/70 dark:bg-card/95 sm:px-4">
         <div className="space-y-2.5">
           <div className="flex items-center justify-between gap-2">
@@ -171,6 +179,7 @@ export function ListeningQuestionAnalysisPanel({
           const correctAnswer = Array.isArray(answerMeta?.correctAnswer)
             ? answerMeta.correctAnswer.join(", ")
             : (answerMeta?.correctAnswer ?? "");
+          const explanationText = (answerMeta?.explanation ?? "").trim();
 
           return (
             <Card
@@ -184,7 +193,7 @@ export function ListeningQuestionAnalysisPanel({
               <div className="flex min-w-0 max-w-full flex-col items-start gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                 <div className="min-w-0 w-full max-w-full space-y-1.5">
                   <p className="wrap-break-word text-base leading-snug font-semibold">
-                    {question.number}. {question.prompt}
+                    {question.number}. <InlineBoldText text={question.prompt} />
                   </p>
                   <div className="flex min-w-0 max-w-full flex-wrap gap-1.5">
                     <Badge
@@ -275,7 +284,7 @@ export function ListeningQuestionAnalysisPanel({
               {isOpen ? (
                 <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/90 p-3 text-sm dark:border-border/70 dark:bg-background/50">
                   <p className="wrap-break-word">
-                    {answerMeta?.explanation ?? t("notAvailable")}
+                    {explanationText || t("notAvailable")}
                   </p>
                   {answerMeta?.evidence.transcriptQuote ? (
                     <p className="mt-2 wrap-break-word text-xs text-muted-foreground">

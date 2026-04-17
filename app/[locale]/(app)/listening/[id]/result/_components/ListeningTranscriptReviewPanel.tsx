@@ -1,11 +1,9 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
 import { cn } from "@/lib/utils";
 
 type ListeningEvidenceStatus = "correct" | "incorrect" | "skipped";
@@ -26,6 +24,7 @@ export type ListeningReviewSection = {
   instructions: string;
   nowPlayingLabel: string;
   audioTitle: string;
+  transcriptText?: string;
   evidenceItems: ListeningTranscriptEvidence[];
 };
 
@@ -35,25 +34,88 @@ type ListeningTranscriptReviewPanelProps = {
   highlightedQuestionId: string | null;
   onSectionChange: (sectionId: string) => void;
   onGoToQuestion?: (questionId: string) => void;
+  className?: string;
 };
 
-function toClock(totalSeconds: number) {
-  const safe = Math.max(0, totalSeconds);
-  const min = Math.floor(safe / 60)
-    .toString()
-    .padStart(2, "0");
-  const sec = (safe % 60).toString().padStart(2, "0");
-  return `${min}:${sec}`;
+function normalizeForSearch(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[“”]/g, "\"")
+    .replace(/[‘’]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function getStatusStyles(status: ListeningEvidenceStatus) {
-  if (status === "correct") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/[0.08] dark:text-emerald-200";
+type TranscriptLine = {
+  speaker: string | null;
+  text: string;
+};
+
+function parseTranscriptLines(transcriptText: string): TranscriptLine[] {
+  const rawLines = transcriptText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const knownSpeakers = new Set(["MAN", "WOMAN", "NARRATOR", "HOST", "GUEST"]);
+  const out: TranscriptLine[] = [];
+
+  for (const line of rawLines) {
+    const colonMatch = line.match(/^([A-Z][A-Z0-9 ]{1,18})\s*:\s*(.+)$/);
+    if (colonMatch) {
+      out.push({ speaker: colonMatch[1].trim(), text: colonMatch[2].trim() });
+      continue;
+    }
+
+    const spaceMatch = line.match(/^([A-Z][A-Z0-9 ]{1,18})\s+(.+)$/);
+    if (spaceMatch) {
+      const maybeSpeaker = spaceMatch[1].trim();
+      const rest = spaceMatch[2].trim();
+      const isKnown = knownSpeakers.has(maybeSpeaker) || /^SPEAKER\s*\d+$/i.test(maybeSpeaker);
+      const isShort = maybeSpeaker.length <= 10;
+      if (isKnown || isShort) {
+        out.push({ speaker: maybeSpeaker, text: rest });
+        continue;
+      }
+    }
+
+    out.push({ speaker: null, text: line });
   }
-  if (status === "incorrect") {
-    return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/35 dark:bg-rose-500/[0.12] dark:text-rose-200";
+
+  return out;
+}
+
+function renderHighlightedText(text: string, needle: string) {
+  const normalizedNeedle = normalizeForSearch(needle);
+  if (!normalizedNeedle) return { node: text, hit: false };
+
+  const normalizedText = normalizeForSearch(text);
+  const idx = normalizedText.indexOf(normalizedNeedle);
+  if (idx < 0) return { node: text, hit: false };
+
+  // Best-effort mapping back to original string: highlight by a simple case-insensitive search.
+  const lower = text.toLowerCase();
+  const rawNeedleLower = needle.toLowerCase().trim();
+  const rawIdx = rawNeedleLower ? lower.indexOf(rawNeedleLower) : -1;
+  if (rawIdx < 0) {
+    return { node: text, hit: true };
   }
-  return "border-slate-200 bg-white text-slate-600 dark:border-border/70 dark:bg-background/55 dark:text-muted-foreground";
+
+  const before = text.slice(0, rawIdx);
+  const match = text.slice(rawIdx, rawIdx + rawNeedleLower.length);
+  const after = text.slice(rawIdx + rawNeedleLower.length);
+  return {
+    node: (
+      <>
+        {before}
+        <mark className="rounded-sm bg-amber-200/70 px-0.5 text-foreground dark:bg-amber-400/20">
+          {match}
+        </mark>
+        {after}
+      </>
+    ),
+    hit: true,
+  };
 }
 
 export function ListeningTranscriptReviewPanel({
@@ -62,114 +124,75 @@ export function ListeningTranscriptReviewPanel({
   highlightedQuestionId,
   onSectionChange,
   onGoToQuestion,
+  className,
 }: ListeningTranscriptReviewPanelProps) {
   const t = useTranslations("listeningResult");
   const activeSection = sections.find((section) => section.sectionId === activeSectionId) ?? sections[0];
+  const transcriptRef = useRef<HTMLDivElement | null>(null);
 
   if (!activeSection) return null;
 
+  const highlightedQuote = highlightedQuestionId
+    ? activeSection.evidenceItems.find((item) => item.questionId === highlightedQuestionId)?.quote ?? ""
+    : "";
+
+  const transcriptLines = parseTranscriptLines(activeSection.transcriptText ?? "");
+
+  useEffect(() => {
+    if (!highlightedQuestionId) return;
+    window.setTimeout(() => {
+      const node = document.getElementById(`transcript-hit-${highlightedQuestionId}`);
+      node?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  }, [highlightedQuestionId, activeSection.sectionId]);
+
   return (
-    <Card className="flex h-[80vh] min-h-0 w-full max-w-full flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-[85vh]">
-      <div className="sticky top-0 z-20 min-w-0 max-w-full border-b border-slate-200/90 bg-white/95 px-3 py-3 backdrop-blur dark:border-border/70 dark:bg-card/95 sm:px-4">
-        <div className="min-w-0 max-w-full space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase">{t("listeningReview")}</p>
-            <p className="text-xs text-muted-foreground">{activeSection.label}</p>
-          </div>
-          <div className="min-w-0 w-full max-w-full overflow-x-auto overflow-y-hidden pb-1 [scrollbar-width:thin]">
-            <div className="inline-flex gap-2 pr-2">
-              {sections.map((section) => (
-                <Button
-                  key={section.sectionId}
-                  size="sm"
-                  variant={section.sectionId === activeSectionId ? "default" : "outline"}
-                  className={cn(
-                    "h-8 shrink-0 rounded-xl px-3.5",
-                    section.sectionId === activeSectionId
-                      ? "bg-blue-500 text-blue-50 hover:bg-blue-500/90"
-                      : "border-slate-200 bg-white hover:bg-slate-100 dark:border-border/70 dark:bg-background/40 dark:hover:bg-background/60"
-                  )}
-                  onClick={() => onSectionChange(section.sectionId)}
-                >
-                  {section.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <Card
+      className={cn(
+        "flex h-[80vh] min-h-0 w-full max-w-full flex-col overflow-hidden rounded-3xl border-slate-200/85 bg-white/95 py-0 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none xl:h-[85vh]",
+        className
+      )}
+    >
       <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-y-auto px-4 pb-5 pt-4 [scrollbar-width:thin] sm:px-6">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-[1.9rem]">{activeSection.title}</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">
-              <FormattedInstructionText text={activeSection.instructions} />
-            </p>
-          </div>
+        {transcriptLines.length ? (
+          <div
+            ref={transcriptRef}
+            className="space-y-3 text-[15px] leading-7 text-foreground/95"
+            aria-label={t("transcript")}
+          >
+            {(() => {
+              let consumedHit = false;
+              return transcriptLines.map((line, index) => {
+                const highlighted = highlightedQuote
+                  ? renderHighlightedText(line.text, highlightedQuote)
+                  : { node: line.text, hit: false };
+                const isFirstHit = Boolean(highlighted.hit && !consumedHit);
+                if (isFirstHit) consumedHit = true;
 
-          <Card className="gap-1 rounded-2xl border-slate-200 bg-slate-50/80 p-3.5 shadow-none dark:border-border/65 dark:bg-background/45">
-            <p className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{activeSection.nowPlayingLabel}</p>
-            <p className="text-sm font-medium">{activeSection.audioTitle}</p>
-          </Card>
-
-          {highlightedQuestionId ? (
-            <Card className="rounded-2xl border-blue-300/70 bg-blue-100/70 p-3.5 shadow-none dark:border-blue-400/40 dark:bg-blue-500/12">
-              <p className="text-xs tracking-[0.12em] text-blue-700 dark:text-blue-200/90 uppercase">{t("selectedEvidence")}</p>
-              <p className="mt-1 text-sm text-foreground/95">
-                {activeSection.evidenceItems.find((item) => item.questionId === highlightedQuestionId)?.quote ?? t("notAvailable")}
-              </p>
-            </Card>
-          ) : null}
-
-          <div className="space-y-3">
-            {activeSection.evidenceItems.map((item) => (
-              <Card
-                key={item.questionId}
-                id={`listening-evidence-${item.questionId}`}
-                className={cn(
-                  "min-w-0 max-w-full gap-2 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-none dark:border-border/65 dark:bg-background/35",
-                  highlightedQuestionId === item.questionId && "border-blue-300/80 bg-blue-100/65 ring-1 ring-blue-300/70 dark:border-blue-400/60 dark:bg-blue-500/[0.14] dark:ring-blue-400/45"
-                )}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="rounded-full border-blue-300 bg-blue-100 text-blue-700 dark:border-blue-400/45 dark:bg-blue-500/15 dark:text-blue-100">
-                      Q{item.questionNumber}
-                    </Badge>
-                    <Badge variant="outline" className={cn("rounded-full", getStatusStyles(item.status))}>
-                      {t(`${item.status}Status`)}
-                    </Badge>
-                  </div>
-                  {item.timeRange ? (
-                    <p className="text-xs text-muted-foreground">
-                      {toClock(item.timeRange[0])} - {toClock(item.timeRange[1])}
-                    </p>
-                  ) : null}
-                </div>
-                <p className="wrap-break-word text-sm font-medium text-foreground/95">{item.prompt}</p>
-                <p className="wrap-break-word text-sm leading-relaxed text-muted-foreground">{item.quote}</p>
-                <div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 rounded-lg px-2.5 text-xs"
-                    onClick={() => {
-                      if (onGoToQuestion) {
-                        onGoToQuestion(item.questionId);
-                        return;
-                      }
-                      const node = document.getElementById(`review-question-${item.questionId}`);
-                      node?.scrollIntoView({ behavior: "smooth", block: "center" });
-                    }}
+                return (
+                  <div
+                    key={`transcript-line-${index}`}
+                    id={isFirstHit && highlightedQuestionId ? `transcript-hit-${highlightedQuestionId}` : undefined}
+                    className="grid grid-cols-[88px_minmax(0,1fr)] gap-3"
                   >
-                    {t("goToQuestion")}
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                    <div className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
+                      {line.speaker ? (
+                        <span className="inline-flex rounded-full border border-border/70 bg-muted/30 px-2 py-1 text-[11px] text-foreground/80">
+                          {line.speaker}
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                    </div>
+                    <p className="wrap-break-word">{highlighted.node}</p>
+                  </div>
+                );
+              });
+            })()}
           </div>
-        </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("notAvailable")}</p>
+        )}
       </div>
     </Card>
   );

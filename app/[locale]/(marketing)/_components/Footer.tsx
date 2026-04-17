@@ -2,6 +2,7 @@
 import {useTranslations} from "next-intl";
 
 import {Container} from "./Container";
+import { BrandIcon } from "@/components/brand/BrandIcon";
 
 const footerLinks = [
   {href: "#", key: "privacy"},
@@ -17,7 +18,10 @@ export function Footer() {
     <footer className="pb-6">
       <Container>
         <div className="flex mt-6 flex-col items-center justify-between gap-4 text-center text-sm text-muted-foreground lg:flex-row lg:text-left">
-          <p className="font-semibold tracking-tight text-foreground">{t("nav.brand")}</p>
+          <div className="flex items-center gap-2 font-semibold tracking-tight text-foreground">
+            <BrandIcon size={28} className="rounded-lg" />
+            <p>{t("nav.brand")}</p>
+          </div>
 
           <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-4 lg:gap-6">
             {footerLinks.map((item) => (

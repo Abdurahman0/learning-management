@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1.1 -1.1 2.2 2.2" width="512" height="512">
+  <style>
+    .brand-icon { fill: none; stroke: #1D5DCE; stroke-width: 0.06; stroke-linecap: round; }
+  </style>
+  <ellipse cx="0" cy="0" rx="0.9" ry="0.3" class="brand-icon" transform="rotate(0)" />
+  <ellipse cx="0" cy="0" rx="0.9" ry="0.3" class="brand-icon" transform="rotate(60)" />
+  <ellipse cx="0" cy="0" rx="0.9" ry="0.3" class="brand-icon" transform="rotate(120)" />
+  <path d="M 0 0.28 Q 0 0 0.28 0 Q 0 0 0 -0.28 Q 0 0 -0.28 0 Q 0 0 0 0.28"
+        class="brand-icon" stroke-linejoin="round" />
+</svg>
+

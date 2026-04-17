@@ -213,6 +213,7 @@ export function adaptListeningBackendReview(review: StudentAttemptReviewResponse
     instructions: part.question_groups[0]?.instructions || "",
     nowPlayingLabel: `Part ${index + 1} of ${Math.max(1, rawQuestionsByPart.length)}`,
     audioTitle: part.title || `Part ${index + 1}`,
+    transcriptText: toStringSafe(part.transcript_text, "").trim(),
     evidenceItems: sectionQuestions.map(({question}) => {
       const evidence = asRecord(question.answer_evidence_json);
       return {

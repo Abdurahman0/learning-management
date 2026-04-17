@@ -476,7 +476,19 @@
                                     "password":  "Password must be at least 8 characters.",
                                     "confirmPassword":  "Passwords do not match.",
                                     "agree":  "You need to accept the terms to continue."
-                                }
+                                },
+                 "forgotPassword":  {
+                                        "title":  "Forgot your password?",
+                                        "subtitle":  "Enter your email and we'll send you a reset link.",
+                                        "badge":  "Password reset",
+                                        "sideTitle":  "Get back in",
+                                        "sideDescription":  "WeвЂ™ll help you recover access securely.",
+                                        "sidePoint1":  "Reset link delivered to your inbox",
+                                        "sidePoint2":  "Works in seconds",
+                                        "sidePoint3":  "Secure and private",
+                                        "submit":  "Send reset link",
+                                        "backToLogin":  "Back to login"
+                                    }
              },
     "comparison":  {
                        "title":  "Maximize Your Preparation",
@@ -646,6 +658,7 @@
                             "reviewAnswers":  "Review Answers",
                             "retakeTest":  "Retake Test",
                             "goToDashboard":  "Dashboard",
+                            "transcript":  "Transcript",
                             "correct":  "Correct",
                             "incorrect":  "Incorrect",
                             "unanswered":  "Unanswered",

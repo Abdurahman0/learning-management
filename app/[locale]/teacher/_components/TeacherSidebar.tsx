@@ -7,7 +7,6 @@ import {
   BarChart3,
   CircleUserRound,
   ClipboardList,
-  GraduationCap,
   LayoutDashboard,
   Megaphone,
   Menu,
@@ -24,6 +23,7 @@ import {ScrollArea} from "@/components/ui/scroll-area";
 import {Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "@/components/ui/sheet";
 import {teacherNavItems, type TeacherNavKey} from "@/data/teacher-dashboard";
 import {cn} from "@/lib/utils";
+import { BrandIcon } from "@/components/brand/BrandIcon";
 
 const navIcons: Record<TeacherNavKey, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -188,11 +188,9 @@ export function TeacherSidebarMobileNav() {
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-76 gap-0 border-l border-border/70 bg-background/95 p-0">
-        <SheetHeader className="border-b border-border/70">
+          <SheetHeader className="border-b border-border/70">
           <SheetTitle className="flex items-center gap-2 text-left text-sm">
-            <span className="inline-flex size-8 items-center justify-center rounded-lg bg-primary/18 text-primary">
-              <GraduationCap className="size-4.5" />
-            </span>
+            <BrandIcon size={32} className="rounded-lg" />
             <span>
               <span className="block font-semibold">{t("sidebar.brand")}</span>
               <span className="block text-xs font-normal text-muted-foreground">{t("sidebar.subtitle")}</span>
@@ -216,9 +214,7 @@ export function TeacherSidebar() {
   return (
     <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-border/70 bg-card/45 p-4 backdrop-blur-xl lg:flex lg:flex-col">
       <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-background/45 px-3 py-3.5">
-        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
-          <GraduationCap className="size-4.5" aria-hidden="true" />
-        </span>
+        <BrandIcon size={36} />
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold tracking-tight">{t("sidebar.brand")}</p>
           <p className="text-xs text-muted-foreground">{t("sidebar.subtitle")}</p>

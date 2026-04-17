@@ -476,7 +476,19 @@
                                     "password":  "Parol kamida 8 ta belgidan iborat bo\u0027lsin.",
                                     "confirmPassword":  "Parollar bir xil emas.",
                                     "agree":  "Davom etish uchun shartlarga rozilik berish kerak."
-                                }
+                                },
+                 "forgotPassword":  {
+                                        "title":  "Parolingizni unutdingizmi?",
+                                        "subtitle":  "Emailingizni kiriting, biz sizga parolni tiklash havolasini yuboramiz.",
+                                        "badge":  "Parolni tiklash",
+                                        "sideTitle":  "Hisobingizga qayting",
+                                        "sideDescription":  "Kirishni xavfsiz tarzda tiklashga yordam beramiz.",
+                                        "sidePoint1":  "Havola emailingizga yuboriladi",
+                                        "sidePoint2":  "Bir necha soniyada",
+                                        "sidePoint3":  "Xavfsiz va maxfiy",
+                                        "submit":  "Tiklash havolasini yuborish",
+                                        "backToLogin":  "Kirishga qaytish"
+                                    }
              },
     "comparison":  {
                        "title":  "Tayyorgarlikni maksimal darajaga olib chiqing",
@@ -646,6 +658,7 @@
                             "reviewAnswers":  "Javoblarni ko\u0027rish",
                             "retakeTest":  "Testni qayta ishlash",
                             "goToDashboard":  "Dashboard",
+                            "transcript":  "Transkript",
                             "correct":  "To\u0027g\u0027ri",
                             "incorrect":  "Noto\u0027g\u0027ri",
                             "unanswered":  "Javobsiz",
