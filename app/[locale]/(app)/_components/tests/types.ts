@@ -1,4 +1,5 @@
 export type Difficulty = "easy" | "medium" | "hard";
+export type PracticeSource = "custom" | "real" | "cambridge";
 
 export type ReadingGuestTest = {
   id: string;
@@ -7,6 +8,7 @@ export type ReadingGuestTest = {
   durationMinutes: number;
   totalQuestions: number;
   difficulty: Difficulty;
+  practiceSource: PracticeSource;
   passages: Array<{
     title: string;
     questionsCount: number;
@@ -21,6 +23,7 @@ export type ListeningTestItem = {
   title: string;
   isPremium: boolean;
   difficulty: ListeningDifficulty;
+  practiceSource: PracticeSource;
   durationMins: number;
   durationMinutes?: number;
   totalQuestions: number;

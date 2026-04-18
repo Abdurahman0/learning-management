@@ -4,6 +4,8 @@ import {NextResponse} from "next/server";
 import {clearAuthCookies, setAccessTokenCookie} from "@/lib/auth/token-cookies";
 import {ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME} from "@/lib/auth/session";
 
+export const runtime = "nodejs";
+
 type RouteContext = {
   params: Promise<{path: string[]}>;
 };
@@ -49,7 +51,16 @@ async function prepareBody(request: Request): Promise<PreparedBody> {
   const contentType = request.headers.get("content-type") ?? "";
 
   if (contentType.includes("multipart/form-data")) {
-    return {body: await request.formData()};
+    // Do not parse multipart payloads in the proxy layer.
+    // Parsing (request.formData) buffers the full body and can trigger "entity too large"
+    // at the Next/Vercel layer even when the upstream backend would accept the upload.
+    // Forward the raw stream instead, preserving the original content-type boundary.
+    if (request.body) {
+      return {body: request.body, contentType};
+    }
+
+    // Fallback for runtimes that don't expose the stream.
+    return {body: await request.arrayBuffer(), contentType};
   }
 
   if (
@@ -100,10 +111,17 @@ async function forwardToBackend(params: {
     headers.set("Content-Type", params.preparedBody.contentType);
   }
 
+  const body = params.preparedBody.body;
+  const needsDuplex =
+    typeof ReadableStream !== "undefined" && body instanceof ReadableStream && params.method.toUpperCase() !== "GET" && params.method.toUpperCase() !== "HEAD";
+
+  // Node.js fetch requires `duplex: "half"` when sending a ReadableStream body.
+  // Next's runtime varies (node/edge); setting it conditionally keeps both working.
   return fetch(params.url, {
     method: params.method,
     headers,
-    body: params.preparedBody.body,
+    body,
+    ...(needsDuplex ? ({duplex: "half"} as unknown as Record<string, unknown>) : {}),
     cache: "no-store"
   });
 }

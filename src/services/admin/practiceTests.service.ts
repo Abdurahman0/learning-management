@@ -91,7 +91,38 @@ export const practiceTestsService = {
       const response = await adminHttpClient.post<PracticeTestDetailRecord>("/practice-tests/", normalizePracticePayload(payload));
       return response.data;
     } catch (error) {
-      throw toAdminApiError(error);
+      const mapped = toAdminApiError(error);
+
+      // Backward/partial backend compatibility: if the backend rejects newly introduced fields,
+      // retry once without them so test creation still works across environments.
+      if (mapped.status === 400) {
+        try {
+          const nextPayload = {...payload} as PracticeTestCreatePayload & {
+            practice_source?: unknown;
+            active_for_registered_users?: unknown;
+          };
+
+          if (Object.prototype.hasOwnProperty.call(mapped.fieldErrors, "practice_source")) {
+            delete nextPayload.practice_source;
+          }
+          if (Object.prototype.hasOwnProperty.call(mapped.fieldErrors, "active_for_registered_users")) {
+            delete nextPayload.active_for_registered_users;
+          }
+
+          // If the backend returned a generic 400 without field errors, fall back to dropping `practice_source`
+          // first (most likely to be rejected by older servers).
+          if (!Object.keys(mapped.fieldErrors ?? {}).length && Object.prototype.hasOwnProperty.call(nextPayload, "practice_source")) {
+            delete nextPayload.practice_source;
+          }
+
+          const retry = await adminHttpClient.post<PracticeTestDetailRecord>("/practice-tests/", normalizePracticePayload(nextPayload));
+          return retry.data;
+        } catch (retryError) {
+          throw toAdminApiError(retryError);
+        }
+      }
+
+      throw mapped;
     }
   },
 
@@ -109,7 +140,34 @@ export const practiceTestsService = {
       const response = await adminHttpClient.patch<PracticeTestDetailRecord>(`/practice-tests/${testId}/`, normalizePracticePatchPayload(payload));
       return response.data;
     } catch (error) {
-      throw toAdminApiError(error);
+      const mapped = toAdminApiError(error);
+      if (mapped.status === 400) {
+        try {
+          const nextPayload = {...payload} as PracticeTestPatchPayload & {
+            practice_source?: unknown;
+            active_for_registered_users?: unknown;
+          };
+          let changed = false;
+
+          if (Object.prototype.hasOwnProperty.call(mapped.fieldErrors, "practice_source")) {
+            delete nextPayload.practice_source;
+            changed = true;
+          }
+          if (Object.prototype.hasOwnProperty.call(mapped.fieldErrors, "active_for_registered_users")) {
+            delete nextPayload.active_for_registered_users;
+            changed = true;
+          }
+
+          if (changed) {
+            const retry = await adminHttpClient.patch<PracticeTestDetailRecord>(`/practice-tests/${testId}/`, normalizePracticePatchPayload(nextPayload));
+            return retry.data;
+          }
+        } catch (retryError) {
+          throw toAdminApiError(retryError);
+        }
+      }
+
+      throw mapped;
     }
   },
 

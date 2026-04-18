@@ -183,12 +183,17 @@
                            },
                   "filters":  {
                                   "searchPlaceholder":  "Search test name, book number or topic...",
+                                  "source":  "Source",
+                                  "sourceAll":  "All",
+                                  "sourceCustom":  "Custom",
+                                  "sourceCambridge":  "Cambridge",
+                                  "sourceReal":  "Real",
                                   "difficulty":  "Difficulty",
                                   "sort":  "Sort by",
                                   "difficultyAll":  "All",
-                                  "easy":  "Easy",
-                                  "medium":  "Medium",
-                                  "hard":  "Hard",
+                                  "easy":  "Beginner",
+                                  "medium":  "Intermediate",
+                                  "hard":  "Advanced",
                                   "sortNewest":  "Newest",
                                   "sortPopular":  "Popular",
                                   "sortHighest":  "A-Z"
@@ -1059,13 +1064,21 @@
                                             "testTitleLabel":  "Full test title",
                                             "testTitlePlaceholder":  "Enter full test title",
                                             "difficultyLabel":  "Difficulty",
+                                            "sourceLabel":  "Source",
+                                            "visibilityLabel":  "Visibility",
+                                            "registeredOnlyHint":  "When enabled, only registered users can see this test.",
+                                            "sources":  {
+                                                            "custom":  "Custom",
+                                                            "cambridge":  "Cambridge",
+                                                            "real":  "Real test"
+                                                        },
                                             "breadcrumb":  {
                                                                "tests":  "Tests",
                                                                "builder":  {
-                                                                               "reading":  "Reading Builder",
-                                                                               "listening":  "Listening Builder"
-                                                                           }
-                                                           },
+                                                                                "reading":  "Reading Builder",
+                                                                                "listening":  "Listening Builder"
+                                                                            }
+                                                            },
                                             "mode":  {
                                                          "editor":  "Editor",
                                                          "preview":  "Preview"
@@ -1084,6 +1097,37 @@
                                                 "intermediate":  "Intermediate",
                                                 "advanced":  "Advanced"
                                             },
+                             "fullListeningAudio":  {
+                                                        "button":  "Full audio",
+                                                        "badge":  "LISTENING",
+                                                        "title":  "Full Listening Audio",
+                                                        "description":  "Upload one full audio file for the whole test and set the start/end seconds for Part 1 to Part 4. Saving regenerates and replaces all 4 per-part audio files.",
+                                                        "sourceLabel":  "Source Audio",
+                                                        "currentFile":  "Current source file",
+                                                        "noFileYet":  "No full audio uploaded yet.",
+                                                        "selectedFile":  "Selected file",
+                                                        "regeneratesNote":  "Note: uploading or updating full audio will regenerate all 4 part audio files.",
+                                                        "largeFileHint":  "This file is larger than {mb}MB. It will be uploaded directly to the backend (bypassing the proxy). If it fails, your backend must allow CORS from this site (englishlabs.uz).",
+                                                        "segmentsTitle":  "Segments",
+                                                        "timeFormatHint":  "Enter seconds or mm:ss (or hh:mm:ss). Example: 5:30 = 330 seconds.",
+                                                        "startSeconds":  "Start",
+                                                        "endSeconds":  "End",
+                                                        "validationHint":  "Segments must be ordered Part 1 -> Part 4 and must not overlap.",
+                                                        "fileRequired":  "Please select a full audio file to upload.",
+                                                        "validationSeconds":  "Please enter valid start/end time for all parts.",
+                                                        "validationEndAfterStart":  "End time must be greater than start time for each part.",
+                                                        "validationNoOverlap":  "Segments must not overlap. Make sure each part starts after the previous one ends.",
+                                                        "missingParts":  "This test must have PART_1 through PART_4 attached before uploading full audio.",
+                                                        "save":  "Save",
+                                                        "saving":  "Saving...",
+                                                        "delete":  "Delete",
+                                                        "deleting":  "Deleting...",
+                                                        "cancel":  "Cancel",
+                                                        "loading":  "Loading full audio...",
+                                                        "genericError":  "Something went wrong. Please try again.",
+                                                        "savedTitle":  "Full audio saved",
+                                                        "savedDescription":  "Part audio files were regenerated successfully."
+                                                    },
                              "contentBankPassage":  "Content Bank Passage",
                              "selectPassagePlaceholder":  "Select a passage",
                              "variantSet":  "Variant Set",

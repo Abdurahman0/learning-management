@@ -1,0 +1,110 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.8.0
+2 info using node@v24.13.1
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\Abdurahmon\learning-management\.npmrc
+5 silly config load:file:C:\Users\Abdurahmon\.npmrc
+6 silly config load:file:C:\Users\Abdurahmon\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm install lamejs
+8 verbose argv "install" "lamejs" "--cache" ".npm-cache"
+9 verbose logfile logs-max:10 dir:C:\Users\Abdurahmon\learning-management\.npm-cache\_logs\2026-04-18T10_35_01_278Z-
+10 verbose logfile C:\Users\Abdurahmon\learning-management\.npm-cache\_logs\2026-04-18T10_35_01_278Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:2348810240 maxSize:587202560 maxEntrySize:293601280
+13 silly idealTree buildDeps
+14 silly fetch manifest lamejs@*
+15 silly packumentCache full:https://registry.npmjs.org/lamejs cache-miss
+16 http fetch GET https://registry.npmjs.org/npm attempt 1 failed with EACCES
+17 http fetch GET https://registry.npmjs.org/lamejs attempt 1 failed with EACCES
+18 http fetch GET https://registry.npmjs.org/npm attempt 2 failed with EACCES
+19 http fetch GET https://registry.npmjs.org/lamejs attempt 2 failed with EACCES
+20 http fetch GET https://registry.npmjs.org/npm attempt 3 failed with EACCES
+21 http fetch GET https://registry.npmjs.org/lamejs attempt 3 failed with EACCES
+22 silly placeDep ROOT lamejs@ OK for: englishlabs@0.1.0 want: *
+23 silly fetch manifest @swc/helpers@>=0.5.17
+24 silly packumentCache full:https://registry.npmjs.org/@swc%2fhelpers cache-miss
+25 http fetch GET https://registry.npmjs.org/@swc%2fhelpers attempt 1 failed with EACCES
+26 http fetch GET https://registry.npmjs.org/@swc%2fhelpers attempt 2 failed with EACCES
+27 http fetch GET https://registry.npmjs.org/@swc%2fhelpers attempt 3 failed with EACCES
+28 silly placeDep node_modules/next-intl @swc/helpers@ OK for: @swc/core@1.15.18 want: >=0.5.17
+29 warn ERESOLVE overriding peer dependency {
+29 warn ERESOLVE   code: 'ERESOLVE',
+29 warn ERESOLVE   edge: {
+29 warn ERESOLVE     type: 'peerOptional',
+29 warn ERESOLVE     name: '@swc/helpers',
+29 warn ERESOLVE     spec: '>=0.5.17',
+29 warn ERESOLVE     error: 'INVALID',
+29 warn ERESOLVE     from: {
+29 warn ERESOLVE       name: '@swc/core',
+29 warn ERESOLVE       version: '1.15.18',
+29 warn ERESOLVE       location: 'node_modules/next-intl/node_modules/@swc/core',
+29 warn ERESOLVE       isWorkspace: false,
+29 warn ERESOLVE       dependents: [Array]
+29 warn ERESOLVE     }
+29 warn ERESOLVE   },
+29 warn ERESOLVE   dep: {
+29 warn ERESOLVE     name: '@swc/helpers',
+29 warn ERESOLVE     version: undefined,
+29 warn ERESOLVE     errors: [ [FetchError] ],
+29 warn ERESOLVE     package: {},
+29 warn ERESOLVE     whileInstalling: {
+29 warn ERESOLVE       name: '@swc/core',
+29 warn ERESOLVE       version: '1.15.18',
+29 warn ERESOLVE       path: 'C:\\Users\\Abdurahmon\\learning-management\\node_modules\\next-intl\\node_modules\\@swc\\core'
+29 warn ERESOLVE     },
+29 warn ERESOLVE     location: 'node_modules/@swc/helpers',
+29 warn ERESOLVE     isWorkspace: false,
+29 warn ERESOLVE     dependents: [ [Object] ]
+29 warn ERESOLVE   },
+29 warn ERESOLVE   force: false,
+29 warn ERESOLVE   isMine: false,
+29 warn ERESOLVE   strictPeerDeps: false,
+29 warn ERESOLVE   current: {
+29 warn ERESOLVE     name: '@swc/helpers',
+29 warn ERESOLVE     version: undefined,
+29 warn ERESOLVE     errors: [ [FetchError] ],
+29 warn ERESOLVE     package: {},
+29 warn ERESOLVE     location: 'node_modules/next-intl/node_modules/@swc/helpers',
+29 warn ERESOLVE     isWorkspace: false,
+29 warn ERESOLVE     dependents: []
+29 warn ERESOLVE   }
+29 warn ERESOLVE }
+30 verbose type system
+31 verbose stack FetchError: request to https://registry.npmjs.org/lamejs failed, reason: 
+31 verbose stack     at ClientRequest.<anonymous> (C:\Program Files\nodejs\node_modules\npm\node_modules\minipass-fetch\lib\index.js:130:14)
+31 verbose stack     at ClientRequest.emit (node:events:508:28)
+31 verbose stack     at emitErrorEvent (node:_http_client:108:11)
+31 verbose stack     at _destroy (node:_http_client:963:9)
+31 verbose stack     at onSocketNT (node:_http_client:983:5)
+31 verbose stack     at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+32 error code EACCES
+33 error errno EACCES
+34 error FetchError: request to https://registry.npmjs.org/lamejs failed, reason: 
+34 error     at ClientRequest.<anonymous> (C:\Program Files\nodejs\node_modules\npm\node_modules\minipass-fetch\lib\index.js:130:14)
+34 error     at ClientRequest.emit (node:events:508:28)
+34 error     at emitErrorEvent (node:_http_client:108:11)
+34 error     at _destroy (node:_http_client:963:9)
+34 error     at onSocketNT (node:_http_client:983:5)
+34 error     at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+34 error   code: 'EACCES',
+34 error   errno: 'EACCES',
+34 error   type: 'system',
+34 error   requiredBy: '.'
+34 error }
+35 error
+35 error The operation was rejected by your operating system.
+35 error It's possible that the file was already in use (by a text editor or antivirus),
+35 error or that you lack permissions to access it.
+35 error
+35 error If you believe this might be a permissions issue, please double-check the
+35 error permissions of the file and its containing directories, or try running
+35 error the command again as root/Administrator.
+36 silly unfinished npm timer reify 1776508501739
+37 silly unfinished npm timer reify:loadTrees 1776508501741
+38 verbose cwd C:\Users\Abdurahmon\learning-management
+39 verbose os Windows_NT 10.0.26200
+40 verbose node v24.13.1
+41 verbose npm  v11.8.0
+42 verbose exit 1
+43 verbose code 1
+44 error A complete log of this run can be found in: C:\Users\Abdurahmon\learning-management\.npm-cache\_logs\2026-04-18T10_35_01_278Z-debug-0.log

@@ -11,15 +11,18 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import type {ListeningDifficulty} from "../tests/types";
+import type {ListeningDifficulty, PracticeSource} from "../tests/types";
 
 type ListeningTab = "all" | "free" | "premium";
 type DifficultyFilter = "all" | ListeningDifficulty;
+type SourceFilter = "all" | PracticeSource;
 type SortFilter = "newest" | "az";
 
 type ListeningFiltersProps = {
   tab: ListeningTab;
   onTabChange: (value: ListeningTab) => void;
+  source: SourceFilter;
+  onSourceChange: (value: SourceFilter) => void;
   search: string;
   onSearchChange: (value: string) => void;
   difficulty: DifficultyFilter;
@@ -31,6 +34,8 @@ type ListeningFiltersProps = {
 export function ListeningFilters({
   tab,
   onTabChange,
+  source,
+  onSourceChange,
   search,
   onSearchChange,
   difficulty,
@@ -42,6 +47,7 @@ export function ListeningFilters({
 
   return (
     <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
       <div className="inline-flex w-full items-center gap-1 rounded-xl bg-muted p-1 sm:w-auto">
         <Button
           type="button"
@@ -73,6 +79,14 @@ export function ListeningFilters({
             <Lock className="size-3.5" aria-hidden="true" />
           </span>
         </Button>
+      </div>
+
+      <div className="inline-flex w-full items-center gap-1 rounded-xl bg-muted p-1 sm:w-auto" aria-label={t("filters.source")}>
+        <Button type="button" size="sm" variant={source === "all" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("all")}>{t("filters.sourceAll")}</Button>
+        <Button type="button" size="sm" variant={source === "custom" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("custom")}>{t("filters.sourceCustom")}</Button>
+        <Button type="button" size="sm" variant={source === "cambridge" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("cambridge")}>{t("filters.sourceCambridge")}</Button>
+        <Button type="button" size="sm" variant={source === "real" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("real")}>{t("filters.sourceReal")}</Button>
+      </div>
       </div>
 
       <label className="relative block">

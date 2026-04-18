@@ -1,5 +1,8 @@
 import type {AxiosProgressEvent} from "axios";
 
+import {maybeCompressAudioFileForUpload} from "@/lib/audio-compression";
+
+import {directAdminMultipartRequest, shouldBypassProxyUpload} from "./directAdminClient";
 import {adminHttpClient, toAdminApiError, toListQuery} from "./httpClient";
 import type {AdminListQuery, AdminPaginatedResponse, ListeningPartPayload, ListeningPartRecord} from "./types";
 
@@ -54,15 +57,51 @@ export const listeningPartsService = {
     }
   ) {
     const formData = new FormData();
-    appendListeningFormData(formData, payload);
+
+    const wantsAudio = payload.audio_file instanceof File && !payload.remove_audio;
+    const isLargeAudio = wantsAudio && shouldBypassProxyUpload(payload.audio_file);
+
+    // If the audio is large, we bypass the Next.js proxy (which has strict body limits on Vercel)
+    // and upload directly to the backend. In that case, keep the original audio file as-is.
+    const normalizedPayload: ListeningPartPayload =
+      wantsAudio && !isLargeAudio
+        ? {
+            ...payload,
+            // For smaller uploads (that can still go through the proxy), we keep them compact.
+            audio_file: await maybeCompressAudioFileForUpload(payload.audio_file, {
+              targetMaxBytes: 3.8 * 1024 * 1024,
+              forceMono: true
+            })
+          }
+        : payload;
+
+    appendListeningFormData(formData, normalizedPayload);
 
     try {
+      if (isLargeAudio) {
+        return await directAdminMultipartRequest<ListeningPartRecord>({
+          path: `/practice-tests/${testId}/listening-parts/`,
+          method: "POST",
+          body: formData,
+          onUploadProgress: options?.onUploadProgress
+        });
+      }
+
       const response = await adminHttpClient.post<ListeningPartRecord>(`/practice-tests/${testId}/listening-parts/`, formData, {
         onUploadProgress: options?.onUploadProgress
       });
       return response.data;
     } catch (error) {
-      throw toAdminApiError(error);
+      const mapped = toAdminApiError(error);
+      if (mapped.status === 413) {
+        return await directAdminMultipartRequest<ListeningPartRecord>({
+          path: `/practice-tests/${testId}/listening-parts/`,
+          method: "POST",
+          body: formData,
+          onUploadProgress: options?.onUploadProgress
+        });
+      }
+      throw mapped;
     }
   },
 
@@ -83,15 +122,48 @@ export const listeningPartsService = {
     }
   ) {
     const formData = new FormData();
-    appendListeningFormData(formData, payload);
+
+    const wantsAudio = payload.audio_file instanceof File && !payload.remove_audio;
+    const isLargeAudio = wantsAudio && shouldBypassProxyUpload(payload.audio_file);
+
+    const normalizedPayload: ListeningPartPayload =
+      wantsAudio && !isLargeAudio
+        ? {
+            ...payload,
+            audio_file: await maybeCompressAudioFileForUpload(payload.audio_file, {
+              targetMaxBytes: 3.8 * 1024 * 1024,
+              forceMono: true
+            })
+          }
+        : payload;
+
+    appendListeningFormData(formData, normalizedPayload);
 
     try {
+      if (isLargeAudio) {
+        return await directAdminMultipartRequest<ListeningPartRecord>({
+          path: `/listening-parts/${listeningPartId}/`,
+          method: "PUT",
+          body: formData,
+          onUploadProgress: options?.onUploadProgress
+        });
+      }
+
       const response = await adminHttpClient.put<ListeningPartRecord>(`/listening-parts/${listeningPartId}/`, formData, {
         onUploadProgress: options?.onUploadProgress
       });
       return response.data;
     } catch (error) {
-      throw toAdminApiError(error);
+      const mapped = toAdminApiError(error);
+      if (mapped.status === 413) {
+        return await directAdminMultipartRequest<ListeningPartRecord>({
+          path: `/listening-parts/${listeningPartId}/`,
+          method: "PUT",
+          body: formData,
+          onUploadProgress: options?.onUploadProgress
+        });
+      }
+      throw mapped;
     }
   },
 
@@ -103,15 +175,48 @@ export const listeningPartsService = {
     }
   ) {
     const formData = new FormData();
-    appendListeningFormData(formData, payload);
+
+    const wantsAudio = payload.audio_file instanceof File && !payload.remove_audio;
+    const isLargeAudio = wantsAudio && shouldBypassProxyUpload(payload.audio_file);
+
+    const normalizedPayload: Partial<ListeningPartPayload> =
+      wantsAudio && !isLargeAudio
+        ? {
+            ...payload,
+            audio_file: await maybeCompressAudioFileForUpload(payload.audio_file, {
+              targetMaxBytes: 3.8 * 1024 * 1024,
+              forceMono: true
+            })
+          }
+        : payload;
+
+    appendListeningFormData(formData, normalizedPayload);
 
     try {
+      if (isLargeAudio) {
+        return await directAdminMultipartRequest<ListeningPartRecord>({
+          path: `/listening-parts/${listeningPartId}/`,
+          method: "PATCH",
+          body: formData,
+          onUploadProgress: options?.onUploadProgress
+        });
+      }
+
       const response = await adminHttpClient.patch<ListeningPartRecord>(`/listening-parts/${listeningPartId}/`, formData, {
         onUploadProgress: options?.onUploadProgress
       });
       return response.data;
     } catch (error) {
-      throw toAdminApiError(error);
+      const mapped = toAdminApiError(error);
+      if (mapped.status === 413) {
+        return await directAdminMultipartRequest<ListeningPartRecord>({
+          path: `/listening-parts/${listeningPartId}/`,
+          method: "PATCH",
+          body: formData,
+          onUploadProgress: options?.onUploadProgress
+        });
+      }
+      throw mapped;
     }
   },
 

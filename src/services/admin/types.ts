@@ -36,6 +36,8 @@ export type PracticeTestRecord = {
   description: string;
   test_type: string;
   difficulty_level: string;
+  practice_source?: string | null;
+  active_for_registered_users?: boolean;
   test_format: string;
   total_questions: number;
   time_limit_seconds: number | null;
@@ -58,6 +60,35 @@ export type ListeningPartRecord = {
   time_limit_seconds: number | null;
   is_active: boolean;
   question_groups?: QuestionGroupRecord[];
+};
+
+export type FullListeningAudioSegmentRecord = {
+  id: AdminEntityId;
+  listening_part: AdminEntityId;
+  part_number: string;
+  title?: string | null;
+  start_seconds: number;
+  end_seconds: number;
+};
+
+export type FullListeningAudioRecord = {
+  id: AdminEntityId;
+  practice_test: AdminEntityId;
+  source_audio_file: string;
+  created_at?: string;
+  updated_at?: string;
+  segments: FullListeningAudioSegmentRecord[];
+};
+
+export type FullListeningAudioSegmentPayload = {
+  listening_part: AdminEntityId;
+  start_seconds: number;
+  end_seconds: number;
+};
+
+export type FullListeningAudioUpsertPayload = {
+  source_audio_file?: File | null;
+  segments?: FullListeningAudioSegmentPayload[];
 };
 
 export type ReadingPassageRecord = {
@@ -116,6 +147,8 @@ export type PracticeTestCreatePayload = {
   description: string;
   test_type: string;
   difficulty_level: string;
+  practice_source?: string | null;
+  active_for_registered_users?: boolean;
   test_format: string;
   total_questions: number;
   time_limit_seconds: number | null;

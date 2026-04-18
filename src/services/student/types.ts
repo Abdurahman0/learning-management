@@ -71,6 +71,8 @@ export type StudentTestRecord = {
   type_display: string;
   difficulty_level: string;
   difficulty_display: string;
+  practice_source?: string | null;
+  active_for_registered_users?: boolean;
   total_questions: number;
   time_limit_seconds: number | null;
   is_premium: boolean;

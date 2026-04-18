@@ -15,6 +15,8 @@ import {UnlockMoreCard} from "../_components/listening/UnlockMoreCard";
 type ListeningTab = "all" | "free" | "premium";
 type ListeningDifficulty = "easy" | "medium" | "hard";
 type DifficultyFilter = "all" | ListeningDifficulty;
+type PracticeSource = "custom" | "real" | "cambridge";
+type SourceFilter = "all" | PracticeSource;
 type SortFilter = "newest" | "az";
 
 type ListeningTestItem = {
@@ -22,6 +24,7 @@ type ListeningTestItem = {
   title: string;
   isPremium: boolean;
   difficulty: ListeningDifficulty;
+  practiceSource: PracticeSource;
   durationMins: number;
   totalQuestions: number;
   sections: Array<{
@@ -53,6 +56,13 @@ function mapDifficulty(value: string): ListeningDifficulty {
   return "medium";
 }
 
+function mapPracticeSource(value: unknown): PracticeSource {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized.includes("CAMBRIDGE")) return "cambridge";
+  if (normalized.includes("REAL")) return "real";
+  return "custom";
+}
+
 function toSections(item: StudentTestRecord, fallbackQuestions: number) {
   const parts = item.listening_parts
     .slice()
@@ -80,6 +90,7 @@ function toSections(item: StudentTestRecord, fallbackQuestions: number) {
 
 function mapStudentListeningTest(item: StudentTestRecord): ListeningTestItem {
   const difficulty = mapDifficulty(item.difficulty_level || item.difficulty_display);
+  const practiceSource = mapPracticeSource(item.practice_source);
   const totalQuestions = item.total_questions || 40;
 
   return {
@@ -87,6 +98,7 @@ function mapStudentListeningTest(item: StudentTestRecord): ListeningTestItem {
     title: item.title || "Listening Test",
     isPremium: item.is_premium,
     difficulty,
+    practiceSource,
     durationMins: Math.max(1, Math.ceil((item.time_limit_seconds ?? 1800) / 60)),
     totalQuestions,
     sections: toSections(item, totalQuestions)
@@ -144,6 +156,7 @@ export default function ListeningPage() {
   const [tab, setTab] = useState<ListeningTab>("all");
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState<DifficultyFilter>("all");
+  const [source, setSource] = useState<SourceFilter>("all");
   const [sort, setSort] = useState<SortFilter>("newest");
 
   useEffect(() => {
@@ -155,7 +168,8 @@ export default function ListeningPage() {
           ? await fetchPublicListeningTests()
           : (await studentTestsService.listListeningAllPages({pageSize: 100})).results;
         if (!active) return;
-        setApiTests(results.map(mapStudentListeningTest));
+        const visible = isGuest ? results.filter((item) => !item.active_for_registered_users) : results;
+        setApiTests(visible.map(mapStudentListeningTest));
       } catch {
         if (!active) return;
         setApiTests([]);
@@ -182,13 +196,17 @@ export default function ListeningPage() {
       tests = tests.filter((test) => test.difficulty === difficulty);
     }
 
+    if (source !== "all") {
+      tests = tests.filter((test) => test.practiceSource === source);
+    }
+
     const searchValue = search.trim().toLowerCase();
     if (searchValue) {
       tests = tests.filter((test) => test.title.toLowerCase().includes(searchValue));
     }
 
     return sortListeningTests(tests, sort);
-  }, [apiTests, difficulty, search, sort, tab]);
+  }, [apiTests, difficulty, search, sort, tab, source]);
 
   return (
     <div>
@@ -203,6 +221,8 @@ export default function ListeningPage() {
             <ListeningFilters
               tab={tab}
               onTabChange={setTab}
+              source={source}
+              onSourceChange={setSource}
               search={search}
               onSearchChange={setSearch}
               difficulty={difficulty}

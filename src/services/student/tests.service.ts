@@ -22,6 +22,8 @@ function normalizeTestRecord(item: StudentTestRecord): StudentTestRecord {
     type_display: String(item.type_display ?? ""),
     difficulty_level: String(item.difficulty_level ?? ""),
     difficulty_display: String(item.difficulty_display ?? ""),
+    practice_source: item.practice_source ?? null,
+    active_for_registered_users: Boolean((item as StudentTestRecord & {active_for_registered_users?: unknown}).active_for_registered_users),
     total_questions: Number(item.total_questions ?? 0),
     time_limit_seconds: typeof item.time_limit_seconds === "number" ? item.time_limit_seconds : null,
     is_premium: Boolean(item.is_premium),

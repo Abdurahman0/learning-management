@@ -11,15 +11,18 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import type {Difficulty} from "../tests/types";
+import type {Difficulty, PracticeSource} from "../tests/types";
 
 type ReadingTab = "all" | "free" | "premium";
 type DifficultyFilter = "all" | Difficulty;
+type SourceFilter = "all" | PracticeSource;
 type SortFilter = "newest" | "az";
 
 type ReadingFiltersProps = {
   tab: ReadingTab;
   onTabChange: (value: ReadingTab) => void;
+  source: SourceFilter;
+  onSourceChange: (value: SourceFilter) => void;
   search: string;
   onSearchChange: (value: string) => void;
   difficulty: DifficultyFilter;
@@ -31,6 +34,8 @@ type ReadingFiltersProps = {
 export function ReadingFilters({
   tab,
   onTabChange,
+  source,
+  onSourceChange,
   search,
   onSearchChange,
   difficulty,
@@ -42,12 +47,21 @@ export function ReadingFilters({
 
   return (
     <div className="space-y-3">
-      <div className="inline-flex w-full items-center gap-1 rounded-xl bg-muted p-1 sm:w-auto">
-        <Button type="button" size="sm" variant={tab === "all" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onTabChange("all")}>{t("tabs.all")}</Button>
-        <Button type="button" size="sm" variant={tab === "free" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onTabChange("free")}>{t("tabs.free")}</Button>
-        <Button type="button" size="sm" variant={tab === "premium" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onTabChange("premium")}>
-          <span className="inline-flex items-center gap-1.5">{t("tabs.premium")}<Lock className="size-3.5" aria-hidden="true" /></span>
-        </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex w-full items-center gap-1 rounded-xl bg-muted p-1 sm:w-auto">
+          <Button type="button" size="sm" variant={tab === "all" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onTabChange("all")}>{t("tabs.all")}</Button>
+          <Button type="button" size="sm" variant={tab === "free" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onTabChange("free")}>{t("tabs.free")}</Button>
+          <Button type="button" size="sm" variant={tab === "premium" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onTabChange("premium")}>
+            <span className="inline-flex items-center gap-1.5">{t("tabs.premium")}<Lock className="size-3.5" aria-hidden="true" /></span>
+          </Button>
+        </div>
+
+        <div className="inline-flex w-full items-center gap-1 rounded-xl bg-muted p-1 sm:w-auto" aria-label={t("filters.source")}>
+          <Button type="button" size="sm" variant={source === "all" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("all")}>{t("filters.sourceAll")}</Button>
+          <Button type="button" size="sm" variant={source === "custom" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("custom")}>{t("filters.sourceCustom")}</Button>
+          <Button type="button" size="sm" variant={source === "cambridge" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("cambridge")}>{t("filters.sourceCambridge")}</Button>
+          <Button type="button" size="sm" variant={source === "real" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("real")}>{t("filters.sourceReal")}</Button>
+        </div>
       </div>
 
       <label className="relative block">

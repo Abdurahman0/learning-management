@@ -37,6 +37,7 @@ import type {
 
 import {AdminSidebar, AdminSidebarMobileNav} from "../../../../_components/AdminSidebar";
 import {BuilderTopbar} from "./BuilderTopbar";
+import {FullListeningAudioModal} from "./FullListeningAudioModal";
 import {PassageEditor} from "./PassageEditor";
 import {QuestionEditorModal} from "./QuestionEditorModal";
 import {QuestionGroupsPanel} from "./QuestionGroupsPanel";
@@ -189,6 +190,20 @@ function mapBuilderDifficultyToApi(value: AdminBuilderTest["difficulty"]) {
   if (value === "beginner") return "BEGINNER";
   if (value === "advanced") return "ADVANCED";
   return "INTERMEDIATE";
+}
+
+function mapApiPracticeSourceToBuilder(value: unknown): NonNullable<AdminBuilderTest["practiceSource"]> {
+  const normalized = toStringSafe(value).trim().toUpperCase();
+  if (normalized.includes("CAMBRIDGE")) return "cambridge";
+  if (normalized.includes("REAL")) return "real";
+  return "custom";
+}
+
+function mapBuilderPracticeSourceToApi(value: AdminBuilderTest["practiceSource"]) {
+  if (!value) return undefined;
+  if (value === "custom") return "CUSTOM_PRACTICE";
+  if (value === "cambridge") return "CAMBRIDGE_TEST";
+  return "REAL_TEST";
 }
 
 const DEFAULT_READING_SLOT_QUESTION_COUNTS = [13, 13, 14] as const;
@@ -1326,6 +1341,8 @@ function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDeta
     book: toStringSafe(detail.title, "Practice Test"),
     module: moduleType,
     difficulty: mapApiDifficultyToBuilder(detail.difficulty_level),
+    practiceSource: mapApiPracticeSourceToBuilder((detail as {practice_source?: unknown}).practice_source),
+    activeForRegisteredUsers: Boolean((detail as {active_for_registered_users?: unknown}).active_for_registered_users),
     status: detail.is_active ? "published" : "draft",
     structures,
     questionGroupsByStructure
@@ -1350,6 +1367,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   const [contentBankVariants, setContentBankVariants] = useState<ContentBankVariantSet[]>([]);
   const [audioFilesByStructureId, setAudioFilesByStructureId] = useState<Record<string, File | null>>({});
   const [removeAudioByStructureId, setRemoveAudioByStructureId] = useState<Record<string, boolean>>({});
+  const [fullListeningAudioOpen, setFullListeningAudioOpen] = useState(false);
   const [isPersisting, setIsPersisting] = useState(false);
   const [apiNotice, setApiNotice] = useState<SiteToastNotice | null>(null);
 
@@ -2119,6 +2137,20 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     }));
   };
 
+  const handleTestPracticeSourceChange = (practiceSource: NonNullable<AdminBuilderTest["practiceSource"]>) => {
+    setTest((current) => ({
+      ...current,
+      practiceSource
+    }));
+  };
+
+  const handleTestRegisteredOnlyChange = (registeredOnly: boolean) => {
+    setTest((current) => ({
+      ...current,
+      activeForRegisteredUsers: registeredOnly
+    }));
+  };
+
   const handleToggleRemoveAudio = (structureId: string, remove: boolean) => {
     setRemoveAudioByStructureId((current) => ({...current, [structureId]: remove}));
     if (remove) {
@@ -2230,6 +2262,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       await practiceTestsService.patch(test.id, {
         title: normalizedTitle,
         difficulty_level: mapBuilderDifficultyToApi(test.difficulty),
+        ...(typeof test.activeForRegisteredUsers === "boolean" ? {active_for_registered_users: test.activeForRegisteredUsers} : {}),
+        ...(test.practiceSource ? {practice_source: mapBuilderPracticeSourceToApi(test.practiceSource)} : {}),
         is_active: nextStatus === "published"
       });
 
@@ -2472,6 +2506,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             bookName={test.name.trim() || test.book.trim() || "Practice Test"}
             testTitle={test.name}
             testDifficulty={test.difficulty}
+            testPracticeSource={test.practiceSource}
+            testRegisteredOnly={Boolean(test.activeForRegisteredUsers)}
             module={test.module}
             mode={mode}
             status={test.status}
@@ -2479,8 +2515,18 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             publishDisabled={!canPublishByQuestionCount}
             isPersisting={isPersisting}
             mobileNav={<AdminSidebarMobileNav />}
+            onOpenFullListeningAudio={
+              test.module === "listening"
+                ? () => {
+                    setApiNotice(null);
+                    setFullListeningAudioOpen(true);
+                  }
+                : undefined
+            }
             onTestTitleChange={handleTestTitleChange}
             onTestDifficultyChange={handleTestDifficultyChange}
+            onTestPracticeSourceChange={handleTestPracticeSourceChange}
+            onTestRegisteredOnlyChange={handleTestRegisteredOnlyChange}
             onModeChange={setMode}
             onSaveDraft={handleSaveDraft}
             onPublish={handlePublish}
@@ -2569,6 +2615,31 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             return;
           }
           updateQuestion(selectedQuestion.groupId, selectedQuestion.questionId, () => nextQuestion);
+        }}
+      />
+
+      <FullListeningAudioModal
+        open={fullListeningAudioOpen}
+        testId={testId}
+        parts={test.structures}
+        onClose={() => setFullListeningAudioOpen(false)}
+        onSaved={(nextAudioLabelByPartId) => {
+          if (Object.keys(nextAudioLabelByPartId).length) {
+            setTest((current) => ({
+              ...current,
+              structures: current.structures.map((structure) =>
+                structure.id in nextAudioLabelByPartId
+                  ? {...structure, audioLabel: nextAudioLabelByPartId[structure.id] ?? structure.audioLabel}
+                  : structure
+              )
+            }));
+          }
+
+          setApiNotice({
+            variant: "success",
+            title: t("fullListeningAudio.savedTitle"),
+            description: t("fullListeningAudio.savedDescription")
+          });
         }}
       />
     </div>

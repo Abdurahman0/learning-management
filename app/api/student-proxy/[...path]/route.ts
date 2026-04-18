@@ -4,6 +4,8 @@ import {NextResponse} from "next/server";
 import {clearAuthCookies, setAccessTokenCookie} from "@/lib/auth/token-cookies";
 import {ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME} from "@/lib/auth/session";
 
+export const runtime = "nodejs";
+
 type RouteContext = {
   params: Promise<{path: string[]}>;
 };
@@ -49,7 +51,13 @@ async function prepareBody(request: Request): Promise<PreparedBody> {
   const contentType = request.headers.get("content-type") ?? "";
 
   if (contentType.includes("multipart/form-data")) {
-    return {body: await request.formData()};
+    // Do not parse multipart payloads in the proxy layer.
+    // Forward the raw stream instead to avoid buffering/size limits in Next/Vercel.
+    if (request.body) {
+      return {body: request.body, contentType};
+    }
+
+    return {body: await request.arrayBuffer(), contentType};
   }
 
   if (
@@ -100,10 +108,15 @@ async function forwardToBackend(params: {
     headers.set("Content-Type", params.preparedBody.contentType);
   }
 
+  const body = params.preparedBody.body;
+  const needsDuplex =
+    typeof ReadableStream !== "undefined" && body instanceof ReadableStream && params.method.toUpperCase() !== "GET" && params.method.toUpperCase() !== "HEAD";
+
   return fetch(params.url, {
     method: params.method,
     headers,
-    body: params.preparedBody.body,
+    body,
+    ...(needsDuplex ? ({duplex: "half"} as unknown as Record<string, unknown>) : {}),
     cache: "no-store"
   });
 }

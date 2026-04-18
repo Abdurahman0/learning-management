@@ -15,6 +15,8 @@ import {ReadingUnlockMoreCard} from "../_components/reading/ReadingUnlockMoreCar
 type ReadingTab = "all" | "free" | "premium";
 type Difficulty = "easy" | "medium" | "hard";
 type DifficultyFilter = "all" | Difficulty;
+type PracticeSource = "custom" | "real" | "cambridge";
+type SourceFilter = "all" | PracticeSource;
 type SortFilter = "newest" | "az";
 
 type ReadingGuestTest = {
@@ -24,6 +26,7 @@ type ReadingGuestTest = {
   durationMinutes: number;
   totalQuestions: number;
   difficulty: Difficulty;
+  practiceSource: PracticeSource;
   passages: Array<{
     title: string;
     questionsCount: number;
@@ -54,8 +57,16 @@ function mapDifficulty(value: string): Difficulty {
   return "medium";
 }
 
+function mapPracticeSource(value: unknown): PracticeSource {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized.includes("CAMBRIDGE")) return "cambridge";
+  if (normalized.includes("REAL")) return "real";
+  return "custom";
+}
+
 function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
   const testDifficulty = mapDifficulty(item.difficulty_level || item.difficulty_display);
+  const practiceSource = mapPracticeSource(item.practice_source);
   const passages =
     item.reading_passages.length > 0
       ? item.reading_passages.map((passage, index) => ({
@@ -76,6 +87,7 @@ function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
     durationMinutes: Math.max(1, Math.ceil((item.time_limit_seconds ?? 3600) / 60)),
     totalQuestions: item.total_questions || passages.reduce((sum, passage) => sum + passage.questionsCount, 0),
     difficulty: testDifficulty,
+    practiceSource,
     passages
   };
 }
@@ -131,6 +143,7 @@ export default function ReadingPage() {
   const [tab, setTab] = useState<ReadingTab>("all");
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState<DifficultyFilter>("all");
+  const [source, setSource] = useState<SourceFilter>("all");
   const [sort, setSort] = useState<SortFilter>("newest");
 
   useEffect(() => {
@@ -142,7 +155,8 @@ export default function ReadingPage() {
           ? await fetchPublicReadingTests()
           : (await studentTestsService.listReadingAllPages({pageSize: 100})).results;
         if (!active) return;
-        setApiTests(results.map(mapStudentReadingTest));
+        const visible = isGuest ? results.filter((item) => !item.active_for_registered_users) : results;
+        setApiTests(visible.map(mapStudentReadingTest));
       } catch {
         if (!active) return;
         setApiTests([]);
@@ -169,13 +183,17 @@ export default function ReadingPage() {
       tests = tests.filter((test) => test.difficulty === difficulty);
     }
 
+    if (source !== "all") {
+      tests = tests.filter((test) => test.practiceSource === source);
+    }
+
     const searchValue = search.trim().toLowerCase();
     if (searchValue) {
       tests = tests.filter((test) => test.title.toLowerCase().includes(searchValue));
     }
 
     return sortReadingTests(tests, sort);
-  }, [apiTests, difficulty, search, sort, tab]);
+  }, [apiTests, difficulty, search, sort, tab, source]);
 
   return (
     <div>
@@ -190,6 +208,8 @@ export default function ReadingPage() {
             <ReadingFilters
               tab={tab}
               onTabChange={setTab}
+              source={source}
+              onSourceChange={setSource}
               search={search}
               onSearchChange={setSearch}
               difficulty={difficulty}

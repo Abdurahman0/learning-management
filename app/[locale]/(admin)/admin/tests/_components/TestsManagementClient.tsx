@@ -335,6 +335,10 @@ export function TestsManagementClient() {
         description: "",
         test_type: module.toUpperCase(),
         difficulty_level: "INTERMEDIATE",
+        // Default: keep drafts visible only to registered users unless explicitly made public later.
+        active_for_registered_users: true,
+        // Default: custom/admin-created test (backend can default if field is optional).
+        practice_source: "CUSTOM_PRACTICE",
         test_format: "FULL_TEST",
         total_questions: 40,
         time_limit_seconds: module === "reading" ? 3600 : 1800,

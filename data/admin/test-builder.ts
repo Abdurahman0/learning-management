@@ -43,6 +43,9 @@ export type AdminBuilderTest = {
   module: TestModule;
   difficulty: TestDifficulty;
   status: BuilderStatus;
+  // Test-level metadata stored on PracticeTest.
+  practiceSource?: "custom" | "real" | "cambridge";
+  activeForRegisteredUsers?: boolean;
   structures: BuilderStructureItem[];
   questionGroupsByStructure: Record<string, QuestionGroup[]>;
 };

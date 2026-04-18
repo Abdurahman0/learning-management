@@ -182,13 +182,18 @@
                                "premium":  "Premium"
                            },
                   "filters":  {
-                                  "searchPlaceholder":  "Test nomi, kitob raqami yoki mavzuni qidiring...",
-                                  "difficulty":  "Qiyinlik",
-                                  "sort":  "Saralash",
-                                  "difficultyAll":  "Barchasi",
-                                  "easy":  "Oson",
-                                  "medium":  "O\u0027rta",
-                                  "hard":  "Qiyin",
+                                   "searchPlaceholder":  "Test nomi, kitob raqami yoki mavzuni qidiring...",
+                                   "source":  "Manba",
+                                   "sourceAll":  "Barchasi",
+                                   "sourceCustom":  "Custom",
+                                   "sourceCambridge":  "Cambridge",
+                                   "sourceReal":  "Real",
+                                   "difficulty":  "Qiyinlik",
+                                   "sort":  "Saralash",
+                                   "difficultyAll":  "Barchasi",
+                                   "easy":  "Boshlang\u0027ich",
+                                   "medium":  "O\u0027rta",
+                                  "hard":  "Yuqori",
                                   "sortNewest":  "Eng yangi",
                                   "sortPopular":  "Ommabop",
                                   "sortHighest":  "A-Z"
@@ -1059,13 +1064,21 @@
                                             "testTitleLabel":  "To'liq test nomi",
                                             "testTitlePlaceholder":  "To'liq test nomini kiriting",
                                             "difficultyLabel":  "Qiyinlik",
+                                            "sourceLabel":  "Manba",
+                                            "visibilityLabel":  "Ko'rinishi",
+                                            "registeredOnlyHint":  "Yoqilgan bo'lsa, testni faqat ro'yxatdan o'tganlar ko'radi.",
+                                            "sources":  {
+                                                            "custom":  "Custom",
+                                                            "cambridge":  "Cambridge",
+                                                            "real":  "Real test"
+                                                        },
                                             "breadcrumb":  {
                                                                "tests":  "Testlar",
                                                                "builder":  {
-                                                                               "reading":  "Reading Builder",
-                                                                               "listening":  "Listening Builder"
-                                                                           }
-                                                           },
+                                                                                "reading":  "Reading Builder",
+                                                                                "listening":  "Listening Builder"
+                                                                            }
+                                                            },
                                             "mode":  {
                                                          "editor":  "Editor",
                                                          "preview":  "Preview"
@@ -1084,6 +1097,37 @@
                                                 "intermediate":  "O\u0027rta",
                                                 "advanced":  "Yuqori"
                                             },
+                             "fullListeningAudio":  {
+                                                        "button":  "To\u0027liq audio",
+                                                        "badge":  "LISTENING",
+                                                        "title":  "Listening uchun to\u0027liq audio",
+                                                        "description":  "Butun test uchun bitta to\u0027liq audio yuklang va 1-qismdan 4-qismgacha start/end soniyalarini belgilang. Saqlaganda 4 ta qism audiosi qayta yaratiladi va almashtiriladi.",
+                                                        "sourceLabel":  "Manba audio",
+                                                        "currentFile":  "Hozirgi manba fayl",
+                                                        "noFileYet":  "Hali to\u0027liq audio yuklanmagan.",
+                                                        "selectedFile":  "Tanlangan fayl",
+                                                        "regeneratesNote":  "Eslatma: to\u0027liq audio yuklash yoki yangilash 4 ta qism audiosini qayta yaratadi.",
+                                                        "largeFileHint":  "Bu fayl {mb}MB dan katta. U proxy\u0027siz bevosita backend\u0027ga yuklanadi. Agar ishlamasa, backend englishlabs.uz dan CORS\u0027ni (Authorization header bilan) ruxsat berishi kerak.",
+                                                        "segmentsTitle":  "Segmentlar",
+                                                        "timeFormatHint":  "Soniyada yoki mm:ss (yoki hh:mm:ss) formatida kiriting. Masalan: 5:30 = 330 soniya.",
+                                                        "startSeconds":  "Boshlanish",
+                                                        "endSeconds":  "Tugash",
+                                                        "validationHint":  "Segmentlar 1-qism -> 4-qism tartibida va bir-birini kesib o\u0027tmasligi kerak.",
+                                                        "fileRequired":  "Iltimos, yuklash uchun to\u0027liq audio faylni tanlang.",
+                                                        "validationSeconds":  "Barcha qismlar uchun boshlanish/tugash vaqtini to\u0027g\u0027ri kiriting.",
+                                                        "validationEndAfterStart":  "Har bir qismda tugash vaqti boshlanishdan katta bo\u0027lishi kerak.",
+                                                        "validationNoOverlap":  "Segmentlar kesishmasligi kerak. Keyingi qism oldingisining tugashidan keyin boshlansin.",
+                                                        "missingParts":  "To\u0027liq audio yuklashdan oldin testda PART_1 dan PART_4 gacha bo\u0027lgan qismlar bo\u0027lishi kerak.",
+                                                        "save":  "Saqlash",
+                                                        "saving":  "Saqlanmoqda...",
+                                                        "delete":  "O\u0027chirish",
+                                                        "deleting":  "O\u0027chirilmoqda...",
+                                                        "cancel":  "Bekor qilish",
+                                                        "loading":  "Yuklanmoqda...",
+                                                        "genericError":  "Nimadir xato bo\u0027ldi. Qaytadan urinib ko\u0027ring.",
+                                                        "savedTitle":  "To\u0027liq audio saqlandi",
+                                                        "savedDescription":  "Qism audio fayllari muvaffaqiyatli qayta yaratildi."
+                                                    },
                              "contentBankPassage":  "Content Bank passage",
                              "selectPassagePlaceholder":  "Passage tanlang",
                              "variantSet":  "Variant to\u0027plam",

@@ -8,12 +8,17 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import {Switch} from "@/components/ui/switch";
 import type {BuilderMode, BuilderStatus, TestDifficulty, TestModule} from "@/data/admin-test-builder";
+
+type PracticeSource = "custom" | "real" | "cambridge";
 
 type BuilderTopbarProps = {
   bookName: string;
   testTitle: string;
   testDifficulty: TestDifficulty;
+  testPracticeSource?: PracticeSource;
+  testRegisteredOnly?: boolean;
   module: TestModule;
   mode: BuilderMode;
   status: BuilderStatus;
@@ -21,8 +26,11 @@ type BuilderTopbarProps = {
   publishDisabled?: boolean;
   isPersisting?: boolean;
   mobileNav?: ReactNode;
+  onOpenFullListeningAudio?: () => void;
   onTestTitleChange: (title: string) => void;
   onTestDifficultyChange: (value: TestDifficulty) => void;
+  onTestPracticeSourceChange?: (value: PracticeSource) => void;
+  onTestRegisteredOnlyChange?: (value: boolean) => void;
   onModeChange: (mode: BuilderMode) => void;
   onSaveDraft: () => void;
   onPublish: () => void;
@@ -32,6 +40,8 @@ export function BuilderTopbar({
   bookName,
   testTitle,
   testDifficulty,
+  testPracticeSource = "custom",
+  testRegisteredOnly = false,
   module,
   mode,
   status,
@@ -39,8 +49,11 @@ export function BuilderTopbar({
   publishDisabled = false,
   isPersisting = false,
   mobileNav,
+  onOpenFullListeningAudio,
   onTestTitleChange,
   onTestDifficultyChange,
+  onTestPracticeSourceChange,
+  onTestRegisteredOnlyChange,
   onModeChange,
   onSaveDraft,
   onPublish
@@ -102,6 +115,43 @@ export function BuilderTopbar({
               </SelectContent>
             </Select>
           </div>
+
+          <div className="flex flex-wrap items-end gap-4 pt-2">
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium tracking-[0.1em] text-muted-foreground uppercase">
+                {t("topbar.sourceLabel")}
+              </p>
+              <Select
+                value={testPracticeSource}
+                onValueChange={(value) => onTestPracticeSourceChange?.(value as PracticeSource)}
+                disabled={isPersisting || !onTestPracticeSourceChange}
+              >
+                <SelectTrigger className="h-9 w-[220px] rounded-xl border-border/70 bg-card/70">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="custom">{t("topbar.sources.custom")}</SelectItem>
+                  <SelectItem value="cambridge">{t("topbar.sources.cambridge")}</SelectItem>
+                  <SelectItem value="real">{t("topbar.sources.real")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-2xl border border-border/70 bg-card/60 px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold tracking-tight">{t("topbar.visibilityLabel")}</p>
+                  <p className="text-xs text-muted-foreground">{t("topbar.registeredOnlyHint")}</p>
+                </div>
+                <Switch
+                  checked={testRegisteredOnly}
+                  onCheckedChange={(checked) => onTestRegisteredOnlyChange?.(Boolean(checked))}
+                  disabled={isPersisting || !onTestRegisteredOnlyChange}
+                  aria-label={t("topbar.visibilityLabel")}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -127,6 +177,18 @@ export function BuilderTopbar({
               {t("topbar.mode.preview")}
             </Button>
           </div>
+
+          {module === "listening" && onOpenFullListeningAudio ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9 rounded-xl border-border/70 bg-card/50"
+              onClick={onOpenFullListeningAudio}
+              disabled={isPersisting}
+            >
+              {t("fullListeningAudio.button")}
+            </Button>
+          ) : null}
 
           <Button
             type="button"
