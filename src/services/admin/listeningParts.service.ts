@@ -58,8 +58,9 @@ export const listeningPartsService = {
   ) {
     const formData = new FormData();
 
-    const wantsAudio = payload.audio_file instanceof File && !payload.remove_audio;
-    const isLargeAudio = wantsAudio && shouldBypassProxyUpload(payload.audio_file);
+    const audioFile = payload.audio_file instanceof File ? payload.audio_file : null;
+    const wantsAudio = audioFile instanceof File && !payload.remove_audio;
+    const isLargeAudio = wantsAudio && shouldBypassProxyUpload(audioFile);
 
     // If the audio is large, we bypass the Next.js proxy (which has strict body limits on Vercel)
     // and upload directly to the backend. In that case, keep the original audio file as-is.
@@ -68,7 +69,7 @@ export const listeningPartsService = {
         ? {
             ...payload,
             // For smaller uploads (that can still go through the proxy), we keep them compact.
-            audio_file: await maybeCompressAudioFileForUpload(payload.audio_file, {
+            audio_file: await maybeCompressAudioFileForUpload(audioFile, {
               targetMaxBytes: 3.8 * 1024 * 1024,
               forceMono: true
             })
@@ -123,14 +124,15 @@ export const listeningPartsService = {
   ) {
     const formData = new FormData();
 
-    const wantsAudio = payload.audio_file instanceof File && !payload.remove_audio;
-    const isLargeAudio = wantsAudio && shouldBypassProxyUpload(payload.audio_file);
+    const audioFile = payload.audio_file instanceof File ? payload.audio_file : null;
+    const wantsAudio = audioFile instanceof File && !payload.remove_audio;
+    const isLargeAudio = wantsAudio && shouldBypassProxyUpload(audioFile);
 
     const normalizedPayload: ListeningPartPayload =
       wantsAudio && !isLargeAudio
         ? {
             ...payload,
-            audio_file: await maybeCompressAudioFileForUpload(payload.audio_file, {
+            audio_file: await maybeCompressAudioFileForUpload(audioFile, {
               targetMaxBytes: 3.8 * 1024 * 1024,
               forceMono: true
             })
@@ -176,14 +178,15 @@ export const listeningPartsService = {
   ) {
     const formData = new FormData();
 
-    const wantsAudio = payload.audio_file instanceof File && !payload.remove_audio;
-    const isLargeAudio = wantsAudio && shouldBypassProxyUpload(payload.audio_file);
+    const audioFile = payload.audio_file instanceof File ? payload.audio_file : null;
+    const wantsAudio = audioFile instanceof File && !payload.remove_audio;
+    const isLargeAudio = wantsAudio && shouldBypassProxyUpload(audioFile);
 
     const normalizedPayload: Partial<ListeningPartPayload> =
       wantsAudio && !isLargeAudio
         ? {
             ...payload,
-            audio_file: await maybeCompressAudioFileForUpload(payload.audio_file, {
+            audio_file: await maybeCompressAudioFileForUpload(audioFile, {
               targetMaxBytes: 3.8 * 1024 * 1024,
               forceMono: true
             })

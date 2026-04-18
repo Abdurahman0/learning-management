@@ -51,6 +51,7 @@ const DEFAULTS: Required<CompressAudioOptions> = {
 const compressionCache = new WeakMap<File, File>();
 
 type WebkitAudioContextWindow = Window & {
+  AudioContext?: typeof AudioContext;
   webkitAudioContext?: typeof AudioContext;
 };
 
@@ -138,7 +139,9 @@ function encodeMp3FromAudioBuffer(audioBuffer: AudioBuffer, params: {bitrateKbps
   const endBuf = encoder.flush();
   if (endBuf.length > 0) mp3Chunks.push(endBuf);
 
-  return new Blob(mp3Chunks, {type: "audio/mpeg"});
+  // TS 5.7+ is stricter about `BlobPart` typing for `Uint8Array<ArrayBufferLike>`; the runtime accepts this.
+  const blobParts: BlobPart[] = mp3Chunks.map((chunk) => chunk as unknown as BlobPart);
+  return new Blob(blobParts, {type: "audio/mpeg"});
 }
 
 function clamp(n: number, min: number, max: number) {

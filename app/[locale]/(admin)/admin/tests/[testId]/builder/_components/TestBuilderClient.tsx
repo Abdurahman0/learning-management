@@ -2636,7 +2636,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           }
 
           setApiNotice({
-            variant: "success",
+            tone: "success",
             title: t("fullListeningAudio.savedTitle"),
             description: t("fullListeningAudio.savedDescription")
           });
