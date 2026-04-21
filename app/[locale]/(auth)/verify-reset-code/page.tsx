@@ -41,10 +41,21 @@ function VerifyResetCodePageContent() {
         return;
       }
 
+      const activationToken =
+        response.data && typeof response.data === "object" && "activation_token" in response.data
+          ? String((response.data as {activation_token?: unknown}).activation_token ?? "").trim()
+          : "";
+
+      if (!activationToken) {
+        setStatus(t("messages.genericError"));
+        setStatusType("error");
+        return;
+      }
+
       setStatus(response.detail ?? t("verifyResetCode.success"));
       setStatusType("success");
 
-      const params = new URLSearchParams({email: normalizedEmail});
+      const params = new URLSearchParams({email: normalizedEmail, activation_token: activationToken});
       router.replace(`/${locale}/reset-password?${params.toString()}`);
     } finally {
       setIsSubmitting(false);

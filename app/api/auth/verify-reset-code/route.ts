@@ -28,14 +28,19 @@ export async function POST(request: Request) {
     return NextResponse.json({detail: "Reset code is required."}, {status: 400});
   }
 
-  const result = await postToAuthBackend<{detail?: string}>(AUTH_BACKEND_ENDPOINTS.verifyResetCode, {
-    email,
-    code
-  });
+  const result = await postToAuthBackend<{detail?: string; activation_token?: string; token?: string}>(
+    AUTH_BACKEND_ENDPOINTS.verifyResetCode,
+    {
+    token: code
+    }
+  );
+
+  const activationToken = asString(result.data?.activation_token ?? result.data?.token).trim();
 
   return NextResponse.json(
     {
-      detail: result.detail ?? "Reset code verification request completed."
+      detail: result.detail ?? (result.ok ? "Reset code verification request completed." : "Reset code verification failed."),
+      ...(activationToken ? {activation_token: activationToken} : {})
     },
     {status: result.status}
   );

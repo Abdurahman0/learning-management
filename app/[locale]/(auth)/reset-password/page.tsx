@@ -19,6 +19,7 @@ function ResetPasswordPageContent() {
   const locale = useLocale();
   const searchParams = useSearchParams();
   const initialEmail = useMemo(() => searchParams.get("email") ?? "", [searchParams]);
+  const activationToken = useMemo(() => searchParams.get("activation_token") ?? "", [searchParams]);
   const [email, setEmail] = useState(initialEmail);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -45,7 +46,8 @@ function ResetPasswordPageContent() {
       const normalizedEmail = email.trim().toLowerCase();
       const response = await authApi.resetPassword({
         email: normalizedEmail,
-        new_password: newPassword
+        new_password: newPassword,
+        activation_token: activationToken.trim()
       });
 
       if (!response.ok) {

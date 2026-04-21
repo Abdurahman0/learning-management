@@ -1,12 +1,12 @@
 "use client";
 
-import {Bold, Highlighter, Italic, Link2, Underline} from "lucide-react";
+import {Bold, Highlighter} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Button} from "@/components/ui/button";
 
 type EvidenceToolbarProps = {
-  onFormatClick: (format: "bold" | "italic" | "underline" | "link") => void;
+  onFormatClick: (format: "bold") => void;
   onAddEvidence: () => void;
   addEvidenceDisabled: boolean;
 };
@@ -25,36 +25,6 @@ export function EvidenceToolbar({onFormatClick, onAddEvidence, addEvidenceDisabl
         aria-label={t("editor.toolbar.bold")}
       >
         <Bold className="size-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        className="rounded-lg"
-        onClick={() => onFormatClick("italic")}
-        aria-label={t("editor.toolbar.italic")}
-      >
-        <Italic className="size-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        className="rounded-lg"
-        onClick={() => onFormatClick("underline")}
-        aria-label={t("editor.toolbar.underline")}
-      >
-        <Underline className="size-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        className="rounded-lg"
-        onClick={() => onFormatClick("link")}
-        aria-label={t("editor.toolbar.link")}
-      >
-        <Link2 className="size-4" />
       </Button>
 
       <div className="mx-1 h-6 w-px bg-border/70" />

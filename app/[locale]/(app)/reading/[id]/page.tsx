@@ -54,11 +54,13 @@ import { BrandIcon } from "@/components/brand/BrandIcon";
 
 const DEFAULT_SPLIT = 50;
 const HEADING_DND_MIME = "application/x-reading-heading";
+const MATCHING_INFO_DND_MIME = "application/x-reading-matching-info";
 const TFNG_OPTIONS: ["TRUE", "FALSE", "NOT GIVEN"] = ["TRUE", "FALSE", "NOT GIVEN"];
 const YNNG_OPTIONS: ["YES", "NO", "NOT GIVEN"] = ["YES", "NO", "NOT GIVEN"];
 
 type AnswerValue = string | string[];
 type MatchingHeadingsQuestion = Extract<ReadingQuestion, { type: "matchingHeadings" }>;
+type MatchingInfoQuestion = Extract<ReadingQuestion, { type: "matchingInfo" }>;
 
 function formatTime(seconds: number) {
   const safe = Math.max(0, seconds);
@@ -123,16 +125,16 @@ function extractParagraphHeaderLetter(paragraph: string) {
   const trimmed = paragraph.trim();
   if (!trimmed) return null;
 
-  const boldOnly = trimmed.match(/^\*\*([A-Z])\*\*$/);
+  const boldOnly = trimmed.match(/^\*\*([A-Z])(?:[.)])?\*\*$/);
   if (boldOnly) return boldOnly[1];
 
-  const plainOnly = trimmed.match(/^([A-Z])$/);
+  const plainOnly = trimmed.match(/^([A-Z])(?:[.)])?$/);
   if (plainOnly) return plainOnly[1];
 
-  const boldPrefix = trimmed.match(/^\*\*([A-Z])\*\*\s+/);
+  const boldPrefix = trimmed.match(/^\*\*([A-Z])(?:[.)])?\*\*(?:\s+|$)/);
   if (boldPrefix) return boldPrefix[1];
 
-  const plainPrefix = trimmed.match(/^([A-Z])\s+/);
+  const plainPrefix = trimmed.match(/^([A-Z])(?:[.)])?(?:\s+|$)/);
   if (plainPrefix) return plainPrefix[1];
 
   return null;
@@ -255,6 +257,69 @@ function MatchingHeadingsBank({
             >
               <span className="mt-0.5 w-9 shrink-0 font-semibold text-muted-foreground">{option.value}</span>
               <span className="min-w-0 flex-1 text-foreground/95">{option.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+type MatchingInfoBankProps = {
+  options: string[];
+  selectedOption: string | null;
+  draggingOption: string | null;
+  disabled: boolean;
+  onSelectOption: (option: string) => void;
+  onDragStartOption: (event: ReactDragEvent<HTMLButtonElement>, option: string) => void;
+  onDragEndOption: () => void;
+  hintText: string;
+};
+
+function MatchingInfoBank({
+  options,
+  selectedOption,
+  draggingOption,
+  disabled,
+  onSelectOption,
+  onDragStartOption,
+  onDragEndOption,
+  hintText,
+}: MatchingInfoBankProps) {
+  if (!options.length) return null;
+
+  return (
+    <div className="rounded-xl border border-border/70 bg-card/80 p-3">
+      <p className="text-sm font-semibold text-foreground">Matching options</p>
+      <p className="mt-1 text-xs text-muted-foreground">{hintText}</p>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {options.map((option) => {
+          const isSelected = selectedOption === option;
+          const isDragging = draggingOption === option;
+          return (
+            <button
+              key={option}
+              type="button"
+              draggable={!disabled}
+              onClick={() => {
+                if (disabled) return;
+                onSelectOption(option);
+              }}
+              onDragStart={(event) => {
+                if (disabled) return;
+                onDragStartOption(event, option);
+              }}
+              onDragEnd={onDragEndOption}
+              className={cn(
+                "inline-flex items-center rounded-md border px-2.5 py-1.5 text-sm transition-colors",
+                isSelected
+                  ? "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300"
+                  : "border-border/70 bg-background/70 text-foreground/90 hover:border-blue-300/60",
+                isDragging && "opacity-70",
+                disabled && "cursor-not-allowed opacity-70"
+              )}
+            >
+              {option}
             </button>
           );
         })}
@@ -389,7 +454,35 @@ function extractMatchingChoiceOptions(group: StudentAttemptQuestionGroup): strin
 
 function extractSummaryInfo(group: StudentAttemptQuestionGroup): { summaryText: string; wordBank: string[] | null } {
   const content = asRecord(group.group_content_json);
-  const summaryText = toStringSafe(content?.summary_text).trim();
+  const orderedQuestions = group.questions
+    .slice()
+    .sort((left, right) => left.question_number - right.question_number);
+  const questionNumbers = orderedQuestions.map((question) => question.question_number);
+
+  const rawSummaryText =
+    toStringSafe(content?.summary_text).trim()
+    || toStringSafe(content?.template_text).trim()
+    || toStringSafe(content?.note_text).trim()
+    || toStringSafe(content?.text).trim();
+
+  let summaryText = rawSummaryText;
+  const hasNumberTokens = /\{\d+\}/.test(summaryText);
+  if (summaryText && !hasNumberTokens && questionNumbers.length) {
+    let cursor = 0;
+    summaryText = summaryText.replace(/(_{2,}|\.{3,}|…+)/g, () => {
+      if (cursor >= questionNumbers.length) return "_____";
+      const token = `{${questionNumbers[cursor]}}`;
+      cursor += 1;
+      return token;
+    });
+  }
+
+  if (!summaryText && questionNumbers.length) {
+    summaryText = orderedQuestions
+      .map((question) => `${extractQuestionPrompt(question) || `Question ${question.question_number}`} {${question.question_number}}`)
+      .join("\n");
+  }
+
   const wordBankRaw = Array.isArray(content?.word_bank) ? content.word_bank : null;
   const wordBank = wordBankRaw
     ? (wordBankRaw as unknown[]).map((item) => toStringSafe(item).trim()).filter(Boolean)
@@ -748,7 +841,14 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
           continue;
         }
 
-        if (qType === "MATCH_PARA_INFO" || qType === "MATCHING_INFORMATION") {
+        if (
+          qType === "MATCH_PARA_INFO"
+          || qType === "MATCHING_INFORMATION"
+          || qType === "MATCHING_ENDINGS"
+          || qType === "MATCHING_SENTENCE_ENDINGS"
+          || qType === "SENTENCE_ENDINGS"
+          || qType === "MATCHING"
+        ) {
           questions.push({
             id: questionId,
             number,
@@ -805,7 +905,7 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
           continue;
         }
 
-        if (qType === "SUMMARY_COMPLETION") {
+        if (qType === "SUMMARY_COMPLETION" || qType === "NOTE_COMPLETION") {
           const summaryInfo = extractSummaryInfo(group);
           questions.push({
             id: questionId,
@@ -1068,6 +1168,8 @@ function ReadingTestClient({
   const [mobilePanel, setMobilePanel] = useState<"passage" | "questions">("passage");
   const [selectedHeadingOption, setSelectedHeadingOption] = useState<string | null>(null);
   const [draggingHeadingOption, setDraggingHeadingOption] = useState<string | null>(null);
+  const [selectedMatchingInfoOption, setSelectedMatchingInfoOption] = useState<string | null>(null);
+  const [draggingMatchingInfoOption, setDraggingMatchingInfoOption] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(test.durationMinutes * 60);
   const [timerRunning, setTimerRunning] = useState(false);
   const [attemptMode, setAttemptMode] = useState<AttemptMode | null>(null);
@@ -1154,6 +1256,8 @@ function ReadingTestClient({
     setMobilePanel("passage");
     setSelectedHeadingOption(null);
     setDraggingHeadingOption(null);
+    setSelectedMatchingInfoOption(null);
+    setDraggingMatchingInfoOption(null);
     setRemainingSeconds(test.durationMinutes * 60);
     setTimerRunning(nextMode === "real");
     setHighlights([]);
@@ -1903,6 +2007,17 @@ function ReadingTestClient({
     setAnswers((prev) => ({ ...prev, [questionId]: "" }));
   }, []);
 
+  const assignMatchingInfo = useCallback((questionId: string, optionValue: string) => {
+    const normalized = optionValue.trim();
+    if (!normalized) return;
+    setAnswers((prev) => ({ ...prev, [questionId]: normalized }));
+    setSelectedMatchingInfoOption(null);
+  }, []);
+
+  const clearMatchingInfo = useCallback((questionId: string) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: "" }));
+  }, []);
+
   const handlePassageChange = (value: string) => {
     const nextPassage = value as "p1" | "p2" | "p3";
     setActivePassageId(nextPassage);
@@ -2615,6 +2730,9 @@ function ReadingTestClient({
                     (question): question is MatchingHeadingsQuestion => question.type === "matchingHeadings"
                   );
                   const visibleGroupQuestions = group.questions.filter((question) => question.type !== "matchingHeadings");
+                  const matchingInfoGroupQuestions = visibleGroupQuestions.filter(
+                    (question): question is MatchingInfoQuestion => question.type === "matchingInfo"
+                  );
                   const matchingHeadingGroupOptionsRaw = matchingHeadingGroupQuestions
                     .flatMap((question) => question.headingOptions)
                     .map((option) => parseMatchingHeadingOption(option))
@@ -2625,6 +2743,11 @@ function ReadingTestClient({
                     value: option.key,
                     label: matchingHeadingDescriptions.get(option.key) ?? option.label ?? option.key,
                   }));
+                  const matchingInfoGroupOptions = matchingInfoGroupQuestions
+                    .flatMap((question) => question.paragraphOptions)
+                    .map((option) => option.trim())
+                    .filter(Boolean)
+                    .filter((option, index, source) => source.indexOf(option) === index);
 
                   if (!visibleGroupQuestions.length && !matchingHeadingGroupQuestions.length) {
                     return null;
@@ -2664,6 +2787,31 @@ function ReadingTestClient({
                             setSelectedHeadingOption(optionValue);
                           }}
                           onDragEndOption={() => setDraggingHeadingOption(null)}
+                        />
+                      ) : null}
+
+                      {matchingInfoGroupOptions.length ? (
+                        <MatchingInfoBank
+                          options={matchingInfoGroupOptions}
+                          selectedOption={selectedMatchingInfoOption}
+                          draggingOption={draggingMatchingInfoOption}
+                          disabled={reviewMode}
+                          hintText={
+                            t.has("dragMatchingInfoHint")
+                              ? t("dragMatchingInfoHint")
+                              : "Drag an option and drop it onto a matching-information answer box. On mobile, tap an option then tap a box."
+                          }
+                          onSelectOption={(optionValue) =>
+                            setSelectedMatchingInfoOption((prev) => (prev === optionValue ? null : optionValue))
+                          }
+                          onDragStartOption={(event, optionValue) => {
+                            event.dataTransfer.effectAllowed = "move";
+                            event.dataTransfer.setData(MATCHING_INFO_DND_MIME, optionValue);
+                            event.dataTransfer.setData("text/plain", optionValue);
+                            setDraggingMatchingInfoOption(optionValue);
+                            setSelectedMatchingInfoOption(optionValue);
+                          }}
+                          onDragEndOption={() => setDraggingMatchingInfoOption(null)}
                         />
                       ) : null}
 
@@ -2784,7 +2932,7 @@ function ReadingTestClient({
                                     Marked
                                   </Badge>
                                 ) : null}
-                                {reviewMode ? (
+                                {reviewMode && !isSummary && !isTable ? (
                                   <div className="flex shrink-0 items-start gap-1.5">
                                     <Button
                                       type="button"
@@ -2813,12 +2961,12 @@ function ReadingTestClient({
                                 ) : null}
                               </div>
 
-                              {reviewMode ? (
-                                <p className="test-muted-copy mb-3 text-xs text-muted-foreground">
-                                  {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
-                                  {reviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
-                                </p>
-                              ) : null}
+                                {reviewMode && !isSummary && !isTable ? (
+                                  <p className="test-muted-copy mb-3 text-xs text-muted-foreground">
+                                    {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
+                                    {reviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
+                                  </p>
+                                ) : null}
 
                               {question.type === "tfng" ? (
                                 <div className="flex flex-wrap gap-4">
@@ -2903,20 +3051,78 @@ function ReadingTestClient({
                               ) : null}
 
                               {question.type === "matchingInfo" ? (
-                                <Select
-                                  value={typeof value === "string" ? value : ""}
-                                  disabled={reviewMode}
-                                  onValueChange={(nextValue) => setAnswers((prev) => ({ ...prev, [question.id]: nextValue }))}
-                                >
-                                  <SelectTrigger className="test-input-surface max-w-55 bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
-                                    <SelectValue placeholder={t("selectParagraph")} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {question.paragraphOptions.map((option) => (
-                                      <SelectItem key={option} value={option}>{option}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                  <div
+                                    role="button"
+                                    tabIndex={reviewMode ? -1 : 0}
+                                    aria-label={`Question ${question.number} matching information drop zone`}
+                                    onClick={() => {
+                                      setActiveQuestionNumber(question.number);
+                                      if (reviewMode || !selectedMatchingInfoOption) return;
+                                      if (!question.paragraphOptions.includes(selectedMatchingInfoOption)) return;
+                                      assignMatchingInfo(question.id, selectedMatchingInfoOption);
+                                    }}
+                                    onKeyDown={(event) => {
+                                      if (reviewMode || !selectedMatchingInfoOption) return;
+                                      if (event.key !== "Enter" && event.key !== " ") return;
+                                      event.preventDefault();
+                                      if (!question.paragraphOptions.includes(selectedMatchingInfoOption)) return;
+                                      assignMatchingInfo(question.id, selectedMatchingInfoOption);
+                                    }}
+                                    onDragOver={(event) => {
+                                      if (reviewMode) return;
+                                      event.preventDefault();
+                                      event.dataTransfer.dropEffect = "move";
+                                    }}
+                                    onDrop={(event) => {
+                                      if (reviewMode) return;
+                                      event.preventDefault();
+                                      setActiveQuestionNumber(question.number);
+                                      const raw =
+                                        event.dataTransfer.getData(MATCHING_INFO_DND_MIME)
+                                        || event.dataTransfer.getData("text/plain");
+                                      const dropped = raw.trim();
+                                      if (!dropped || !question.paragraphOptions.includes(dropped)) return;
+                                      assignMatchingInfo(question.id, dropped);
+                                    }}
+                                    className={cn(
+                                      "min-w-32 rounded-md border-2 border-dashed px-2.5 py-1.5 text-xs transition-colors",
+                                      typeof value === "string" && value.trim()
+                                        ? "border-blue-400/80 bg-blue-50/50 text-foreground dark:bg-blue-900/20"
+                                        : "border-border/80 bg-background/80 text-muted-foreground",
+                                      !reviewMode && "cursor-pointer hover:border-blue-300/70"
+                                    )}
+                                  >
+                                    {typeof value === "string" && value.trim()
+                                      ? value
+                                      : (t.has("selectParagraph") ? t("selectParagraph") : "Select paragraph")}
+                                  </div>
+                                  {typeof value === "string" && value.trim() && !reviewMode ? (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => clearMatchingInfo(question.id)}
+                                      className="h-6 rounded-md px-2 text-[11px]"
+                                    >
+                                      {t.has("clearSelection") ? t("clearSelection") : "Clear"}
+                                    </Button>
+                                  ) : null}
+                                  <Select
+                                    value={typeof value === "string" ? value : ""}
+                                    disabled={reviewMode}
+                                    onValueChange={(nextValue) => assignMatchingInfo(question.id, nextValue)}
+                                  >
+                                    <SelectTrigger className="test-input-surface max-w-55 bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
+                                      <SelectValue placeholder={t("selectParagraph")} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {question.paragraphOptions.map((option) => (
+                                        <SelectItem key={option} value={option}>{option}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                               ) : null}
 
                               {question.type === "sentenceCompletion" ? (
@@ -2972,41 +3178,94 @@ function ReadingTestClient({
 
                                                     const targetValue = answers[targetQuestion.id];
                                                     const isActiveBlank = activeQuestionNumber === targetNumber;
+                                                    const targetReviewedQuestion =
+                                                      reviewQuestionById.get(targetQuestion.id)
+                                                      ?? reviewQuestionByNumber.get(targetQuestion.number)
+                                                      ?? targetQuestion;
+                                                    const targetReviewedCorrectAnswer = Array.isArray(targetReviewedQuestion.correctAnswer)
+                                                      ? targetReviewedQuestion.correctAnswer.join(", ")
+                                                      : targetReviewedQuestion.correctAnswer;
+                                                    const targetReviewedExplanation = targetReviewedQuestion.explanation?.trim()
+                                                      ? targetReviewedQuestion.explanation
+                                                      : (t.has("notAvailable") ? t("notAvailable") : "Not available");
 
                                                     return (
-                                                      <span key={`${question.id}-cell-input-${rowIndex}-${cellIndex}-${partIndex}`} className="inline-flex items-baseline gap-1">
-                                                        <span
-                                                          className={cn(
-                                                            "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white",
-                                                            isActiveBlank ? "bg-blue-600" : "bg-muted-foreground/50"
-                                                          )}
-                                                        >
-                                                          {targetNumber}
+                                                      <span key={`${question.id}-cell-input-${rowIndex}-${cellIndex}-${partIndex}`} className="inline-flex flex-col items-start gap-1.5">
+                                                        <span className="inline-flex items-baseline gap-1">
+                                                          <span
+                                                            className={cn(
+                                                              "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white",
+                                                              isActiveBlank ? "bg-blue-600" : "bg-muted-foreground/50"
+                                                            )}
+                                                          >
+                                                            {targetNumber}
+                                                          </span>
+                                                          <Input
+                                                            aria-label={`Question ${targetNumber}`}
+                                                            value={typeof targetValue === "string" ? targetValue : ""}
+                                                            disabled={reviewMode}
+                                                            onPointerDown={(event) => {
+                                                              event.stopPropagation();
+                                                            }}
+                                                            onClick={(event) => {
+                                                              event.stopPropagation();
+                                                            }}
+                                                            onFocus={() => {
+                                                              if (activeQuestionNumber !== targetNumber) {
+                                                                setActiveQuestionNumber(targetNumber);
+                                                              }
+                                                            }}
+                                                            onChange={(event) => setAnswers((prev) => ({...prev, [targetQuestion.id]: event.target.value}))}
+                                                            placeholder="..."
+                                                            className={cn(
+                                                              "test-input-surface h-8 w-28 rounded-md px-2 text-sm sm:w-36",
+                                                              isActiveBlank
+                                                                ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-400/30 dark:bg-blue-900/20"
+                                                                : "border-blue-300/40 bg-background/80 dark:bg-muted/30"
+                                                            )}
+                                                          />
                                                         </span>
-                                                        <Input
-                                                          aria-label={`Question ${targetNumber}`}
-                                                          value={typeof targetValue === "string" ? targetValue : ""}
-                                                          disabled={reviewMode}
-                                                          onPointerDown={(event) => {
-                                                            event.stopPropagation();
-                                                          }}
-                                                          onClick={(event) => {
-                                                            event.stopPropagation();
-                                                          }}
-                                                          onFocus={() => {
-                                                            if (activeQuestionNumber !== targetNumber) {
-                                                              setActiveQuestionNumber(targetNumber);
-                                                            }
-                                                          }}
-                                                          onChange={(event) => setAnswers((prev) => ({...prev, [targetQuestion.id]: event.target.value}))}
-                                                          placeholder="..."
-                                                          className={cn(
-                                                            "test-input-surface h-8 w-28 rounded-md px-2 text-sm sm:w-36",
-                                                            isActiveBlank
-                                                              ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-400/30 dark:bg-blue-900/20"
-                                                              : "border-blue-300/40 bg-background/80 dark:bg-muted/30"
-                                                          )}
-                                                        />
+                                                        {reviewMode ? (
+                                                          <span className="pl-6">
+                                                            <span className="flex flex-wrap items-center gap-1.5">
+                                                              <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="ghost"
+                                                                onClick={(event) => {
+                                                                  event.stopPropagation();
+                                                                  openExplanation(targetQuestion);
+                                                                }}
+                                                                className="h-6 rounded-md px-2 text-[10px]"
+                                                              >
+                                                                {expandedExplanations.has(targetQuestion.id)
+                                                                  ? (t.has("hideExplanation") ? t("hideExplanation") : "Hide explanation")
+                                                                  : (t.has("explain") ? t("explain") : "Explain")}
+                                                              </Button>
+                                                              <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={(event) => {
+                                                                  event.stopPropagation();
+                                                                  jumpToEvidenceFromReview(targetQuestion.id);
+                                                                }}
+                                                                className="h-6 rounded-md border-border/70 px-2 text-[10px]"
+                                                              >
+                                                                {t.has("jumpToEvidence") ? t("jumpToEvidence") : "Jump to evidence"}
+                                                              </Button>
+                                                            </span>
+                                                            {expandedExplanations.has(targetQuestion.id) ? (
+                                                              <span className="test-soft-surface mt-1 block rounded-md border border-border/80 bg-muted/25 p-2 text-xs">
+                                                                <span className="block text-foreground/90">{targetReviewedExplanation}</span>
+                                                                <span className="test-muted-copy mt-1 block text-muted-foreground">
+                                                                  {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
+                                                                  {targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
+                                                                </span>
+                                                              </span>
+                                                            ) : null}
+                                                          </span>
+                                                        ) : null}
                                                       </span>
                                                     );
                                                   })}
@@ -3034,7 +3293,17 @@ function ReadingTestClient({
                                           const targetQuestion = questionsByNumber.get(num);
                                           if (targetQuestion) {
                                             const questionValue = answers[targetQuestion.id];
-                                            const isThisQuestion = num === question.number;
+                                            const isThisQuestion = num === activeQuestionNumber;
+                                            const targetReviewedQuestion =
+                                              reviewQuestionById.get(targetQuestion.id)
+                                              ?? reviewQuestionByNumber.get(targetQuestion.number)
+                                              ?? targetQuestion;
+                                            const targetReviewedCorrectAnswer = Array.isArray(targetReviewedQuestion.correctAnswer)
+                                              ? targetReviewedQuestion.correctAnswer.join(", ")
+                                              : targetReviewedQuestion.correctAnswer;
+                                            const targetReviewedExplanation = targetReviewedQuestion.explanation?.trim()
+                                              ? targetReviewedQuestion.explanation
+                                              : (t.has("notAvailable") ? t("notAvailable") : "Not available");
 
                                             return (
                                               <span key={partIndex} className="inline-flex items-baseline gap-1 mx-0.5">
@@ -3051,6 +3320,12 @@ function ReadingTestClient({
                                                   aria-label={`Question ${num}`}
                                                   value={typeof questionValue === "string" ? questionValue : ""}
                                                   disabled={reviewMode}
+                                                  onPointerDown={(event) => {
+                                                    event.stopPropagation();
+                                                  }}
+                                                  onClick={(event) => {
+                                                    event.stopPropagation();
+                                                  }}
                                                   onFocus={() => {
                                                     if (activeQuestionNumber !== num) {
                                                       setActiveQuestionNumber(num);
@@ -3066,11 +3341,50 @@ function ReadingTestClient({
                                                   )}
                                                   style={{ verticalAlign: "baseline" }}
                                                 />
+                                                {reviewMode ? (
+                                                  <span className="ml-1 inline-flex items-center gap-1">
+                                                    <Button
+                                                      type="button"
+                                                      size="sm"
+                                                      variant="ghost"
+                                                      onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        openExplanation(targetQuestion);
+                                                      }}
+                                                      className="h-6 rounded-md px-2 text-[10px]"
+                                                    >
+                                                      {expandedExplanations.has(targetQuestion.id)
+                                                        ? (t.has("hideExplanation") ? t("hideExplanation") : "Hide explanation")
+                                                        : (t.has("explain") ? t("explain") : "Explain")}
+                                                    </Button>
+                                                    <Button
+                                                      type="button"
+                                                      size="sm"
+                                                      variant="outline"
+                                                      onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        jumpToEvidenceFromReview(targetQuestion.id);
+                                                      }}
+                                                      className="h-6 rounded-md border-border/70 px-2 text-[10px]"
+                                                    >
+                                                      {t.has("jumpToEvidence") ? t("jumpToEvidence") : "Jump to evidence"}
+                                                    </Button>
+                                                  </span>
+                                                ) : null}
+                                                {reviewMode && expandedExplanations.has(targetQuestion.id) ? (
+                                                  <span className="ml-1 inline-block rounded-md border border-border/80 bg-muted/25 px-2 py-1 text-[10px] text-foreground/90">
+                                                    <span className="block">{targetReviewedExplanation}</span>
+                                                    <span className="mt-0.5 block text-muted-foreground">
+                                                      {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
+                                                      {targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
+                                                    </span>
+                                                  </span>
+                                                ) : null}
                                               </span>
                                             );
                                           }
                                         }
-                                        return <span key={partIndex}>{part}</span>;
+                                        return part ? <InlineBoldText key={partIndex} text={part} /> : null;
                                       })}
                                     </p>
                                   </div>
@@ -3079,7 +3393,7 @@ function ReadingTestClient({
                             })() : null}
 
 
-                              {reviewMode ? (
+                              {reviewMode && !isSummary && !isTable ? (
                                 <div className="mt-3 space-y-2">
                                   {expandedExplanations.has(question.id) ? (
                                     <div className="test-soft-surface rounded-md border border-border/80 bg-muted/25 p-3 text-sm">

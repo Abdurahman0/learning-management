@@ -10,7 +10,7 @@ export const AUTH_BACKEND_ENDPOINTS = {
   edit: "/api/auth/edit/",
   refresh: "/api/auth/token/refresh/",
   forgotPassword: "/api/auth/forgot-password/",
-  verifyResetCode: "/api/auth/verify-reset-code/",
+  verifyResetCode: "/api/auth/activate-reset-token/",
   resetPassword: "/api/auth/reset-password/"
 } as const;
 

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json(
     {
-      detail: result.detail ?? "Activation request completed."
+      detail: result.detail ?? (result.ok ? "Activation request completed." : "Activation failed.")
     },
     {status: result.status}
   );

@@ -11,6 +11,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import type {BuilderMode, BuilderStructureItem, TestModule} from "@/data/admin-test-builder";
 import type {ContentBankPassage, ContentBankVariantSet} from "@/data/admin/selectors";
 
+import {BoldTextarea} from "./BoldTextarea";
 import {EvidenceToolbar} from "./EvidenceToolbar";
 
 type PassageEditorProps = {
@@ -40,6 +41,12 @@ function textToParagraphs(text: string) {
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function applyBoldToText(value: string, start: number, end: number) {
+  const selected = value.slice(start, end);
+  const wrapped = `**${selected || "bold text"}**`;
+  return `${value.slice(0, start)}${wrapped}${value.slice(end)}`;
 }
 
 export function PassageEditor({
@@ -162,7 +169,13 @@ export function PassageEditor({
 
             <EvidenceToolbar
               onFormatClick={(format) => {
-                console.info("[builder] format click", format);
+                if (format !== "bold") return;
+                const element = textRef.current;
+                if (!element) return;
+                const start = element.selectionStart ?? 0;
+                const end = element.selectionEnd ?? 0;
+                const nextValue = applyBoldToText(textValue, start, end);
+                onUpdateContent(structure.id, textToParagraphs(nextValue));
               }}
               onAddEvidence={applyEvidence}
               addEvidenceDisabled={!selectedQuestionLabel}
@@ -176,10 +189,10 @@ export function PassageEditor({
               <p className="text-xs text-muted-foreground">{t("editor.evidenceHint")}</p>
             )}
 
-            <textarea
-              ref={textRef}
+            <BoldTextarea
+              textareaRef={textRef}
               value={textValue}
-              onChange={(event) => onUpdateContent(structure.id, textToParagraphs(event.target.value))}
+              onChange={(nextValue) => onUpdateContent(structure.id, textToParagraphs(nextValue))}
               className="min-h-[420px] w-full resize-y rounded-2xl border border-border/70 bg-background/45 px-4 py-3 text-sm leading-7 outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
             />
 

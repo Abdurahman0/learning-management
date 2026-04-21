@@ -298,7 +298,7 @@ export function AuthCard({ mode }: AuthCardProps) {
               />
               {t("signin.remember")}
             </Label>
-            <Link href="#" className="text-base font-semibold text-blue-700 hover:underline dark:text-blue-400">
+            <Link href={`/${locale}/forgot-password`} className="text-base font-semibold text-blue-700 hover:underline dark:text-blue-400">
               {t("signin.forgot")}
             </Link>
           </div>

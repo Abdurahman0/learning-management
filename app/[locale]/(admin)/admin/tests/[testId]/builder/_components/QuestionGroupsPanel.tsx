@@ -12,6 +12,7 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle} from "@/components/ui/sheet";
 import type {BuilderMode, BuilderStructureItem, QuestionGroup, QuestionType, TestModule} from "@/data/admin-test-builder";
 import {QUESTION_TYPE_OPTIONS_BY_MODULE, getStructureRange} from "@/data/admin-test-builder";
+import {BoldTextarea} from "./BoldTextarea";
 
 import {QuestionGroupCard} from "./QuestionGroupCard";
 
@@ -457,12 +458,12 @@ export function QuestionGroupsPanel({
             </div>
             <div className="space-y-1.5">
               <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.instructions")}</label>
-              <textarea
+              <BoldTextarea
                 value={editor.instructions}
-                onChange={(event) =>
+                onChange={(nextValue) =>
                   setEditor((current) => ({
                     ...current,
-                    instructions: event.target.value
+                    instructions: nextValue
                   }))
                 }
                 placeholder={t("groups.fields.instructionsPlaceholder")}
@@ -474,12 +475,12 @@ export function QuestionGroupsPanel({
               <>
                 <div className="space-y-1.5">
                   <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.summaryText")}</label>
-                  <textarea
+                  <BoldTextarea
                     value={editor.summaryText}
-                    onChange={(event) =>
+                    onChange={(nextValue) =>
                       setEditor((current) => ({
                         ...current,
-                        summaryText: event.target.value
+                        summaryText: nextValue
                       }))
                     }
                     placeholder={t("groups.fields.summaryTextPlaceholder")}
@@ -514,9 +515,9 @@ export function QuestionGroupsPanel({
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCQ Options (shared)</label>
-                  <textarea
+                  <BoldTextarea
                     value={editor.mcqOptions}
-                    onChange={(event) => setEditor((current) => ({...current, mcqOptions: event.target.value}))}
+                    onChange={(nextValue) => setEditor((current) => ({...current, mcqOptions: nextValue}))}
                     placeholder="Option A text&#10;Option B text&#10;Option C text&#10;Option D text&#10;Option E text"
                     className="min-h-32 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
                   />
@@ -528,12 +529,12 @@ export function QuestionGroupsPanel({
             {(editor.type === "note_completion" || editor.type === "form_completion") && (
               <div className="space-y-1.5">
                 <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">Template Text</label>
-                <textarea
+                <BoldTextarea
                   value={editor.completionTemplateText}
-                  onChange={(event) =>
+                  onChange={(nextValue) =>
                     setEditor((current) => ({
                       ...current,
-                      completionTemplateText: event.target.value
+                      completionTemplateText: nextValue
                     }))
                   }
                   placeholder={`Example:\nItem ${editor.from}: {${editor.from}}\nItem ${Math.min(editor.from + 1, editor.to)}: {${Math.min(editor.from + 1, editor.to)}}`}
@@ -547,9 +548,9 @@ export function QuestionGroupsPanel({
               <>
                 <div className="space-y-1.5">
                   <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.tableColumns")}</label>
-                  <textarea
+                  <BoldTextarea
                     value={editor.tableColumns}
-                    onChange={(event) => setEditor((current) => ({...current, tableColumns: event.target.value}))}
+                    onChange={(nextValue) => setEditor((current) => ({...current, tableColumns: nextValue}))}
                     placeholder={t("groups.fields.tableColumnsPlaceholder")}
                     className="min-h-24 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
                   />
@@ -557,9 +558,9 @@ export function QuestionGroupsPanel({
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.tableRows")}</label>
-                  <textarea
+                  <BoldTextarea
                     value={editor.tableRows}
-                    onChange={(event) => setEditor((current) => ({...current, tableRows: event.target.value}))}
+                    onChange={(nextValue) => setEditor((current) => ({...current, tableRows: nextValue}))}
                     placeholder={t("groups.fields.tableRowsPlaceholder", {from: editor.from})}
                     className="min-h-36 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
                   />
@@ -571,9 +572,9 @@ export function QuestionGroupsPanel({
             {editor.type === "matching_headings" && (
               <div className="space-y-1.5">
                 <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.headingOptions")}</label>
-                <textarea
+                <BoldTextarea
                   value={editor.headings}
-                  onChange={(event) => setEditor((current) => ({...current, headings: event.target.value}))}
+                  onChange={(nextValue) => setEditor((current) => ({...current, headings: nextValue}))}
                   placeholder="Enter headings, one per line..."
                   className="min-h-32 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
                 />
@@ -586,9 +587,9 @@ export function QuestionGroupsPanel({
               editor.type === "map") && (
               <div className="space-y-1.5">
                 <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("groups.fields.choices")}</label>
-                <textarea
+                <BoldTextarea
                   value={editor.choices}
-                  onChange={(event) => setEditor((current) => ({...current, choices: event.target.value}))}
+                  onChange={(nextValue) => setEditor((current) => ({...current, choices: nextValue}))}
                   placeholder="Enter choices, one per line..."
                   className="min-h-32 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
                 />

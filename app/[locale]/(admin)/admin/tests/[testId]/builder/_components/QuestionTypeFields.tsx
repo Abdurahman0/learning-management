@@ -7,6 +7,7 @@ import {Badge} from "@/components/ui/badge";
 import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import type {BuilderQuestion, TextInputQuestion} from "@/data/admin-test-builder";
+import {BoldTextarea} from "./BoldTextarea";
 
 type QuestionTypeFieldsProps = {
   question: BuilderQuestion;
@@ -83,22 +84,21 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.prompt")}</Label>
-        <textarea
+        <BoldTextarea
           value={question.prompt}
-          onChange={(event) => {
+          onChange={(nextPrompt) => {
             if (question.type !== "selecting_from_a_list") {
-              onChange({...question, prompt: event.target.value});
+              onChange({...question, prompt: nextPrompt});
               return;
             }
 
-            const nextPrompt = event.target.value;
             const previousKey = question.items[0] ?? (question.prompt.trim() || `Question ${question.number}`);
             const nextKey = nextPrompt.trim() || `Question ${question.number}`;
             const preservedValue =
               question.correctAnswer[previousKey]
               ?? question.correctAnswer[nextKey]
               ?? Object.values(question.correctAnswer).find((value) => String(value ?? "").trim().length > 0)
-              ?? "";
+                ?? "";
 
             onChange({
               ...question,
@@ -336,10 +336,10 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
                 {autoListSelectionItem}
               </div>
             ) : (
-              <textarea
+              <BoldTextarea
                 value={question.items.join("\n")}
-                onChange={(event) => {
-                  const items = event.target.value.split("\n").map((item) => item.trim()).filter(Boolean);
+                onChange={(nextValue) => {
+                  const items = nextValue.split("\n").map((item) => item.trim()).filter(Boolean);
                   const nextMapping: Record<string, string> = {};
                   for (const item of items) {
                     nextMapping[item] = question.correctAnswer[item] ?? "";
@@ -421,18 +421,18 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
 
       <div className="space-y-1.5">
         <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.explanation")}</Label>
-        <textarea
+        <BoldTextarea
           value={question.explanation ?? ""}
-          onChange={(event) => onChange({...question, explanation: event.target.value})}
+          onChange={(nextValue) => onChange({...question, explanation: nextValue})}
           className={fieldClassName}
         />
       </div>
 
       <div className="space-y-1.5">
         <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.evidence")}</Label>
-        <textarea
+        <BoldTextarea
           value={question.evidence ?? question.evidenceText ?? ""}
-          onChange={(event) => onChange({...question, evidence: event.target.value, evidenceText: event.target.value})}
+          onChange={(nextValue) => onChange({...question, evidence: nextValue, evidenceText: nextValue})}
           className={fieldClassName}
           placeholder={t("questions.fields.evidencePlaceholder")}
         />

@@ -135,10 +135,10 @@ export const authApi = {
   },
 
   verifyResetCode(payload: {email: string; code: string}) {
-    return requestAuthApi<{detail?: string}>("/api/auth/verify-reset-code", {body: payload});
+    return requestAuthApi<{detail?: string; activation_token?: string}>("/api/auth/verify-reset-code", {body: payload});
   },
 
-  resetPassword(payload: {email: string; new_password: string}) {
+  resetPassword(payload: {email: string; new_password: string; activation_token?: string}) {
     return requestAuthApi<{detail?: string}>("/api/auth/reset-password", {body: payload});
   }
 };
