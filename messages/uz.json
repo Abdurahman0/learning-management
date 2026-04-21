@@ -493,7 +493,39 @@
                                         "sidePoint3":  "Xavfsiz va maxfiy",
                                         "submit":  "Tiklash havolasini yuborish",
                                         "backToLogin":  "Kirishga qaytish"
-                                    }
+                                    },
+                 "verifyResetCode":  {
+                                         "title":  "Tiklash kodini tasdiqlash",
+                                         "subtitle":  "Davom etish uchun emailingizga yuborilgan kodni kiriting.",
+                                         "badge":  "Kod tasdiqlash",
+                                         "sideTitle":  "Shaxsingizni tasdiqlang",
+                                         "sideDescription":  "Bu qisqa bosqich akkauntingiz xavfsizligini ta'minlaydi.",
+                                         "sidePoint1":  "Eng so'nggi kodni emaildan tekshiring",
+                                         "sidePoint2":  "Kodni aynan yuborilgandek kiriting",
+                                         "sidePoint3":  "Xavfsizlik uchun kod tezda eskiradi",
+                                         "codeLabel":  "Tasdiqlash kodi",
+                                         "codePlaceholder":  "Tiklash kodini kiriting",
+                                         "submit":  "Kodni tasdiqlash",
+                                         "success":  "Kod muvaffaqiyatli tasdiqlandi."
+                                     },
+                 "resetPassword":  {
+                                       "title":  "Yangi parol o'rnating",
+                                       "subtitle":  "Akkauntingiz uchun kuchli yangi parol yarating.",
+                                       "badge":  "Parolni yangilash",
+                                       "sideTitle":  "Deyarli tugadi",
+                                       "sideDescription":  "Yangi parol tanlang va akkauntingizni himoyalangan holda saqlang.",
+                                       "sidePoint1":  "Kamida 8 ta belgidan foydalaning",
+                                       "sidePoint2":  "Eski parollarni qayta ishlatmang",
+                                       "sidePoint3":  "Parol menejerida xavfsiz saqlang",
+                                       "newPasswordLabel":  "Yangi parol",
+                                       "submit":  "Parolni yangilash",
+                                       "success":  "Parol muvaffaqiyatli yangilandi.",
+                                       "backToLogin":  "Kirishga qaytish",
+                                       "goToVerifyCode":  "Tiklash kodini tasdiqlash"
+                                   },
+                 "messages":  {
+                                  "genericError":  "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring."
+                              }
              },
     "comparison":  {
                        "title":  "Tayyorgarlikni maksimal darajaga olib chiqing",

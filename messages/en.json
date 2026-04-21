@@ -493,7 +493,39 @@
                                         "sidePoint3":  "Secure and private",
                                         "submit":  "Send reset link",
                                         "backToLogin":  "Back to login"
-                                    }
+                                    },
+                 "verifyResetCode":  {
+                                         "title":  "Verify reset code",
+                                         "subtitle":  "Enter the code we sent to your email to continue.",
+                                         "badge":  "Code verification",
+                                         "sideTitle":  "Confirm your identity",
+                                         "sideDescription":  "This quick verification step keeps your account secure.",
+                                         "sidePoint1":  "Check your inbox for the latest code",
+                                         "sidePoint2":  "Enter the code exactly as received",
+                                         "sidePoint3":  "Code expires quickly for safety",
+                                         "codeLabel":  "Verification code",
+                                         "codePlaceholder":  "Enter reset code",
+                                         "submit":  "Verify code",
+                                         "success":  "Code verified successfully."
+                                     },
+                 "resetPassword":  {
+                                       "title":  "Set a new password",
+                                       "subtitle":  "Create a strong password for your account.",
+                                       "badge":  "Password update",
+                                       "sideTitle":  "Almost done",
+                                       "sideDescription":  "Choose a new password and keep your account protected.",
+                                       "sidePoint1":  "Use at least 8 characters",
+                                       "sidePoint2":  "Avoid reusing old passwords",
+                                       "sidePoint3":  "Store it in a safe password manager",
+                                       "newPasswordLabel":  "New password",
+                                       "submit":  "Reset password",
+                                       "success":  "Password reset successfully.",
+                                       "backToLogin":  "Back to login",
+                                       "goToVerifyCode":  "Verify reset code"
+                                   },
+                 "messages":  {
+                                  "genericError":  "Something went wrong. Please try again."
+                              }
              },
     "comparison":  {
                        "title":  "Maximize Your Preparation",
