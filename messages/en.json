@@ -498,6 +498,81 @@
                                          "emailPlaceholder":  "name@example.com",
                                          "submit":  "Resend activation email"
                                      },
+                "onboarding":  {
+                                   "title":  "Quick setup",
+                                   "subtitle":  "A few answers help us personalize your IELTS plan.",
+                                   "hint":  "You can skip for now and complete this later from your dashboard.",
+                                   "progress":  "Step {current} of {total}",
+                                   "datePicker":  {
+                                                     "prevMonth":  "Previous month",
+                                                     "nextMonth":  "Next month",
+                                                     "clear":  "Clear",
+                                                     "today":  "Today"
+                                                 },
+                                   "actions":  {
+                                                   "back":  "Back",
+                                                   "next":  "Next",
+                                                   "finish":  "Finish",
+                                                   "skip":  "Skip for now"
+                                               },
+                                   "dashboardCta":  {
+                                                        "title":  "Finish your setup",
+                                                        "subtitle":  "Answer a few questions to personalize your preparation.",
+                                                        "button":  "Complete setup"
+                                                    },
+                                   "modules":  {
+                                                   "listening":  "Listening",
+                                                   "reading":  "Reading",
+                                                   "writing":  "Writing",
+                                                   "speaking":  "Speaking"
+                                               },
+                                   "steps":  {
+                                                 "examDate":  {
+                                                                  "title":  "When is your IELTS exam?",
+                                                                  "subtitle":  "Pick a date so we can plan the weeks ahead."
+                                                              },
+                                                 "targets":  {
+                                                                 "title":  "What are your target scores?",
+                                                                 "subtitle":  "Choose half or full band scores for each skill."
+                                                             },
+                                                 "strongest":  {
+                                                                   "title":  "What is your strongest section?",
+                                                                   "subtitle":  "We\u0027ll use this to balance your practice."
+                                                               },
+                                                 "weakest":  {
+                                                                 "title":  "What is your weakest section?",
+                                                                 "subtitle":  "We\u0027ll prioritize this in your plan."
+                                                             },
+                                                 "hours":  {
+                                                               "title":  "How much time can you study daily?",
+                                                               "subtitle":  "Set a realistic goal in hours per day."
+                                                           }
+                                             },
+                                   "fields":  {
+                                                  "examDate":  {
+                                                                   "label":  "IELTS exam date",
+                                                                   "placeholder":  "Select a date",
+                                                                   "help":  "This helps us estimate your weekly study pace."
+                                                               },
+                                                  "targets":  {
+                                                                   "help":  "Targets default to 9.0 if you haven\u0027t decided yet.",
+                                                                   "bandHint":  "Band score (0.0 to 9.0, step 0.5)"
+                                                               },
+                                                  "strongest":  {
+                                                                    "label":  "Strongest section",
+                                                                    "placeholder":  "Select your strongest section"
+                                                                },
+                                                  "weakest":  {
+                                                                  "label":  "Weakest section",
+                                                                  "placeholder":  "Select your weakest section"
+                                                              },
+                                                  "hours":  {
+                                                                 "label":  "Daily study time",
+                                                                 "help":  "Be honest: consistency beats intensity.",
+                                                                 "unit":  "hours/day"
+                                                             }
+                                              }
+                               },
                 "validation":  {
                                    "fullName":  "Please enter your full name.",
                                    "email":  "Please enter a valid email address.",

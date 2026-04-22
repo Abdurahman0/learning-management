@@ -19,6 +19,7 @@ import {studentDashboardService} from "@/src/services/student/dashboard.service"
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
 import {StudentApiError} from "@/src/services/student/types";
 import type {StudentDashboardResponse} from "@/src/services/student/types";
+import {ONBOARDING_CHANGE_EVENT, openOnboardingWizard, readOnboardingState} from "@/lib/onboarding-storage";
 
 type Notice = {
   title: string;
@@ -200,11 +201,24 @@ function createEmptyDashboardViewModel(): DashboardViewModel {
 
 export function DashboardClient() {
   const t = useTranslations("dashboard");
+  const tOnboarding = useTranslations("auth.onboarding");
   const locale = useLocale();
   const router = useRouter();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardViewModel>(createEmptyDashboardViewModel);
   const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
+  const [onboardingStatus, setOnboardingStatus] = useState<"none" | "pending" | "skipped" | "completed">("none");
+
+  useEffect(() => {
+    const refresh = () => {
+      const state = readOnboardingState();
+      setOnboardingStatus(state?.status ?? "none");
+    };
+
+    refresh();
+    window.addEventListener(ONBOARDING_CHANGE_EVENT, refresh);
+    return () => window.removeEventListener(ONBOARDING_CHANGE_EVENT, refresh);
+  }, []);
 
   useEffect(() => {
     if (!notice) {
@@ -307,6 +321,20 @@ export function DashboardClient() {
           <CardContent className="p-3">
             <p className="text-sm font-semibold text-blue-700 dark:text-blue-100">{notice.title}</p>
             <p className="text-sm text-blue-700/90 dark:text-blue-100/85">{notice.description}</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {onboardingStatus === "skipped" ? (
+        <Card className="mt-4 overflow-hidden rounded-2xl border-border/70 bg-linear-to-br from-blue-600/10 via-card/70 to-card/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground">{tOnboarding("dashboardCta.title")}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{tOnboarding("dashboardCta.subtitle")}</p>
+            </div>
+            <Button className="h-11 rounded-xl bg-blue-600 px-5 text-base font-semibold text-white hover:bg-blue-600/90" onClick={() => openOnboardingWizard()}>
+              {tOnboarding("dashboardCta.button")}
+            </Button>
           </CardContent>
         </Card>
       ) : null}

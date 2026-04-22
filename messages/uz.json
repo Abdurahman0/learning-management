@@ -494,10 +494,85 @@
                                    "backToLogin":  "Kirishga qaytish"
                                },
                 "resendActivation":  {
-                                         "emailLabel":  "Email manzil",
-                                         "emailPlaceholder":  "name@example.com",
-                                         "submit":  "Faollashtirishni qayta yuborish"
-                                     },
+                                          "emailLabel":  "Email manzil",
+                                          "emailPlaceholder":  "name@example.com",
+                                          "submit":  "Faollashtirishni qayta yuborish"
+                                      },
+                "onboarding":  {
+                                   "title":  "Tezkor sozlash",
+                                   "subtitle":  "Bir nechta savol IELTS rejangizni moslashtirishga yordam beradi.",
+                                   "hint":  "Hozircha o\u0027tkazib yuborishingiz mumkin, keyin dashboarddan to\u0027ldirasiz.",
+                                   "progress":  "Qadam {current} / {total}",
+                                   "datePicker":  {
+                                                     "prevMonth":  "Oldingi oy",
+                                                     "nextMonth":  "Keyingi oy",
+                                                     "clear":  "Tozalash",
+                                                     "today":  "Bugun"
+                                                 },
+                                   "actions":  {
+                                                   "back":  "Orqaga",
+                                                   "next":  "Keyingi",
+                                                   "finish":  "Tugatish",
+                                                   "skip":  "Hozircha o\u0027tkazish"
+                                               },
+                                   "dashboardCta":  {
+                                                        "title":  "Sozlashni yakunlang",
+                                                        "subtitle":  "Bir nechta savolga javob bering va tayyorgarlikni moslashtiring.",
+                                                        "button":  "Sozlashni davom ettirish"
+                                                    },
+                                   "modules":  {
+                                                   "listening":  "Listening",
+                                                   "reading":  "Reading",
+                                                   "writing":  "Writing",
+                                                   "speaking":  "Speaking"
+                                               },
+                                   "steps":  {
+                                                 "examDate":  {
+                                                                  "title":  "IELTS imtihoningiz qachon?",
+                                                                  "subtitle":  "Oldindagi haftalarni rejalash uchun sanani tanlang."
+                                                              },
+                                                 "targets":  {
+                                                                 "title":  "Maqsad ballaringiz qanday?",
+                                                                 "subtitle":  "Har bir bo\u0027lim uchun 0.5 yoki butun bandni tanlang."
+                                                             },
+                                                 "strongest":  {
+                                                                   "title":  "Eng kuchli bo\u0027limingiz qaysi?",
+                                                                   "subtitle":  "Mashqlarni muvozanatlash uchun kerak bo\u0027ladi."
+                                                               },
+                                                 "weakest":  {
+                                                                 "title":  "Eng zaif bo\u0027limingiz qaysi?",
+                                                                 "subtitle":  "Rejada shu bo\u0027limga ko\u0027proq e\u0027tibor beramiz."
+                                                             },
+                                                 "hours":  {
+                                                               "title":  "Har kuni qancha vaqt ajrata olasiz?",
+                                                               "subtitle":  "Soatlarda real maqsad qo\u0027ying."
+                                                           }
+                                             },
+                                   "fields":  {
+                                                  "examDate":  {
+                                                                   "label":  "IELTS imtihon sanasi",
+                                                                   "placeholder":  "Sanani tanlang",
+                                                                   "help":  "Haftalik o\u0027qish jadvalini hisoblashga yordam beradi."
+                                                               },
+                                                  "targets":  {
+                                                                   "help":  "Agar hali qaror qilmagan bo\u0027lsangiz, maqsad avtomatik 9.0 bo\u0027ladi.",
+                                                                   "bandHint":  "Band ball (0.0 dan 9.0 gacha, 0.5 qadam)"
+                                                               },
+                                                  "strongest":  {
+                                                                    "label":  "Kuchli bo\u0027lim",
+                                                                    "placeholder":  "Kuchli bo\u0027limni tanlang"
+                                                                },
+                                                  "weakest":  {
+                                                                  "label":  "Zaif bo\u0027lim",
+                                                                  "placeholder":  "Zaif bo\u0027limni tanlang"
+                                                              },
+                                                  "hours":  {
+                                                                 "label":  "Kunlik o\u0027qish vaqti",
+                                                                 "help":  "Halol bo\u0027ling: muntazamlik kuchliroq.",
+                                                                 "unit":  "soat/kun"
+                                                             }
+                                              }
+                               },
                 "validation":  {
                                    "fullName":  "To\u0027liq ismni kiriting.",
                                    "email":  "To\u0027g\u0027ri email manzil kiriting.",

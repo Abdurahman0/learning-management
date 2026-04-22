@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { authApi } from "@/lib/api/auth";
+import {seedOnboardingPending} from "@/lib/onboarding-storage";
 import { cn } from "@/lib/utils";
 
 import type { AuthMode } from "./AuthShell";
@@ -120,6 +121,9 @@ export function AuthCard({ mode }: AuthCardProps) {
           setStatusType("error");
           return;
         }
+
+        // Frontend-only onboarding (API coming later): show after the first successful signup.
+        seedOnboardingPending();
 
         setStatus(response.detail ?? successLabel);
         setStatusType("success");

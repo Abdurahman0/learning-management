@@ -15,6 +15,7 @@ import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "@/comp
 import {cn} from "@/lib/utils";
 
 import {useAppSessionRole} from "../session/AppSessionContext";
+import {OnboardingWizard} from "../onboarding/OnboardingWizard";
 import {GuestSidebar} from "./GuestSidebar";
 
 type GuestShellProps = {
@@ -308,6 +309,7 @@ export function GuestShell({children}: GuestShellProps) {
             </header>
           ) : null}
           {children}
+          {isStudent ? <OnboardingWizard /> : null}
             </>
           ) : null}
         </main>
