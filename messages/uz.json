@@ -467,19 +467,42 @@
                                                      },
                                          "trustLine":  "O\u0027zbekiston va dunyo bo\u0027ylab talabalar ishonch bildirgan"
                                      },
-                 "signinMarketing":  {
-                                         "title":  "Qaytganingizdan xursandmiz.",
-                                         "description":  "Ingliz tili yo\u0027lingizni davom ettiring. Testlaringiz va shaxsiy AI feedbackga qayting.",
-                                         "proTip":  "PRO MASLAHAT",
-                                         "proTipText":  "Shunchaki ko\u0027rib chiqyapsizmi?",
-                                         "guestLink":  "Guest mode\u0027ni sinab ko\u0027ring",
-                                         "socialProof":  "50k+ talabalar biz bilan"
+                "signinMarketing":  {
+                                        "title":  "Qaytganingizdan xursandmiz.",
+                                        "description":  "Ingliz tili yo\u0027lingizni davom ettiring. Testlaringiz va shaxsiy AI feedbackga qayting.",
+                                        "proTip":  "PRO MASLAHAT",
+                                        "proTipText":  "Shunchaki ko\u0027rib chiqyapsizmi?",
+                                        "guestLink":  "Guest mode\u0027ni sinab ko\u0027ring",
+                                        "socialProof":  "50k+ talabalar biz bilan"
+                                    },
+                "activation":  {
+                                   "title":  "Akkauntingizni faollashtiring",
+                                   "subtitle":  "Emailingizni tasdiqlang va EnglishLabs\u0027dan foydalanishni boshlang.",
+                                   "badge":  "Faollashtirish",
+                                   "sideTitle":  "Yana bir qadam qoldi",
+                                   "sideDescription":  "Faollashtirish orqali testlar, tahlillar va AI fikr-mulohazalariga kirish oling.",
+                                   "sidePoint1":  "Bir bosishda faollashtirish",
+                                   "sidePoint2":  "Xavfsiz email tasdiqlash",
+                                   "sidePoint3":  "Tasdiqlangach darhol kirish",
+                                   "loading":  "Akkaunt faollashtirilmoqda...",
+                                   "missingToken":  "Faollashtirish havolasi topilmadi yoki noto\u0027g\u0027ri. Quyida qayta yuboring.",
+                                   "invalidToken":  "Faollashtirish havolasi eskirgan yoki noto\u0027g\u0027ri. Qayta yuborishni so\u0027rang.",
+                                   "rateLimited":  "Juda ko\u0027p urinish. Biroz kutib qayta urinib ko\u0027ring.",
+                                   "success":  "Akkauntingiz faollashtirildi. Kirish sahifasiga yo\u0027naltirilmoqda...",
+                                   "resendPrompt":  "Email kelmadimi? Faollashtirish havolasini qayta yuboring.",
+                                   "goToLogin":  "Kirishga o\u0027tish",
+                                   "backToLogin":  "Kirishga qaytish"
+                               },
+                "resendActivation":  {
+                                         "emailLabel":  "Email manzil",
+                                         "emailPlaceholder":  "name@example.com",
+                                         "submit":  "Faollashtirishni qayta yuborish"
                                      },
-                 "validation":  {
-                                    "fullName":  "To\u0027liq ismni kiriting.",
-                                    "email":  "To\u0027g\u0027ri email manzil kiriting.",
-                                    "password":  "Parol kamida 8 ta belgidan iborat bo\u0027lsin.",
-                                    "confirmPassword":  "Parollar bir xil emas.",
+                "validation":  {
+                                   "fullName":  "To\u0027liq ismni kiriting.",
+                                   "email":  "To\u0027g\u0027ri email manzil kiriting.",
+                                   "password":  "Parol kamida 8 ta belgidan iborat bo\u0027lsin.",
+                                   "confirmPassword":  "Parollar bir xil emas.",
                                     "agree":  "Davom etish uchun shartlarga rozilik berish kerak."
                                 },
                  "forgotPassword":  {

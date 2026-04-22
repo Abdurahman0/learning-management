@@ -467,19 +467,42 @@
                                                      },
                                          "trustLine":  "Trusted by students in Uzbekistan and worldwide"
                                      },
-                 "signinMarketing":  {
-                                         "title":  "Welcome back.",
-                                         "description":  "Continue your journey to English proficiency. Access your practice tests and personalized AI feedback.",
-                                         "proTip":  "PRO TIP",
-                                         "proTipText":  "Just browsing?",
-                                         "guestLink":  "Try our Guest mode",
-                                         "socialProof":  "Join 50k+ students worldwide"
+                "signinMarketing":  {
+                                        "title":  "Welcome back.",
+                                        "description":  "Continue your journey to English proficiency. Access your practice tests and personalized AI feedback.",
+                                        "proTip":  "PRO TIP",
+                                        "proTipText":  "Just browsing?",
+                                        "guestLink":  "Try our Guest mode",
+                                        "socialProof":  "Join 50k+ students worldwide"
+                                    },
+                "activation":  {
+                                   "title":  "Activate your account",
+                                   "subtitle":  "Verify your email to start using EnglishLabs.",
+                                   "badge":  "Activation",
+                                   "sideTitle":  "You're almost there",
+                                   "sideDescription":  "Activate your account to access practice tests, analytics, and AI feedback.",
+                                   "sidePoint1":  "One-click activation",
+                                   "sidePoint2":  "Secure email verification",
+                                   "sidePoint3":  "Instant access after confirmation",
+                                   "loading":  "Activating your account...",
+                                   "missingToken":  "Activation link is missing or invalid. Please request a new one below.",
+                                   "invalidToken":  "This activation link is invalid or expired. Request a new activation email below.",
+                                   "rateLimited":  "Too many attempts. Please wait a moment and try again.",
+                                   "success":  "Your account has been activated. Redirecting you to login...",
+                                   "resendPrompt":  "Didn't get the email? Resend the activation link.",
+                                   "goToLogin":  "Go to login",
+                                   "backToLogin":  "Back to login"
+                               },
+                "resendActivation":  {
+                                         "emailLabel":  "Email address",
+                                         "emailPlaceholder":  "name@example.com",
+                                         "submit":  "Resend activation email"
                                      },
-                 "validation":  {
-                                    "fullName":  "Please enter your full name.",
-                                    "email":  "Please enter a valid email address.",
-                                    "password":  "Password must be at least 8 characters.",
-                                    "confirmPassword":  "Passwords do not match.",
+                "validation":  {
+                                   "fullName":  "Please enter your full name.",
+                                   "email":  "Please enter a valid email address.",
+                                   "password":  "Password must be at least 8 characters.",
+                                   "confirmPassword":  "Passwords do not match.",
                                     "agree":  "You need to accept the terms to continue."
                                 },
                  "forgotPassword":  {

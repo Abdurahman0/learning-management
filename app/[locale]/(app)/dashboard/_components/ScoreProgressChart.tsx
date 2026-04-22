@@ -60,6 +60,8 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
   const safeHoveredIndex =
     hoveredIndex !== null && hoveredIndex < visiblePoints.length ? hoveredIndex : null;
   const hasPoints = visiblePoints.length > 0;
+  const latestBand = hasPoints ? visiblePoints[visiblePoints.length - 1].band : 0;
+  const earliestBand = hasPoints ? visiblePoints[0].band : latestBand;
 
   const chart = useMemo(() => {
     const width = 760;
@@ -94,22 +96,51 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
 
   const active = safeHoveredIndex !== null ? visiblePoints[safeHoveredIndex] : null;
   const trendDelta = visiblePoints.length > 1 ? visiblePoints[visiblePoints.length - 1].band - visiblePoints[0].band : 0;
+  const trendTone =
+    trendDelta > 0.05 ? "up" : trendDelta < -0.05 ? "down" : "flat";
+  const trendChipClassName =
+    trendTone === "up"
+      ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-300"
+      : trendTone === "down"
+        ? "border-rose-400/30 bg-rose-500/10 text-rose-300"
+        : "border-blue-400/30 bg-blue-500/10 text-blue-300";
   const tooltipLeftPct =
     safeHoveredIndex === null ? 50 : clamp((chart.mapX(safeHoveredIndex) / chart.width) * 100, 10, 90);
 
   return (
-    <Card className="min-w-0 rounded-2xl border-border/70 bg-linear-to-b from-card/85 to-blue-500/3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-      <CardHeader className="flex flex-row items-center justify-between gap-3">
+    <Card className="min-w-0 overflow-hidden rounded-2xl border-border/70 bg-linear-to-b from-card/92 via-card/85 to-blue-500/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="pointer-events-none relative">
+        <div className="absolute -top-20 -right-24 h-52 w-52 rounded-full bg-blue-500/12 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-indigo-500/10 blur-3xl" />
+      </div>
+
+      <CardHeader className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <CardTitle>{t("scoreProgress.title")}</CardTitle>
+          <CardTitle className="text-xl font-semibold tracking-tight">{t("scoreProgress.title")}</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">{t("scoreProgress.subtitle")}</p>
-          <div className="mt-2 inline-flex items-center rounded-full border border-blue-400/30 bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-300">
-            {trendDelta >= 0 ? "+" : ""}
-            {trendDelta.toFixed(1)} band
+
+          <div className="mt-3 flex flex-wrap items-center gap-2.5">
+            <div className="flex items-baseline gap-2">
+              <p className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+                {latestBand.toFixed(1)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {t.has("scoreProgress.bandLabel") ? t("scoreProgress.bandLabel") : "Band"}
+              </p>
+            </div>
+
+            <div
+              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${trendChipClassName}`}
+              title={`From ${earliestBand.toFixed(1)} to ${latestBand.toFixed(1)}`}
+            >
+              {trendDelta >= 0 ? "+" : ""}
+              {trendDelta.toFixed(1)} band
+            </div>
           </div>
         </div>
+
         <Select value={period} onValueChange={(value) => setPeriod(value as "1m" | "3m" | "6m")}>
-          <SelectTrigger className="w-40 rounded-xl border-border/70 bg-background/45">
+          <SelectTrigger className="w-full rounded-xl border-border/70 bg-background/45 sm:w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -121,8 +152,9 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
       </CardHeader>
       <CardContent>
         {hasPoints ? (
-          <ChartContainer className="relative overflow-x-hidden rounded-xl border border-border/50 bg-linear-to-b from-blue-500/4 to-transparent p-2 sm:p-3">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_65%_at_50%_-10%,rgba(59,130,246,0.18),transparent_62%)]" />
+          <ChartContainer className="relative overflow-x-hidden rounded-xl border border-border/50 bg-linear-to-b from-blue-500/5 to-transparent p-2 sm:p-3 animate-in fade-in duration-700 delay-150">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_65%_at_50%_-10%,rgba(59,130,246,0.22),transparent_62%)]" />
+            <div className="pointer-events-none absolute inset-0 opacity-50 [background-image:linear-gradient(to_right,rgba(148,163,184,0.18)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.12)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(60%_80%_at_50%_40%,black,transparent)]" />
             <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="h-auto w-full">
             <defs>
               <linearGradient id={`score-area-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
@@ -165,8 +197,22 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
               />
             ) : null}
 
-            <path d={chart.areaPath} fill={`url(#score-area-${gradientId})`} />
-            <path d={chart.linePath} fill="none" stroke={`url(#score-line-${gradientId})`} strokeWidth="3" strokeLinecap="round" />
+            <path
+              key={`area-${period}-${visiblePoints.length}-${latestBand.toFixed(1)}`}
+              d={chart.areaPath}
+              fill={`url(#score-area-${gradientId})`}
+              className="score-progress-area"
+            />
+            <path
+              key={`line-${period}-${visiblePoints.length}-${latestBand.toFixed(1)}`}
+              d={chart.linePath}
+              fill="none"
+              stroke={`url(#score-line-${gradientId})`}
+              strokeWidth="3"
+              strokeLinecap="round"
+              pathLength={1}
+              className="score-progress-line"
+            />
 
               {visiblePoints.map((point, i) => {
                 const x = chart.mapX(i);
@@ -198,7 +244,7 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
 
             {active ? (
               <div
-                className="pointer-events-none absolute top-2 -translate-x-1/2 rounded-xl border border-blue-300/25 bg-[#0B1528]/95 px-3 py-2 text-xs shadow-[0_10px_30px_rgba(2,6,23,0.45)]"
+                className="pointer-events-none absolute top-2 -translate-x-1/2 rounded-xl border border-blue-300/25 bg-[#0B1528]/95 px-3 py-2 text-xs shadow-[0_10px_30px_rgba(2,6,23,0.45)] animate-in fade-in zoom-in-95 duration-150"
                 style={{left: `${tooltipLeftPct}%`}}
               >
                 <p className="font-semibold text-blue-100">{active.label}</p>
