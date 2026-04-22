@@ -110,6 +110,16 @@ export type AdminUserDetailResponse = {
   listeningBand: number;
   testsCompleted: number;
   lastActivityAt: string;
+  profile?: {
+    examDatetime: string | null;
+    targetListeningBand: number;
+    targetReadingBand: number;
+    targetSpeakingBand: number;
+    targetWritingBand: number;
+    strongestSection: string | null;
+    weakestSection: string | null;
+    studyHoursAvailable: number | null;
+  } | null;
   modulePerformance: {
     reading: number;
     listening: number;
@@ -161,6 +171,7 @@ function normalizeListItem(payload: unknown): AdminUserListItem {
 function normalizeDetailResponse(payload: unknown): AdminUserDetailResponse {
   const root = asRecord(payload);
   const modulePerformance = asRecord(root.module_performance ?? root.modulePerformance);
+  const profile = asRecord(root.profile);
 
   return {
     id: asString(root.id),
@@ -176,6 +187,23 @@ function normalizeDetailResponse(payload: unknown): AdminUserDetailResponse {
     listeningBand: asNumber(root.listening_band ?? root.listeningBand),
     testsCompleted: asNumber(root.tests_completed ?? root.testsCompleted),
     lastActivityAt: asString(root.last_activity_at ?? root.lastActivityAt),
+    profile: profile
+      ? {
+          examDatetime: asString(profile.exam_datetime ?? profile.examDatetime) || null,
+          targetListeningBand: asNumber(profile.target_listening_band ?? profile.targetListeningBand),
+          targetReadingBand: asNumber(profile.target_reading_band ?? profile.targetReadingBand),
+          targetSpeakingBand: asNumber(profile.target_speaking_band ?? profile.targetSpeakingBand),
+          targetWritingBand: asNumber(profile.target_writing_band ?? profile.targetWritingBand),
+          strongestSection: asString(profile.strongest_section ?? profile.strongestSection) || null,
+          weakestSection: asString(profile.weakest_section ?? profile.weakestSection) || null,
+          studyHoursAvailable:
+            typeof profile.study_hours_available === "number"
+              ? profile.study_hours_available
+              : typeof profile.study_hours_available === "string"
+                ? (Number.isFinite(Number(profile.study_hours_available)) ? Number(profile.study_hours_available) : null)
+                : null
+        }
+      : null,
     modulePerformance: {
       reading: asNumber(modulePerformance.reading),
       listening: asNumber(modulePerformance.listening)

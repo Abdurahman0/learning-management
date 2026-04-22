@@ -333,6 +333,14 @@ export type StudentProfileResponse = {
   full_name: string;
   email: string;
   target_band: number | null;
+  exam_datetime?: string | null;
+  target_listening_band?: number | null;
+  target_reading_band?: number | null;
+  target_speaking_band?: number | null;
+  target_writing_band?: number | null;
+  strongest_section?: "LISTENING" | "READING" | "SPEAKING" | "WRITING" | string | null;
+  weakest_section?: "LISTENING" | "READING" | "SPEAKING" | "WRITING" | string | null;
+  study_hours_available?: number | null;
   study_streak?: number;
   last_activity_date?: string | null;
   updated_at?: string | null;
@@ -343,7 +351,15 @@ export type StudentProfileResponse = {
 };
 
 export type StudentProfileUpdatePayload = {
-  target_band?: number | string;
+  exam_datetime?: string | null;
+  target_band?: number | string | null;
+  target_listening_band?: number | string | null;
+  target_reading_band?: number | string | null;
+  target_speaking_band?: number | string | null;
+  target_writing_band?: number | string | null;
+  strongest_section?: "LISTENING" | "READING" | "SPEAKING" | "WRITING" | string | null;
+  weakest_section?: "LISTENING" | "READING" | "SPEAKING" | "WRITING" | string | null;
+  study_hours_available?: number | null;
 };
 
 export type StudentAnalyticsBandPoint = {

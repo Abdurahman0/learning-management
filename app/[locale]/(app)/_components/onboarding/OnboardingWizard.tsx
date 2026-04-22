@@ -12,6 +12,8 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
 import {cn} from "@/lib/utils";
 import {BrandIcon} from "@/components/brand/BrandIcon";
+import {studentProfileService} from "@/src/services/student/profile.service";
+import {StudentApiError} from "@/src/services/student/types";
 import {
   DEFAULT_TARGETS,
   type OnboardingAnswers,
@@ -30,11 +32,55 @@ const MODULES: Array<{key: OnboardingModule; label: string}> = [
   {key: "speaking", label: "Speaking"}
 ];
 
+const BACKEND_SECTIONS = ["LISTENING", "READING", "WRITING", "SPEAKING"] as const;
+type BackendSection = (typeof BACKEND_SECTIONS)[number];
+
 function toIsoDate(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function toIsoTime(date: Date) {
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+function toBackendSection(value?: OnboardingModule): BackendSection | null {
+  if (!value) return null;
+  const upper = value.toUpperCase();
+  return (BACKEND_SECTIONS as readonly string[]).includes(upper) ? (upper as BackendSection) : null;
+}
+
+function fromBackendSection(value?: string | null): OnboardingModule | undefined {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "listening") return "listening";
+  if (normalized === "reading") return "reading";
+  if (normalized === "writing") return "writing";
+  if (normalized === "speaking") return "speaking";
+  return undefined;
+}
+
+function toBandString(value: number) {
+  // Backend accepts string values and validates half-band steps.
+  return Number(value).toFixed(1);
+}
+
+function buildExamDateTimeIso(dateIso?: string, timeIso?: string) {
+  if (!dateIso) return null;
+  const [y, m, d] = dateIso.split("-").map((item) => Number(item));
+  if (!y || !m || !d) return null;
+
+  const [hhRaw, mmRaw] = String(timeIso || "09:00").split(":");
+  const hh = Number(hhRaw);
+  const mm = Number(mmRaw);
+  const safeH = Number.isFinite(hh) ? Math.min(23, Math.max(0, hh)) : 9;
+  const safeM = Number.isFinite(mm) ? Math.min(59, Math.max(0, mm)) : 0;
+
+  // Interpret as local time and send ISO-8601 in UTC.
+  return new Date(y, m - 1, d, safeH, safeM, 0).toISOString();
 }
 
 function getMonthMatrix(view: Date) {
@@ -247,6 +293,9 @@ export function OnboardingWizard() {
   const returnTo = returnToParam.startsWith("/") && !returnToParam.startsWith("//") ? returnToParam : "";
 
   const [stepIndex, setStepIndex] = useState(0);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const steps: Array<{key: StepKey; title: string; subtitle: string}> = useMemo(
     () => [
       {key: "examDate", title: t("steps.examDate.title"), subtitle: t("steps.examDate.subtitle")},
@@ -267,9 +316,48 @@ export function OnboardingWizard() {
     // Seed a pending state and then read it back.
     seedOnboardingPending();
     const state = readOnboardingState();
-    if (state) {
-      setAnswers(state.answers);
-    }
+    if (state) setAnswers((prev) => ({...prev, ...state.answers, targets: {...DEFAULT_TARGETS, ...state.answers.targets}}));
+
+    let active = true;
+    setIsLoadingProfile(true);
+    setApiError(null);
+
+    studentProfileService
+      .getProfile()
+      .then((profile) => {
+        if (!active) return;
+
+        const nextExamDate = profile.exam_datetime ? toIsoDate(new Date(profile.exam_datetime)) : undefined;
+        const nextExamTime = profile.exam_datetime ? toIsoTime(new Date(profile.exam_datetime)) : undefined;
+
+        setAnswers((prev) => ({
+          ...prev,
+          examDate: nextExamDate ?? prev.examDate,
+          examTime: nextExamTime ?? prev.examTime,
+          targets: {
+            listening: profile.target_listening_band ?? prev.targets.listening ?? DEFAULT_TARGETS.listening,
+            reading: profile.target_reading_band ?? prev.targets.reading ?? DEFAULT_TARGETS.reading,
+            writing: profile.target_writing_band ?? prev.targets.writing ?? DEFAULT_TARGETS.writing,
+            speaking: profile.target_speaking_band ?? prev.targets.speaking ?? DEFAULT_TARGETS.speaking
+          },
+          strongest: fromBackendSection(profile.strongest_section ?? undefined) ?? prev.strongest,
+          weakest: fromBackendSection(profile.weakest_section ?? undefined) ?? prev.weakest,
+          hoursPerDay: typeof profile.study_hours_available === "number" ? profile.study_hours_available : prev.hoursPerDay
+        }));
+      })
+      .catch((error) => {
+        if (!active) return;
+        const message = error instanceof StudentApiError ? error.message : t("errors.profileLoad");
+        setApiError(message);
+      })
+      .finally(() => {
+        if (!active) return;
+        setIsLoadingProfile(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const activeStep = steps[stepIndex];
@@ -303,6 +391,7 @@ export function OnboardingWizard() {
               type="button"
               variant="outline"
               className="h-10 cursor-pointer rounded-xl border-border/70"
+              disabled={isSaving}
               onClick={() => closeAndPersist("skipped")}
             >
               {t("actions.skip")}
@@ -386,6 +475,18 @@ export function OnboardingWizard() {
             </div>
 
             <div className="mt-6">
+              {apiError ? (
+                <div className="mb-4 rounded-2xl border border-rose-400/35 bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-200">
+                  {apiError}
+                </div>
+              ) : null}
+
+              {isLoadingProfile ? (
+                <div className="mb-4 rounded-2xl border border-border/70 bg-background/50 p-3 text-sm text-muted-foreground">
+                  {t("loading.profile")}
+                </div>
+              ) : null}
+
               {activeStep.key === "examDate" ? (
                 <div className="space-y-2">
                   <Label>{t("fields.examDate.label")}</Label>
@@ -400,6 +501,38 @@ export function OnboardingWizard() {
                       today: t("datePicker.today")
                     }}
                   />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">{t("fields.examDate.timeLabel")}</Label>
+                      <Select
+                        value={answers.examTime ?? "09:00"}
+                        onValueChange={(value) => setAnswers((prev) => ({...prev, examTime: value}))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl border-border/70 bg-background/60">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72">
+                          {Array.from({length: 48}, (_, index) => index).map((slot) => {
+                            const minutes = slot * 30;
+                            const h = Math.floor(minutes / 60);
+                            const m = minutes % 60;
+                            const value = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+                            return (
+                              <SelectItem key={value} value={value}>
+                                {value}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">{t("fields.examDate.timeZoneLabel")}</Label>
+                      <div className="flex h-11 items-center rounded-xl border border-border/70 bg-background/50 px-3 text-sm text-muted-foreground">
+                        {t("fields.examDate.timeZoneValue")}
+                      </div>
+                    </div>
+                  </div>
                   <p className="text-xs text-muted-foreground">{t("fields.examDate.help")}</p>
                 </div>
               ) : null}
@@ -482,7 +615,7 @@ export function OnboardingWizard() {
                       </div>
                       <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-right">
                         <p className="text-xl font-semibold text-blue-600 dark:text-blue-300">
-                          {(answers.hoursPerDay ?? 2).toFixed(1)}
+                          {Math.round(answers.hoursPerDay ?? 2)}
                         </p>
                         <p className="text-[11px] text-muted-foreground">{t("fields.hours.unit")}</p>
                       </div>
@@ -492,8 +625,8 @@ export function OnboardingWizard() {
                         type="range"
                         min={0}
                         max={8}
-                        step={0.5}
-                        value={answers.hoursPerDay ?? 2}
+                        step={1}
+                        value={Math.round(answers.hoursPerDay ?? 2)}
                         onChange={(event) => setAnswers((prev) => ({...prev, hoursPerDay: Number(event.target.value)}))}
                         className="w-full accent-blue-600"
                         aria-label={t("fields.hours.label")}
@@ -526,6 +659,7 @@ export function OnboardingWizard() {
                   type="button"
                   variant="ghost"
                   className="h-11 rounded-xl"
+                  disabled={isSaving}
                   onClick={() => closeAndPersist("skipped")}
                 >
                   {t("actions.skip")}
@@ -537,6 +671,7 @@ export function OnboardingWizard() {
                   type="button"
                   className="h-11 rounded-xl bg-blue-600 px-6 text-base font-semibold text-white hover:bg-blue-600/90"
                   onClick={() => setStepIndex((current) => Math.min(steps.length - 1, current + 1))}
+                  disabled={isSaving}
                 >
                   {t("actions.next")}
                 </Button>
@@ -544,9 +679,34 @@ export function OnboardingWizard() {
                 <Button
                   type="button"
                   className="h-11 rounded-xl bg-blue-600 px-6 text-base font-semibold text-white hover:bg-blue-600/90"
-                  onClick={() => closeAndPersist("completed")}
+                  disabled={isSaving}
+                  onClick={async () => {
+                    if (isSaving) return;
+                    setIsSaving(true);
+                    setApiError(null);
+                    try {
+                      const payload = {
+                        exam_datetime: buildExamDateTimeIso(answers.examDate, answers.examTime),
+                        target_listening_band: toBandString(answers.targets.listening ?? DEFAULT_TARGETS.listening),
+                        target_reading_band: toBandString(answers.targets.reading ?? DEFAULT_TARGETS.reading),
+                        target_writing_band: toBandString(answers.targets.writing ?? DEFAULT_TARGETS.writing),
+                        target_speaking_band: toBandString(answers.targets.speaking ?? DEFAULT_TARGETS.speaking),
+                        strongest_section: toBackendSection(answers.strongest),
+                        weakest_section: toBackendSection(answers.weakest),
+                        study_hours_available: typeof answers.hoursPerDay === "number" ? Math.round(answers.hoursPerDay) : null
+                      } as const;
+
+                      await studentProfileService.updateProfile(payload);
+                      closeAndPersist("completed");
+                    } catch (error) {
+                      const message = error instanceof StudentApiError ? error.message : t("errors.profileSave");
+                      setApiError(message);
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  }}
                 >
-                  {t("actions.finish")}
+                  {isSaving ? t("loading.saving") : t("actions.finish")}
                 </Button>
               )}
             </div>

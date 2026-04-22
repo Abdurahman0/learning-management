@@ -19,11 +19,20 @@ function toNumberOrNull(value: unknown) {
 
 function normalizeProfile(data: unknown): StudentProfileResponse {
   const record = asRecord(data);
+  const studyHours = toNumberOrNull(record?.study_hours_available);
   return {
     id: toStringSafe(record?.id),
     full_name: toStringSafe(record?.full_name ?? record?.name),
     email: toStringSafe(record?.email),
     target_band: toNumberOrNull(record?.target_band ?? record?.targetBand),
+    exam_datetime: typeof record?.exam_datetime === "string" ? record.exam_datetime : null,
+    target_listening_band: toNumberOrNull(record?.target_listening_band),
+    target_reading_band: toNumberOrNull(record?.target_reading_band),
+    target_speaking_band: toNumberOrNull(record?.target_speaking_band),
+    target_writing_band: toNumberOrNull(record?.target_writing_band),
+    strongest_section: typeof record?.strongest_section === "string" ? record.strongest_section : null,
+    weakest_section: typeof record?.weakest_section === "string" ? record.weakest_section : null,
+    study_hours_available: studyHours,
     study_streak: typeof record?.study_streak === "number" ? record.study_streak : 0,
     last_activity_date: typeof record?.last_activity_date === "string" ? record.last_activity_date : null,
     updated_at: typeof record?.updated_at === "string" ? record.updated_at : null,

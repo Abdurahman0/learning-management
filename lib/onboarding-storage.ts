@@ -4,6 +4,7 @@ export type OnboardingTargets = Record<OnboardingModule, number>;
 
 export type OnboardingAnswers = {
   examDate?: string; // YYYY-MM-DD
+  examTime?: string; // HH:mm (local)
   targets: OnboardingTargets;
   strongest?: OnboardingModule;
   weakest?: OnboardingModule;
@@ -43,6 +44,7 @@ function safeParseState(raw: string): OnboardingState | null {
       updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : new Date().toISOString(),
       answers: {
         examDate: typeof answers.examDate === "string" ? answers.examDate : undefined,
+        examTime: typeof answers.examTime === "string" ? answers.examTime : undefined,
         targets: {
           listening: typeof targets.listening === "number" ? targets.listening : DEFAULT_TARGETS.listening,
           reading: typeof targets.reading === "number" ? targets.reading : DEFAULT_TARGETS.reading,

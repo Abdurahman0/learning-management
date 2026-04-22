@@ -503,6 +503,14 @@
                                    "subtitle":  "Bir nechta savol IELTS rejangizni moslashtirishga yordam beradi.",
                                    "hint":  "Hozircha o\u0027tkazib yuborishingiz mumkin, keyin dashboarddan to\u0027ldirasiz.",
                                    "progress":  "Qadam {current} / {total}",
+                                   "loading":  {
+                                                   "profile":  "Profil yuklanmoqda...",
+                                                   "saving":  "Saqlanmoqda..."
+                                               },
+                                   "errors":  {
+                                                  "profileLoad":  "Profilni hozircha yuklab bo\u0027lmadi. Baribir davom etib, keyin saqlashingiz mumkin.",
+                                                  "profileSave":  "Ma\u0027lumotlarni saqlab bo\u0027lmadi. Qayta urinib ko\u0027ring."
+                                              },
                                    "datePicker":  {
                                                      "prevMonth":  "Oldingi oy",
                                                      "nextMonth":  "Keyingi oy",
@@ -552,7 +560,10 @@
                                                   "examDate":  {
                                                                    "label":  "IELTS imtihon sanasi",
                                                                    "placeholder":  "Sanani tanlang",
-                                                                   "help":  "Haftalik o\u0027qish jadvalini hisoblashga yordam beradi."
+                                                                   "help":  "Haftalik o\u0027qish jadvalini hisoblashga yordam beradi.",
+                                                                   "timeLabel":  "Imtihon vaqti (ixtiyoriy)",
+                                                                   "timeZoneLabel":  "Vaqt zonasi",
+                                                                   "timeZoneValue":  "Mahalliy vaqt"
                                                                },
                                                   "targets":  {
                                                                    "help":  "Agar hali qaror qilmagan bo\u0027lsangiz, maqsad avtomatik 9.0 bo\u0027ladi.",

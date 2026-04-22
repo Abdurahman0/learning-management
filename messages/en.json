@@ -503,6 +503,14 @@
                                    "subtitle":  "A few answers help us personalize your IELTS plan.",
                                    "hint":  "You can skip for now and complete this later from your dashboard.",
                                    "progress":  "Step {current} of {total}",
+                                   "loading":  {
+                                                   "profile":  "Loading your profile...",
+                                                   "saving":  "Saving..."
+                                               },
+                                   "errors":  {
+                                                  "profileLoad":  "We couldn\u0027t load your profile right now. You can still continue and save later.",
+                                                  "profileSave":  "We couldn\u0027t save your answers. Please try again."
+                                              },
                                    "datePicker":  {
                                                      "prevMonth":  "Previous month",
                                                      "nextMonth":  "Next month",
@@ -552,7 +560,10 @@
                                                   "examDate":  {
                                                                    "label":  "IELTS exam date",
                                                                    "placeholder":  "Select a date",
-                                                                   "help":  "This helps us estimate your weekly study pace."
+                                                                   "help":  "This helps us estimate your weekly study pace.",
+                                                                   "timeLabel":  "Exam time (optional)",
+                                                                   "timeZoneLabel":  "Time zone",
+                                                                   "timeZoneValue":  "Local time"
                                                                },
                                                   "targets":  {
                                                                    "help":  "Targets default to 9.0 if you haven\u0027t decided yet.",
