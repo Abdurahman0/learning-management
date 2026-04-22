@@ -51,14 +51,21 @@ export function ReadingFilters({
         <div className="inline-flex w-full items-center gap-1 rounded-xl bg-muted p-1 sm:w-auto">
           <Button type="button" size="sm" variant={tab === "all" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onTabChange("all")}>{t("tabs.all")}</Button>
           <Button type="button" size="sm" variant={tab === "free" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onTabChange("free")}>{t("tabs.free")}</Button>
-          <Button type="button" size="sm" variant={tab === "premium" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onTabChange("premium")}>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none disabled:cursor-not-allowed disabled:opacity-60"
+            disabled
+            aria-disabled="true"
+            onClick={() => onTabChange("premium")}
+          >
             <span className="inline-flex items-center gap-1.5">{t("tabs.premium")}<Lock className="size-3.5" aria-hidden="true" /></span>
           </Button>
         </div>
 
         <div className="inline-flex w-full items-center gap-1 rounded-xl bg-muted p-1 sm:w-auto" aria-label={t("filters.source")}>
           <Button type="button" size="sm" variant={source === "all" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("all")}>{t("filters.sourceAll")}</Button>
-          <Button type="button" size="sm" variant={source === "custom" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("custom")}>{t("filters.sourceCustom")}</Button>
           <Button type="button" size="sm" variant={source === "cambridge" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("cambridge")}>{t("filters.sourceCambridge")}</Button>
           <Button type="button" size="sm" variant={source === "real" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("real")}>{t("filters.sourceReal")}</Button>
         </div>

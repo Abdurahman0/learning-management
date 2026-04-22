@@ -6,7 +6,6 @@ import {useRouter} from "next/navigation";
 import {Brain, CalendarClock, Sparkles} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
-import {AchievementsGrid} from "./AchievementsGrid";
 import {ContinueCard} from "./ContinueCard";
 import {DashboardKpis} from "./DashboardKpis";
 import {ScoreProgressChart} from "./ScoreProgressChart";
@@ -443,9 +442,12 @@ export function DashboardClient() {
         </Card>
       </section>
 
-      <section className="mt-4">
-        <AchievementsGrid achievements={dashboardData.achievements} />
-      </section>
+      {/* Your Achievements section is temporarily hidden for students. */}
+      {/*
+        <section className="mt-4">
+          <AchievementsGrid achievements={dashboardData.achievements} />
+        </section>
+      */}
     </main>
   );
 }

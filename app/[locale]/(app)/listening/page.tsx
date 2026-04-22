@@ -183,6 +183,13 @@ export default function ListeningPage() {
     };
   }, [isGuest]);
 
+  // Premium filtering is temporarily disabled (tab is visible but non-interactive).
+  useEffect(() => {
+    if (tab === "premium") {
+      setTab("all");
+    }
+  }, [tab]);
+
   const filteredTests = useMemo(() => {
     let tests = [...apiTests];
 
