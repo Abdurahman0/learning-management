@@ -1,8 +1,9 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
-import {CalendarDays, ChevronLeft, ChevronRight, Sparkles, X} from "lucide-react";
+import {CalendarDays, ChevronLeft, ChevronRight, X} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
+import {useRouter, useSearchParams} from "next/navigation";
 
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
@@ -10,12 +11,13 @@ import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
 import {cn} from "@/lib/utils";
+import {BrandIcon} from "@/components/brand/BrandIcon";
 import {
   DEFAULT_TARGETS,
-  ONBOARDING_OPEN_EVENT,
   type OnboardingAnswers,
   type OnboardingModule,
   readOnboardingState,
+  seedOnboardingPending,
   setOnboardingStatus
 } from "@/lib/onboarding-storage";
 
@@ -238,8 +240,12 @@ function HandmadeDatePicker({
 
 export function OnboardingWizard() {
   const t = useTranslations("auth.onboarding");
+  const locale = useLocale();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnToParam = (searchParams.get("returnTo") ?? "").trim();
+  const returnTo = returnToParam.startsWith("/") && !returnToParam.startsWith("//") ? returnToParam : "";
 
-  const [open, setOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const steps: Array<{key: StepKey; title: string; subtitle: string}> = useMemo(
     () => [
@@ -257,24 +263,13 @@ export function OnboardingWizard() {
   });
 
   useEffect(() => {
+    // When users existed before onboarding was introduced, we still want this page to work.
+    // Seed a pending state and then read it back.
+    seedOnboardingPending();
     const state = readOnboardingState();
-    if (!state) return;
-
-    setAnswers(state.answers);
-    if (state.status === "pending") {
-      setOpen(true);
+    if (state) {
+      setAnswers(state.answers);
     }
-  }, []);
-
-  useEffect(() => {
-    const handler = () => {
-      const state = readOnboardingState();
-      if (state) setAnswers(state.answers);
-      setStepIndex(0);
-      setOpen(true);
-    };
-    window.addEventListener(ONBOARDING_OPEN_EVENT, handler);
-    return () => window.removeEventListener(ONBOARDING_OPEN_EVENT, handler);
   }, []);
 
   const activeStep = steps[stepIndex];
@@ -284,26 +279,39 @@ export function OnboardingWizard() {
 
   const closeAndPersist = (status: "skipped" | "completed") => {
     setOnboardingStatus(status, answers);
-    setOpen(false);
+    router.replace(`/${locale}${returnTo || "/dashboard"}`);
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="absolute -bottom-28 -right-28 h-80 w-80 rounded-full bg-indigo-500/20 blur-3xl" />
+    <div className="mx-auto w-full max-w-[1040px] py-4 sm:py-8">
+      <div className="pointer-events-none relative mb-6 overflow-hidden rounded-3xl border border-border/70 bg-linear-to-br from-blue-600/12 via-card/70 to-card/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="absolute -top-24 -right-28 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
+        <div className="absolute -bottom-28 -left-28 h-80 w-80 rounded-full bg-indigo-500/15 blur-3xl" />
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <BrandIcon size={36} className="shadow-none" />
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold tracking-tight">{t("title")}</p>
+              <p className="truncate text-sm text-muted-foreground">{t("subtitle")}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full border border-border/70 bg-background/60 px-3 py-1 text-xs text-muted-foreground">
+              {t("progress", {current: stepIndex + 1, total: steps.length})}
+            </span>
+            <Button variant="outline" className="h-10 rounded-xl border-border/70" onClick={() => closeAndPersist("skipped")}>
+              {t("actions.skip")}
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <Card className="relative w-full max-w-[920px] overflow-hidden rounded-3xl border-border/70 bg-card/95 shadow-2xl shadow-slate-950/30 animate-in fade-in zoom-in-95 duration-200">
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr]">
-          <div className="relative border-b border-border/70 bg-linear-to-b from-blue-500/10 via-card/70 to-card/60 p-5 md:border-b-0 md:border-r">
+      <Card className="w-full overflow-hidden rounded-3xl border-border/70 bg-card/95 shadow-xl shadow-slate-950/10 animate-in fade-in duration-300">
+        <div className="grid grid-cols-1 md:grid-cols-[300px_1fr]">
+          <div className="relative hidden border-b border-border/70 bg-linear-to-b from-blue-500/10 via-card/70 to-card/60 p-5 md:block md:border-b-0 md:border-r">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2">
-                <span className="inline-flex size-10 items-center justify-center rounded-2xl bg-blue-600/15 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
-                  <Sparkles className="size-5" />
-                </span>
+                <BrandIcon size={40} />
                 <div>
                   <p className="text-sm font-semibold">{t("title")}</p>
                   <p className="text-xs text-muted-foreground">{t("subtitle")}</p>
@@ -369,11 +377,6 @@ export function OnboardingWizard() {
               <div>
                 <p className="text-2xl font-semibold tracking-tight">{activeStep.title}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{activeStep.subtitle}</p>
-              </div>
-              <div className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
-                <span className="rounded-full border border-border/70 bg-background/60 px-2.5 py-1">
-                  {t("progress", {current: stepIndex + 1, total: steps.length})}
-                </span>
               </div>
             </div>
 

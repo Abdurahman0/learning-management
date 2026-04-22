@@ -1,6 +1,6 @@
 "use client";
 
-import {useState, type ReactNode} from "react";
+import {useEffect, useState, type ReactNode} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
 import {BarChart3, BookOpen, ChevronDown, CircleUserRound, Headphones, Home, Lock, Menu, Mic, PenLine, TriangleAlert} from "lucide-react";
@@ -15,8 +15,8 @@ import {Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger} from "@/comp
 import {cn} from "@/lib/utils";
 
 import {useAppSessionRole} from "../session/AppSessionContext";
-import {OnboardingWizard} from "../onboarding/OnboardingWizard";
 import {GuestSidebar} from "./GuestSidebar";
+import {ONBOARDING_OPEN_EVENT, readOnboardingState} from "@/lib/onboarding-storage";
 
 type GuestShellProps = {
   children: ReactNode;
@@ -38,7 +38,7 @@ type MobileTestNavItem = {
 };
 
 function isBackendOnlySupportedStudentPath(pathWithoutLocale: string) {
-  const allowedPrefixes = ["/dashboard", "/reading", "/listening", "/analytics", "/mistake-analysis", "/settings"];
+  const allowedPrefixes = ["/dashboard", "/reading", "/listening", "/analytics", "/mistake-analysis", "/settings", "/onboarding"];
   const blockedPrefixes = ["/messages", "/assignments", "/study-bank", "/vocabulary", "/review-center", "/sessions", "/result"];
 
   if (blockedPrefixes.some((prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`))) {
@@ -76,8 +76,38 @@ export function GuestShell({children}: GuestShellProps) {
   const pathWithoutLocale = pathname.replace(/^\/(uz|en)(?=\/|$)/, "") || "/";
   const hideSidebar = /^\/(reading|listening)\/[^/]+(?:\/result)?\/?$/.test(pathWithoutLocale)
     || /^\/(reading|listening)\/test\/[^/]+\/?$/.test(pathWithoutLocale)
-    || /^\/result\/[^/]+\/?$/.test(pathWithoutLocale);
+    || /^\/result\/[^/]+\/?$/.test(pathWithoutLocale)
+    || /^\/onboarding\/?$/.test(pathWithoutLocale);
   const isBackendOnlySupported = isBackendOnlySupportedStudentPath(pathWithoutLocale);
+
+  useEffect(() => {
+    if (!isStudent) return;
+
+    const openHandler = () => {
+      router.push(`/${locale}/onboarding?returnTo=${encodeURIComponent(pathWithoutLocale)}`);
+    };
+
+    window.addEventListener(ONBOARDING_OPEN_EVENT, openHandler);
+    return () => window.removeEventListener(ONBOARDING_OPEN_EVENT, openHandler);
+  }, [isStudent, locale, pathWithoutLocale, router]);
+
+  useEffect(() => {
+    if (!isStudent) return;
+    if (pathWithoutLocale === "/onboarding") return;
+
+    const state = readOnboardingState();
+    if (state?.status !== "pending") return;
+
+    // Only force-focus new users on safe top-level pages (avoid interrupting tests/results).
+    const isSafeLanding =
+      pathWithoutLocale === "/dashboard" ||
+      pathWithoutLocale === "/reading" ||
+      pathWithoutLocale === "/listening";
+
+    if (!isSafeLanding) return;
+
+    router.replace(`/${locale}/onboarding?returnTo=${encodeURIComponent(pathWithoutLocale)}`);
+  }, [isStudent, locale, pathWithoutLocale, router]);
 
   const mobilePrimaryItems: MobileNavItem[] = !isGuest
     ? [{key: "dashboard", label: t("sidebar.dashboard"), href: dashboardHref, icon: Home}]
@@ -309,7 +339,6 @@ export function GuestShell({children}: GuestShellProps) {
             </header>
           ) : null}
           {children}
-          {isStudent ? <OnboardingWizard /> : null}
             </>
           ) : null}
         </main>
