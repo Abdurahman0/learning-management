@@ -794,6 +794,7 @@
                                                 "matchingHeadings":  "Matching Headings",
                                                 "mcq":  "MCQ",
                                                 "sentenceCompletion":  "Sentence Completion",
+                                                "summaryCompletion":  "Summary Completion",
                                                 "matchingInfo":  "Matching Information",
                                                 "tableCompletion":  "Table Completion"
                                             }
