@@ -3,7 +3,7 @@
 import {useEffect, useState} from "react";
 import Link from "next/link";
 import {useRouter} from "next/navigation";
-import {Brain, CalendarClock, Sparkles} from "lucide-react";
+import {Brain, Sparkles} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {ContinueCard} from "./ContinueCard";
@@ -307,12 +307,6 @@ export function DashboardClient() {
           <Button asChild>
             <Link href={`/${locale}/reading`}>{t("startNewTest")}</Link>
           </Button>
-          <Button variant="secondary" onClick={() => pushNotice(t("feedback.placeholder.title"), t("feedback.placeholder.description"))}>
-            <span>
-              <CalendarClock className="size-4" />
-              {t("actions.bookSession")}
-            </span>
-          </Button>
         </div>
       </section>
 
@@ -325,7 +319,7 @@ export function DashboardClient() {
         </Card>
       ) : null}
 
-      {onboardingStatus === "skipped" ? (
+      {onboardingStatus === "skipped" || onboardingStatus === "none" ? (
         <Card className="mt-4 overflow-hidden rounded-2xl border-border/70 bg-linear-to-br from-blue-600/10 via-card/70 to-card/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] animate-in fade-in slide-in-from-bottom-2 duration-500">
           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
