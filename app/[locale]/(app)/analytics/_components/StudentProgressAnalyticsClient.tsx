@@ -225,7 +225,16 @@ export function StudentProgressAnalyticsClient() {
   };
 
   const handleViewHistory = () => {
-    router.push(`/${locale}/dashboard#recent-history`);
+    // Stay on analytics and jump to the history section (Dashboard "View all history" deep-links here).
+    if (typeof window !== "undefined") {
+      const section = document.getElementById("history");
+      if (section) {
+        section.scrollIntoView({behavior: "smooth", block: "start"});
+      }
+      window.history.replaceState(null, "", `/${locale}/analytics#history`);
+    } else {
+      router.push(`/${locale}/analytics#history`);
+    }
   };
 
   const handleActivityAction = async (row: StudentAnalyticsPracticeActivity) => {
