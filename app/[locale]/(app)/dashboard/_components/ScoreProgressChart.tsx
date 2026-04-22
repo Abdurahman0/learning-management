@@ -1,7 +1,18 @@
 "use client";
 
-import {useMemo, useState, useId} from "react";
+import {useMemo, useId, useState} from "react";
 import {useTranslations} from "next-intl";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Line,
+  ReferenceDot,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from "recharts";
 
 import {ChartContainer} from "@/components/ui/chart";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
@@ -12,42 +23,12 @@ type ScoreProgressChartProps = {
   points: ScorePoint[];
 };
 
-type Point = {
-  x: number;
-  y: number;
-};
-
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function createSmoothLine(points: Point[]) {
-  if (points.length === 0) return "";
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
-  if (points.length === 2) return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
-
-  let path = `M ${points[0].x} ${points[0].y}`;
-
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const p0 = index === 0 ? points[index] : points[index - 1];
-    const p1 = points[index];
-    const p2 = points[index + 1];
-    const p3 = index + 2 < points.length ? points[index + 2] : p2;
-
-    const cp1x = p1.x + (p2.x - p0.x) / 6;
-    const cp1y = p1.y + (p2.y - p0.y) / 6;
-    const cp2x = p2.x - (p3.x - p1.x) / 6;
-    const cp2y = p2.y - (p3.y - p1.y) / 6;
-
-    path += ` C ${cp1x} ${cp1y} ${cp2x} ${cp2y} ${p2.x} ${p2.y}`;
-  }
-
-  return path;
-}
-
 export function ScoreProgressChart({points}: ScoreProgressChartProps) {
   const t = useTranslations("dashboard");
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [period, setPeriod] = useState<"1m" | "3m" | "6m">("3m");
   const gradientId = useId().replace(/:/g, "");
 
@@ -57,44 +38,49 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
     return points;
   }, [period, points]);
 
-  const safeHoveredIndex =
-    hoveredIndex !== null && hoveredIndex < visiblePoints.length ? hoveredIndex : null;
   const hasPoints = visiblePoints.length > 0;
   const latestBand = hasPoints ? visiblePoints[visiblePoints.length - 1].band : 0;
   const earliestBand = hasPoints ? visiblePoints[0].band : latestBand;
 
-  const chart = useMemo(() => {
-    const width = 760;
-    const height = 250;
-    const leftPad = 36;
-    const rightPad = 20;
-    const topPad = 20;
-    const bottomPad = 38;
-    const plotW = width - leftPad - rightPad;
-    const plotH = height - topPad - bottomPad;
-    const step = hasPoints && visiblePoints.length > 1 ? plotW / (visiblePoints.length - 1) : plotW;
-    const mapX = (i: number) => leftPad + i * step;
-    const values = hasPoints ? visiblePoints.map((point) => point.band) : [0];
+  const chartMeta = useMemo(() => {
+    if (!hasPoints) {
+      return {
+        yDomain: [0, 9] as [number, number],
+        yTicks: [0, 3, 5, 7, 9],
+        xInterval: 0
+      };
+    }
+
+    const values = visiblePoints.map((point) => point.band);
     const minRaw = Math.min(...values);
     const maxRaw = Math.max(...values);
-    const range = Math.max(0.35, maxRaw - minRaw);
-    const min = Math.max(5, Math.floor((minRaw - range * 0.42) * 2) / 2);
-    const max = Math.min(9, Math.ceil((maxRaw + range * 0.42) * 2) / 2);
-    const safeMax = max === min ? max + 0.5 : max;
 
-    const mapY = (value: number) => topPad + ((safeMax - value) / (safeMax - min)) * plotH;
-    const cartesian = visiblePoints.map((point, index) => ({x: mapX(index), y: mapY(point.band)}));
-    const linePath = createSmoothLine(cartesian);
-    const areaPath =
-      cartesian.length > 0
-        ? `${linePath} L ${cartesian[cartesian.length - 1].x} ${topPad + plotH} L ${cartesian[0].x} ${topPad + plotH} Z`
-        : "";
-    const yTicks = [0, 1, 2, 3, 4].map((stepIndex) => safeMax - ((safeMax - min) * stepIndex) / 4);
+    // Keep the chart readable even with small deltas, but avoid the "floating" effect by clamping.
+    const pad = Math.max(0.5, (maxRaw - minRaw) * 0.35);
+    let min = clamp(Math.floor((minRaw - pad) * 2) / 2, 0, 9);
+    let max = clamp(Math.ceil((maxRaw + pad) * 2) / 2, 0, 9);
 
-    return {width, height, leftPad, rightPad, topPad, plotH, yTicks, mapX, mapY, linePath, areaPath, cartesian};
+    if (min === max) {
+      min = clamp(min - 1, 0, 9);
+      max = clamp(max + 1, 0, 9);
+    }
+
+    const range = Math.max(0.5, max - min);
+    const step = range <= 2 ? 0.5 : 1;
+    const yTicks = Array.from({length: Math.floor(range / step) + 1}, (_, index) =>
+      Number((min + index * step).toFixed(1))
+    );
+
+    // Show about 6 ticks max on X to reduce clutter.
+    const xInterval = visiblePoints.length <= 7 ? 0 : Math.max(0, Math.ceil(visiblePoints.length / 6) - 1);
+
+    return {
+      yDomain: [min, max] as [number, number],
+      yTicks,
+      xInterval
+    };
   }, [hasPoints, visiblePoints]);
 
-  const active = safeHoveredIndex !== null ? visiblePoints[safeHoveredIndex] : null;
   const trendDelta = visiblePoints.length > 1 ? visiblePoints[visiblePoints.length - 1].band - visiblePoints[0].band : 0;
   const trendTone =
     trendDelta > 0.05 ? "up" : trendDelta < -0.05 ? "down" : "flat";
@@ -104,15 +90,9 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
       : trendTone === "down"
         ? "border-rose-400/30 bg-rose-500/10 text-rose-300"
         : "border-blue-400/30 bg-blue-500/10 text-blue-300";
-  const tooltipLeftPct =
-    safeHoveredIndex === null ? 50 : clamp((chart.mapX(safeHoveredIndex) / chart.width) * 100, 10, 90);
 
   return (
-    <Card className="min-w-0 overflow-hidden rounded-2xl border-border/70 bg-linear-to-b from-card/92 via-card/85 to-blue-500/4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="pointer-events-none relative">
-        <div className="absolute -top-20 -right-24 h-52 w-52 rounded-full bg-blue-500/12 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 h-56 w-56 rounded-full bg-indigo-500/10 blur-3xl" />
-      </div>
+    <Card className="min-w-0 overflow-hidden rounded-2xl border-border/70 bg-card/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] animate-in fade-in slide-in-from-bottom-2 duration-500">
 
       <CardHeader className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
@@ -152,105 +132,83 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
       </CardHeader>
       <CardContent>
         {hasPoints ? (
-          <ChartContainer className="relative overflow-x-hidden rounded-xl border border-border/50 bg-linear-to-b from-blue-500/5 to-transparent p-2 sm:p-3 animate-in fade-in duration-700 delay-150">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_65%_at_50%_-10%,rgba(59,130,246,0.22),transparent_62%)]" />
-            <div className="pointer-events-none absolute inset-0 opacity-50 [background-image:linear-gradient(to_right,rgba(148,163,184,0.18)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.12)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(60%_80%_at_50%_40%,black,transparent)]" />
-            <svg viewBox={`0 0 ${chart.width} ${chart.height}`} className="h-auto w-full">
-            <defs>
-              <linearGradient id={`score-area-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgb(59 130 246 / 0.28)" />
-                <stop offset="100%" stopColor="rgb(59 130 246 / 0.02)" />
-              </linearGradient>
-              <linearGradient id={`score-line-${gradientId}`} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="rgb(59 130 246)" />
-                <stop offset="100%" stopColor="rgb(96 165 250)" />
-              </linearGradient>
-            </defs>
+          <ChartContainer className="overflow-x-auto rounded-xl border border-border/60 bg-background/40 p-3 animate-in fade-in duration-700 delay-150">
+            <div className="min-w-[640px]">
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={visiblePoints} margin={{top: 12, right: 16, left: 6, bottom: 8}}>
+                  <defs>
+                    <linearGradient id={`score-area-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="rgb(59 130 246 / 0.25)" />
+                      <stop offset="100%" stopColor="rgb(59 130 246 / 0.02)" />
+                    </linearGradient>
+                  </defs>
 
-            {chart.yTicks.map((tick) => {
-              const y = chart.mapY(tick);
-              return (
-                <g key={tick}>
-                  <line
-                    x1={chart.leftPad}
-                    y1={y}
-                    x2={chart.width - chart.rightPad}
-                    y2={y}
-                    stroke="rgba(148, 163, 184, 0.35)"
-                    strokeDasharray="4 5"
+                  <CartesianGrid strokeDasharray="3 6" stroke="hsl(var(--border))" opacity={0.45} vertical={false} />
+
+                  <XAxis
+                    dataKey="label"
+                    interval={chartMeta.xInterval}
+                    tickLine={false}
+                    axisLine={{stroke: "hsl(var(--border))"}}
+                    tick={{fill: "hsl(var(--muted-foreground))", fontSize: 12}}
                   />
-                  <text x={6} y={y + 4} fontSize={11} fill="var(--foreground)" fillOpacity="0.75">
-                    {tick.toFixed(1)}
-                  </text>
-                </g>
-              );
-            })}
+                  <YAxis
+                    domain={chartMeta.yDomain}
+                    ticks={chartMeta.yTicks}
+                    tickLine={false}
+                    axisLine={false}
+                    width={36}
+                    tick={{fill: "hsl(var(--muted-foreground))", fontSize: 12}}
+                    tickFormatter={(value) => Number(value).toFixed(1)}
+                  />
 
-            {safeHoveredIndex !== null ? (
-              <line
-                x1={chart.mapX(safeHoveredIndex)}
-                y1={chart.topPad}
-                x2={chart.mapX(safeHoveredIndex)}
-                y2={chart.topPad + chart.plotH}
-                stroke="rgba(148, 163, 184, 0.55)"
-                strokeDasharray="3 5"
-              />
-            ) : null}
+                  <Tooltip
+                    cursor={{stroke: "hsl(var(--muted-foreground))", strokeDasharray: "3 6", opacity: 0.55}}
+                    content={({active, payload, label}) => {
+                      if (!active || !payload?.length) return null;
+                      const band = Number(payload[0].value ?? 0);
+                      return (
+                        <div className="rounded-xl border border-border/70 bg-background/95 px-3 py-2 text-xs shadow-lg">
+                          <p className="font-semibold text-foreground">{label}</p>
+                          <p className="text-muted-foreground">
+                            {t.has("scoreProgress.bandLabel") ? t("scoreProgress.bandLabel") : "Band"} {band.toFixed(1)}
+                          </p>
+                        </div>
+                      );
+                    }}
+                  />
 
-            <path
-              key={`area-${period}-${visiblePoints.length}-${latestBand.toFixed(1)}`}
-              d={chart.areaPath}
-              fill={`url(#score-area-${gradientId})`}
-              className="score-progress-area"
-            />
-            <path
-              key={`line-${period}-${visiblePoints.length}-${latestBand.toFixed(1)}`}
-              d={chart.linePath}
-              fill="none"
-              stroke={`url(#score-line-${gradientId})`}
-              strokeWidth="3"
-              strokeLinecap="round"
-              pathLength={1}
-              className="score-progress-line"
-            />
+                  <Area
+                    type="monotone"
+                    dataKey="band"
+                    stroke="transparent"
+                    fill={`url(#score-area-${gradientId})`}
+                    isAnimationActive
+                    animationDuration={650}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="band"
+                    stroke="rgb(59 130 246)"
+                    strokeWidth={3}
+                    dot={{r: 3.5, strokeWidth: 2, stroke: "rgb(59 130 246 / 0.35)", fill: "rgb(59 130 246)"}}
+                    activeDot={{r: 5.25, stroke: "rgb(59 130 246)", strokeWidth: 2, fill: "hsl(var(--background))"}}
+                    isAnimationActive
+                    animationDuration={650}
+                  />
 
-              {visiblePoints.map((point, i) => {
-                const x = chart.mapX(i);
-                const y = chart.mapY(point.band);
-                const isActive = safeHoveredIndex === i;
-                const showXLabel = visiblePoints.length <= 7 || i % 2 === 0 || i === visiblePoints.length - 1;
-                return (
-                  <g key={`${point.label}-${i}`} onMouseEnter={() => setHoveredIndex(i)} onMouseLeave={() => setHoveredIndex(null)} className="cursor-pointer">
-                  <rect x={x - 16} y={chart.topPad} width={32} height={chart.plotH + 12} fill="transparent" />
-                  {isActive ? <circle cx={x} cy={y} r={11} fill="rgb(59 130 246 / 0.2)" /> : null}
-                  <circle cx={x} cy={y} r={isActive ? 5.2 : 3.8} fill="rgb(59 130 246)" />
-                  {showXLabel ? (
-                    <text
-                      x={x}
-                      y={chart.topPad + chart.plotH + 23}
-                      fontSize={11}
-                      fill="var(--foreground)"
-                      fillOpacity={isActive ? "1" : "0.75"}
-                      textAnchor="middle"
-                    >
-                      {point.label}
-                    </text>
-                  ) : null}
-                  <title>{`${point.label}: ${point.band.toFixed(1)}`}</title>
-                  </g>
-                );
-              })}
-            </svg>
-
-            {active ? (
-              <div
-                className="pointer-events-none absolute top-2 -translate-x-1/2 rounded-xl border border-blue-300/25 bg-[#0B1528]/95 px-3 py-2 text-xs shadow-[0_10px_30px_rgba(2,6,23,0.45)] animate-in fade-in zoom-in-95 duration-150"
-                style={{left: `${tooltipLeftPct}%`}}
-              >
-                <p className="font-semibold text-blue-100">{active.label}</p>
-                <p className="text-blue-200/80">Band {active.band.toFixed(1)}</p>
-              </div>
-            ) : null}
+                  <ReferenceDot
+                    x={visiblePoints[visiblePoints.length - 1]?.label}
+                    y={latestBand}
+                    r={6}
+                    fill="hsl(var(--background))"
+                    stroke="rgb(59 130 246)"
+                    strokeWidth={2}
+                    label={{value: "Latest", position: "top", fill: "hsl(var(--muted-foreground))", fontSize: 12}}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           </ChartContainer>
         ) : (
           <p className="rounded-xl border border-dashed border-border/70 bg-background/60 p-4 text-sm text-muted-foreground">{t("scoreProgress.empty")}</p>
