@@ -18,7 +18,6 @@ import { ReviewMistakeHeatmap } from "./ReviewMistakeHeatmap";
 import { ReviewNextActions } from "./ReviewNextActions";
 import { ReviewPassagePanel } from "./ReviewPassagePanel";
 import { ReviewQuestionsPanel } from "./ReviewQuestionsPanel";
-import { ReviewVideoLessonCard } from "./ReviewVideoLessonCard";
 import { QuestionTypePerformance, type QuestionTypePerformanceItem } from "./QuestionTypePerformance";
 
 export function ReviewPageClient() {
@@ -291,7 +290,8 @@ export function ReviewPageClient() {
           </Card>
         ) : null}
 
-        <ReviewVideoLessonCard lesson={reviewData.videoLesson} onAction={handleAction} />
+        {/* Video lesson is temporarily hidden. */}
+        {/* <ReviewVideoLessonCard lesson={reviewData.videoLesson} onAction={handleAction} /> */}
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
           <ReviewAiCoachCard coach={dynamicCoach} mistakeBreakdown={dynamicMistakeBreakdown} onAction={handleAction} />

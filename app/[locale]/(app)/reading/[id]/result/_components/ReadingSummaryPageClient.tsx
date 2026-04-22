@@ -16,7 +16,6 @@ import {ReviewAiCoachCard} from "./ReviewAiCoachCard";
 import {ReviewHeader} from "./ReviewHeader";
 import {ReviewMistakeHeatmap} from "./ReviewMistakeHeatmap";
 import {ReviewNextActions} from "./ReviewNextActions";
-import {ReviewVideoLessonCard} from "./ReviewVideoLessonCard";
 import {adaptReadingBackendReview, type AdaptedReadingBackendReview} from "./backendReviewAdapters";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -263,7 +262,7 @@ export function ReadingSummaryPageClient() {
         minutes={minutes}
         seconds={seconds}
         timerUsed={Boolean(timeUsedSeconds)}
-        reviewHref={`/${locale}/reading/${testId}/review?attempt=${resolvedBackendAttemptId}`}
+        reviewHref={`/${locale}/reading/${testId}?review=1&attempt=${resolvedBackendAttemptId}`}
       />
 
       <Card className="rounded-3xl border-border/70 bg-card/80 p-4 text-sm">
@@ -324,10 +323,13 @@ export function ReadingSummaryPageClient() {
         </Card>
       ) : null}
 
-      <ReviewVideoLessonCard
-        lesson={reviewData.videoLesson}
-        onAction={(message) => setActionNotice(tReadingReview("actionPlaceholder", {action: message}))}
-      />
+      {/* Video lesson is temporarily hidden. */}
+      {/*
+        <ReviewVideoLessonCard
+          lesson={reviewData.videoLesson}
+          onAction={(message) => setActionNotice(tReadingReview("actionPlaceholder", {action: message}))}
+        />
+      */}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <ReviewAiCoachCard

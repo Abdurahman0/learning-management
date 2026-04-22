@@ -732,6 +732,9 @@ export default function ListeningTestPage() {
   const modeParam = searchParams.get("mode");
   const requestedMode: AttemptMode | null =
     modeParam === "real" || modeParam === "practice" ? modeParam : null;
+  const reviewRequested = searchParams.get("review") === "1";
+  const reviewAttemptParam = searchParams.get("attempt")?.trim() ?? "";
+  const reviewAttemptId = reviewRequested && UUID_PATTERN.test(reviewAttemptParam) ? reviewAttemptParam : null;
 
   const [resolvedTestId, setResolvedTestId] = useState<string>(testId);
   const [loadingBackendTest, setLoadingBackendTest] = useState(false);
@@ -777,35 +780,45 @@ export default function ListeningTestPage() {
           throw new Error("Listening test not found in backend.");
         }
 
-        const createdAttempt = await studentAttemptsService.create({
-          practice_test: matched.id,
-          mode: "PRACTICE"
-        });
-        let finalAttempt = createdAttempt.listening_parts?.length
-          ? createdAttempt
-          : await studentAttemptsService.getById(String(createdAttempt.id));
+        let finalAttempt: StudentAttemptDetail;
+        let finalAttemptId: string | null = null;
 
-        // If backend resumed an empty in-progress attempt, recycle it so we pick up
-        // the latest listening-part media (including newly uploaded per-part audio).
-        if (
-          String(finalAttempt.status ?? "").toUpperCase() === "IN_PROGRESS"
-          && Number(finalAttempt.answered_count ?? 0) === 0
-        ) {
-          try {
-            await studentAttemptsService.submit(String(finalAttempt.id), {
-              time_used_seconds: 0,
-              answers: []
-            });
-            const refreshedAttempt = await studentAttemptsService.create({
-              practice_test: matched.id,
-              mode: "PRACTICE"
-            });
-            finalAttempt = refreshedAttempt.listening_parts?.length
-              ? refreshedAttempt
-              : await studentAttemptsService.getById(String(refreshedAttempt.id));
-          } catch {
-            // Keep the original attempt if recycle fails.
+        if (reviewAttemptId) {
+          finalAttempt = await studentAttemptsService.getById(reviewAttemptId);
+          finalAttemptId = reviewAttemptId;
+        } else {
+          const createdAttempt = await studentAttemptsService.create({
+            practice_test: matched.id,
+            mode: "PRACTICE"
+          });
+          finalAttempt = createdAttempt.listening_parts?.length
+            ? createdAttempt
+            : await studentAttemptsService.getById(String(createdAttempt.id));
+
+          // If backend resumed an empty in-progress attempt, recycle it so we pick up
+          // the latest listening-part media (including newly uploaded per-part audio).
+          if (
+            String(finalAttempt.status ?? "").toUpperCase() === "IN_PROGRESS"
+            && Number(finalAttempt.answered_count ?? 0) === 0
+          ) {
+            try {
+              await studentAttemptsService.submit(String(finalAttempt.id), {
+                time_used_seconds: 0,
+                answers: []
+              });
+              const refreshedAttempt = await studentAttemptsService.create({
+                practice_test: matched.id,
+                mode: "PRACTICE"
+              });
+              finalAttempt = refreshedAttempt.listening_parts?.length
+                ? refreshedAttempt
+                : await studentAttemptsService.getById(String(refreshedAttempt.id));
+            } catch {
+              // Keep the original attempt if recycle fails.
+            }
           }
+
+          finalAttemptId = toStringSafe(finalAttempt.id).trim() || null;
         }
 
         const nextSubmitMetaByNumber = collectListeningSubmitMetaByNumber(finalAttempt);
@@ -815,7 +828,7 @@ export default function ListeningTestPage() {
 
         if (!active) return;
         setResolvedTestId(mapped.id);
-        setInitialBackendAttemptId(toStringSafe(finalAttempt.id).trim() || null);
+        setInitialBackendAttemptId(finalAttemptId);
         setInitialSubmitMetaByNumber(nextSubmitMetaByNumber);
       } catch (error) {
         if (!active) return;
@@ -836,7 +849,7 @@ export default function ListeningTestPage() {
     return () => {
       active = false;
     };
-  }, [testId]);
+  }, [testId, reviewAttemptId]);
 
   const test = getListeningTestById(resolvedTestId);
 
@@ -890,6 +903,9 @@ function ListeningTestClient({
   const tListeningResult = useTranslations("listeningResult");
   const tOptions = useTranslations("testOptions");
   const locale = useLocale();
+  const reviewDeepLinkAttemptIdRaw = searchParams.get("attempt")?.trim() ?? "";
+  const reviewDeepLinkActive = searchParams.get("review") === "1" && UUID_PATTERN.test(reviewDeepLinkAttemptIdRaw);
+  const reviewDeepLinkAttemptId = reviewDeepLinkActive ? reviewDeepLinkAttemptIdRaw : null;
   const test = getListeningTestById(testId)!;
   const restartRequested = searchParams.get("restart") === "1";
   const paletteTitle = t.has("questionPalette")
@@ -927,7 +943,7 @@ function ListeningTestClient({
   const [submitMetaByNumber, setSubmitMetaByNumber] = useState<Map<number, ListeningSubmitQuestionMeta>>(() => new Map(initialSubmitMetaByNumber));
   const [startedAt, setStartedAt] = useState(0);
   const [finishOpen, setFinishOpen] = useState(false);
-  const [reviewMode, setReviewMode] = useState(false);
+  const [reviewMode, setReviewMode] = useState(reviewDeepLinkActive);
   const [backendReviewData, setBackendReviewData] = useState<AdaptedListeningBackendReview | null>(null);
   const [isSubmittingResult, setIsSubmittingResult] = useState(false);
   const [expandedReviewQuestions, setExpandedReviewQuestions] = useState<Set<string>>(new Set());
@@ -1057,6 +1073,40 @@ function ListeningTestClient({
     }
     initDoneRef.current = true;
 
+    if (reviewDeepLinkActive && reviewDeepLinkAttemptId) {
+      const initTimer = window.setTimeout(() => {
+        setAttemptId(createAttemptId());
+        setBackendAttemptId(reviewDeepLinkAttemptId);
+        setStartedAt(Date.now());
+        setAttemptMode("practice");
+        setFinishOpen(false);
+        setReviewMode(true);
+        setBackendReviewData(null);
+        setIsSubmittingResult(false);
+        setExpandedReviewQuestions(new Set());
+        setHighlightedEvidenceQuestionId(null);
+        setReviewMobilePanel("transcript");
+        setActiveSectionId("s1");
+        setActiveQuestionNumber(1);
+        setAnswers({});
+        setMarked(new Set());
+        setRemainingSeconds(test.durationMinutes * 60);
+        setTimerRunning(false);
+        setAudioPlaying(false);
+        setAudioProgress(0);
+        setAudioBufferedProgress(0);
+        setAudioCurrentSec(0);
+        setAudioDurationSec(0);
+        setAudioSpeed(1);
+        setPaletteOpen(false);
+        realModeAutoFinishedRef.current = false;
+        pendingJumpRef.current = null;
+        audioShouldPlayRef.current = false;
+        suppressAudioAutoPlayRef.current = true;
+      }, 0);
+      return () => window.clearTimeout(initTimer);
+    }
+
     if (restartRequested || requestedMode) {
       const mode = requestedMode ?? null;
       const resetTimer = window.setTimeout(() => {
@@ -1107,9 +1157,12 @@ function ListeningTestClient({
       realModeAutoFinishedRef.current = false;
     }, 0);
     return () => window.clearTimeout(initTimer);
-  }, [requestedMode, restartRequested, test.id]);
+  }, [requestedMode, restartRequested, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.durationMinutes, test.id]);
 
   useEffect(() => {
+    if (reviewDeepLinkActive) {
+      return;
+    }
     if (!(restartRequested || requestedMode)) {
       return;
     }
@@ -1124,7 +1177,7 @@ function ListeningTestClient({
     clearAttemptQueryParams();
 
     return () => window.clearTimeout(resetTimer);
-  }, [attemptMode, requestedMode, restartRequested]);
+  }, [attemptMode, requestedMode, restartRequested, reviewDeepLinkActive]);
 
   useEffect(() => {
     let active = true;
@@ -1362,6 +1415,7 @@ function ListeningTestClient({
   };
 
   useEffect(() => {
+    if (reviewDeepLinkActive) return;
     if (!attemptId || !attemptMode) return;
     const persistedAnswers = Object.fromEntries(
       Object.entries(answers).map(([number, value]) => [`${test.id}-q${number}`, value])
@@ -1379,6 +1433,27 @@ function ListeningTestClient({
       timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
     });
   }, [answers, attemptId, attemptMode, backendAttemptId, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
+
+  useEffect(() => {
+    if (!reviewDeepLinkActive || !reviewDeepLinkAttemptId) return;
+    let active = true;
+
+    const loadReview = async () => {
+      try {
+        const reviewResponse = await studentAttemptsService.review(reviewDeepLinkAttemptId);
+        if (!active) return;
+        setBackendReviewData(adaptListeningBackendReview(reviewResponse));
+      } catch {
+        // If review fails, keep fallback review UI (no explanations/evidence).
+      }
+    };
+
+    void loadReview();
+
+    return () => {
+      active = false;
+    };
+  }, [reviewDeepLinkActive, reviewDeepLinkAttemptId]);
 
   useEffect(() => {
     const compactMedia = window.matchMedia("(max-width: 1024px)");
@@ -3574,8 +3649,8 @@ function ListeningTestClient({
       ) : null}
 
       {reviewMode ? (
-        <div className="fixed bottom-4 right-4 z-50 sm:bottom-5 sm:right-5">
-          <Button asChild className="h-10 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-lg hover:bg-blue-600/90">
+        <div className="fixed bottom-16 right-4 z-50 sm:bottom-20 sm:right-5">
+          <Button asChild className="h-12 rounded-2xl bg-blue-600 px-6 text-base font-semibold text-white shadow-lg hover:bg-blue-600/90">
             <Link href={`/${locale}/listening/${test.id}/result?attempt=${backendAttemptId ?? attemptId}`}>
               Analyze
             </Link>

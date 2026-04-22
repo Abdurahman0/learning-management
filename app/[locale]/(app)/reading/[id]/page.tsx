@@ -1000,6 +1000,9 @@ export default function ReadingTestPage() {
   const modeParam = searchParams.get("mode");
   const requestedMode: AttemptMode | null =
     modeParam === "real" || modeParam === "practice" ? modeParam : null;
+  const reviewRequested = searchParams.get("review") === "1";
+  const reviewAttemptParam = searchParams.get("attempt")?.trim() ?? "";
+  const reviewAttemptId = reviewRequested && UUID_PATTERN.test(reviewAttemptParam) ? reviewAttemptParam : null;
   const shouldLoadFromBackend = Boolean(testId);
   const [test, setTest] = useState<ReadingFullTest | null>(null);
   const [backendAttemptId, setBackendAttemptId] = useState<string | null>(null);
@@ -1026,42 +1029,54 @@ export default function ReadingTestPage() {
           return;
         }
 
-        const attempt = await studentAttemptsService.create({
-          practice_test: testId,
-          mode: requestedMode === "real" ? "REAL" : "PRACTICE"
-        });
-        if (!active) return;
+        let finalAttempt: StudentAttemptDetail;
+        let finalAttemptId: string;
 
-        const hydratedAttempt =
-          hasAttemptQuestionData(attempt)
-            ? attempt
-            : await studentAttemptsService.getById(String(attempt.id));
-        if (!active) return;
+        if (reviewAttemptId) {
+          finalAttempt = await studentAttemptsService.getById(reviewAttemptId);
+          if (!active) return;
+          finalAttemptId = reviewAttemptId;
+        } else {
+          const attempt = await studentAttemptsService.create({
+            practice_test: testId,
+            mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+          });
+          if (!active) return;
 
-        let finalAttempt = hydratedAttempt;
-        if (
-          !hasAttemptQuestionData(finalAttempt)
-          && toStringSafe(finalAttempt.status).toUpperCase() === "IN_PROGRESS"
-          && toNumberSafe(finalAttempt.answered_count, 0) === 0
-        ) {
-          try {
-            await studentAttemptsService.submit(String(finalAttempt.id), {
-              time_used_seconds: 0,
-              answers: []
-            });
-            if (!active) return;
+          const hydratedAttempt =
+            hasAttemptQuestionData(attempt)
+              ? attempt
+              : await studentAttemptsService.getById(String(attempt.id));
+          if (!active) return;
 
-            const freshAttempt = await studentAttemptsService.create({
-              practice_test: testId,
-              mode: requestedMode === "real" ? "REAL" : "PRACTICE"
-            });
-            if (!active) return;
-            finalAttempt = hasAttemptQuestionData(freshAttempt)
-              ? freshAttempt
-              : await studentAttemptsService.getById(String(freshAttempt.id));
-            if (!active) return;
-          } catch {
-            // Keep original attempt and surface generic empty-data error below.
+          finalAttempt = hydratedAttempt;
+          finalAttemptId = String(hydratedAttempt.id);
+
+          if (
+            !hasAttemptQuestionData(finalAttempt)
+            && toStringSafe(finalAttempt.status).toUpperCase() === "IN_PROGRESS"
+            && toNumberSafe(finalAttempt.answered_count, 0) === 0
+          ) {
+            try {
+              await studentAttemptsService.submit(String(finalAttempt.id), {
+                time_used_seconds: 0,
+                answers: []
+              });
+              if (!active) return;
+
+              const freshAttempt = await studentAttemptsService.create({
+                practice_test: testId,
+                mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+              });
+              if (!active) return;
+              finalAttempt = hasAttemptQuestionData(freshAttempt)
+                ? freshAttempt
+                : await studentAttemptsService.getById(String(freshAttempt.id));
+              if (!active) return;
+              finalAttemptId = String(finalAttempt.id);
+            } catch {
+              // Keep original attempt and surface generic empty-data error below.
+            }
           }
         }
 
@@ -1069,7 +1084,7 @@ export default function ReadingTestPage() {
         if (!mappedTest.questions.length) {
           throw new Error("No questions returned for this reading attempt.");
         }
-        setBackendAttemptId(String(finalAttempt.id));
+        setBackendAttemptId(finalAttemptId);
         saveRuntimeReadingTest(mappedTest);
         setTest(mappedTest);
       } catch (error) {
@@ -1095,7 +1110,7 @@ export default function ReadingTestPage() {
     return () => {
       active = false;
     };
-  }, [requestedMode, restartRequested, shouldLoadFromBackend, t, testId]);
+  }, [requestedMode, restartRequested, reviewAttemptId, shouldLoadFromBackend, t, testId]);
 
   if (isLoading) {
     return (
@@ -1148,16 +1163,20 @@ function ReadingTestClient({
   restartRequested = false,
   requestedMode = null
 }: ReadingTestClientProps) {
+  const searchParams = useSearchParams();
   const t = useTranslations("readingTest");
   const tReadingResult = useTranslations("readingResult");
   const tOptions = useTranslations("testOptions");
   const locale = useLocale();
+  const reviewDeepLinkAttemptIdRaw = searchParams.get("attempt")?.trim() ?? "";
+  const reviewDeepLinkActive = searchParams.get("review") === "1" && UUID_PATTERN.test(reviewDeepLinkAttemptIdRaw);
+  const reviewDeepLinkAttemptId = reviewDeepLinkActive ? reviewDeepLinkAttemptIdRaw : null;
   type RealModeInterruptionReason = "fullscreen" | "visibility";
   const [attemptId, setAttemptId] = useState<string>("");
   const [startedAt, setStartedAt] = useState<number>(0);
   const [finishOpen, setFinishOpen] = useState(false);
   const [restartOpen, setRestartOpen] = useState(false);
-  const [reviewMode, setReviewMode] = useState(false);
+  const [reviewMode, setReviewMode] = useState(reviewDeepLinkActive);
   const [expandedExplanations, setExpandedExplanations] = useState<Set<string>>(new Set());
   const [activePassageId, setActivePassageId] = useState<"p1" | "p2" | "p3">("p1");
   const [activeQuestionNumber, setActiveQuestionNumber] = useState(1);
@@ -1284,6 +1303,24 @@ function ReadingTestClient({
     }
     initDoneRef.current = true;
 
+    if (reviewDeepLinkActive && reviewDeepLinkAttemptId) {
+      const initTimer = window.setTimeout(() => {
+        setAttemptId(createAttemptId());
+        setStartedAt(Date.now());
+        setAttemptMode("practice");
+        setTimerRunning(false);
+        setFinishOpen(false);
+        setRestartOpen(false);
+        setReviewMode(true);
+        setBackendAttemptId(reviewDeepLinkAttemptId);
+        setExpandedExplanations(new Set());
+        setAnswers({});
+        setMarked(new Set());
+        setPaletteOpen(false);
+      }, 0);
+      return () => window.clearTimeout(initTimer);
+    }
+
     if (restartRequested || requestedMode) {
       const mode = requestedMode ?? null;
       const resetTimer = window.setTimeout(() => {
@@ -1320,9 +1357,12 @@ function ReadingTestClient({
       realModeAutoFinishedRef.current = false;
     }, 0);
     return () => window.clearTimeout(initTimer);
-  }, [requestedMode, restartRequested, test.id]);
+  }, [requestedMode, restartRequested, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.id]);
 
   useEffect(() => {
+    if (reviewDeepLinkActive) {
+      return;
+    }
     if (!(restartRequested || requestedMode)) {
       return;
     }
@@ -1337,7 +1377,7 @@ function ReadingTestClient({
     clearAttemptQueryParams();
 
     return () => window.clearTimeout(resetTimer);
-  }, [attemptMode, requestedMode, restartRequested]);
+  }, [attemptMode, requestedMode, restartRequested, reviewDeepLinkActive]);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
@@ -1520,6 +1560,7 @@ function ReadingTestClient({
   }, [initialBackendAttemptId, test.id]);
 
   useEffect(() => {
+    if (reviewDeepLinkActive) return;
     if (!attemptId || !attemptMode) return;
     saveAttemptProgress({
       attemptId,
@@ -1534,6 +1575,27 @@ function ReadingTestClient({
       timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
     });
   }, [answers, attemptId, attemptMode, backendAttemptId, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
+
+  useEffect(() => {
+    if (!reviewDeepLinkActive || !reviewDeepLinkAttemptId) return;
+    let active = true;
+
+    const loadReview = async () => {
+      try {
+        const reviewResponse = await studentAttemptsService.review(reviewDeepLinkAttemptId);
+        if (!active) return;
+        setBackendReviewData(adaptReadingBackendReview(reviewResponse));
+      } catch {
+        // Keep review mode fallback UI (no explanations/evidence) on failure.
+      }
+    };
+
+    void loadReview();
+
+    return () => {
+      active = false;
+    };
+  }, [reviewDeepLinkActive, reviewDeepLinkAttemptId]);
 
   const resolveTimeUsedSeconds = useCallback(
     (finishedAtMs?: number) => {
@@ -3611,8 +3673,8 @@ function ReadingTestClient({
       </Sheet>
 
       {reviewMode ? (
-        <div className="fixed bottom-4 right-4 z-50 sm:bottom-5 sm:right-5">
-          <Button asChild className="h-10 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-lg hover:bg-blue-600/90">
+        <div className="fixed bottom-16 right-4 z-50 sm:bottom-20 sm:right-5">
+          <Button asChild className="h-12 rounded-2xl bg-blue-600 px-6 text-base font-semibold text-white shadow-lg hover:bg-blue-600/90">
             <Link href={`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId ?? attemptId}`}>
               Analyze
             </Link>

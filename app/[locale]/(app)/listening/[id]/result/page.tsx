@@ -167,7 +167,7 @@ export default function ListeningResultPage() {
         timerUsed={Boolean(reviewPayload?.time_used_seconds)}
         minutes={minutes}
         seconds={seconds}
-        reviewHref={`/${locale}/listening/${testId}/review?attempt=${resolvedBackendAttemptId}`}
+        reviewHref={`/${locale}/listening/${testId}?review=1&attempt=${resolvedBackendAttemptId}`}
       />
 
       <ListeningSectionPerformance items={backendReview.sectionPerformance} />
