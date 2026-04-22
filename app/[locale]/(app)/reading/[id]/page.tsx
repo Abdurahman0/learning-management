@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { type CSSProperties, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Bookmark, BookmarkCheck, Clock3, Grid2x2, Maximize2, Menu, Minimize2, MoveLeft, MoveRight, Play, RotateCcw, Square, User } from "lucide-react";
 import { LoadingModal } from "@/components/ui/loading-modal";
 import { useLocale, useTranslations } from "next-intl";
@@ -1168,6 +1168,7 @@ function ReadingTestClient({
   const tReadingResult = useTranslations("readingResult");
   const tOptions = useTranslations("testOptions");
   const locale = useLocale();
+  const router = useRouter();
   const reviewDeepLinkAttemptIdRaw = searchParams.get("attempt")?.trim() ?? "";
   const reviewDeepLinkActive = searchParams.get("review") === "1" && UUID_PATTERN.test(reviewDeepLinkAttemptIdRaw);
   const reviewDeepLinkAttemptId = reviewDeepLinkActive ? reviewDeepLinkAttemptIdRaw : null;
@@ -2161,8 +2162,6 @@ function ReadingTestClient({
           time_used_seconds: timeUsedSeconds,
           answers: []
         });
-        const reviewResponse = await studentAttemptsService.review(backendAttemptId);
-        setBackendReviewData(adaptReadingBackendReview(reviewResponse));
       }
 
       saveAttemptResult({
@@ -2179,9 +2178,16 @@ function ReadingTestClient({
         timerUsed,
       });
 
-      setReviewMode(true);
       setFinishOpen(false);
       setTimerRunning(false);
+
+      if (backendAttemptId) {
+        router.push(`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId}`);
+        return;
+      }
+
+      // Fallback: if backend attempt is missing, keep the in-test review mode.
+      setReviewMode(true);
     } catch {
       // Keep submit failure silent in UI logs.
     } finally {
@@ -2201,6 +2207,8 @@ function ReadingTestClient({
     test.durationMinutes,
     test.id,
     timerRunning,
+    router,
+    locale,
   ]);
 
   const requestRealModeFullscreen = useCallback(async () => {

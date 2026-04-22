@@ -168,6 +168,7 @@ export default function ListeningResultPage() {
         minutes={minutes}
         seconds={seconds}
         reviewHref={`/${locale}/listening/${testId}?review=1&attempt=${resolvedBackendAttemptId}`}
+        reviewVariant="analysis"
       />
 
       <ListeningSectionPerformance items={backendReview.sectionPerformance} />

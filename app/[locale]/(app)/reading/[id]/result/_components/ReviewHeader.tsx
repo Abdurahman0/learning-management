@@ -18,6 +18,7 @@ type ReviewHeaderProps = {
   total: number;
   scorePercent: number;
   bandScore?: string | null;
+  reviewVariant?: "answers" | "analysis";
   minutes: string;
   seconds: string;
   timerUsed: boolean;
@@ -35,6 +36,7 @@ export function ReviewHeader({
   total,
   scorePercent,
   bandScore = null,
+  reviewVariant = "answers",
   minutes,
   seconds,
   timerUsed,
@@ -44,6 +46,10 @@ export function ReviewHeader({
 }: ReviewHeaderProps) {
   const locale = useLocale();
   const t = useTranslations("readingResult");
+  const reviewCtaLabel =
+    reviewVariant === "analysis"
+      ? (t.has("reviewAnalysis") ? t("reviewAnalysis") : "Review Analysis")
+      : t("reviewAnswers");
 
   return (
     <Card className="gap-5 rounded-3xl border-slate-200/85 bg-linear-to-br from-white via-slate-50 to-blue-50 p-4 shadow-sm shadow-slate-200/60 dark:border-border/75 dark:bg-[linear-gradient(120deg,rgba(11,23,43,0.95),rgba(10,25,49,0.82)_52%,rgba(22,48,92,0.32))] dark:shadow-none sm:p-6">
@@ -76,7 +82,7 @@ export function ReviewHeader({
 
           <div className="flex flex-wrap gap-2.5">
             <Button asChild className="h-9 rounded-xl px-4">
-              <Link href={reviewHref ?? "#review-main"}>{t("reviewAnswers")}</Link>
+              <Link href={reviewHref ?? "#review-main"}>{reviewCtaLabel}</Link>
             </Button>
             {showResultsButton && resultsHref ? (
               <Button variant="outline" asChild className="h-9 rounded-xl border-slate-200 bg-white/90 px-4 hover:bg-slate-100/80 dark:border-border/70 dark:bg-background/35">

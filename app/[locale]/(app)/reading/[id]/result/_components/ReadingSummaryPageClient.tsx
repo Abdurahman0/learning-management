@@ -264,6 +264,7 @@ export function ReadingSummaryPageClient() {
         timerUsed={Boolean(timeUsedSeconds)}
         reviewHref={`/${locale}/reading/${testId}?review=1&attempt=${resolvedBackendAttemptId}`}
         bandScore={attemptDetail?.band_score ?? reviewPayload?.band_score ?? null}
+        reviewVariant="analysis"
       />
 
       {/* Attempt metadata card is temporarily hidden. */}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Bookmark,
   BookmarkCheck,
@@ -903,6 +903,7 @@ function ListeningTestClient({
   const tListeningResult = useTranslations("listeningResult");
   const tOptions = useTranslations("testOptions");
   const locale = useLocale();
+  const router = useRouter();
   const reviewDeepLinkAttemptIdRaw = searchParams.get("attempt")?.trim() ?? "";
   const reviewDeepLinkActive = searchParams.get("review") === "1" && UUID_PATTERN.test(reviewDeepLinkAttemptIdRaw);
   const reviewDeepLinkAttemptId = reviewDeepLinkActive ? reviewDeepLinkAttemptIdRaw : null;
@@ -1965,14 +1966,7 @@ function ListeningTestClient({
         }
       }
 
-      if (submitAttemptId && submitSucceeded) {
-        try {
-          const reviewResponse = await studentAttemptsService.review(submitAttemptId);
-          setBackendReviewData(adaptListeningBackendReview(reviewResponse));
-        } catch {
-          // If review fails, keep fallback review UI (no explanations/evidence).
-        }
-      }
+      // Result page will load review/explanations; no need to fetch here.
 
       saveAttemptResult({
         attemptId,
@@ -1992,6 +1986,14 @@ function ListeningTestClient({
       setPaletteOpen(false);
       setTimerRunning(false);
       setAudioPlaying(false);
+
+      const resultAttemptId = submitAttemptId ?? backendAttemptId;
+      if (resultAttemptId) {
+        router.push(`/${locale}/listening/${test.id}/result?attempt=${resultAttemptId}`);
+        return;
+      }
+
+      // Fallback: if backend attempt is missing, keep the in-test review mode.
       setReviewMobilePanel("transcript");
       setReviewMode(true);
     } finally {
@@ -2011,6 +2013,8 @@ function ListeningTestClient({
     test.durationMinutes,
     test.id,
     timerRunning,
+    router,
+    locale,
   ]);
 
   useEffect(() => {
