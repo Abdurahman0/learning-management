@@ -284,9 +284,9 @@ export function OnboardingWizard() {
 
   return (
     <div className="mx-auto w-full max-w-[1040px] py-4 sm:py-8">
-      <div className="pointer-events-none relative mb-6 overflow-hidden rounded-3xl border border-border/70 bg-linear-to-br from-blue-600/12 via-card/70 to-card/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-        <div className="absolute -top-24 -right-28 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
-        <div className="absolute -bottom-28 -left-28 h-80 w-80 rounded-full bg-indigo-500/15 blur-3xl" />
+      <div className="relative mb-6 overflow-hidden rounded-3xl border border-border/70 bg-linear-to-br from-blue-600/12 via-card/70 to-card/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <div className="pointer-events-none absolute -top-24 -right-28 h-72 w-72 rounded-full bg-blue-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 -left-28 h-80 w-80 rounded-full bg-indigo-500/15 blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <BrandIcon size={36} className="shadow-none" />
@@ -299,7 +299,12 @@ export function OnboardingWizard() {
             <span className="rounded-full border border-border/70 bg-background/60 px-3 py-1 text-xs text-muted-foreground">
               {t("progress", {current: stepIndex + 1, total: steps.length})}
             </span>
-            <Button variant="outline" className="h-10 rounded-xl border-border/70" onClick={() => closeAndPersist("skipped")}>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 cursor-pointer rounded-xl border-border/70"
+              onClick={() => closeAndPersist("skipped")}
+            >
               {t("actions.skip")}
             </Button>
           </div>
@@ -319,7 +324,7 @@ export function OnboardingWizard() {
               </div>
               <button
                 type="button"
-                className="inline-flex size-10 items-center justify-center rounded-2xl border border-border/70 hover:bg-muted"
+                className="inline-flex size-10 cursor-pointer items-center justify-center rounded-2xl border border-border/70 hover:bg-muted"
                 onClick={() => closeAndPersist("skipped")}
                 aria-label={t("actions.skip")}
                 title={t("actions.skip")}
