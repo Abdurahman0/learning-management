@@ -4,6 +4,7 @@ import Link from "next/link";
 import { LayoutDashboard, RotateCcw } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ResultStatCard } from "./ResultStatCard";
@@ -16,6 +17,7 @@ type ReviewHeaderProps = {
   unanswered: number;
   total: number;
   scorePercent: number;
+  bandScore?: string | null;
   minutes: string;
   seconds: string;
   timerUsed: boolean;
@@ -32,6 +34,7 @@ export function ReviewHeader({
   unanswered,
   total,
   scorePercent,
+  bandScore = null,
   minutes,
   seconds,
   timerUsed,
@@ -55,7 +58,19 @@ export function ReviewHeader({
                 <span className="text-slate-600 dark:text-foreground/75"> / {total}</span>
                 <span className="ml-2 text-xl font-medium text-slate-700 dark:text-foreground/90 sm:text-2xl">{t("correctStatus")}</span>
               </p>
-              <p className="pb-1 text-sm text-slate-600 dark:text-muted-foreground">{t("accuracyPercent", { percent: scorePercent })}</p>
+              {(() => {
+                const cleaned = String(bandScore ?? "").trim();
+                return cleaned && cleaned !== "-";
+              })() ? (
+                <Badge
+                  variant="outline"
+                  className="mb-1 rounded-full border-blue-200 bg-white/80 px-3 py-1 text-[11px] font-semibold text-blue-700 shadow-sm shadow-blue-100/70 dark:border-blue-500/35 dark:bg-blue-500/10 dark:text-blue-200 dark:shadow-none"
+                >
+                  Band {String(bandScore).trim()}
+                </Badge>
+              ) : (
+                <p className="pb-1 text-sm text-slate-600 dark:text-muted-foreground">{t("accuracyPercent", { percent: scorePercent })}</p>
+              )}
             </div>
           </div>
 

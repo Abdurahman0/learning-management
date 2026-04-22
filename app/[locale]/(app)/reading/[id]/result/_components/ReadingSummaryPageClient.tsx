@@ -263,18 +263,22 @@ export function ReadingSummaryPageClient() {
         seconds={seconds}
         timerUsed={Boolean(timeUsedSeconds)}
         reviewHref={`/${locale}/reading/${testId}?review=1&attempt=${resolvedBackendAttemptId}`}
+        bandScore={attemptDetail?.band_score ?? reviewPayload?.band_score ?? null}
       />
 
-      <Card className="rounded-3xl border-border/70 bg-card/80 p-4 text-sm">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div><span className="text-muted-foreground">Attempt ID:</span> {attemptDetail?.id ?? resolvedBackendAttemptId}</div>
-          <div><span className="text-muted-foreground">Status:</span> {attemptDetail?.status ?? "UNKNOWN"}</div>
-          <div><span className="text-muted-foreground">Score:</span> {attemptDetail?.score ?? correctCount}</div>
-          <div><span className="text-muted-foreground">Band Score:</span> {attemptDetail?.band_score ?? "-"}</div>
-          <div><span className="text-muted-foreground">Mode:</span> {attemptDetail?.mode ?? "-"}</div>
-          <div><span className="text-muted-foreground">Time Used:</span> {timeUsedSeconds}s</div>
-        </div>
-      </Card>
+      {/* Attempt metadata card is temporarily hidden. */}
+      {/*
+        <Card className="rounded-3xl border-border/70 bg-card/80 p-4 text-sm">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div><span className="text-muted-foreground">Attempt ID:</span> {attemptDetail?.id ?? resolvedBackendAttemptId}</div>
+            <div><span className="text-muted-foreground">Status:</span> {attemptDetail?.status ?? "UNKNOWN"}</div>
+            <div><span className="text-muted-foreground">Score:</span> {attemptDetail?.score ?? correctCount}</div>
+            <div><span className="text-muted-foreground">Band Score:</span> {attemptDetail?.band_score ?? "-"}</div>
+            <div><span className="text-muted-foreground">Mode:</span> {attemptDetail?.mode ?? "-"}</div>
+            <div><span className="text-muted-foreground">Time Used:</span> {timeUsedSeconds}s</div>
+          </div>
+        </Card>
+      */}
 
       <QuestionTypePerformance items={accuracyByType} />
 

@@ -17,6 +17,8 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Separator} from "@/components/ui/separator";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {studentDashboardService} from "@/src/services/student/dashboard.service";
+import {studentAttemptsService} from "@/src/services/student/attempts.service";
+import {StudentApiError} from "@/src/services/student/types";
 import type {StudentDashboardResponse} from "@/src/services/student/types";
 
 type Notice = {
@@ -203,6 +205,7 @@ export function DashboardClient() {
   const router = useRouter();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardViewModel>(createEmptyDashboardViewModel);
+  const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!notice) {
@@ -215,6 +218,33 @@ export function DashboardClient() {
 
   const pushNotice = (title: string, description: string) => {
     setNotice({title, description});
+  };
+
+  const handleRecentHistoryReview = async (row: DashboardRecentHistoryItem) => {
+    if (reviewLoadingId) return;
+    if (!isSupportedStudentModule(row.module)) {
+      pushNotice(t("feedback.reviewDetails.title"), t("feedback.reviewDetails.description"));
+      return;
+    }
+
+    setReviewLoadingId(row.id);
+    try {
+      const attempt = await studentAttemptsService.getById(row.id);
+      const testId = String(attempt.practice_test ?? "").trim();
+      if (!testId) {
+        pushNotice(t("feedback.reviewDetails.title"), t("feedback.reviewDetails.description"));
+        return;
+      }
+      router.push(`/${locale}/${row.module}/${testId}?review=1&attempt=${row.id}`);
+    } catch (error) {
+      const message =
+        error instanceof StudentApiError
+          ? error.message
+          : t("feedback.reviewDetails.description");
+      pushNotice(t("feedback.reviewDetails.title"), message);
+    } finally {
+      setReviewLoadingId(null);
+    }
   };
 
   useEffect(() => {
@@ -397,7 +427,8 @@ export function DashboardClient() {
                           <Button
                             variant="link"
                             className="h-auto p-0 text-blue-400"
-                            onClick={() => pushNotice(t("feedback.reviewDetails.title"), t("feedback.reviewDetails.description"))}
+                            disabled={reviewLoadingId === row.id}
+                            onClick={() => void handleRecentHistoryReview(row)}
                           >
                             {t("recentHistory.review")}
                           </Button>
