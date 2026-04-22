@@ -385,11 +385,11 @@ export function DashboardClient() {
         ) : null}
       </section>
 
-      <section className="mt-4">
+      <section className="mt-4" id="recent-history">
         <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/70">
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>{t("recentHistory.title")}</CardTitle>
-            <Button variant="link" className="h-auto p-0" onClick={() => pushNotice(t("feedback.placeholder.title"), t("feedback.placeholder.description"))}>
+            <Button variant="link" className="h-auto p-0" onClick={() => router.push(`/${locale}/analytics#history`)}>
               {t("recentHistory.viewAll")}
             </Button>
           </CardHeader>

@@ -3,12 +3,14 @@
 import {useEffect, useMemo, useState} from "react";
 import {useLocale, useTranslations} from "next-intl";
 import {useRouter} from "next/navigation";
-import {Activity, ArrowRight, Download, Goal, Target, TrendingUp} from "lucide-react";
+import {Activity, Download, Eye, Goal, Target, TrendingUp} from "lucide-react";
 import {Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
 
 import {getQuestionTypeDisplayLabel} from "@/src/services/student/questionTypeLabels";
 import {studentAnalyticsService} from "@/src/services/student/analytics.service";
+import {studentAttemptsService} from "@/src/services/student/attempts.service";
 import type {StudentAnalyticsPracticeActivity, StudentAnalyticsResponse} from "@/src/services/student/types";
+import {StudentApiError} from "@/src/services/student/types";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
@@ -115,6 +117,7 @@ export function StudentProgressAnalyticsClient() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<StudentAnalyticsResponse>(EMPTY_ANALYTICS);
+  const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -222,19 +225,45 @@ export function StudentProgressAnalyticsClient() {
   };
 
   const handleViewHistory = () => {
-    router.push(`/${locale}/dashboard`);
+    router.push(`/${locale}/dashboard#recent-history`);
   };
 
-  const handleActivityAction = (row: StudentAnalyticsPracticeActivity) => {
+  const handleActivityAction = async (row: StudentAnalyticsPracticeActivity) => {
+    if (reviewLoadingId) return;
+
     if (row.action === "navigate" && row.href) {
       router.push(`/${locale}${row.href}`);
       return;
     }
 
-    setNotice({
-      title: t("feedback.unavailable.title"),
-      description: t("feedback.unavailable.description")
-    });
+    if (row.module !== "reading" && row.module !== "listening") {
+      setNotice({
+        title: t("feedback.unavailable.title"),
+        description: t("feedback.unavailable.description")
+      });
+      return;
+    }
+
+    setReviewLoadingId(row.id);
+    try {
+      const attempt = await studentAttemptsService.getById(row.id);
+      const testId = String(attempt.practice_test ?? "").trim();
+      if (!testId) {
+        throw new Error("Missing practice_test on attempt.");
+      }
+      router.push(`/${locale}/${row.module}/${testId}?review=1&attempt=${row.id}`);
+    } catch (error) {
+      const message =
+        error instanceof StudentApiError
+          ? error.message
+          : t("feedback.unavailable.description");
+      setNotice({
+        title: t("feedback.unavailable.title"),
+        description: message
+      });
+    } finally {
+      setReviewLoadingId(null);
+    }
   };
 
   return (
@@ -517,7 +546,7 @@ export function StudentProgressAnalyticsClient() {
         </section>
 
         <section>
-          <Card className={cardClassName}>
+          <Card className={cardClassName} id="history">
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle className="text-xl font-semibold tracking-tight text-foreground dark:text-slate-100">{t("table.title")}</CardTitle>
               <Button
@@ -558,8 +587,14 @@ export function StudentProgressAnalyticsClient() {
                             <TableCell className="font-semibold text-foreground dark:text-slate-100">{row.accuracy}%</TableCell>
                             <TableCell className="text-muted-foreground dark:text-slate-300">{t("table.duration", {value: row.durationMinutes})}</TableCell>
                             <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => handleActivityAction(row)}>
-                                <ArrowRight className="size-4 text-foreground/90 dark:text-slate-200" />
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg"
+                                disabled={reviewLoadingId === row.id}
+                                onClick={() => void handleActivityAction(row)}
+                              >
+                                <Eye className="size-4 text-foreground/90 dark:text-slate-200" />
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -588,7 +623,8 @@ export function StudentProgressAnalyticsClient() {
                           type="button"
                           variant="outline"
                           className="mt-3 h-9 w-full rounded-lg border-border/70 dark:border-slate-600/70 bg-background/70 dark:bg-slate-900/40 text-foreground dark:text-slate-100"
-                          onClick={() => handleActivityAction(row)}
+                          disabled={reviewLoadingId === row.id}
+                          onClick={() => void handleActivityAction(row)}
                         >
                           {t("actions.openActivity")}
                         </Button>
