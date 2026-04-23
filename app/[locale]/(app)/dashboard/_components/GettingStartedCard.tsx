@@ -4,12 +4,11 @@ import {useMemo} from "react";
 import type React from "react";
 import {useRouter} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
-import {BookOpenText, Check, ChevronRight, ClipboardList, Headphones, LineChart, X} from "lucide-react";
+import {BookOpenText, Check, ChevronRight, ClipboardList, Headphones, LineChart} from "lucide-react";
 
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {cn} from "@/lib/utils";
 import {openOnboardingWizard} from "@/lib/onboarding-storage";
-import {setGettingStartedDismissed} from "@/lib/getting-started-storage";
 
 type GettingStartedCardProps = {
   isVisible: boolean;
@@ -92,15 +91,6 @@ export function GettingStartedCard({isVisible, completedSurvey, triedListening, 
               <p className="text-sm font-semibold text-foreground">{percent}%</p>
               <p className="text-[11px] text-muted-foreground">{t("percentLabel")}</p>
             </div>
-            <button
-              type="button"
-              className="mt-0.5 inline-flex size-8 items-center justify-center rounded-xl border border-border/70 bg-background/40 text-muted-foreground transition hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
-              onClick={() => setGettingStartedDismissed(true)}
-              aria-label={t("dismiss")}
-              title={t("dismiss")}
-            >
-              <X className="size-4" />
-            </button>
           </div>
         </CardHeader>
 

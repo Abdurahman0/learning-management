@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
-import {CalendarDays, ChevronLeft, ChevronRight, X} from "lucide-react";
+import {CalendarDays, Check, ChevronLeft, ChevronRight, X} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {useRouter, useSearchParams} from "next/navigation";
 
@@ -81,6 +81,18 @@ function buildExamDateTimeIso(dateIso?: string, timeIso?: string) {
 
   // Interpret as local time and send ISO-8601 in UTC.
   return new Date(y, m - 1, d, safeH, safeM, 0).toISOString();
+}
+
+function getTomorrowIso() {
+  const now = new Date();
+  return toIsoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+}
+
+function clampExamDateToTomorrow(iso?: string) {
+  const value = typeof iso === "string" ? iso.trim() : "";
+  if (!value) return undefined;
+  // YYYY-MM-DD string compare works lexicographically.
+  return value >= getTomorrowIso() ? value : undefined;
 }
 
 function getMonthMatrix(view: Date) {
@@ -180,6 +192,7 @@ function HandmadeDatePicker({
     return Array.from({length: 7}, (_, i) => fmt.format(new Date(baseSunday.getFullYear(), baseSunday.getMonth(), baseSunday.getDate() + i)));
   }, [locale]);
   const todayIso = toIsoDate(new Date());
+  const minSelectableIso = useMemo(() => getTomorrowIso(), []);
   const selectedIso = value;
 
   return (
@@ -233,11 +246,14 @@ function HandmadeDatePicker({
               const inMonth = date.getMonth() === month;
               const isSelected = selectedIso === iso;
               const isToday = todayIso === iso;
+              const isDisabled = iso < minSelectableIso;
               return (
                 <button
                   key={iso}
                   type="button"
+                  disabled={isDisabled}
                   onClick={() => {
+                    if (isDisabled) return;
                     onChange(iso);
                     setOpen(false);
                   }}
@@ -245,7 +261,8 @@ function HandmadeDatePicker({
                     "h-9 rounded-xl text-sm transition-colors",
                     inMonth ? "text-foreground" : "text-muted-foreground/60",
                     isSelected ? "bg-blue-600 text-white hover:bg-blue-600/90" : "hover:bg-muted",
-                    !isSelected && isToday ? "ring-1 ring-blue-500/50" : ""
+                    !isSelected && isToday ? "ring-1 ring-blue-500/50" : "",
+                    isDisabled ? "cursor-not-allowed opacity-35 hover:bg-transparent" : ""
                   )}
                 >
                   {date.getDate()}
@@ -270,8 +287,8 @@ function HandmadeDatePicker({
               variant="outline"
               className="h-9 rounded-xl border-border/70"
               onClick={() => {
-                const now = new Date();
-                onChange(toIsoDate(now));
+                // Minimum is tomorrow (exam date cannot be today or in the past).
+                onChange(minSelectableIso);
                 setOpen(false);
               }}
             >
@@ -316,7 +333,13 @@ export function OnboardingWizard() {
     // Seed a pending state and then read it back.
     seedOnboardingPending();
     const state = readOnboardingState();
-    if (state) setAnswers((prev) => ({...prev, ...state.answers, targets: {...DEFAULT_TARGETS, ...state.answers.targets}}));
+    if (state)
+      setAnswers((prev) => ({
+        ...prev,
+        ...state.answers,
+        examDate: clampExamDateToTomorrow(state.answers.examDate) ?? prev.examDate,
+        targets: {...DEFAULT_TARGETS, ...state.answers.targets}
+      }));
 
     let active = true;
     setIsLoadingProfile(true);
@@ -332,7 +355,7 @@ export function OnboardingWizard() {
 
         setAnswers((prev) => ({
           ...prev,
-          examDate: nextExamDate ?? prev.examDate,
+          examDate: clampExamDateToTomorrow(nextExamDate) ?? clampExamDateToTomorrow(prev.examDate),
           examTime: nextExamTime ?? prev.examTime,
           targets: {
             listening: profile.target_listening_band ?? prev.targets.listening ?? DEFAULT_TARGETS.listening,
@@ -372,12 +395,8 @@ export function OnboardingWizard() {
 
   const progressPercent = steps.length > 0 ? Math.round(((stepIndex + 1) / steps.length) * 100) : 0;
 
-  const selectModuleAndMaybeAdvance = (key: "strongest" | "weakest", value: OnboardingModule) => {
+  const selectModule = (key: "strongest" | "weakest", value: OnboardingModule) => {
     setAnswers((prev) => ({...prev, [key]: value}));
-    // “Game-like” flow: choosing an option moves you forward.
-    if (canGoNext) {
-      window.setTimeout(() => setStepIndex((current) => Math.min(steps.length - 1, current + 1)), 220);
-    }
   };
 
   return (
@@ -563,16 +582,16 @@ export function OnboardingWizard() {
                           key={mod.key}
                           type="button"
                           disabled={isSaving}
-                          onClick={() => selectModuleAndMaybeAdvance("strongest", mod.key)}
+                          onClick={() => selectModule("strongest", mod.key)}
                           className={cn(
                             "flex h-12 items-center justify-between rounded-2xl border px-4 text-left text-sm font-semibold transition disabled:opacity-60",
                             selected
-                              ? "border-blue-500/50 bg-blue-600/10 text-foreground"
+                              ? "border-blue-500/55 bg-linear-to-r from-blue-600/14 via-blue-500/10 to-indigo-500/10 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
                               : "border-border/70 bg-background/50 hover:bg-muted/35"
                           )}
                         >
                           <span>{t(`modules.${mod.key}` as const)}</span>
-                          <ChevronRight className={cn("size-4 text-muted-foreground", selected && "text-blue-500")} />
+                          {selected ? <Check className="size-4 text-blue-500" /> : <ChevronRight className="size-4 text-muted-foreground" />}
                         </button>
                       );
                     })}
@@ -591,16 +610,16 @@ export function OnboardingWizard() {
                           key={mod.key}
                           type="button"
                           disabled={isSaving}
-                          onClick={() => selectModuleAndMaybeAdvance("weakest", mod.key)}
+                          onClick={() => selectModule("weakest", mod.key)}
                           className={cn(
                             "flex h-12 items-center justify-between rounded-2xl border px-4 text-left text-sm font-semibold transition disabled:opacity-60",
                             selected
-                              ? "border-blue-500/50 bg-blue-600/10 text-foreground"
+                              ? "border-blue-500/55 bg-linear-to-r from-blue-600/14 via-blue-500/10 to-indigo-500/10 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
                               : "border-border/70 bg-background/50 hover:bg-muted/35"
                           )}
                         >
                           <span>{t(`modules.${mod.key}` as const)}</span>
-                          <ChevronRight className={cn("size-4 text-muted-foreground", selected && "text-blue-500")} />
+                          {selected ? <Check className="size-4 text-blue-500" /> : <ChevronRight className="size-4 text-muted-foreground" />}
                         </button>
                       );
                     })}

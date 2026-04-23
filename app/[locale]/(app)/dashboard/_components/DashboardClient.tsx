@@ -225,8 +225,6 @@ export function DashboardClient() {
   const [onboardingStatus, setOnboardingStatus] = useState<"none" | "pending" | "skipped" | "completed">("none");
   const [onboardingExamDate, setOnboardingExamDate] = useState<string | null>(null);
   const [profileExamDate, setProfileExamDate] = useState<string | null>(null);
-  const [profileJoinedAt, setProfileJoinedAt] = useState<string | null>(null);
-  const [gettingStartedDismissed, setGettingStartedDismissed] = useState(false);
   const [gettingStartedProgressChecked, setGettingStartedProgressChecked] = useState(false);
 
   useEffect(() => {
@@ -248,7 +246,6 @@ export function DashboardClient() {
       .getProfile()
       .then((profile) => {
         if (!active) return;
-        setProfileJoinedAt(profile.date_joined ?? null);
         if (!profile.exam_datetime) {
           setProfileExamDate(null);
           return;
@@ -266,7 +263,6 @@ export function DashboardClient() {
         // Dashboard should still work if the profile endpoint is unavailable.
         if (!active) return;
         setProfileExamDate(null);
-        setProfileJoinedAt(null);
       });
 
     return () => {
@@ -277,7 +273,6 @@ export function DashboardClient() {
   useEffect(() => {
     const refresh = () => {
       const state = readGettingStartedState();
-      setGettingStartedDismissed(Boolean(state?.dismissed));
       setGettingStartedProgressChecked(Boolean(state?.progressChecked));
     };
 
@@ -363,22 +358,8 @@ export function DashboardClient() {
   const triedReading = dashboardData.recentHistory.some((row) => row.module === "reading");
   const checkedProgress = gettingStartedProgressChecked;
   const allGettingStartedDone = completedSurvey && triedListening && triedReading && checkedProgress;
-
-  const isNewUser = (() => {
-    if (profileJoinedAt) {
-      const parsed = parseBackendIso(profileJoinedAt);
-      if (!parsed) return dashboardData.userSummary.testsTaken <= 1;
-      const now = new Date();
-      const joinedDay = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const diffDays = Math.round((today.getTime() - joinedDay.getTime()) / 86400000);
-      return diffDays <= 14;
-    }
-
-    return dashboardData.userSummary.testsTaken <= 1;
-  })();
-
-  const showGettingStarted = isNewUser && !gettingStartedDismissed && !allGettingStartedDone;
+  // Getting Started is intentionally non-dismissible: it remains until tasks are completed.
+  const showGettingStarted = !allGettingStartedDone;
 
   return (
     <main className="mx-auto min-w-0 w-full max-w-445 overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
