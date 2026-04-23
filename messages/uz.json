@@ -166,11 +166,11 @@
                   "brand":  "EnglishLabs",
                   "banner":  {
                                  "title":  "Mehmon rejimi faol",
-                                 "desc":  "Sizda 4 ta demo testga kirish bor (2 ta Reading, 2 ta Listening). Barcha testlar, to\u0027liq tahlil, tarix va tavsiyalarni ochish uchun ro\u0027yxatdan o\u0027ting.",
+                                 "desc":  "Sizda {count} ta demo testga kirish bor ({reading} ta Reading, {listening} ta Listening). Barcha testlar, to\u0027liq tahlil, tarix va tavsiyalarni ochish uchun ro\u0027yxatdan o\u0027ting.",
                                  "used":  "Demo kirish",
-                                 "available":  "ta test mavjud",
+                                 "available":  "{count} ta test mavjud",
                                  "badges":  {
-                                                "demo":  "4 ta demo test",
+                                                "demo":  "{count} ta demo test",
                                                 "scoreOnly":  "Faqat score",
                                                 "analysisAfterSignup":  "To\u0027liq tahlil ro\u0027yxatdan so\u0027ng"
                                             },
@@ -191,9 +191,9 @@
                                    "difficulty":  "Qiyinlik",
                                    "sort":  "Saralash",
                                    "difficultyAll":  "Barchasi",
-                                   "easy":  "Boshlang\u0027ich",
+                                   "easy":  "Oson",
                                    "medium":  "O\u0027rta",
-                                  "hard":  "Yuqori",
+                                  "hard":  "Qiyin",
                                   "sortNewest":  "Eng yangi",
                                   "sortPopular":  "Ommabop",
                                   "sortHighest":  "A-Z"
@@ -882,6 +882,19 @@
                               },
                       "title":  "Dashboard",
                       "welcome":  "Welcome back, {name}! You\u0027re {bandsAway} bands away from your goal.",
+                      "gettingStarted":  {
+                                             "title":  "Boshlash",
+                                             "subtitle":  "{total} tadan {done} tasi bajarildi",
+                                             "percentLabel":  "bajarildi",
+                                             "done":  "Bajarildi",
+                                             "dismiss":  "Yopish",
+                                             "tasks":  {
+                                                           "survey":  "So\u0027rovnomani to\u0027ldiring",
+                                                           "listening":  "Listening testini sinab ko\u0027ring",
+                                                           "reading":  "Reading testini sinab ko\u0027ring",
+                                                           "progress":  "Progressni ko\u0027ring"
+                                                       }
+                                         },
                       "practiceWeakAreas":  "Practice Weak Areas",
                       "startNewTest":  "Start New Test",
                       "resumePractice":  "Resume Practice",
@@ -900,6 +913,15 @@
                                    "testsTaken":  "Tests Taken",
                                    "avgScore":  "Avg Score",
                                    "studyStreak":  "Study Streak",
+                                   "examCountdown":  {
+                                                         "label":  "Imtihongacha",
+                                                         "labelWithDate":  "Imtihon ({date})",
+                                                         "valueNotSet":  "Imtihon sanasini kiriting",
+                                                         "valueToday":  "Imtihon bugun",
+                                                         "valuePassed":  "Imtihon o\u0027tdi",
+                                                         "valueOneDay":  "1 kun qoldi",
+                                                         "valueDays":  "{days} kun qoldi"
+                                                     },
                                    "reading":  "Reading aniqligi",
                                    "listening":  "Listening aniqligi",
                                    "streakRule":  "Streak qoidasi: bugun kamida bitta test bajarilsa +1, test bajarilmasa -1 (minimum 0)."
@@ -1080,9 +1102,9 @@
                                                   },
                                        "difficulty":  {
                                                           "all":  "Barcha darajalar",
-                                                          "beginner":  "Boshlang\u0027ich",
+                                                          "beginner":  "Oson",
                                                           "intermediate":  "O\u0027rta",
-                                                          "advanced":  "Yuqori"
+                                                          "advanced":  "Qiyin"
                                                       },
                                        "questionType":  {
                                                             "all":  "Barcha turlar",
@@ -1122,9 +1144,9 @@
                                        "listening":  "Listening"
                                    },
                        "difficulty":  {
-                                          "beginner":  "Boshlang\u0027ich",
+                                          "beginner":  "Oson",
                                           "intermediate":  "O\u0027rta",
-                                          "advanced":  "Yuqori"
+                                          "advanced":  "Qiyin"
                                       },
                        "status":  {
                                       "published":  "Nashr qilingan",
@@ -1237,9 +1259,9 @@
                                             "published":  "Nashr qilingan"
                                         },
                              "difficulty":  {
-                                                "beginner":  "Boshlang\u0027ich",
+                                                "beginner":  "Oson",
                                                 "intermediate":  "O\u0027rta",
-                                                "advanced":  "Yuqori"
+                                                "advanced":  "Qiyin"
                                             },
                              "fullListeningAudio":  {
                                                         "button":  "To\u0027liq audio",

@@ -18,6 +18,7 @@ import {ChartContainer} from "@/components/ui/chart";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {cn} from "@/lib/utils";
+import {setGettingStartedProgressChecked} from "@/lib/getting-started-storage";
 
 type Notice = {
   title: string;
@@ -118,6 +119,11 @@ export function StudentProgressAnalyticsClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<StudentAnalyticsResponse>(EMPTY_ANALYTICS);
   const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Frontend-only “Getting Started” checklist: mark progress as checked when the user opens Analytics.
+    setGettingStartedProgressChecked();
+  }, []);
 
   useEffect(() => {
     let active = true;

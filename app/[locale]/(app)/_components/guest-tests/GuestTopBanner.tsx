@@ -8,9 +8,16 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 
+import {useGuestDemoStats} from "./useGuestDemoStats";
+
 export function GuestTopBanner() {
   const t = useTranslations("guest");
   const locale = useLocale();
+  const stats = useGuestDemoStats(true);
+  const demoCount = stats?.totalPublicCount ?? 4;
+  const readingCount = stats?.readingPublicCount ?? 2;
+  const listeningCount = stats?.listeningPublicCount ?? 2;
+  const totalAll = stats?.totalAllCount ?? null;
 
   return (
     <Card className="overflow-hidden border-blue-300/60 bg-gradient-to-r from-card to-blue-50/30 py-0 shadow-sm dark:from-card dark:to-blue-500/10 dark:border-blue-500/40">
@@ -21,10 +28,12 @@ export function GuestTopBanner() {
           </div>
           <div>
             <p className="text-base font-semibold text-foreground">{t("banner.title")}</p>
-            <p className="mt-0.5 max-w-[720px] text-sm leading-relaxed text-muted-foreground">{t("banner.desc")}</p>
+            <p className="mt-0.5 max-w-[720px] text-sm leading-relaxed text-muted-foreground">
+              {t("banner.desc", {count: demoCount, reading: readingCount, listening: listeningCount})}
+            </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               <Badge variant="secondary" className="h-6 px-2.5 text-[11px]">
-                {t("banner.badges.demo")}
+                {t("banner.badges.demo", {count: demoCount})}
               </Badge>
               <Badge variant="secondary" className="h-6 px-2.5 text-[11px]">
                 {t("banner.badges.scoreOnly")}
@@ -39,8 +48,12 @@ export function GuestTopBanner() {
         <div className="flex w-full items-center justify-end gap-4 lg:w-auto">
           <div className="text-right leading-tight">
             <p className="text-[11px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">{t("banner.used")}</p>
-            <p className="text-xl font-bold text-blue-600">4</p>
-            <p className="text-[11px] text-muted-foreground">{t("banner.available")}</p>
+            <p className="text-xl font-bold text-blue-600">
+              {typeof totalAll === "number" ? `${demoCount}/${totalAll}` : `${demoCount}`}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {typeof totalAll === "number" ? t("banner.available", {count: totalAll}) : t("banner.available")}
+            </p>
           </div>
           <Button asChild className="h-10 rounded-xl bg-blue-600 px-5 text-sm font-semibold hover:bg-blue-600/90">
             <Link href={`/${locale}/auth`}>{t("banner.signup")}</Link>
@@ -50,4 +63,3 @@ export function GuestTopBanner() {
     </Card>
   );
 }
-

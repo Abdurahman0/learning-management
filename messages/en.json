@@ -166,11 +166,11 @@
                   "brand":  "EnglishLabs",
                   "banner":  {
                                  "title":  "Guest mode active",
-                                 "desc":  "You have access to 4 demo tests (2 Reading, 2 Listening). Register to unlock all tests, full review, history, and recommendations.",
+                                 "desc":  "You have access to {count} demo tests ({reading} Reading, {listening} Listening). Register to unlock all tests, full review, history, and recommendations.",
                                  "used":  "Demo access",
-                                 "available":  "tests available",
+                                 "available":  "{count} tests available",
                                  "badges":  {
-                                                "demo":  "4 demo tests",
+                                                "demo":  "{count} demo tests",
                                                 "scoreOnly":  "Score only",
                                                 "analysisAfterSignup":  "Full analysis after signup"
                                             },
@@ -191,9 +191,9 @@
                                   "difficulty":  "Difficulty",
                                   "sort":  "Sort by",
                                   "difficultyAll":  "All",
-                                  "easy":  "Beginner",
-                                  "medium":  "Intermediate",
-                                  "hard":  "Advanced",
+                                  "easy":  "Easy",
+                                  "medium":  "Medium",
+                                  "hard":  "Hard",
                                   "sortNewest":  "Newest",
                                   "sortPopular":  "Popular",
                                   "sortHighest":  "A-Z"
@@ -882,6 +882,19 @@
                               },
                       "title":  "Dashboard",
                       "welcome":  "Welcome back, {name}! You\u0027re {bandsAway} bands away from your goal.",
+                      "gettingStarted":  {
+                                             "title":  "Getting Started",
+                                             "subtitle":  "{done} of {total} completed",
+                                             "percentLabel":  "done",
+                                             "done":  "Done",
+                                             "dismiss":  "Dismiss",
+                                             "tasks":  {
+                                                           "survey":  "Complete Survey",
+                                                           "listening":  "Try a Listening test",
+                                                           "reading":  "Try a Reading test",
+                                                           "progress":  "Check your progress"
+                                                       }
+                                         },
                       "practiceWeakAreas":  "Practice Weak Areas",
                       "startNewTest":  "Start New Test",
                       "resumePractice":  "Resume Practice",
@@ -900,6 +913,15 @@
                                    "testsTaken":  "Tests Taken",
                                    "avgScore":  "Avg Score",
                                    "studyStreak":  "Study Streak",
+                                   "examCountdown":  {
+                                                         "label":  "Exam countdown",
+                                                         "labelWithDate":  "Exam in ({date})",
+                                                         "valueNotSet":  "Set exam date",
+                                                         "valueToday":  "Exam today",
+                                                         "valuePassed":  "Exam passed",
+                                                         "valueOneDay":  "1 day left",
+                                                         "valueDays":  "{days} days left"
+                                                     },
                                    "reading":  "Reading Accuracy",
                                    "listening":  "Listening Accuracy",
                                    "streakRule":  "Streak rule: complete at least one test today to gain +1; no test today applies -1 (min 0)."
@@ -1080,9 +1102,9 @@
                                                   },
                                        "difficulty":  {
                                                           "all":  "All Levels",
-                                                          "beginner":  "Beginner",
-                                                          "intermediate":  "Intermediate",
-                                                          "advanced":  "Advanced"
+                                                          "beginner":  "Easy",
+                                                          "intermediate":  "Medium",
+                                                          "advanced":  "Hard"
                                                       },
                                        "questionType":  {
                                                             "all":  "All Types",
@@ -1122,9 +1144,9 @@
                                        "listening":  "Listening"
                                    },
                        "difficulty":  {
-                                          "beginner":  "Beginner",
-                                          "intermediate":  "Intermediate",
-                                          "advanced":  "Advanced"
+                                          "beginner":  "Easy",
+                                          "intermediate":  "Medium",
+                                          "advanced":  "Hard"
                                       },
                        "status":  {
                                       "published":  "Published",
@@ -1237,9 +1259,9 @@
                                             "published":  "Published"
                                         },
                              "difficulty":  {
-                                                "beginner":  "Beginner",
-                                                "intermediate":  "Intermediate",
-                                                "advanced":  "Advanced"
+                                                "beginner":  "Easy",
+                                                "intermediate":  "Medium",
+                                                "advanced":  "Hard"
                                             },
                              "fullListeningAudio":  {
                                                         "button":  "Full audio",

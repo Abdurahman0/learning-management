@@ -464,21 +464,25 @@ function ensureGroupContentForApi(
   }
 
   if (type === "matching_information") {
-    if (module === "listening") {
-      const sourceRows = Array.isArray(content.options)
-        ? content.options
-        : Array.isArray(content.choices)
-          ? content.choices
-          : [];
-      const options = sourceRows
-        .map((item) => {
-          if (typeof item === "string") return item;
-          const row = asRecord(item);
-          return toStringSafe(row.text ?? row.label ?? row.key);
-        })
-        .map((item) => item.trim())
-        .filter(Boolean);
+    // Reading uses MATCH_PARA_INFO, which does not accept shared group content on the backend.
+    if (module !== "listening") {
+      return null;
+    }
+    const sourceRows = Array.isArray(content.options)
+      ? content.options
+      : Array.isArray(content.choices)
+        ? content.choices
+        : [];
+    const options = sourceRows
+      .map((item) => {
+        if (typeof item === "string") return item;
+        const row = asRecord(item);
+        return toStringSafe(row.text ?? row.label ?? row.key);
+      })
+      .map((item) => item.trim())
+      .filter(Boolean);
 
+    if (options.length > 0) {
       return {
         options: options.map((text, index) => ({
           key: toOptionKey(index),
@@ -486,7 +490,8 @@ function ensureGroupContentForApi(
         }))
       };
     }
-    return null;
+
+    return fallback;
   }
 
   if (type === "matching_headings") {
@@ -661,6 +666,7 @@ function resolveGroupContentForSync(group: QuestionGroup, module: "reading" | "l
   }
 
   if (group.type === "matching_information" && module !== "listening") {
+    // Reading backend (MATCH_PARA_INFO) does not accept group_content_json.
     return null;
   }
 

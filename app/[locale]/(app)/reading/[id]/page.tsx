@@ -428,7 +428,70 @@ function extractHeadingOptions(group: StudentAttemptQuestionGroup): string[] {
   return headings.length ? headings : ["Heading 1", "Heading 2", "Heading 3", "Heading 4", "Heading 5"];
 }
 
-function extractMatchingChoiceOptions(group: StudentAttemptQuestionGroup): string[] {
+function generateRangeOptions(startRaw: string, endRaw: string): string[] {
+  const start = startRaw.trim();
+  const end = endRaw.trim();
+  if (!start || !end) return [];
+
+  // Numeric range like 1-7
+  if (/^\d+$/.test(start) && /^\d+$/.test(end)) {
+    const from = Number(start);
+    const to = Number(end);
+    if (!Number.isFinite(from) || !Number.isFinite(to) || from <= 0 || to <= 0) return [];
+    const step = from <= to ? 1 : -1;
+    const result: string[] = [];
+    for (let n = from; step > 0 ? n <= to : n >= to; n += step) result.push(String(n));
+    return result;
+  }
+
+  // Letter range like A-I
+  if (/^[A-Z]$/.test(start) && /^[A-Z]$/.test(end)) {
+    const from = start.charCodeAt(0);
+    const to = end.charCodeAt(0);
+    const step = from <= to ? 1 : -1;
+    const result: string[] = [];
+    for (let c = from; step > 0 ? c <= to : c >= to; c += step) result.push(String.fromCharCode(c));
+    return result;
+  }
+
+  return [];
+}
+
+function extractRangeFromInstructionText(text: string): string[] {
+  const source = String(text ?? "");
+  if (!source) return [];
+
+  // Match "A-I" / "A – I" / "1-7", etc.
+  const match = source.match(/\b([A-Z]|\d{1,2})\s*[-–—]\s*([A-Z]|\d{1,2})\b/);
+  if (!match) return [];
+  return generateRangeOptions(match[1] ?? "", match[2] ?? "");
+}
+
+function extractParagraphMarkersFromPassageText(passageText: string): string[] {
+  const text = String(passageText ?? "");
+  if (!text) return [];
+
+  const markers: string[] = [];
+  const seen = new Set<string>();
+
+  // Prefer explicit header lines like "A", "A.", "A)", "**A**"
+  const lineRegex = /^\s*(?:\*\*|\*)?([A-Z])(?:\*\*|\*)?\s*(?:[.)])?\s*$/gm;
+  let match: RegExpExecArray | null;
+  while ((match = lineRegex.exec(text))) {
+    const key = String(match[1] ?? "").trim().toUpperCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    markers.push(key);
+  }
+
+  return markers;
+}
+
+function extractMatchingChoiceOptions(
+  group: StudentAttemptQuestionGroup,
+  instructionText?: string,
+  passageText?: string
+): string[] {
   const content = asRecord(group.group_content_json);
   const optionRows = asArray<unknown>(content?.choices).length
     ? asArray<unknown>(content?.choices)
@@ -449,7 +512,23 @@ function extractMatchingChoiceOptions(group: StudentAttemptQuestionGroup): strin
     .map((item) => item.trim())
     .filter(Boolean);
 
-  return options.length ? options : ["A", "B", "C", "D", "E", "F"];
+  if (options.length) {
+    return options;
+  }
+
+  // Reading MATCH_PARA_INFO doesn't accept shared group content on the backend.
+  // Derive the available options from instructions or from the passage text headers (A, B, C...).
+  const derivedFromInstruction = extractRangeFromInstructionText(instructionText ?? toStringSafe(group.instructions));
+  if (derivedFromInstruction.length) {
+    return derivedFromInstruction;
+  }
+
+  const derivedFromPassage = extractParagraphMarkersFromPassageText(passageText ?? "");
+  if (derivedFromPassage.length) {
+    return derivedFromPassage;
+  }
+
+  return ["A", "B", "C", "D", "E", "F"];
 }
 
 function extractSummaryInfo(group: StudentAttemptQuestionGroup): { summaryText: string; wordBank: string[] | null } {
@@ -788,7 +867,7 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
       const groupTitle = buildGroupTitle(group);
       const instruction = toStringSafe(group.instructions);
       const headingOptions = extractHeadingOptions(group);
-      const matchingChoiceOptions = extractMatchingChoiceOptions(group);
+      const matchingChoiceOptions = extractMatchingChoiceOptions(group, instruction, toStringSafe(passage.passage_text));
 
       for (const question of group.questions as StudentAttemptQuestion[]) {
         const number = toNumberSafe(question.question_number, questions.length + 1);

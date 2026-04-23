@@ -70,7 +70,7 @@ export function ReviewHeader({
               })() ? (
                 <Badge
                   variant="outline"
-                  className="mb-1 rounded-full border-blue-200 bg-white/80 px-3 py-1 text-[11px] font-semibold text-blue-700 shadow-sm shadow-blue-100/70 dark:border-blue-500/35 dark:bg-blue-500/10 dark:text-blue-200 dark:shadow-none"
+                  className="mb-1 inline-flex h-9 items-center rounded-full border-blue-200 bg-white/80 px-4 text-sm font-semibold text-blue-700 shadow-sm shadow-blue-100/70 dark:border-blue-500/35 dark:bg-blue-500/10 dark:text-blue-200 dark:shadow-none sm:h-10 sm:px-5 sm:text-[15px]"
                 >
                   Band {String(bandScore).trim()}
                 </Badge>

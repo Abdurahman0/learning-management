@@ -124,6 +124,68 @@ function toTableRowsText(value: unknown) {
     .join("\n");
 }
 
+function inferRangeTokenFromChoices(values: string[]) {
+  const cleaned = values.map((value) => value.trim()).filter(Boolean);
+  if (cleaned.length < 2) return null;
+
+  const letterOnly = cleaned.every((value) => /^[A-Z]$/.test(value));
+  if (letterOnly) {
+    const codes = cleaned.map((value) => value.charCodeAt(0));
+    const sequential = codes.every((code, idx) => (idx === 0 ? true : code === codes[idx - 1] + 1));
+    if (!sequential) return null;
+    return `${cleaned[0]}-${cleaned[cleaned.length - 1]}`;
+  }
+
+  const numberOnly = cleaned.every((value) => /^\d{1,2}$/.test(value));
+  if (numberOnly) {
+    const nums = cleaned.map((value) => Number(value));
+    const sequential = nums.every((num, idx) => (idx === 0 ? true : num === nums[idx - 1] + 1));
+    if (!sequential) return null;
+    return `${cleaned[0]}-${cleaned[cleaned.length - 1]}`;
+  }
+
+  return null;
+}
+
+function hasRangeInText(text: string) {
+  return /\b([A-Z]|\d{1,2})\s*[-–—]\s*([A-Z]|\d{1,2})\b/.test(text);
+}
+
+function generateRangeOptions(startRaw: string, endRaw: string): string[] {
+  const start = startRaw.trim();
+  const end = endRaw.trim();
+  if (!start || !end) return [];
+
+  if (/^\d+$/.test(start) && /^\d+$/.test(end)) {
+    const from = Number(start);
+    const to = Number(end);
+    if (!Number.isFinite(from) || !Number.isFinite(to)) return [];
+    const step = from <= to ? 1 : -1;
+    const out: string[] = [];
+    for (let n = from; step > 0 ? n <= to : n >= to; n += step) out.push(String(n));
+    return out;
+  }
+
+  if (/^[A-Z]$/.test(start) && /^[A-Z]$/.test(end)) {
+    const from = start.charCodeAt(0);
+    const to = end.charCodeAt(0);
+    const step = from <= to ? 1 : -1;
+    const out: string[] = [];
+    for (let c = from; step > 0 ? c <= to : c >= to; c += step) out.push(String.fromCharCode(c));
+    return out;
+  }
+
+  return [];
+}
+
+function extractRangeFromInstructionText(text: string) {
+  const source = String(text ?? "");
+  if (!source) return [];
+  const match = source.match(/\b([A-Z]|\d{1,2})\s*[-–—]\s*([A-Z]|\d{1,2})\b/);
+  if (!match) return [];
+  return generateRangeOptions(match[1] ?? "", match[2] ?? "");
+}
+
 export function QuestionGroupsPanel({
   mode,
   module,
@@ -245,6 +307,11 @@ export function QuestionGroupsPanel({
   };
 
   const openEditEditor = (group: QuestionGroup) => {
+    const derivedChoicesFromInstructions =
+      group.type === "matching_information" && module === "reading"
+        ? extractRangeFromInstructionText(group.instructions ?? "").join("\n")
+        : "";
+
     setEditor({
       open: true,
       mode: "edit",
@@ -277,7 +344,7 @@ export function QuestionGroupsPanel({
                   .filter(Boolean)
                   .join("\n")
               : ""
-        )),
+        ) || derivedChoicesFromInstructions),
       tableColumns: toLineJoinedValues((group.groupContentJson as any)?.columns),
       tableRows: toTableRowsText((group.groupContentJson as any)?.rows)
     });
@@ -299,6 +366,17 @@ export function QuestionGroupsPanel({
       .map((value) => value.trim())
       .filter(Boolean)
       .map((row) => row.split("|").map((cell) => cell.trim()));
+
+    let nextInstructions = editor.instructions;
+    if (editor.type === "matching_information" && module === "reading") {
+      // Backend docs: MATCH_PARA_INFO group_content_json must be null.
+      // We still let admin type A..G here, but we persist it by embedding the range into instructions
+      // so the student UI can derive the option list.
+      const inferredRange = inferRangeTokenFromChoices(parsedChoices);
+      if (inferredRange && !hasRangeInText(nextInstructions)) {
+        nextInstructions = `${nextInstructions.trim()}\n\nThe Reading Passage has paragraphs ${inferredRange}.`.trim();
+      }
+    }
 
     const groupContent =
       editor.type === "multiple_choice" && module === "listening"
@@ -338,9 +416,9 @@ export function QuestionGroupsPanel({
             : undefined;
 
     if (editor.mode === "create") {
-      onCreateGroup(editor.type, editor.from, editor.to, editor.instructions, groupContent);
+      onCreateGroup(editor.type, editor.from, editor.to, nextInstructions, groupContent);
     } else if (editor.groupId) {
-      onEditGroup(editor.groupId, editor.type, editor.from, editor.to, editor.instructions, groupContent);
+      onEditGroup(editor.groupId, editor.type, editor.from, editor.to, nextInstructions, groupContent);
     }
 
     setEditor((current) => ({...current, open: false}));

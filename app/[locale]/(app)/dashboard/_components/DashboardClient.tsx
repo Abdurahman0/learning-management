@@ -7,6 +7,7 @@ import {Brain, Sparkles} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {ContinueCard} from "./ContinueCard";
+import {GettingStartedCard} from "./GettingStartedCard";
 import {DashboardKpis} from "./DashboardKpis";
 import {ScoreProgressChart} from "./ScoreProgressChart";
 import {SkillsSnapshot} from "./SkillsSnapshot";
@@ -17,9 +18,11 @@ import {Separator} from "@/components/ui/separator";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {studentDashboardService} from "@/src/services/student/dashboard.service";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
+import {studentProfileService} from "@/src/services/student/profile.service";
 import {StudentApiError} from "@/src/services/student/types";
 import type {StudentDashboardResponse} from "@/src/services/student/types";
 import {ONBOARDING_CHANGE_EVENT, openOnboardingWizard, readOnboardingState} from "@/lib/onboarding-storage";
+import {GETTING_STARTED_CHANGE_EVENT, readGettingStartedState} from "@/lib/getting-started-storage";
 
 type Notice = {
   title: string;
@@ -107,6 +110,18 @@ function formatDateLabel(value: string) {
     day: "2-digit",
     year: "numeric"
   }).format(date);
+}
+
+function toIsoDateLocal(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function parseBackendIso(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function buildDashboardViewModel(payload: StudentDashboardResponse): DashboardViewModel {
@@ -208,16 +223,67 @@ export function DashboardClient() {
   const [dashboardData, setDashboardData] = useState<DashboardViewModel>(createEmptyDashboardViewModel);
   const [reviewLoadingId, setReviewLoadingId] = useState<string | null>(null);
   const [onboardingStatus, setOnboardingStatus] = useState<"none" | "pending" | "skipped" | "completed">("none");
+  const [onboardingExamDate, setOnboardingExamDate] = useState<string | null>(null);
+  const [profileExamDate, setProfileExamDate] = useState<string | null>(null);
+  const [profileJoinedAt, setProfileJoinedAt] = useState<string | null>(null);
+  const [gettingStartedDismissed, setGettingStartedDismissed] = useState(false);
+  const [gettingStartedProgressChecked, setGettingStartedProgressChecked] = useState(false);
 
   useEffect(() => {
     const refresh = () => {
       const state = readOnboardingState();
       setOnboardingStatus(state?.status ?? "none");
+      setOnboardingExamDate(state?.answers?.examDate ?? null);
     };
 
     refresh();
     window.addEventListener(ONBOARDING_CHANGE_EVENT, refresh);
     return () => window.removeEventListener(ONBOARDING_CHANGE_EVENT, refresh);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    studentProfileService
+      .getProfile()
+      .then((profile) => {
+        if (!active) return;
+        setProfileJoinedAt(profile.date_joined ?? null);
+        if (!profile.exam_datetime) {
+          setProfileExamDate(null);
+          return;
+        }
+
+        const parsed = parseBackendIso(profile.exam_datetime);
+        if (!parsed) {
+          setProfileExamDate(null);
+          return;
+        }
+
+        setProfileExamDate(toIsoDateLocal(parsed));
+      })
+      .catch(() => {
+        // Dashboard should still work if the profile endpoint is unavailable.
+        if (!active) return;
+        setProfileExamDate(null);
+        setProfileJoinedAt(null);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => {
+      const state = readGettingStartedState();
+      setGettingStartedDismissed(Boolean(state?.dismissed));
+      setGettingStartedProgressChecked(Boolean(state?.progressChecked));
+    };
+
+    refresh();
+    window.addEventListener(GETTING_STARTED_CHANGE_EVENT, refresh);
+    return () => window.removeEventListener(GETTING_STARTED_CHANGE_EVENT, refresh);
   }, []);
 
   useEffect(() => {
@@ -290,6 +356,30 @@ export function DashboardClient() {
     pushNotice(t("feedback.placeholder.title"), t("feedback.placeholder.description"));
   };
 
+  const examDate = onboardingExamDate ?? profileExamDate;
+
+  const completedSurvey = onboardingStatus === "completed";
+  const triedListening = dashboardData.recentHistory.some((row) => row.module === "listening");
+  const triedReading = dashboardData.recentHistory.some((row) => row.module === "reading");
+  const checkedProgress = gettingStartedProgressChecked;
+  const allGettingStartedDone = completedSurvey && triedListening && triedReading && checkedProgress;
+
+  const isNewUser = (() => {
+    if (profileJoinedAt) {
+      const parsed = parseBackendIso(profileJoinedAt);
+      if (!parsed) return dashboardData.userSummary.testsTaken <= 1;
+      const now = new Date();
+      const joinedDay = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffDays = Math.round((today.getTime() - joinedDay.getTime()) / 86400000);
+      return diffDays <= 14;
+    }
+
+    return dashboardData.userSummary.testsTaken <= 1;
+  })();
+
+  const showGettingStarted = isNewUser && !gettingStartedDismissed && !allGettingStartedDone;
+
   return (
     <main className="mx-auto min-w-0 w-full max-w-445 overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
       <section className="flex flex-wrap items-start justify-between gap-4">
@@ -333,10 +423,20 @@ export function DashboardClient() {
         </Card>
       ) : null}
 
+      <GettingStartedCard
+        isVisible={showGettingStarted}
+        completedSurvey={completedSurvey}
+        triedListening={triedListening}
+        triedReading={triedReading}
+        checkedProgress={checkedProgress}
+      />
+
       <div className="mt-5">
         <DashboardKpis
           summary={dashboardData.userSummary}
           onCurrentBandClick={() => document.getElementById("skills-snapshot")?.scrollIntoView({behavior: "smooth", block: "start"})}
+          examDate={examDate}
+          onExamCountdownClick={() => openOnboardingWizard()}
         />
         <p className="mt-2 text-xs text-muted-foreground">{t("kpis.streakRule")}</p>
       </div>

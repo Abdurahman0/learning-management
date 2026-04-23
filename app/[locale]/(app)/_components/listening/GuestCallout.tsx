@@ -8,9 +8,16 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 
+import {useGuestDemoStats} from "../guest-tests/useGuestDemoStats";
+
 export function GuestCallout() {
   const t = useTranslations("guest");
   const locale = useLocale();
+  const stats = useGuestDemoStats(true);
+  const demoCount = stats?.totalPublicCount ?? 4;
+  const readingCount = stats?.readingPublicCount ?? 2;
+  const listeningCount = stats?.listeningPublicCount ?? 2;
+  const totalAll = stats?.totalAllCount ?? null;
 
   return (
     <Card className="overflow-hidden border-blue-300/60 bg-gradient-to-r from-card to-blue-50/30 py-0 shadow-sm dark:from-card dark:to-blue-500/10 dark:border-blue-500/40">
@@ -22,10 +29,12 @@ export function GuestCallout() {
             </span>
             <div className="min-w-0">
               <p className="text-base font-semibold text-foreground">{t("banner.title")}</p>
-              <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">{t("banner.desc")}</p>
+              <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
+                {t("banner.desc", {count: demoCount, reading: readingCount, listening: listeningCount})}
+              </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <Badge variant="secondary" className="h-auto px-2.5 py-1 text-[11px] whitespace-normal">
-                  {t("banner.badges.demo")}
+                  {t("banner.badges.demo", {count: demoCount})}
                 </Badge>
                 <Badge variant="secondary" className="h-auto px-2.5 py-1 text-[11px] whitespace-normal">
                   {t("banner.badges.scoreOnly")}
@@ -39,15 +48,21 @@ export function GuestCallout() {
 
           <div className="hidden text-right sm:block">
             <p className="text-[11px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">{t("banner.used")}</p>
-            <p className="text-xl font-bold text-blue-600">4</p>
-            <p className="text-[11px] text-muted-foreground">{t("banner.available")}</p>
+            <p className="text-xl font-bold text-blue-600">
+              {typeof totalAll === "number" ? `${demoCount}/${totalAll}` : `${demoCount}`}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {typeof totalAll === "number" ? t("banner.available", {count: totalAll}) : t("banner.available")}
+            </p>
           </div>
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3">
           <div className="text-right sm:hidden">
             <p className="text-[11px] font-semibold tracking-[0.2em] text-muted-foreground uppercase">{t("banner.used")}</p>
-            <p className="text-xl font-bold text-blue-600 leading-none">4</p>
+            <p className="text-xl font-bold text-blue-600 leading-none">
+              {typeof totalAll === "number" ? `${demoCount}/${totalAll}` : `${demoCount}`}
+            </p>
           </div>
           <Button asChild className="h-9 rounded-lg bg-blue-600 px-4 text-sm font-semibold hover:bg-blue-600/90">
             <Link href={`/${locale}/auth`}>{t("banner.signup")}</Link>
