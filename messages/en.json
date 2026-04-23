@@ -520,6 +520,7 @@
                                    "actions":  {
                                                    "back":  "Back",
                                                    "next":  "Next",
+                                                   "letsGo":  "Let's go",
                                                    "finish":  "Finish",
                                                    "skip":  "Skip for now"
                                                },

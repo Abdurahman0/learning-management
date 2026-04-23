@@ -370,6 +370,336 @@ export function OnboardingWizard() {
     router.replace(`/${locale}${returnTo || "/dashboard"}`);
   };
 
+  const progressPercent = steps.length > 0 ? Math.round(((stepIndex + 1) / steps.length) * 100) : 0;
+
+  const selectModuleAndMaybeAdvance = (key: "strongest" | "weakest", value: OnboardingModule) => {
+    setAnswers((prev) => ({...prev, [key]: value}));
+    // “Game-like” flow: choosing an option moves you forward.
+    if (canGoNext) {
+      window.setTimeout(() => setStepIndex((current) => Math.min(steps.length - 1, current + 1)), 220);
+    }
+  };
+
+  return (
+    <div className="mx-auto w-full max-w-[1100px] py-4 sm:py-8">
+      <div className="relative overflow-hidden rounded-3xl border border-border/70 bg-linear-to-br from-blue-600/10 via-card/70 to-card/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] animate-in fade-in duration-500">
+        <div className="pointer-events-none absolute -top-28 -right-36 h-80 w-80 rounded-full bg-blue-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 -left-36 h-96 w-96 rounded-full bg-indigo-500/15 blur-3xl" />
+
+        <header className="relative flex items-center justify-between gap-3">
+          <button
+            type="button"
+            disabled={!canGoBack}
+            onClick={() => setStepIndex((current) => Math.max(0, current - 1))}
+            className={cn(
+              "inline-flex size-11 items-center justify-center rounded-2xl border border-border/70 bg-background/50 text-foreground transition",
+              canGoBack ? "cursor-pointer hover:bg-muted/40" : "cursor-not-allowed opacity-50"
+            )}
+            aria-label={t("actions.back")}
+            title={t("actions.back")}
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+
+          <div className="flex min-w-0 flex-1 flex-col items-center gap-3">
+            <div className="flex items-center gap-3">
+              <BrandIcon size={36} className="shadow-none" />
+              <div className="min-w-0 text-center">
+                <p className="truncate text-sm font-semibold tracking-tight text-foreground">{t("title")}</p>
+                <p className="truncate text-xs text-muted-foreground">{t("progress", {current: stepIndex + 1, total: steps.length})}</p>
+              </div>
+            </div>
+
+            <div className="relative w-full max-w-[760px]">
+              <div className="h-3 w-full overflow-hidden rounded-full bg-muted/35">
+                <div
+                  className="h-full rounded-full bg-linear-to-r from-blue-600 via-indigo-500 to-violet-500 transition-[width] duration-700"
+                  style={{width: `${progressPercent}%`}}
+                />
+              </div>
+              <div
+                className="absolute -top-4 transition-[left] duration-700"
+                style={{left: `calc(${progressPercent}% - 18px)`}}
+                aria-hidden="true"
+              >
+                <span className="inline-flex size-9 items-center justify-center rounded-2xl border border-border/70 bg-background/80 shadow-sm shadow-slate-950/5">
+                  <BrandIcon size={22} />
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-2xl border border-border/70 bg-background/50 px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25 disabled:opacity-60"
+            disabled={isSaving}
+            onClick={() => closeAndPersist("skipped")}
+          >
+            <X className="size-4" />
+            {t("actions.skip")}
+          </button>
+        </header>
+
+        <main className="relative mt-8 grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center">
+          <div className="flex flex-col items-center justify-center gap-5 text-center">
+            <div className="rounded-3xl border border-border/70 bg-background/55 p-4 shadow-sm shadow-slate-950/5 animate-in fade-in zoom-in-95 duration-500">
+              <BrandIcon size={72} className="shadow-none" />
+            </div>
+
+            <div className="relative w-full max-w-[520px] rounded-3xl border border-blue-500/35 bg-blue-500/10 px-5 py-4 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div className="pointer-events-none absolute -left-2 top-8 size-4 rotate-45 border-l border-b border-blue-500/35 bg-blue-500/10" />
+              <p className="text-base font-semibold tracking-tight text-foreground sm:text-lg">{activeStep.title}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{activeStep.subtitle}</p>
+            </div>
+
+            <p className="max-w-[520px] text-xs text-muted-foreground">{t("hint")}</p>
+          </div>
+
+          <Card className="w-full overflow-hidden rounded-3xl border-border/70 bg-card/95 shadow-xl shadow-slate-950/10 animate-in fade-in duration-500">
+            <div className="p-5 sm:p-7">
+              {apiError ? (
+                <div className="mb-4 rounded-2xl border border-rose-400/35 bg-rose-500/10 p-3 text-sm text-rose-700 dark:text-rose-200">
+                  {apiError}
+                </div>
+              ) : null}
+
+              {isLoadingProfile ? (
+                <div className="mb-4 rounded-2xl border border-border/70 bg-background/50 p-3 text-sm text-muted-foreground">
+                  {t("loading.profile")}
+                </div>
+              ) : null}
+
+              {activeStep.key === "examDate" ? (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>{t("fields.examDate.label")}</Label>
+                    <HandmadeDatePicker
+                      value={answers.examDate}
+                      onChange={(iso) => setAnswers((prev) => ({...prev, examDate: iso}))}
+                      label={t("fields.examDate.placeholder")}
+                      labels={{
+                        prevMonth: t("datePicker.prevMonth"),
+                        nextMonth: t("datePicker.nextMonth"),
+                        clear: t("datePicker.clear"),
+                        today: t("datePicker.today")
+                      }}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">{t("fields.examDate.timeLabel")}</Label>
+                      <Select
+                        value={answers.examTime ?? "09:00"}
+                        onValueChange={(value) => setAnswers((prev) => ({...prev, examTime: value}))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl border-border/70 bg-background/60">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-72">
+                          {Array.from({length: 48}, (_, index) => index).map((slot) => {
+                            const minutes = slot * 30;
+                            const h = Math.floor(minutes / 60);
+                            const m = minutes % 60;
+                            const value = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+                            return (
+                              <SelectItem key={value} value={value}>
+                                {value}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">{t("fields.examDate.timeZoneLabel")}</Label>
+                      <div className="flex h-11 items-center rounded-xl border border-border/70 bg-background/50 px-3 text-sm text-muted-foreground">
+                        {t("fields.examDate.timeZoneValue")}
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">{t("fields.examDate.help")}</p>
+                </div>
+              ) : null}
+
+              {activeStep.key === "targets" ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">{t("fields.targets.help")}</p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {MODULES.map((mod) => (
+                      <div
+                        key={mod.key}
+                        className="rounded-2xl border border-border/70 bg-background/50 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                      >
+                        <p className="text-sm font-semibold">{t(`modules.${mod.key}` as const)}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{t("fields.targets.bandHint")}</p>
+                        <div className="mt-3">
+                          <BandSelect
+                            value={answers.targets[mod.key] ?? DEFAULT_TARGETS[mod.key]}
+                            onChange={(value) =>
+                              setAnswers((prev) => ({
+                                ...prev,
+                                targets: {...prev.targets, [mod.key]: value}
+                              }))
+                            }
+                            ariaLabel={`${mod.label} target band`}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {activeStep.key === "strongest" ? (
+                <div className="space-y-3">
+                  <Label className="text-sm">{t("fields.strongest.label")}</Label>
+                  <div className="grid grid-cols-1 gap-3">
+                    {MODULES.map((mod) => {
+                      const selected = answers.strongest === mod.key;
+                      return (
+                        <button
+                          key={mod.key}
+                          type="button"
+                          disabled={isSaving}
+                          onClick={() => selectModuleAndMaybeAdvance("strongest", mod.key)}
+                          className={cn(
+                            "flex h-12 items-center justify-between rounded-2xl border px-4 text-left text-sm font-semibold transition disabled:opacity-60",
+                            selected
+                              ? "border-blue-500/50 bg-blue-600/10 text-foreground"
+                              : "border-border/70 bg-background/50 hover:bg-muted/35"
+                          )}
+                        >
+                          <span>{t(`modules.${mod.key}` as const)}</span>
+                          <ChevronRight className={cn("size-4 text-muted-foreground", selected && "text-blue-500")} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {activeStep.key === "weakest" ? (
+                <div className="space-y-3">
+                  <Label className="text-sm">{t("fields.weakest.label")}</Label>
+                  <div className="grid grid-cols-1 gap-3">
+                    {MODULES.map((mod) => {
+                      const selected = answers.weakest === mod.key;
+                      return (
+                        <button
+                          key={mod.key}
+                          type="button"
+                          disabled={isSaving}
+                          onClick={() => selectModuleAndMaybeAdvance("weakest", mod.key)}
+                          className={cn(
+                            "flex h-12 items-center justify-between rounded-2xl border px-4 text-left text-sm font-semibold transition disabled:opacity-60",
+                            selected
+                              ? "border-blue-500/50 bg-blue-600/10 text-foreground"
+                              : "border-border/70 bg-background/50 hover:bg-muted/35"
+                          )}
+                        >
+                          <span>{t(`modules.${mod.key}` as const)}</span>
+                          <ChevronRight className={cn("size-4 text-muted-foreground", selected && "text-blue-500")} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {activeStep.key === "hours" ? (
+                <div className="space-y-4">
+                  <div className="rounded-3xl border border-border/70 bg-background/50 p-5 text-center">
+                    <p className="text-sm font-semibold tracking-tight">{t("fields.hours.label")}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{t("fields.hours.help")}</p>
+
+                    <div className="mt-5 flex items-center justify-center">
+                      <div className="relative rounded-3xl border border-border/70 bg-background/80 px-6 py-4 shadow-sm shadow-slate-950/5">
+                        <div className="pointer-events-none absolute -bottom-2 left-1/2 size-4 -translate-x-1/2 rotate-45 border-r border-b border-border/70 bg-background/80" />
+                        <p className="text-4xl font-semibold tracking-tight text-foreground">
+                          {Math.round(answers.hoursPerDay ?? 2)}
+                          <span className="ml-2 text-base font-medium text-muted-foreground">{t("fields.hours.unit")}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6">
+                      <input
+                        type="range"
+                        min={0}
+                        max={8}
+                        step={1}
+                        value={Math.round(answers.hoursPerDay ?? 2)}
+                        onChange={(event) => setAnswers((prev) => ({...prev, hoursPerDay: Number(event.target.value)}))}
+                        className="w-full accent-blue-600"
+                        aria-label={t("fields.hours.label")}
+                      />
+                      <div className="mt-2 flex justify-between text-[11px] text-muted-foreground">
+                        <span>0</span>
+                        <span>2</span>
+                        <span>4</span>
+                        <span>6</span>
+                        <span>8</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="mt-7 flex items-center justify-center">
+                {canGoNext ? (
+                  <Button
+                    type="button"
+                    className="h-12 w-full max-w-[360px] rounded-2xl bg-blue-600 px-8 text-base font-semibold text-white shadow-sm shadow-blue-950/10 hover:bg-blue-600/90"
+                    onClick={() => setStepIndex((current) => Math.min(steps.length - 1, current + 1))}
+                    disabled={isSaving}
+                  >
+                    {stepIndex === 0 && t.has("actions.letsGo") ? t("actions.letsGo") : t("actions.next")}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    className="h-12 w-full max-w-[360px] rounded-2xl bg-blue-600 px-8 text-base font-semibold text-white shadow-sm shadow-blue-950/10 hover:bg-blue-600/90"
+                    disabled={isSaving}
+                    onClick={async () => {
+                      if (isSaving) return;
+                      setIsSaving(true);
+                      setApiError(null);
+                      try {
+                        const payload = {
+                          exam_datetime: buildExamDateTimeIso(answers.examDate, answers.examTime),
+                          target_listening_band: toBandString(answers.targets.listening ?? DEFAULT_TARGETS.listening),
+                          target_reading_band: toBandString(answers.targets.reading ?? DEFAULT_TARGETS.reading),
+                          target_writing_band: toBandString(answers.targets.writing ?? DEFAULT_TARGETS.writing),
+                          target_speaking_band: toBandString(answers.targets.speaking ?? DEFAULT_TARGETS.speaking),
+                          strongest_section: toBackendSection(answers.strongest),
+                          weakest_section: toBackendSection(answers.weakest),
+                          study_hours_available: typeof answers.hoursPerDay === "number" ? Math.round(answers.hoursPerDay) : null
+                        } as const;
+
+                        await studentProfileService.updateProfile(payload);
+                        closeAndPersist("completed");
+                      } catch (error) {
+                        const message = error instanceof StudentApiError ? error.message : t("errors.profileSave");
+                        setApiError(message);
+                      } finally {
+                        setIsSaving(false);
+                      }
+                    }}
+                  >
+                    {isSaving ? t("loading.saving") : t("actions.finish")}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        </main>
+      </div>
+    </div>
+  );
+
+  /*
   return (
     <div className="mx-auto w-full max-w-[1040px] py-4 sm:py-8">
       <div className="relative mb-6 overflow-hidden rounded-3xl border border-border/70 bg-linear-to-br from-blue-600/12 via-card/70 to-card/60 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
@@ -715,4 +1045,5 @@ export function OnboardingWizard() {
       </Card>
     </div>
   );
+  */
 }

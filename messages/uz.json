@@ -520,6 +520,7 @@
                                    "actions":  {
                                                    "back":  "Orqaga",
                                                    "next":  "Keyingi",
+                                                   "letsGo":  "Kettik",
                                                    "finish":  "Tugatish",
                                                    "skip":  "Hozircha o\u0027tkazish"
                                                },
