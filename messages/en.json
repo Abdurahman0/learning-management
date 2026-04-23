@@ -521,6 +521,7 @@
                                                    "back":  "Back",
                                                    "next":  "Next",
                                                    "letsGo":  "Let's go",
+                                                   "edit":  "Edit setup",
                                                    "finish":  "Finish",
                                                    "skip":  "Skip for now"
                                                },

@@ -7,6 +7,7 @@ import {Brain, Sparkles} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {ContinueCard} from "./ContinueCard";
+import {EditOnboardingButton} from "./EditOnboardingButton";
 import {GettingStartedCard} from "./GettingStartedCard";
 import {DashboardKpis} from "./DashboardKpis";
 import {ScoreProgressChart} from "./ScoreProgressChart";
@@ -375,6 +376,7 @@ export function DashboardClient() {
           <Button variant="outline" onClick={() => document.getElementById("weak-areas")?.scrollIntoView({behavior: "smooth"})}>
             {t("practiceWeakAreas")}
           </Button>
+          <EditOnboardingButton />
           <Button asChild>
             <Link href={`/${locale}/reading`}>{t("startNewTest")}</Link>
           </Button>
