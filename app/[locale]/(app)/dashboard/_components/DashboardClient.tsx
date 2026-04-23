@@ -372,12 +372,16 @@ export function DashboardClient() {
           </p>
         </div>
 
-        <div className="flex w-full min-w-0 flex-wrap gap-2 sm:w-auto">
-          <Button variant="outline" onClick={() => document.getElementById("weak-areas")?.scrollIntoView({behavior: "smooth"})}>
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+          <Button
+            variant="outline"
+            className="h-11 rounded-xl border-border/70 bg-background/40 px-4 hover:bg-muted/40"
+            onClick={() => document.getElementById("weak-areas")?.scrollIntoView({behavior: "smooth"})}
+          >
             {t("practiceWeakAreas")}
           </Button>
-          <EditOnboardingButton />
-          <Button asChild>
+          <EditOnboardingButton className="h-11" />
+          <Button asChild className="h-11 rounded-xl px-5 text-base font-semibold">
             <Link href={`/${locale}/reading`}>{t("startNewTest")}</Link>
           </Button>
         </div>
@@ -419,7 +423,7 @@ export function DashboardClient() {
           summary={dashboardData.userSummary}
           onCurrentBandClick={() => document.getElementById("skills-snapshot")?.scrollIntoView({behavior: "smooth", block: "start"})}
           examDate={examDate}
-          onExamCountdownClick={() => openOnboardingWizard()}
+          // Intentional: only the dedicated "Edit setup" button should open onboarding.
         />
         <p className="mt-2 text-xs text-muted-foreground">{t("kpis.streakRule")}</p>
       </div>

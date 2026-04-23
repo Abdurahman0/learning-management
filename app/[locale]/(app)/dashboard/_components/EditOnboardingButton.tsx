@@ -20,7 +20,7 @@ export function EditOnboardingButton({className}: EditOnboardingButtonProps) {
       variant="outline"
       onClick={() => openOnboardingWizard()}
       className={cn(
-        "h-10 rounded-xl border-border/70 bg-background/40 px-3.5 text-sm font-semibold hover:bg-muted/40 sm:h-11 sm:px-4",
+        "h-11 rounded-xl border-border/70 bg-background/40 px-4 text-sm font-semibold hover:bg-muted/40",
         className
       )}
       title={t("actions.edit")}
@@ -30,4 +30,3 @@ export function EditOnboardingButton({className}: EditOnboardingButtonProps) {
     </Button>
   );
 }
-
