@@ -98,7 +98,16 @@ function renderHighlightedText(text: string, needle: string) {
   const rawNeedleLower = needle.toLowerCase().trim();
   const rawIdx = rawNeedleLower ? lower.indexOf(rawNeedleLower) : -1;
   if (rawIdx < 0) {
-    return { node: text, hit: true };
+    // We found a normalized match but can't map indices back reliably.
+    // Highlight the full line so the user still gets a visible "evidence" cue.
+    return {
+      node: (
+        <mark className="rounded-sm bg-emerald-200/70 px-0.5 text-foreground dark:bg-emerald-500/20">
+          {text}
+        </mark>
+      ),
+      hit: true,
+    };
   }
 
   const before = text.slice(0, rawIdx);
@@ -108,7 +117,7 @@ function renderHighlightedText(text: string, needle: string) {
     node: (
       <>
         {before}
-        <mark className="rounded-sm bg-amber-200/70 px-0.5 text-foreground dark:bg-amber-400/20">
+        <mark className="rounded-sm bg-emerald-200/70 px-0.5 text-foreground dark:bg-emerald-500/20">
           {match}
         </mark>
         {after}

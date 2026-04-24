@@ -14,7 +14,7 @@ export function getQuestionNumbersFromListeningBlock(block: ListeningBlock) {
     case "noteForm":
       return block.fields.map((field) => field.questionNumber);
     case "tableCompletion":
-      return block.rows.map((row) => row.questionNumber);
+      return block.rows.flatMap((row) => row.questionNumbers);
     case "mcqGroup":
       return block.questions.map((question) => question.questionNumber);
     case "matching":
@@ -110,14 +110,21 @@ export function flattenListeningQuestions(
 
       if (block.type === "tableCompletion") {
         for (const row of block.rows) {
-          items.push({
-            id: `${testId}-q${row.questionNumber}`,
-            number: row.questionNumber,
-            sectionId: section.id,
-            sectionTitle: section.title,
-            prompt: row.values.slice(0, 2).join(" - "),
-            type: "text",
-          });
+          const rowPrompt = row.values
+            .map((cell) => cell.replace(/\{\d+\}/g, "_____").trim())
+            .filter(Boolean)
+            .join(" | ");
+
+          for (const number of row.questionNumbers) {
+            items.push({
+              id: `${testId}-q${number}`,
+              number,
+              sectionId: section.id,
+              sectionTitle: section.title,
+              prompt: rowPrompt || `Question ${number}`,
+              type: "text",
+            });
+          }
         }
         continue;
       }

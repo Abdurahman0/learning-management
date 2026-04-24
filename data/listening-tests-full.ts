@@ -23,8 +23,12 @@ export type TableCompletionBlock = {
   title: string;
   columns: string[];
   rows: Array<{
-    questionNumber: number;
+    // Stable id for rendering; does not have to match a question number.
+    id: string;
     values: string[];
+    // Table cells can contain multiple placeholders like "{7} km" or "... {8}".
+    // We extract all question numbers so the palette/navigation can work.
+    questionNumbers: number[];
   }>;
 };
 
@@ -252,10 +256,10 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
             title: "Seminar Schedule Plan",
             columns: ["Session", "Focus", "Answer"],
             rows: [
-              { questionNumber: 27, values: ["Opening talk", "Campus transport", "..."] },
-              { questionNumber: 28, values: ["Workshop", "Food waste", "..."] },
-              { questionNumber: 29, values: ["Panel", "Renewable energy", "..."] },
-              { questionNumber: 30, values: ["Closing activity", "Student pledge", "..."] }
+              { id: "row-0", values: ["Opening talk", "Campus transport", "{27}"], questionNumbers: [27] },
+              { id: "row-1", values: ["Workshop", "Food waste", "{28}"], questionNumbers: [28] },
+              { id: "row-2", values: ["Panel", "Renewable energy", "{29}"], questionNumbers: [29] },
+              { id: "row-3", values: ["Closing activity", "Student pledge", "{30}"], questionNumbers: [30] }
             ]
           }
         ]
@@ -423,11 +427,11 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
             title: "Project Decision Table",
             columns: ["Topic", "Current status", "Answer"],
             rows: [
-              { questionNumber: 26, values: ["Budget planning", "Draft complete", "..."] },
-              { questionNumber: 27, values: ["Participant consent", "In progress", "..."] },
-              { questionNumber: 28, values: ["Data collection app", "Testing", "..."] },
-              { questionNumber: 29, values: ["Presentation slides", "Not started", "..."] },
-              { questionNumber: 30, values: ["Final report", "Outline ready", "..."] }
+              { id: "row-0", values: ["Budget planning", "Draft complete", "{26}"], questionNumbers: [26] },
+              { id: "row-1", values: ["Participant consent", "In progress", "{27}"], questionNumbers: [27] },
+              { id: "row-2", values: ["Data collection app", "Testing", "{28}"], questionNumbers: [28] },
+              { id: "row-3", values: ["Presentation slides", "Not started", "{29}"], questionNumbers: [29] },
+              { id: "row-4", values: ["Final report", "Outline ready", "{30}"], questionNumbers: [30] }
             ]
           }
         ]
@@ -596,10 +600,10 @@ export const LISTENING_TESTS_FULL: ListeningFullTest[] = [
             title: "Fieldwork Preparation Table",
             columns: ["Task", "Deadline", "Answer"],
             rows: [
-              { questionNumber: 27, values: ["Draft questionnaire", "Monday", "..."] },
-              { questionNumber: 28, values: ["Ethics approval", "Wednesday", "..."] },
-              { questionNumber: 29, values: ["Transport booking", "Friday", "..."] },
-              { questionNumber: 30, values: ["Interview training", "Next week", "..."] }
+              { id: "row-0", values: ["Draft questionnaire", "Monday", "{27}"], questionNumbers: [27] },
+              { id: "row-1", values: ["Ethics approval", "Wednesday", "{28}"], questionNumbers: [28] },
+              { id: "row-2", values: ["Transport booking", "Friday", "{29}"], questionNumbers: [29] },
+              { id: "row-3", values: ["Interview training", "Next week", "{30}"], questionNumbers: [30] }
             ]
           }
         ]

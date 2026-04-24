@@ -33,7 +33,7 @@ function numbersFromBlock(block: ListeningBlock) {
     case "noteForm":
       return block.fields.map((field) => field.questionNumber);
     case "tableCompletion":
-      return block.rows.map((row) => row.questionNumber);
+      return block.rows.flatMap((row) => row.questionNumbers);
     case "mcqGroup":
       return block.questions.map((question) => question.questionNumber);
     case "matching":
@@ -172,22 +172,24 @@ function buildFromBlock(testId: string, sectionId: ListeningSectionId, block: Li
   }
 
   if (block.type === "tableCompletion") {
-    return block.rows.map((row) => {
-      const keyword = row.values[1]?.split(" ").at(-1)?.toLowerCase() ?? "value";
-      const answer = keyword.replace(/[^a-z0-9]/gi, "") || `ans${row.questionNumber}`;
-      return {
-        questionId: getListeningQuestionId(testId, row.questionNumber),
-        questionNumber: row.questionNumber,
-        type: "text",
-        correctAnswer: answer,
-        acceptableAnswers: [answer.toLowerCase(), answer.toUpperCase()],
-        explanation: `The table entry is stated directly during the planning discussion.`,
-        evidence: {
-          sectionId,
-          transcriptQuote: row.values.join(" | "),
-          timeRange: [Math.max(0, row.questionNumber * 10), row.questionNumber * 10 + 10],
-        },
-      };
+    return block.rows.flatMap((row) => {
+      const keyword = row.values.join(" ").split(" ").at(-1)?.toLowerCase() ?? "value";
+      return row.questionNumbers.map((questionNumber) => {
+        const answer = keyword.replace(/[^a-z0-9]/gi, "") || `ans${questionNumber}`;
+        return {
+          questionId: getListeningQuestionId(testId, questionNumber),
+          questionNumber,
+          type: "text" as const,
+          correctAnswer: answer,
+          acceptableAnswers: [answer.toLowerCase(), answer.toUpperCase()],
+          explanation: `The table entry is stated directly during the planning discussion.`,
+          evidence: {
+            sectionId,
+            transcriptQuote: row.values.join(" | "),
+            timeRange: [Math.max(0, questionNumber * 10), questionNumber * 10 + 10],
+          },
+        };
+      });
     });
   }
 

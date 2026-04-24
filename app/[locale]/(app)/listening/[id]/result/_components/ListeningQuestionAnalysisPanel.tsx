@@ -181,6 +181,28 @@ export function ListeningQuestionAnalysisPanel({
             : (answerMeta?.correctAnswer ?? "");
           const explanationText = (answerMeta?.explanation ?? "").trim();
 
+          const rawAnswer = answers[question.id];
+          const selectedMcqKeys = new Set(
+            (typeof rawAnswer === "string"
+              ? rawAnswer.split(",")
+              : Array.isArray(rawAnswer)
+                ? rawAnswer
+                : []
+            )
+              .map((value) => String(value ?? "").trim().toUpperCase())
+              .filter(Boolean)
+          );
+          const correctMcqKeys = new Set(
+            (Array.isArray(answerMeta?.correctAnswer)
+              ? answerMeta.correctAnswer
+              : typeof answerMeta?.correctAnswer === "string"
+                ? answerMeta.correctAnswer.split(",")
+                : []
+            )
+              .map((value) => String(value ?? "").trim().toUpperCase())
+              .filter(Boolean)
+          );
+
           return (
             <Card
               id={`review-question-${question.id}`}
@@ -235,6 +257,57 @@ export function ListeningQuestionAnalysisPanel({
                   )}
                 </div>
               </div>
+
+              {question.type === "mcq" && answerMeta?.options?.length ? (
+                <div className="mt-3 space-y-2">
+                  {answerMeta.options.map((option) => {
+                    const key = option.key.toUpperCase();
+                    const isCorrect = correctMcqKeys.has(key);
+                    const isSelected = selectedMcqKeys.has(key);
+
+                    return (
+                      <div
+                        key={`${question.id}-opt-${key}`}
+                        className={cn(
+                          "flex min-w-0 items-start gap-2 rounded-xl border px-3 py-2 text-sm",
+                          isCorrect
+                            ? "border-emerald-200 bg-emerald-50/70 dark:border-emerald-400/30 dark:bg-emerald-500/[0.08]"
+                            : isSelected
+                              ? "border-rose-200 bg-rose-50/70 dark:border-rose-400/30 dark:bg-rose-500/[0.08]"
+                              : "border-border/70 bg-background/40"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "mt-0.5 inline-flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-xs font-semibold",
+                            isCorrect
+                              ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-500/55 dark:bg-emerald-500/20 dark:text-emerald-100"
+                              : isSelected
+                                ? "border-rose-300 bg-rose-100 text-rose-700 dark:border-rose-500/55 dark:bg-rose-500/20 dark:text-rose-100"
+                                : "border-border/70 bg-muted/35 text-foreground"
+                          )}
+                        >
+                          {key}
+                        </span>
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <p className="wrap-break-word leading-snug">
+                            <InlineBoldText text={option.text} />
+                          </p>
+                          {isSelected && !isCorrect ? (
+                            <p className="text-[11px] text-rose-700 dark:text-rose-200">
+                              {t("yourAnswer")}
+                            </p>
+                          ) : isCorrect ? (
+                            <p className="text-[11px] text-emerald-700 dark:text-emerald-200">
+                              {t("correctAnswer")}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : null}
 
               {answersVisible ? (
                 <div className="mt-3 grid gap-2 text-sm">

@@ -224,6 +224,7 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
                     <button
                       key={value}
                       type="button"
+                      title={question.options[index]?.trim() || value}
                       className={`h-9 rounded-lg border text-xs font-semibold tracking-wide ${
                         selected
                           ? "border-primary/60 bg-primary/20 text-primary"
@@ -255,7 +256,12 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
                     const value = toOptionKey(index);
                     return (
                     <SelectItem key={value} value={value}>
-                      {value}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-border/70 bg-muted/35 px-2 text-[11px] font-semibold">
+                          {value}
+                        </span>
+                        <span className="min-w-0 truncate">{question.options[index]?.trim() || value}</span>
+                      </span>
                     </SelectItem>
                     );
                   })}

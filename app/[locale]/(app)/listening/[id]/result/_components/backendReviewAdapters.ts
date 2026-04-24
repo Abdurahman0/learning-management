@@ -10,6 +10,8 @@ export type ListeningBackendAnswerMeta = {
   type: FlattenedListeningQuestion["type"];
   correctAnswer: string | string[] | null;
   acceptableAnswers?: string[] | undefined;
+  // For MCQ questions, surface the option rows so student review can show the choices.
+  options?: Array<{key: string; text: string}>;
   explanation: string;
   evidence: {
     sectionId: string;
@@ -46,6 +48,31 @@ function parseAnswerValue(value: unknown): ListeningAnswerValue {
     return record.answers.map((item) => toStringSafe(item).trim()).filter(Boolean);
   }
   return null;
+}
+
+function parseOptionRows(value: unknown): Array<{key: string; text: string}> {
+  const record = asRecord(value);
+  const rows = Array.isArray(record?.options) ? record?.options : [];
+  return rows
+    .map((item) => {
+      if (typeof item === "string") {
+        const trimmed = item.trim();
+        const match = trimmed.match(/^([A-Z])[\)\].:\-]\s*(.+)$/i);
+        if (match) {
+          return {key: match[1].toUpperCase(), text: match[2].trim()};
+        }
+        return {key: "", text: trimmed};
+      }
+      const row = asRecord(item);
+      const key = toStringSafe(row?.key).trim().toUpperCase();
+      const text = toStringSafe(row?.text ?? row?.label ?? row?.value).trim();
+      return {key, text};
+    })
+    .filter((row) => row.text.length > 0)
+    .map((row, index) => ({
+      key: row.key || String.fromCharCode("A".charCodeAt(0) + index),
+      text: row.text,
+    }));
 }
 
 function normalizeQuestionType(value: string): FlattenedListeningQuestion["type"] {
@@ -172,6 +199,7 @@ export function adaptListeningBackendReview(review: StudentAttemptReviewResponse
         type: questionType,
         correctAnswer: parseAnswerValue(question.correct_answer_json) ?? serializeUnknown(question.correct_answer_json),
         acceptableAnswers: undefined,
+        options: questionType === "mcq" ? parseOptionRows(question.options_json) : undefined,
         explanation: toStringSafe(question.explanation, "No explanation provided by backend."),
         evidence: {
           sectionId,

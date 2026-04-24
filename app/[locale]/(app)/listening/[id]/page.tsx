@@ -86,7 +86,7 @@ function getQuestionNumbersFromBlock(block: ListeningBlock): number[] {
     case "noteForm":
       return block.fields.map((field) => field.questionNumber);
     case "tableCompletion":
-      return block.rows.map((row) => row.questionNumber);
+      return block.rows.flatMap((row) => row.questionNumbers);
     case "mcqGroup":
       return block.questions.map((question) => question.questionNumber);
     case "matching":
@@ -382,6 +382,7 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
   });
 
   if (type === "MCQ_SINGLE" || type === "MCQ_MULTIPLE") {
+    const sharedOptionTexts = extractOptionTexts(content?.options);
     return [withGroupMeta({
       type: "mcqGroup",
       title: "Multiple Choice",
@@ -392,7 +393,7 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
         return {
           questionNumber: question.question_number,
           prompt: extractQuestionPrompt(question),
-          options: optionTexts.length ? optionTexts : ["A", "B", "C"]
+          options: optionTexts.length ? optionTexts : (sharedOptionTexts.length ? sharedOptionTexts : ["A", "B", "C"])
         };
       })
     })];
@@ -429,14 +430,42 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
     const columnsRaw = extractOptionTexts(content?.columns);
     const columns = columnsRaw.length ? columnsRaw : ["Prompt", "Answer"];
     const rowsRaw = asArray<unknown>(content?.rows);
-    const rows = rowsRaw
-      .map((row, index) => {
-        const cells = asArray<unknown>(row).map((item) => toStringSafe(item).trim());
-        const fallbackQuestion = questions[index];
-        const match = cells.join(" ").match(/\{(\d+)\}/);
-        const questionNumber = match ? Number(match[1]) : fallbackQuestion?.question_number ?? index + 1;
-        return {questionNumber, values: cells.length ? cells : [`Question ${questionNumber}`, ""]};
-      });
+
+    const extractPlaceholderNumbers = (value: string) => {
+      const found = [...value.matchAll(/\{(\d+)\}/g)]
+        .map((match) => Number(match[1]))
+        .filter((num) => Number.isFinite(num) && num > 0);
+      return [...new Set(found)];
+    };
+
+    const rows = rowsRaw.map((row, index) => {
+      const cells = asArray<unknown>(row).map((item) => toStringSafe(item).trim());
+      const fallbackQuestion = questions[index];
+      const placeholders = extractPlaceholderNumbers(cells.join(" "));
+      const fallbackNumber = fallbackQuestion?.question_number ?? index + 1;
+      const questionNumbers = placeholders.length ? placeholders : (Number.isFinite(fallbackNumber) ? [fallbackNumber] : []);
+
+      // If the backend/content omitted explicit placeholders, inject one into the last cell
+      // so the UI has a place to render the blank.
+      const needsInjection = questionNumbers.length === 1 && placeholders.length === 0;
+      const normalizedCells = cells.length ? [...cells] : ["", ""];
+      if (needsInjection) {
+        const hasAnyCell = normalizedCells.some((cell) => cell.trim().length > 0);
+        if (!hasAnyCell) {
+          normalizedCells[0] = `Question ${questionNumbers[0]}`;
+          normalizedCells[1] = `{${questionNumbers[0]}}`;
+        } else if (!normalizedCells.join(" ").includes(`{${questionNumbers[0]}}`)) {
+          const lastIndex = Math.max(0, normalizedCells.length - 1);
+          normalizedCells[lastIndex] = (normalizedCells[lastIndex] ? `${normalizedCells[lastIndex]} ` : "") + `{${questionNumbers[0]}}`;
+        }
+      }
+
+      return {
+        id: `row-${index}`,
+        values: normalizedCells,
+        questionNumbers,
+      };
+    });
 
     return [withGroupMeta({
       type: "tableCompletion",
@@ -444,7 +473,11 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
       columns,
       rows: rows.length
         ? rows
-        : questions.map((q) => ({questionNumber: q.question_number, values: [extractQuestionPrompt(q), ""]}))
+        : questions.map((q, index) => ({
+            id: `row-fallback-${index}`,
+            values: [extractQuestionPrompt(q), `{${q.question_number}}`],
+            questionNumbers: [q.question_number],
+          }))
     })];
   }
 
@@ -939,6 +972,11 @@ function ListeningTestClient({
   const [activeSectionId, setActiveSectionId] = useState<
     "s1" | "s2" | "s3" | "s4"
   >("s1");
+  // UI can switch between parts independently from which audio track is currently playing.
+  // This is required for Real Mode sequencing: audio advances only after the current part finishes.
+  const [audioSectionId, setAudioSectionId] = useState<
+    "s1" | "s2" | "s3" | "s4"
+  >("s1");
   const [attemptId, setAttemptId] = useState("");
   const [backendAttemptId, setBackendAttemptId] = useState<string | null>(initialBackendAttemptId);
   const [submitMetaByNumber, setSubmitMetaByNumber] = useState<Map<number, ListeningSubmitQuestionMeta>>(() => new Map(initialSubmitMetaByNumber));
@@ -1038,6 +1076,7 @@ function ListeningTestClient({
     setHighlightedEvidenceQuestionId(null);
     setReviewMobilePanel("transcript");
     setActiveSectionId("s1");
+    setAudioSectionId("s1");
     setActiveQuestionNumber(1);
     setAnswers({});
     setMarked(new Set());
@@ -1088,6 +1127,7 @@ function ListeningTestClient({
         setHighlightedEvidenceQuestionId(null);
         setReviewMobilePanel("transcript");
         setActiveSectionId("s1");
+        setAudioSectionId("s1");
         setActiveQuestionNumber(1);
         setAnswers({});
         setMarked(new Set());
@@ -1144,6 +1184,9 @@ function ListeningTestClient({
         setAttemptMode(restoredMode);
         setTimerRunning(restoredMode === "real" && saved.timeRemainingSec > 0);
         setAudioPlaying(restoredMode === "real");
+        setActiveSectionId("s1");
+        setAudioSectionId("s1");
+        audioShouldPlayRef.current = restoredMode === "real";
         realModeAutoFinishedRef.current = false;
       }, 0);
       return () => window.clearTimeout(hydrateTimer);
@@ -1261,9 +1304,15 @@ function ListeningTestClient({
       test.sections[0],
     [activeSectionId, test.sections],
   );
-  const activeSectionAudioUrl = useMemo(
-    () => resolvePlayableAudioUrl(toStringSafe(activeSection.audioMeta.audioUrl)),
-    [activeSection.audioMeta.audioUrl]
+  const audioSection = useMemo(
+    () =>
+      test.sections.find((section) => section.id === audioSectionId) ??
+      test.sections[0],
+    [audioSectionId, test.sections],
+  );
+  const audioSectionAudioUrl = useMemo(
+    () => resolvePlayableAudioUrl(toStringSafe(audioSection.audioMeta.audioUrl)),
+    [audioSection.audioMeta.audioUrl],
   );
 
   const answeredCount = useMemo(() => {
@@ -1403,7 +1452,7 @@ function ListeningTestClient({
   );
   const effectiveAudioDurationSec = Math.max(
     0,
-    Math.round(audioDurationSec > 0 ? audioDurationSec : activeSection.audioMeta.durationSec)
+    Math.round(audioDurationSec > 0 ? audioDurationSec : audioSection.audioMeta.durationSec)
   );
   const safePlayedProgress = Math.max(0, Math.min(100, audioProgress));
   const safeBufferedProgress = Math.max(0, Math.min(100, audioBufferedProgress));
@@ -1545,7 +1594,10 @@ function ListeningTestClient({
   const updateBufferedProgress = useCallback(() => {
     const media = audioRef.current;
     if (!media) return;
-    const duration = Number.isFinite(media.duration) ? media.duration : 0;
+    const duration =
+      Number.isFinite(media.duration) && media.duration > 0
+        ? media.duration
+        : Math.max(0, audioSection.audioMeta.durationSec);
     if (duration <= 0 || media.buffered.length === 0) {
       setAudioBufferedProgress(0);
       return;
@@ -1558,7 +1610,7 @@ function ListeningTestClient({
     } catch {
       setAudioBufferedProgress(0);
     }
-  }, []);
+  }, [audioSection.audioMeta.durationSec]);
 
   const getBufferedEndForCurrentTime = useCallback((media: HTMLAudioElement) => {
     if (media.buffered.length === 0) {
@@ -1591,7 +1643,16 @@ function ListeningTestClient({
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (!activeSectionAudioUrl) {
+    // Switching tracks should always stop the previous playback immediately, but we keep
+    // `audioShouldPlayRef` as the "intent" so we can auto-start the new track when needed.
+    audio.pause();
+    try {
+      audio.currentTime = 0;
+    } catch {
+      // Ignore browsers that reject setting currentTime before metadata is loaded.
+    }
+
+    if (!audioSectionAudioUrl) {
       audio.pause();
       audio.removeAttribute("src");
       audio.load();
@@ -1605,20 +1666,21 @@ function ListeningTestClient({
       return;
     }
 
-    audio.src = activeSectionAudioUrl;
+    audio.src = audioSectionAudioUrl;
     audio.load();
     bufferingPauseRef.current = false;
-    setAudioPlaying(false);
+    // Preserve desired playback across source changes (practice-mode auto-start and real-mode sequencing).
+    setAudioPlaying(audioShouldPlayRef.current);
     setAudioCurrentSec(0);
     setAudioDurationSec(0);
     setAudioProgress(0);
     setAudioBufferedProgress(0);
-  }, [activeSectionAudioUrl]);
+  }, [audioSectionAudioUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (!activeSectionAudioUrl) {
+    if (!audioSectionAudioUrl) {
       setAudioPlaying(false);
       return;
     }
@@ -1638,16 +1700,11 @@ function ListeningTestClient({
     }
 
     audio.pause();
-  }, [activeSectionAudioUrl, audioPlaying]);
+  }, [audioSectionAudioUrl, audioPlaying]);
 
   useEffect(() => {
     questionsScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeSectionId]);
-
-  useEffect(() => {
-    // Always stop and rewind when changing part, even if URL is shared.
-    stopSectionAudioPlayback();
-  }, [activeSectionId, stopSectionAudioPlayback]);
 
   useEffect(() => {
     const pending = pendingJumpRef.current;
@@ -1672,9 +1729,15 @@ function ListeningTestClient({
     const nextNumbers = sectionQuestionNumbers.get(nextSectionId) ?? [];
     const first = nextNumbers[0] ?? 1;
 
-    suppressAudioAutoPlayRef.current = true;
-    stopSectionAudioPlayback();
     setActiveSectionId(nextSectionId);
+    if (!reviewMode && !isRealMode) {
+      // Practice mode: switching parts should immediately start the selected part audio.
+      suppressAudioAutoPlayRef.current = false;
+      stopSectionAudioPlayback();
+      audioShouldPlayRef.current = true;
+      setAudioSectionId(nextSectionId);
+      setAudioPlaying(true);
+    }
     setActiveQuestionNumber(first);
   };
 
@@ -1682,7 +1745,7 @@ function ListeningTestClient({
     // In review mode (after finishing), the question list is rendered inside the Question Analysis panel.
     // The old `questionRefs`/`questionsScrollRef` mapping belongs to the test-taking UI, so we scroll by id.
     if (reviewMode) {
-      const reviewQuestion = flatQuestions.find((question) => question.number === questionNumber);
+      const reviewQuestion = reviewQuestions.find((question) => question.number === questionNumber);
       if (!reviewQuestion) return;
 
       const nextSectionId = reviewQuestion.sectionId as ListeningSectionFull["id"];
@@ -1718,8 +1781,14 @@ function ListeningTestClient({
 
     if (sectionId !== activeSectionId) {
       pendingJumpRef.current = questionNumber;
-      suppressAudioAutoPlayRef.current = true;
-      stopSectionAudioPlayback();
+      if (!reviewMode && !isRealMode) {
+        // Practice mode: jumping into another part should start that part immediately.
+        suppressAudioAutoPlayRef.current = false;
+        stopSectionAudioPlayback();
+        audioShouldPlayRef.current = true;
+        setAudioSectionId(sectionId);
+        setAudioPlaying(true);
+      }
       setActiveSectionId(sectionId);
       if (isCompact) {
         setPaletteOpen(false);
@@ -1744,7 +1813,7 @@ function ListeningTestClient({
   };
 
   const toggleAudioPlayback = useCallback(() => {
-    if (isRealMode || !activeSectionAudioUrl) return;
+    if (isRealMode || !audioSectionAudioUrl) return;
     const media = audioRef.current;
     if (!media) return;
 
@@ -1759,7 +1828,7 @@ function ListeningTestClient({
     audioShouldPlayRef.current = false;
     bufferingPauseRef.current = false;
     media.pause();
-  }, [activeSectionAudioUrl, isRealMode]);
+  }, [audioSectionAudioUrl, isRealMode]);
 
   const chooseAttemptMode = (mode: AttemptMode) => {
     realModeAutoFinishedRef.current = false;
@@ -1795,15 +1864,29 @@ function ListeningTestClient({
     setAudioPlaying(false);
   };
 
-  const confirmRealModeStart = () => {
+  const confirmRealModeStart = async () => {
     if (realModeStartTimeoutRef.current) {
       window.clearTimeout(realModeStartTimeoutRef.current);
       realModeStartTimeoutRef.current = null;
     }
     setRealModeConfirmOpen(false);
+
+    // Real mode should always begin from Part 1 and run in fullscreen (like Reading real mode).
+    stopSectionAudioPlayback();
+    // Prevent the track swap from auto-starting before the countdown completes.
+    suppressAudioAutoPlayRef.current = true;
+    setActiveSectionId("s1");
+    setAudioSectionId("s1");
+    setActiveQuestionNumber(1);
+    if (!isFullscreen) {
+      await toggleFullscreen();
+    }
+
     setRealModeStarting(true);
     realModeStartTimeoutRef.current = window.setTimeout(() => {
       setTimerRunning(true);
+      suppressAudioAutoPlayRef.current = false;
+      audioShouldPlayRef.current = true;
       setAudioPlaying(true);
       setRealModeStarting(false);
       realModeStartTimeoutRef.current = null;
@@ -2074,7 +2157,7 @@ function ListeningTestClient({
       return (
         <Card className="test-panel test-soft-surface min-w-0 gap-0 rounded-lg border border-border bg-muted/20 p-4 overflow-hidden">
           <h4 className="text-center text-base font-semibold tracking-wide">
-            {block.title}
+            <InlineBoldText text={block.title} />
           </h4>
           {block.description ? (
             <p className="test-muted-copy mt-2 text-sm text-muted-foreground">
@@ -2111,7 +2194,7 @@ function ListeningTestClient({
                     isSmallLandscape && "col-span-2 sm:col-span-2",
                   )}
                 >
-                  {field.label}
+                  <InlineBoldText text={field.label} />
                 </p>
                 <QuestionChip
                   number={field.questionNumber}
@@ -2138,6 +2221,61 @@ function ListeningTestClient({
     }
 
     if (block.type === "tableCompletion") {
+      const renderCell = (raw: string) => {
+        const tokens = tokenizeTemplateTextWithBoldAndPlaceholders(raw);
+        return tokens.map((token, tokenIndex) => {
+          if (token.kind === "text") {
+            if (!token.value) return null;
+            return token.bold ? (
+              <strong key={`table-text-${tokenIndex}`} className="font-semibold">
+                {token.value}
+              </strong>
+            ) : (
+              <span key={`table-text-${tokenIndex}`}>{token.value}</span>
+            );
+          }
+
+          const questionNumber = token.questionNumber;
+          const isActiveBlank = activeQuestionNumber === questionNumber;
+          const isMarkedBlank = marked.has(questionNumber);
+
+          return (
+            <span
+              key={`table-blank-${questionNumber}-${tokenIndex}`}
+              id={`q-${questionNumber}`}
+              ref={(el) => {
+                if (!el) {
+                  questionRefs.current.delete(questionNumber);
+                  return;
+                }
+                questionRefs.current.set(questionNumber, el);
+              }}
+              className={cn(
+                "inline-flex items-baseline gap-1.5 align-baseline",
+                isMarkedBlank && "rounded-md bg-amber-50/40 px-1 py-0.5 dark:bg-amber-500/10"
+              )}
+              onClick={() => setActiveQuestionNumber(questionNumber)}
+            >
+              <QuestionChip number={questionNumber} active={isActiveBlank} />
+              <Input
+                aria-label={`Question ${questionNumber}`}
+                value={answers[questionNumber] ?? ""}
+                disabled={reviewMode}
+                onFocus={() => setActiveQuestionNumber(questionNumber)}
+                onChange={(event) => setAnswer(questionNumber, event.target.value)}
+                placeholder="..."
+                className={cn(
+                  "test-input-surface h-9 w-28 rounded-md px-2 text-sm sm:w-36",
+                  isActiveBlank
+                    ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-400/30 dark:bg-blue-900/20"
+                    : "border-blue-300/40 bg-background/80 dark:bg-muted/30"
+                )}
+              />
+            </span>
+          );
+        });
+      };
+
       return (
         <Card className="test-panel min-w-0 gap-0 rounded-lg border border-border bg-card p-0 overflow-hidden">
           <h4 className="border-b border-border px-4 py-3 text-sm font-semibold">
@@ -2160,46 +2298,20 @@ function ListeningTestClient({
               <tbody>
                 {block.rows.map((row) => (
                   <tr
-                    key={row.questionNumber}
-                    id={`q-${row.questionNumber}`}
-                    ref={(el) => {
-                      if (!el) {
-                        questionRefs.current.delete(row.questionNumber);
-                        return;
-                      }
-                      questionRefs.current.set(row.questionNumber, el);
-                    }}
-                    className={cn("scroll-mt-24", markedQuestionClass(row.questionNumber))}
+                    key={row.id}
+                    className={cn(
+                      "scroll-mt-24",
+                      row.questionNumbers.some((num) => marked.has(num)) && "bg-amber-50/20 dark:bg-amber-500/[0.06]"
+                    )}
                   >
-                    <td className="border-b border-border px-3 py-2 wrap-break-word">
-                      <InlineBoldText text={row.values[0] ?? ""} />
-                    </td>
-                    <td className="border-b border-border px-3 py-2 wrap-break-word">
-                      <InlineBoldText text={row.values[1] ?? ""} />
-                    </td>
-                    <td className="border-b border-border px-3 py-2">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <QuestionChip
-                          number={row.questionNumber}
-                          active={activeQuestionNumber === row.questionNumber}
-                        />
-                        <Input
-                          aria-label={`Question ${row.questionNumber}`}
-                          value={answers[row.questionNumber] ?? ""}
-                          onChange={(e) =>
-                            setAnswer(row.questionNumber, e.target.value)
-                          }
-                          onFocus={() =>
-                            setActiveQuestionNumber(row.questionNumber)
-                          }
-                          placeholder="..."
-                          className={cn(
-                            "test-input-surface w-full min-w-0 h-10",
-                            isSmallLandscape && "h-11",
-                          )}
-                        />
-                      </div>
-                    </td>
+                    {block.columns.map((_, colIndex) => (
+                      <td
+                        key={`${row.id}-col-${colIndex}`}
+                        className="border-b border-border px-3 py-2 align-top wrap-break-word"
+                      >
+                        {renderCell(row.values[colIndex] ?? "")}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -2439,7 +2551,9 @@ function ListeningTestClient({
                   subtle={activeQuestionNumber !== number}
                 />
               ))}
-              <p className="wrap-break-word text-sm font-medium">{block.prompt}</p>
+              <p className="wrap-break-word text-sm font-medium">
+                <InlineBoldText text={block.prompt} />
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -2487,7 +2601,9 @@ function ListeningTestClient({
                       <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border/70 bg-muted/35 px-2 text-xs font-semibold text-foreground">
                         {choice.key}
                       </span>
-                      <span>{choice.text ?? choice.label}</span>
+                      <span>
+                        <InlineBoldText text={choice.text ?? choice.label} />
+                      </span>
                     </span>
                   </label>
                 );
@@ -2532,7 +2648,9 @@ function ListeningTestClient({
                   number={item.questionNumber}
                   active={activeQuestionNumber === item.questionNumber}
                 />
-                <p className="wrap-break-word text-sm">{item.prompt}</p>
+                <p className="wrap-break-word text-sm">
+                  <InlineBoldText text={item.prompt} />
+                </p>
                 <Select
                   value={resolveChoiceKeyFromRawValue(answers[item.questionNumber], parsedOptions, block.options)}
                   onValueChange={(value) =>
@@ -3013,7 +3131,10 @@ function ListeningTestClient({
         }}
         onLoadedMetadata={(event) => {
           const media = event.currentTarget;
-          const duration = Number.isFinite(media.duration) ? media.duration : 0;
+          const duration =
+            Number.isFinite(media.duration) && media.duration > 0
+              ? media.duration
+              : Math.max(0, audioSection.audioMeta.durationSec);
           setAudioDurationSec(duration);
           const progress = duration > 0 ? (media.currentTime / duration) * 100 : 0;
           setAudioProgress(progress);
@@ -3022,7 +3143,10 @@ function ListeningTestClient({
         }}
         onTimeUpdate={(event) => {
           const media = event.currentTarget;
-          const duration = Number.isFinite(media.duration) ? media.duration : 0;
+          const duration =
+            Number.isFinite(media.duration) && media.duration > 0
+              ? media.duration
+              : Math.max(0, audioSection.audioMeta.durationSec);
           const current = media.currentTime || 0;
           setAudioCurrentSec(current);
           const progress = duration > 0 ? (current / duration) * 100 : 0;
@@ -3062,11 +3186,35 @@ function ListeningTestClient({
           }
         }}
         onEnded={() => {
-          audioShouldPlayRef.current = false;
           bufferingPauseRef.current = false;
-          setAudioPlaying(false);
           setAudioProgress(100);
           setAudioBufferedProgress(100);
+
+          // Real mode: parts must play sequentially. Advancing UI parts should not start audio early,
+          // but when the current audio finishes we start the next part immediately.
+          if (isRealMode && !reviewMode) {
+            const order: Array<ListeningSectionFull["id"]> = ["s1", "s2", "s3", "s4"];
+            const currentIndex = order.indexOf(audioSectionId);
+            const nextSectionId =
+              currentIndex >= 0 && currentIndex < order.length - 1
+                ? order[currentIndex + 1]
+                : null;
+
+            if (nextSectionId) {
+              const nextNumbers = sectionQuestionNumbers.get(nextSectionId) ?? [];
+              const first = nextNumbers[0] ?? 1;
+              suppressAudioAutoPlayRef.current = false;
+              audioShouldPlayRef.current = true;
+              setActiveSectionId(nextSectionId);
+              setAudioSectionId(nextSectionId);
+              setActiveQuestionNumber(first);
+              setAudioPlaying(true);
+              return;
+            }
+          }
+
+          audioShouldPlayRef.current = false;
+          setAudioPlaying(false);
         }}
         onError={() => {
           audioShouldPlayRef.current = false;
@@ -3084,28 +3232,28 @@ function ListeningTestClient({
         )}
       >
         <div className="grid w-full min-w-0 max-w-full grid-cols-[36px_minmax(0,1fr)] items-center gap-2 sm:gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            disabled={isRealMode || !activeSectionAudioUrl}
-            className={cn(
-              "h-9 w-9 rounded-full shrink-0",
-              isSmallLandscape && "h-8 w-8",
-              (isRealMode || !activeSectionAudioUrl) && "cursor-not-allowed opacity-60",
-            )}
-            onClick={() => {
-              toggleAudioPlayback();
-            }}
-            aria-label={
-              isRealMode
-                ? realModeLockedAudioLabel
-                : !activeSectionAudioUrl
-                  ? (t.has("audioUnavailable") ? t("audioUnavailable") : "Audio unavailable")
-                  : audioPlaying
-                    ? t("pauseAudio")
-                    : t("playAudio")
-            }
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              disabled={isRealMode || !audioSectionAudioUrl}
+              className={cn(
+                "h-9 w-9 rounded-full shrink-0",
+                isSmallLandscape && "h-8 w-8",
+                (isRealMode || !audioSectionAudioUrl) && "cursor-not-allowed opacity-60",
+              )}
+              onClick={() => {
+                toggleAudioPlayback();
+              }}
+              aria-label={
+                isRealMode
+                  ? realModeLockedAudioLabel
+                  : !audioSectionAudioUrl
+                    ? (t.has("audioUnavailable") ? t("audioUnavailable") : "Audio unavailable")
+                    : audioPlaying
+                      ? t("pauseAudio")
+                      : t("playAudio")
+              }
           >
             {audioPlaying ? (
               <Pause className="size-4" />
@@ -3117,8 +3265,8 @@ function ListeningTestClient({
           <div className="w-full min-w-0 max-w-full overflow-hidden">
             <div className="mb-1 flex min-w-0 items-center justify-between gap-2 text-[11px] text-muted-foreground">
               <p className="test-muted-copy min-w-0 truncate">
-                {activeSection.audioMeta.nowPlayingLabel} -{" "}
-                {activeSection.audioMeta.currentTrackTitle}
+                {audioSection.audioMeta.nowPlayingLabel} -{" "}
+                {audioSection.audioMeta.currentTrackTitle}
               </p>
               <p className={cn("test-muted-copy shrink-0", isSmallLandscape && "text-[10px]")}>
                 {`${formatTime(Math.round(audioCurrentSec))} / ${formatTime(effectiveAudioDurationSec)}`}
@@ -3136,13 +3284,16 @@ function ListeningTestClient({
                   min={0}
                   max={100}
                   value={audioProgress}
-                  disabled={isRealMode || !activeSectionAudioUrl}
+                  disabled={isRealMode || !audioSectionAudioUrl}
                   onChange={(e) => {
-                    if (isRealMode || !activeSectionAudioUrl) return;
+                    if (isRealMode || !audioSectionAudioUrl) return;
                     const nextProgress = Number(e.target.value);
                     const media = audioRef.current;
                     if (media) {
-                      const duration = Number.isFinite(media.duration) ? media.duration : 0;
+                      const duration =
+                        Number.isFinite(media.duration) && media.duration > 0
+                          ? media.duration
+                          : effectiveAudioDurationSec;
                       if (duration > 0) {
                         media.currentTime = (nextProgress / 100) * duration;
                       }
@@ -3156,7 +3307,7 @@ function ListeningTestClient({
                     "[&::-webkit-slider-thumb]:-mt-[5px] [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white/70 [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:shadow",
                     "[&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-transparent",
                     "[&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-white/70 [&::-moz-range-thumb]:bg-blue-600",
-                    (isRealMode || !activeSectionAudioUrl) && "cursor-not-allowed opacity-60"
+                    (isRealMode || !audioSectionAudioUrl) && "cursor-not-allowed opacity-60"
                   )}
                   style={audioProgressTrackStyle}
                 />
