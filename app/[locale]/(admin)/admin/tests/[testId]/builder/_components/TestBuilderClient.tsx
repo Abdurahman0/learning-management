@@ -717,7 +717,8 @@ function resolveGroupContentForSync(group: QuestionGroup, module: "reading" | "l
 
 function mapBuilderQuestionTypeToApi(value: QuestionType, questionCount: number) {
   if (value === "multiple_choice") {
-    return questionCount > 1 ? "MCQ_MULTIPLE" : "MCQ_SINGLE";
+    // We always use MCQ_SINGLE. For “Choose TWO letters”, use LIST_SELECTION (Selecting from a List).
+    return "MCQ_SINGLE";
   }
 
   const mapping: Record<QuestionType, string> = {
@@ -791,7 +792,7 @@ function resolveApiQuestionTypeForGroup(
     }
     return mapBuilderQuestionTypeToApi(type, questionCount);
   }
-  return resolveMcqModeFromGroupContent(groupContent) === "multiple" ? "MCQ_MULTIPLE" : "MCQ_SINGLE";
+  return "MCQ_SINGLE";
 }
 
 function normalizeChoiceToken(value: string) {
@@ -1094,8 +1095,10 @@ function mapApiQuestionToBuilderQuestion(
     const normalizedMultiple = answer.answers
       .map((value) => value.toUpperCase())
       .filter((value) => /^[A-Z]+$/.test(value));
+    // We no longer support multi-answer MCQ in the builder. If the backend returns MCQ_MULTIPLE,
+    // we keep only the first answer to avoid breaking the editor UI.
     builderQuestion.correctAnswer = normalizedMultiple.length
-      ? [...new Set(normalizedMultiple)].join(", ")
+      ? normalizedMultiple[0]!
       : (/^[A-Z]+$/.test(normalizedSingle) ? normalizedSingle : "");
     return builderQuestion;
   }
@@ -1176,10 +1179,7 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
     : Array.from({length: Math.max(0, to - from + 1)}, (_, index) => createDefaultQuestion(type, from + index));
 
   const rawGroupContent = asRecord(group.group_content_json);
-  const groupContent =
-    toStringSafe(group.question_type).trim().toUpperCase() === "MCQ_MULTIPLE"
-      ? {...rawGroupContent, mcq_mode: "multiple"}
-      : rawGroupContent;
+  const groupContent = rawGroupContent;
   const headingRows = Array.isArray(groupContent.headings) ? groupContent.headings : [];
   const choiceRows = Array.isArray(groupContent.choices)
     ? groupContent.choices
@@ -2680,7 +2680,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         open={questionEditorOpen && Boolean(selectedQuestionData)}
         question={selectedQuestionData?.question ?? null}
         module={test.module}
-        mcqMode={resolveMcqModeFromGroupContent(selectedQuestionData?.group?.groupContentJson)}
+        mcqMode="single"
         onOpenChange={setQuestionEditorOpen}
         onQuestionChange={(nextQuestion) => {
           if (!selectedQuestion) {

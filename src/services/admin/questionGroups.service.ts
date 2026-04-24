@@ -57,14 +57,15 @@ function normalizeQuestionTypeForApi(value: string, questionCount?: number) {
   }
 
   if (normalized === "multiple_choice") {
-    return typeof questionCount === "number" && questionCount > 1 ? "MCQ_MULTIPLE" : "MCQ_SINGLE";
+    // We always use MCQ_SINGLE. For “Choose TWO letters”, use LIST_SELECTION (Selecting from a List).
+    return "MCQ_SINGLE";
   }
 
   const mapped: Record<string, string> = {
     mcq_single: "MCQ_SINGLE",
-    mcq_multiple: "MCQ_MULTIPLE",
+    mcq_multiple: "MCQ_SINGLE",
     multiple_choice_single: "MCQ_SINGLE",
-    multiple_choice_multiple: "MCQ_MULTIPLE",
+    multiple_choice_multiple: "MCQ_SINGLE",
     sentence_completion: "SENTENCE_COMPLETION",
     summary_completion: "SUMMARY_COMPLETION",
     table_completion: "TABLE_COMPLETION",

@@ -46,7 +46,7 @@ type GroupEditorState = {
   instructions: string;
   summaryText: string;
   completionTemplateText: string;
-  mcqMode: "single" | "multiple";
+  mcqMode: "single";
   mcqOptions: string;
   wordBank: string;
   headings: string;
@@ -339,7 +339,7 @@ export function QuestionGroupsPanel({
       instructions: group.instructions ?? "",
       summaryText: (group.groupContentJson as any)?.summary_text ?? "",
       completionTemplateText: (group.groupContentJson as any)?.template_text ?? "",
-      mcqMode: (group.groupContentJson as any)?.mcq_mode === "multiple" ? "multiple" : "single",
+      mcqMode: "single",
       mcqOptions:
         (() => {
           const stored = Array.isArray((group.groupContentJson as any)?.options)
@@ -404,7 +404,7 @@ export function QuestionGroupsPanel({
     const groupContent =
       editor.type === "multiple_choice"
         ? {
-            mcq_mode: editor.mcqMode,
+            mcq_mode: "single",
             // MCQ option keys are stored for UI purposes only (backend group_content_json for MCQ is null).
             // We intentionally keep values as single letters so each question can define its own prompts.
             options: parsedMcqKeys.map((key) => ({key, text: key}))
@@ -594,24 +594,10 @@ export function QuestionGroupsPanel({
             {editor.type === "multiple_choice" && (
               <>
                 <div className="space-y-1.5">
-                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCQ Mode</label>
-                  <Select
-                    value={editor.mcqMode}
-                    onValueChange={(value) =>
-                      setEditor((current) => ({
-                        ...current,
-                        mcqMode: value === "multiple" ? "multiple" : "single"
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="h-10 rounded-xl border-border/70 bg-background/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="single">Single answer (MCQ_SINGLE)</SelectItem>
-                      <SelectItem value="multiple">Multiple answers (MCQ_MULTIPLE)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">Multiple Choice</label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Multiple Choice is always single-answer. For “Choose TWO letters”, use “Selecting from a List”.
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCQ Option Keys</label>

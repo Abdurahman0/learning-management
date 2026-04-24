@@ -5,6 +5,7 @@ import {AUTH_COOKIE_NAME, parseSessionRole} from "@/lib/auth/session";
 
 import {GuestShell} from "./_components/guest-tests/GuestShell";
 import {AppSessionProvider, type AppSessionRole} from "./_components/session/AppSessionContext";
+import {GuestAttemptSyncClient} from "./_components/session/GuestAttemptSyncClient";
 
 export default async function Layout({children}: { children: ReactNode }) {
   const cookieStore = await cookies();
@@ -13,6 +14,7 @@ export default async function Layout({children}: { children: ReactNode }) {
   return (
     <AppSessionProvider role={role}>
       <GuestShell>{children}</GuestShell>
+      <GuestAttemptSyncClient />
     </AppSessionProvider>
   );
 }

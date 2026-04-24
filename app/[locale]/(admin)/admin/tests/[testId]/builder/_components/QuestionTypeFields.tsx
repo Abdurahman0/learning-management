@@ -209,51 +209,14 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctOption")}</Label>
-            {mcqMode === "multiple" ? (
-              <div className="grid grid-cols-4 gap-2">
+            <Select value={question.correctAnswer} onValueChange={(value) => onChange({...question, correctAnswer: value})}>
+              <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
                 {question.options.map((_, index) => {
                   const value = toOptionKey(index);
-                  const selected = question.correctAnswer
-                    .split(",")
-                    .map((item) => item.trim().toUpperCase())
-                    .filter(Boolean)
-                    .includes(value);
-
                   return (
-                    <button
-                      key={value}
-                      type="button"
-                      title={question.options[index]?.trim() || value}
-                      className={`h-9 rounded-lg border text-xs font-semibold tracking-wide ${
-                        selected
-                          ? "border-primary/60 bg-primary/20 text-primary"
-                          : "border-border/70 bg-background/45 text-muted-foreground"
-                      }`}
-                      onClick={() => {
-                        const current = question.correctAnswer
-                          .split(",")
-                          .map((item) => item.trim().toUpperCase())
-                          .filter(Boolean);
-                        const next = selected
-                          ? current.filter((item) => item !== value)
-                          : [...current, value];
-                        onChange({...question, correctAnswer: next.join(", ")});
-                      }}
-                    >
-                      {value}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <Select value={question.correctAnswer} onValueChange={(value) => onChange({...question, correctAnswer: value})}>
-                <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {question.options.map((_, index) => {
-                    const value = toOptionKey(index);
-                    return (
                     <SelectItem key={value} value={value}>
                       <span className="flex min-w-0 items-center gap-2">
                         <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-border/70 bg-muted/35 px-2 text-[11px] font-semibold">
@@ -262,11 +225,10 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
                         <span className="min-w-0 truncate">{question.options[index]?.trim() || value}</span>
                       </span>
                     </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            )}
+                  );
+                })}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       ) : null}

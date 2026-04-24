@@ -7,7 +7,7 @@ import { Bookmark, BookmarkCheck, Clock3, Grid2x2, Maximize2, Menu, Minimize2, M
 import { LoadingModal } from "@/components/ui/loading-modal";
 import { useLocale, useTranslations } from "next-intl";
 
-import { saveRuntimeReadingTest, type ReadingFullTest, type ReadingQuestion } from "@/data/reading-tests";
+import { getReadingTestById, saveRuntimeReadingTest, type ReadingFullTest, type ReadingQuestion } from "@/data/reading-tests";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,8 @@ import type { StudentAttemptDetail, StudentAttemptQuestion, StudentAttemptQuesti
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useLeaveConfirm } from "@/lib/use-leave-confirm";
 import { BrandIcon } from "@/components/brand/BrandIcon";
+import { useAppSessionRole } from "../../_components/session/AppSessionContext";
+import { enqueueGuestPendingAttempt } from "@/lib/guest-attempt-sync";
 
 const DEFAULT_SPLIT = 50;
 const HEADING_DND_MIME = "application/x-reading-heading";
@@ -1073,6 +1075,8 @@ export default function ReadingTestPage() {
   const searchParams = useSearchParams();
   const locale = useLocale();
   const t = useTranslations("readingTest");
+  const role = useAppSessionRole();
+  const isGuest = role === "guest";
 
   const testId = typeof params?.id === "string" ? params.id : "";
   const restartRequested = searchParams.get("restart") === "1";
@@ -1097,6 +1101,140 @@ export default function ReadingTestPage() {
       setIsLoading(true);
       setLoadError(null);
       try {
+        if (isGuest) {
+          const cached = getReadingTestById(testId);
+          if (cached) {
+            setBackendAttemptId(null);
+            setTest(cached);
+            return;
+          }
+
+          const collected: StudentTestRecord[] = [];
+          let nextPath = "/api/public/tests/reading?page_size=100";
+
+          while (nextPath) {
+            const response = await fetch(nextPath, { cache: "no-store" });
+            if (!response.ok) break;
+            const payload = (await response.json().catch(() => null)) as { results?: unknown; next?: unknown } | null;
+            const results = asArray<StudentTestRecord>((payload as {results?: unknown} | null)?.results);
+            collected.push(...results);
+
+            const next = typeof payload?.next === "string" ? payload.next.trim() : "";
+            if (!next) {
+              nextPath = "";
+              continue;
+            }
+
+            try {
+              const url = new URL(next);
+              nextPath = `/api/public/tests/reading${url.search}`;
+            } catch {
+              nextPath = "";
+            }
+          }
+
+          const matched = collected.find((item) => String(item.id) === testId);
+          if (!matched) {
+            setTest(null);
+            setBackendAttemptId(null);
+            setLoadError(t("notFoundDesc"));
+            return;
+          }
+
+          if (matched.active_for_registered_users) {
+            setTest(null);
+            setBackendAttemptId(null);
+            setLoadError(t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.");
+            return;
+          }
+
+          const detailResponse = await fetch(`/api/public/tests/reading/${encodeURIComponent(testId)}/`, { cache: "no-store" });
+          if (!detailResponse.ok) {
+            setTest(null);
+            setBackendAttemptId(null);
+            setLoadError(t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.");
+            return;
+          }
+          const detailPayload = await detailResponse.json().catch(() => null);
+
+          const attemptLike: StudentAttemptDetail = {
+            id: "guest",
+            practice_test: testId,
+            practice_test_title: toStringSafe(matched.title, "Reading Test"),
+            test_type: "READING",
+            mode: requestedMode === "real" ? "REAL" : "PRACTICE",
+            status: "GUEST",
+            started_at: null,
+            time_used_seconds: 0,
+            time_limit_seconds: matched.time_limit_seconds ?? null,
+            total_questions: matched.total_questions ?? 0,
+            answered_count: 0,
+            reading_passages: asArray(asRecord(detailPayload)?.reading_passages ?? asRecord(detailPayload)?.passages).map((rawPassage, index) => {
+              const passageRecord = asRecord(rawPassage);
+              const groupsRaw = passageRecord?.question_groups ?? passageRecord?.groups ?? passageRecord?.questionGroups;
+              const passageId = toStringSafe(passageRecord?.id, `guest-p${index + 1}`);
+
+              const normalizeQuestion = (rawQuestion: unknown): StudentAttemptQuestion => {
+                const qRecord = asRecord(rawQuestion);
+                const canonicalId = toStringSafe(qRecord?.question_id ?? qRecord?.id ?? qRecord?.uuid);
+                return {
+                  id: canonicalId || toStringSafe(qRecord?.id, ""),
+                  question_id: canonicalId || null,
+                  attempt_question_id: null,
+                  candidate_question_ids: canonicalId ? [canonicalId] : [],
+                  question_number: toNumberSafe(qRecord?.question_number ?? qRecord?.number),
+                  question_text: typeof qRecord?.question_text === "string" ? qRecord.question_text : typeof qRecord?.prompt === "string" ? qRecord.prompt : null,
+                  options_json: qRecord?.options_json ?? qRecord?.options ?? null,
+                  question_type: toStringSafe(qRecord?.question_type ?? qRecord?.type),
+                  question_type_display: typeof qRecord?.question_type_display === "string" ? qRecord.question_type_display : null,
+                  student_answer: null,
+                  is_flagged: false
+                };
+              };
+
+              const normalizeGroup = (rawGroup: unknown): StudentAttemptQuestionGroup => {
+                const gRecord = asRecord(rawGroup);
+                return {
+                  id: toStringSafe(gRecord?.id),
+                  question_type: toStringSafe(gRecord?.question_type ?? gRecord?.type),
+                  question_type_display: typeof gRecord?.question_type_display === "string" ? gRecord.question_type_display : null,
+                  group_order: toNumberSafe(gRecord?.group_order ?? gRecord?.order),
+                  instructions: toStringSafe(gRecord?.instructions ?? gRecord?.instruction),
+                  question_number_start: toNumberSafe(gRecord?.question_number_start ?? gRecord?.from),
+                  question_number_end: toNumberSafe(gRecord?.question_number_end ?? gRecord?.to),
+                  word_limit: typeof gRecord?.word_limit === "number" ? gRecord.word_limit : null,
+                  number_allowed: typeof gRecord?.number_allowed === "boolean" ? gRecord.number_allowed : null,
+                  group_content_json: gRecord?.group_content_json ?? gRecord?.group_content ?? gRecord?.content_json ?? null,
+                  questions: asArray(gRecord?.questions).map(normalizeQuestion)
+                };
+              };
+
+              const groups = asArray(groupsRaw).map(normalizeGroup);
+
+              return {
+                id: passageId,
+                passage_number: toStringSafe(passageRecord?.passage_number ?? passageRecord?.passageNumber ?? `PASSAGE_${index + 1}`),
+                title: toStringSafe(passageRecord?.title, `Passage ${index + 1}`),
+                passage_text: toStringSafe(passageRecord?.passage_text ?? passageRecord?.text),
+                max_questions: toNumberSafe(passageRecord?.max_questions ?? passageRecord?.maxQuestions),
+                answered_count: 0,
+                question_groups: groups
+              } satisfies StudentAttemptReadingPassage;
+            }),
+            listening_parts: []
+          };
+
+          const mappedTest = mapBackendAttemptToReadingTest(testId, matched, attemptLike);
+          if (!mappedTest.questions.length) {
+            throw new Error("No questions returned for this reading test.");
+          }
+
+          setBackendAttemptId(null);
+          saveRuntimeReadingTest(mappedTest);
+          setTest(mappedTest);
+          return;
+        }
+
         const listed = await studentTestsService.listReadingAllPages({ pageSize: 100 });
         if (!active) return;
 
@@ -1189,7 +1327,7 @@ export default function ReadingTestPage() {
     return () => {
       active = false;
     };
-  }, [requestedMode, restartRequested, reviewAttemptId, shouldLoadFromBackend, t, testId]);
+  }, [isGuest, requestedMode, restartRequested, reviewAttemptId, shouldLoadFromBackend, t, testId]);
 
   if (isLoading) {
     return (
@@ -1225,6 +1363,7 @@ export default function ReadingTestPage() {
       backendAttemptId={backendAttemptId}
       restartRequested={restartRequested}
       requestedMode={requestedMode}
+      isGuest={isGuest}
     />
   );
 }
@@ -1234,13 +1373,15 @@ type ReadingTestClientProps = {
   backendAttemptId?: string | null;
   restartRequested?: boolean;
   requestedMode?: AttemptMode | null;
+  isGuest?: boolean;
 };
 
 function ReadingTestClient({
   test,
   backendAttemptId: initialBackendAttemptId = null,
   restartRequested = false,
-  requestedMode = null
+  requestedMode = null,
+  isGuest = false
 }: ReadingTestClientProps) {
   const searchParams = useSearchParams();
   const t = useTranslations("readingTest");
@@ -1890,6 +2031,10 @@ function ReadingTestClient({
   }, [backendAttemptId]);
 
   useEffect(() => {
+    if (isGuest) {
+      restartNeedsFreshBackendAttemptRef.current = false;
+      return;
+    }
     if (!attemptMode || reviewMode) {
       return;
     }
@@ -1926,7 +2071,7 @@ function ReadingTestClient({
     return () => {
       active = false;
     };
-  }, [attemptMode, reviewMode, test.id]);
+  }, [attemptMode, isGuest, reviewMode, test.id]);
 
   useEffect(() => {
     setBackendReviewData(null);
@@ -2257,6 +2402,43 @@ function ReadingTestClient({
         timerUsed,
       });
 
+      if (isGuest && !backendAttemptId) {
+        const keyToBackend = new Map<string, string>();
+        test.questions.forEach((question) => {
+          const backendKey = (question.backendQuestionId ?? question.id).trim();
+          if (backendKey) {
+            keyToBackend.set(question.id, backendKey);
+          }
+        });
+
+        const queuedAnswers: Record<string, string | string[] | null> = {};
+        for (const [key, value] of Object.entries(answers)) {
+          const backendKey = keyToBackend.get(key) ?? key;
+          if (typeof value === "string") {
+            const trimmed = value.trim();
+            queuedAnswers[backendKey] = trimmed.length ? trimmed : null;
+          } else if (Array.isArray(value)) {
+            const cleaned = value.map((entry) => entry.trim()).filter(Boolean);
+            queuedAnswers[backendKey] = cleaned.length ? cleaned : null;
+          } else {
+            queuedAnswers[backendKey] = null;
+          }
+        }
+
+        const queuedMarked = [...marked].map((key) => keyToBackend.get(key) ?? key);
+
+        enqueueGuestPendingAttempt({
+          module: "reading",
+          testId: test.id,
+          localAttemptId: attemptId,
+          mode: attemptMode ?? "practice",
+          finishedAt,
+          timeUsedSeconds,
+          answers: queuedAnswers,
+          markedQuestionIds: queuedMarked
+        });
+      }
+
       setFinishOpen(false);
       setTimerRunning(false);
 
@@ -2277,6 +2459,7 @@ function ReadingTestClient({
     attemptId,
     attemptMode,
     backendAttemptId,
+    isGuest,
     isSubmittingResult,
     marked,
     remainingSeconds,
@@ -2285,6 +2468,7 @@ function ReadingTestClient({
     startedAt,
     test.durationMinutes,
     test.id,
+    test.questions,
     timerRunning,
     router,
     locale,
