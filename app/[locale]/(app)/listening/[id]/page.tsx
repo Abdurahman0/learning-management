@@ -997,6 +997,12 @@ function ListeningTestClient({
   );
   const [timerRunning, setTimerRunning] = useState(false);
   const [attemptMode, setAttemptMode] = useState<AttemptMode | null>(null);
+  type RealModeInterruptionReason = "fullscreen" | "visibility";
+  const [realModeInterruption, setRealModeInterruption] = useState<RealModeInterruptionReason | null>(null);
+  const [realModeInterruptionCount, setRealModeInterruptionCount] = useState({
+    fullscreen: 0,
+    visibility: 0,
+  });
 
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
@@ -1027,6 +1033,7 @@ function ListeningTestClient({
   const bufferingPauseRef = useRef(false);
   const pendingJumpRef = useRef<number | null>(null);
   const realModeAutoFinishedRef = useRef(false);
+  const fullscreenRequestInFlightRef = useRef(false);
   const initDoneRef = useRef(false);
   const realModeStartTimeoutRef = useRef<number | null>(null);
   const leaveWarningMessage = t.has("leaveWarning")
@@ -1073,6 +1080,8 @@ function ListeningTestClient({
     setBackendReviewData(null);
     setIsSubmittingResult(false);
     setExpandedReviewQuestions(new Set());
+    setRealModeInterruption(null);
+    setRealModeInterruptionCount({ fullscreen: 0, visibility: 0 });
     setHighlightedEvidenceQuestionId(null);
     setReviewMobilePanel("transcript");
     setActiveSectionId("s1");
@@ -1124,6 +1133,8 @@ function ListeningTestClient({
         setBackendReviewData(null);
         setIsSubmittingResult(false);
         setExpandedReviewQuestions(new Set());
+        setRealModeInterruption(null);
+        setRealModeInterruptionCount({ fullscreen: 0, visibility: 0 });
         setHighlightedEvidenceQuestionId(null);
         setReviewMobilePanel("transcript");
         setActiveSectionId("s1");
@@ -1323,6 +1334,7 @@ function ListeningTestClient({
   const unansweredCount = test.totalQuestions - answeredCount;
   const timeSpent = test.durationMinutes * 60 - remainingSeconds;
   const isRealMode = attemptMode === "real";
+  const realModeLocked = isRealMode && timerRunning && !reviewMode && realModeInterruption !== null;
   const showModePicker = attemptMode === null;
   const flatQuestions = useMemo(
     () => flattenListeningQuestions(test.id, test.sections),
@@ -1892,6 +1904,124 @@ function ListeningTestClient({
       realModeStartTimeoutRef.current = null;
     }, 1000);
   };
+
+  const requestRealModeFullscreen = useCallback(async () => {
+    if (typeof document === "undefined") {
+      return false;
+    }
+    if (document.fullscreenElement) {
+      return true;
+    }
+
+    try {
+      fullscreenRequestInFlightRef.current = true;
+      await document.documentElement.requestFullscreen();
+      return Boolean(document.fullscreenElement);
+    } catch {
+      return Boolean(document.fullscreenElement);
+    } finally {
+      window.setTimeout(() => {
+        fullscreenRequestInFlightRef.current = false;
+      }, 120);
+    }
+  }, []);
+
+  const triggerRealModeInterruption = useCallback((reason: RealModeInterruptionReason) => {
+    const realModeSessionActive = isRealMode && timerRunning;
+    if (!realModeSessionActive || reviewMode) {
+      return;
+    }
+
+    setRealModeInterruptionCount((prev) => ({
+      ...prev,
+      [reason]: prev[reason] + 1,
+    }));
+    setRealModeInterruption((prev) => prev ?? reason);
+  }, [isRealMode, reviewMode, timerRunning]);
+
+  const leaveRealMode = useCallback(() => {
+    // Exiting Real mode explicitly switches the user into Practice mode.
+    setAttemptMode("practice");
+    setTimerRunning(false);
+    setRealModeStarting(false);
+    setRealModeConfirmOpen(false);
+    setRealModeInterruption(null);
+    setRealModeInterruptionCount({ fullscreen: 0, visibility: 0 });
+
+    audioShouldPlayRef.current = false;
+    bufferingPauseRef.current = false;
+    suppressAudioAutoPlayRef.current = false;
+    stopSectionAudioPlayback();
+    setAudioPlaying(false);
+
+    if (typeof document !== "undefined" && document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    }
+  }, []);
+
+  const returnToRealMode = useCallback(async () => {
+    const enteredFullscreen = await requestRealModeFullscreen();
+    if (!enteredFullscreen) {
+      setRealModeInterruption("fullscreen");
+      return;
+    }
+    setRealModeInterruption(null);
+  }, [requestRealModeFullscreen]);
+
+  useEffect(() => {
+    const realModeSessionActive = isRealMode && timerRunning;
+    if (!realModeSessionActive || reviewMode || isFullscreen || realModeInterruption !== null) {
+      return;
+    }
+
+    void requestRealModeFullscreen().then((enteredFullscreen) => {
+      if (!enteredFullscreen) {
+        triggerRealModeInterruption("fullscreen");
+      }
+    });
+  }, [
+    isFullscreen,
+    isRealMode,
+    realModeInterruption,
+    requestRealModeFullscreen,
+    reviewMode,
+    timerRunning,
+    triggerRealModeInterruption,
+  ]);
+
+  useEffect(() => {
+    const realModeSessionActive = isRealMode && timerRunning;
+    if (!realModeSessionActive || reviewMode || realModeInterruption !== null) {
+      return;
+    }
+    if (isFullscreen || fullscreenRequestInFlightRef.current) {
+      return;
+    }
+    triggerRealModeInterruption("fullscreen");
+  }, [isFullscreen, isRealMode, realModeInterruption, reviewMode, timerRunning, triggerRealModeInterruption]);
+
+  useEffect(() => {
+    const realModeSessionActive = isRealMode && timerRunning;
+    if (!realModeSessionActive || reviewMode) {
+      return;
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        triggerRealModeInterruption("visibility");
+      }
+    };
+    const onWindowBlur = () => {
+      triggerRealModeInterruption("visibility");
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("blur", onWindowBlur);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("blur", onWindowBlur);
+    };
+  }, [isRealMode, reviewMode, timerRunning, triggerRealModeInterruption]);
 
   const handleJumpEvidenceFromReview = useCallback((questionId: string) => {
     const reviewMeta = reviewAnswerMetaByQuestionId[questionId];
@@ -3781,6 +3911,53 @@ function ListeningTestClient({
               </Button>
               <Button type="button" onClick={confirmRealModeStart}>
                 {t.has("realModeStartCta") ? t("realModeStartCta") : "Start Now"}
+              </Button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
+
+      {realModeLocked ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md border-border/80 bg-card/95 p-5 shadow-2xl sm:p-6">
+            <h3 className="text-lg font-semibold">
+              {realModeInterruption === "fullscreen"
+                ? t.has("realModeFullscreenExitedTitle")
+                  ? t("realModeFullscreenExitedTitle")
+                  : "Fullscreen exited"
+                : t.has("realModeInterruptedTitle")
+                  ? t("realModeInterruptedTitle")
+                  : "Exam session interrupted"}
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {realModeInterruption === "fullscreen"
+                ? t.has("realModeFullscreenExitedDescription")
+                  ? t("realModeFullscreenExitedDescription")
+                  : "Real Mode requires fullscreen to continue. Return to fullscreen to keep your exam session active."
+                : t.has("realModeInterruptedDescription")
+                  ? t("realModeInterruptedDescription")
+                  : "Real Mode requires you to stay in the active fullscreen test window. Return to continue or exit Real Mode."}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t.has("realModeInterruptionCount")
+                ? t("realModeInterruptionCount", {
+                    fullscreen: realModeInterruptionCount.fullscreen,
+                    visibility: realModeInterruptionCount.visibility,
+                  })
+                : `Interruptions - fullscreen: ${realModeInterruptionCount.fullscreen}, tab/window: ${realModeInterruptionCount.visibility}`}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="outline" onClick={leaveRealMode}>
+                {t.has("realModeExitButton") ? t("realModeExitButton") : "Exit Real Mode"}
+              </Button>
+              <Button type="button" onClick={() => void returnToRealMode()}>
+                {realModeInterruption === "fullscreen"
+                  ? t.has("realModeReturnFullscreenButton")
+                    ? t("realModeReturnFullscreenButton")
+                    : "Return to Fullscreen"
+                  : t.has("realModeReturnTestButton")
+                    ? t("realModeReturnTestButton")
+                    : "Return to Test"}
               </Button>
             </div>
           </Card>

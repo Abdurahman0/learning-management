@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 
@@ -141,11 +142,11 @@ export function ListeningTranscriptReviewPanel({
 
   if (!activeSection) return null;
 
-  const highlightedQuote = highlightedQuestionId
-    ? activeSection.evidenceItems.find((item) => item.questionId === highlightedQuestionId)?.quote ?? ""
-    : "";
-
   const transcriptLines = parseTranscriptLines(activeSection.transcriptText ?? "");
+  const evidenceItems = [...(activeSection.evidenceItems ?? [])]
+    .filter((item) => normalizeForSearch(item.quote))
+    // Prefer longer quotes first so we hit the most specific match per line.
+    .sort((a, b) => b.quote.length - a.quote.length);
 
   useEffect(() => {
     if (!highlightedQuestionId) return;
@@ -170,19 +171,40 @@ export function ListeningTranscriptReviewPanel({
             aria-label={t("transcript")}
           >
             {(() => {
-              let consumedHit = false;
+              const anchorsAssigned = new Set<string>();
               return transcriptLines.map((line, index) => {
-                const highlighted = highlightedQuote
-                  ? renderHighlightedText(line.text, highlightedQuote)
-                  : { node: line.text, hit: false };
-                const isFirstHit = Boolean(highlighted.hit && !consumedHit);
-                if (isFirstHit) consumedHit = true;
+                let matchedEvidence: ListeningTranscriptEvidence | null = null;
+                let highlighted: { node: ReactNode; hit: boolean } = { node: line.text, hit: false };
+
+                for (const evidence of evidenceItems) {
+                  const attempt = renderHighlightedText(line.text, evidence.quote);
+                  if (attempt.hit) {
+                    matchedEvidence = evidence;
+                    highlighted = attempt;
+                    break;
+                  }
+                }
+
+                const matchedQuestionId = matchedEvidence?.questionId ?? null;
+                const anchorId =
+                  matchedQuestionId && !anchorsAssigned.has(matchedQuestionId)
+                    ? `transcript-hit-${matchedQuestionId}`
+                    : undefined;
+
+                if (matchedQuestionId && anchorId) {
+                  anchorsAssigned.add(matchedQuestionId);
+                }
 
                 return (
                   <div
                     key={`transcript-line-${index}`}
-                    id={isFirstHit && highlightedQuestionId ? `transcript-hit-${highlightedQuestionId}` : undefined}
-                    className="grid grid-cols-[88px_minmax(0,1fr)] gap-3"
+                    id={anchorId}
+                    className={cn(
+                      "grid grid-cols-[88px_minmax(0,1fr)] gap-3",
+                      matchedQuestionId &&
+                        highlightedQuestionId === matchedQuestionId &&
+                        "rounded-lg bg-emerald-500/10 px-2 py-1 ring-2 ring-emerald-400/50 ring-offset-1 ring-offset-background"
+                    )}
                   >
                     <div className="text-xs font-semibold tracking-[0.14em] text-muted-foreground uppercase">
                       {line.speaker ? (
