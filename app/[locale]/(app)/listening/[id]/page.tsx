@@ -368,7 +368,23 @@ function parseTemplateLines(templateText: string, questions: StudentAttemptQuest
 function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] {
   const type = toStringSafe(group.question_type).trim().toUpperCase();
   const content = asRecord(group.group_content_json);
-  const questions = group.questions.slice().sort((a, b) => a.question_number - b.question_number);
+  // Defensive: backend (or misconfigured content) can occasionally return duplicate question numbers
+  // in the same group, which breaks mark-for-review + radio grouping (same `name`) and causes UI duplication.
+  const dedupedQuestions = group.questions
+    .slice()
+    .sort((a, b) => a.question_number - b.question_number)
+    .filter((question) => {
+      const num = Number(question.question_number);
+      if (!Number.isFinite(num) || num <= 0) return false;
+      return true;
+    });
+  const seen = new Set<number>();
+  const questions = dedupedQuestions.filter((question) => {
+    const num = Number(question.question_number);
+    if (seen.has(num)) return false;
+    seen.add(num);
+    return true;
+  });
   const minQuestion = questions.length ? questions[0].question_number : 0;
   const maxQuestion = questions.length ? questions[questions.length - 1].question_number : minQuestion;
   const groupRangeLabel = minQuestion > 0 && maxQuestion > 0
