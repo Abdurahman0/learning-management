@@ -24,6 +24,7 @@ type HighlightableProps = {
   noteScopeKey?: string;
   className?: string;
   contentVersion?: string | number;
+  clearToken?: string | number;
   children: ReactNode;
 };
 
@@ -220,6 +221,7 @@ export function Highlightable({
   noteScopeKey,
   className,
   contentVersion,
+  clearToken,
   children,
 }: HighlightableProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -240,6 +242,13 @@ export function Highlightable({
   useEffect(() => {
     saveHighlights(storageKey, highlights);
   }, [highlights, storageKey]);
+
+  useEffect(() => {
+    if (clearToken === undefined || clearToken === null) return;
+    setSelection(null);
+    setHighlights([]);
+    // Notes intentionally preserved: this button is "Clear highlights" only.
+  }, [clearToken]);
 
   useEffect(() => {
     saveTextNotes(notesKey, notes);

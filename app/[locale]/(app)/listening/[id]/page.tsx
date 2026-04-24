@@ -7,6 +7,7 @@ import {
   Bookmark,
   BookmarkCheck,
   Clock3,
+  Eraser,
   Grid2x2,
   Maximize2,
   Menu,
@@ -368,23 +369,27 @@ function parseTemplateLines(templateText: string, questions: StudentAttemptQuest
 function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] {
   const type = toStringSafe(group.question_type).trim().toUpperCase();
   const content = asRecord(group.group_content_json);
-  // Defensive: backend (or misconfigured content) can occasionally return duplicate question numbers
-  // in the same group, which breaks mark-for-review + radio grouping (same `name`) and causes UI duplication.
-  const dedupedQuestions = group.questions
+  // Backend/content can occasionally return duplicate question numbers in the same group (especially MCQ where
+  // options may be split across records). Keep duplicates for MCQ so we can merge them later, and dedupe
+  // non-MCQ types defensively.
+  const sortedValidQuestions = group.questions
     .slice()
     .sort((a, b) => a.question_number - b.question_number)
     .filter((question) => {
       const num = Number(question.question_number);
-      if (!Number.isFinite(num) || num <= 0) return false;
-      return true;
+      return Number.isFinite(num) && num > 0;
     });
-  const seen = new Set<number>();
-  const questions = dedupedQuestions.filter((question) => {
-    const num = Number(question.question_number);
-    if (seen.has(num)) return false;
-    seen.add(num);
-    return true;
-  });
+  const questions = (type === "MCQ_SINGLE" || type === "MCQ_MULTIPLE")
+    ? sortedValidQuestions
+    : (() => {
+        const seen = new Set<number>();
+        return sortedValidQuestions.filter((question) => {
+          const num = Number(question.question_number);
+          if (seen.has(num)) return false;
+          seen.add(num);
+          return true;
+        });
+      })();
   const minQuestion = questions.length ? questions[0].question_number : 0;
   const maxQuestion = questions.length ? questions[questions.length - 1].question_number : minQuestion;
   const groupRangeLabel = minQuestion > 0 && maxQuestion > 0
@@ -719,6 +724,13 @@ function mergeDuplicateMcqQuestions(blocks: ListeningBlock[]) {
       return nextQuestions.length ? {...block, questions: nextQuestions} : null;
     })
     .filter(Boolean) as ListeningBlock[];
+}
+
+function normalizeListeningSectionsForRender(sections: ListeningSectionFull[]) {
+  return sections.map((section) => ({
+    ...section,
+    blocks: mergeDuplicateMcqQuestions(section.blocks),
+  }));
 }
 
 function mapListeningAttemptToRuntimeTest(test: StudentTestRecord, attempt: StudentAttemptDetail): ListeningFullTest {
@@ -1076,7 +1088,9 @@ function ListeningTestClient({
   const reviewDeepLinkActive = searchParams.get("review") === "1" && UUID_PATTERN.test(reviewDeepLinkAttemptIdRaw);
   const reviewDeepLinkAttemptId = reviewDeepLinkActive ? reviewDeepLinkAttemptIdRaw : null;
   const test = getListeningTestById(testId)!;
+  const normalizedSections = useMemo(() => normalizeListeningSectionsForRender(test.sections), [test.sections]);
   const restartRequested = searchParams.get("restart") === "1";
+  const clearHighlightsLabel = t.has("clearHighlights") ? t("clearHighlights") : "Clear highlights";
   const paletteTitle = t.has("questionPalette")
     ? t("questionPalette")
     : "Question palette";
@@ -1126,6 +1140,7 @@ function ListeningTestClient({
   const [activeQuestionNumber, setActiveQuestionNumber] = useState(1);
   const [answers, setAnswers] = useState<AnswersMap>({});
   const [marked, setMarked] = useState<Set<number>>(new Set());
+  const [clearHighlightsToken, setClearHighlightsToken] = useState(0);
 
   const [remainingSeconds, setRemainingSeconds] = useState(
     test.durationMinutes * 60,
@@ -1398,7 +1413,7 @@ function ListeningTestClient({
   const sectionByQuestion = useMemo(() => {
     const map = new Map<number, ListeningSectionFull["id"]>();
 
-    test.sections.forEach((section) => {
+    normalizedSections.forEach((section) => {
       section.blocks.forEach((block) => {
         getQuestionNumbersFromBlock(block).forEach((number) =>
           map.set(number, section.id),
@@ -1407,12 +1422,12 @@ function ListeningTestClient({
     });
 
     return map;
-  }, [test.sections]);
+  }, [normalizedSections]);
 
   const sectionQuestionNumbers = useMemo(() => {
     const map = new Map<ListeningSectionFull["id"], number[]>();
 
-    test.sections.forEach((section) => {
+    normalizedSections.forEach((section) => {
       const numbers = section.blocks.flatMap((block) =>
         getQuestionNumbersFromBlock(block),
       );
@@ -1420,10 +1435,10 @@ function ListeningTestClient({
     });
 
     return map;
-  }, [test.sections]);
+  }, [normalizedSections]);
 
   const sectionPaletteSections = useMemo(() => {
-    return test.sections.map((section, index) => {
+    return normalizedSections.map((section, index) => {
       const numbers = sectionQuestionNumbers.get(section.id) ?? [];
       const answered = numbers.reduce((count, number) => {
         return count + (isAnswered(answers[number]) ? 1 : 0);
@@ -1435,7 +1450,7 @@ function ListeningTestClient({
         answered,
       };
     });
-  }, [answers, sectionQuestionNumbers, test.sections]);
+  }, [answers, sectionQuestionNumbers, normalizedSections]);
   const activeSectionPaletteSection = useMemo(
     () =>
       sectionPaletteSections.find((section) => section.sectionId === activeSectionId)
@@ -1446,15 +1461,15 @@ function ListeningTestClient({
 
   const activeSection = useMemo(
     () =>
-      test.sections.find((section) => section.id === activeSectionId) ??
-      test.sections[0],
-    [activeSectionId, test.sections],
+      normalizedSections.find((section) => section.id === activeSectionId) ??
+      normalizedSections[0],
+    [activeSectionId, normalizedSections],
   );
   const audioSection = useMemo(
     () =>
-      test.sections.find((section) => section.id === audioSectionId) ??
-      test.sections[0],
-    [audioSectionId, test.sections],
+      normalizedSections.find((section) => section.id === audioSectionId) ??
+      normalizedSections[0],
+    [audioSectionId, normalizedSections],
   );
   const audioSectionAudioUrl = useMemo(
     () => resolvePlayableAudioUrl(toStringSafe(audioSection.audioMeta.audioUrl)),
@@ -1472,8 +1487,8 @@ function ListeningTestClient({
   const realModeLocked = isRealMode && timerRunning && !reviewMode && realModeInterruption !== null;
   const showModePicker = attemptMode === null;
   const flatQuestions = useMemo(
-    () => flattenListeningQuestions(test.id, test.sections),
-    [test.id, test.sections]
+    () => flattenListeningQuestions(test.id, normalizedSections),
+    [test.id, normalizedSections]
   );
   const localAnswersByQuestionId = useMemo(
     () =>
@@ -1563,7 +1578,7 @@ function ListeningTestClient({
       }));
     }
 
-    return test.sections.map((section, index) => ({
+    return normalizedSections.map((section, index) => ({
       sectionId: section.id,
       label: tListeningResult("partLabel", { index: index + 1 }),
       title: section.title,
@@ -1586,10 +1601,10 @@ function ListeningTestClient({
           } as const;
         }),
     }));
-  }, [backendReviewData, flatQuestions, grading.byQuestion, tListeningResult, test.sections]);
-  const resolvedActiveSectionId = test.sections.some((section) => section.id === activeSectionId)
+  }, [backendReviewData, flatQuestions, grading.byQuestion, normalizedSections, tListeningResult]);
+  const resolvedActiveSectionId = normalizedSections.some((section) => section.id === activeSectionId)
     ? activeSectionId
-    : (test.sections[0]?.id ?? "s1");
+    : (normalizedSections[0]?.id ?? "s1");
   const reviewStartQuestionId = useMemo(
     () =>
       reviewQuestions
@@ -2587,9 +2602,9 @@ function ListeningTestClient({
     }
 
     if (block.type === "mcqGroup") {
-      const renderMcqQuestion = (question: typeof block.questions[number], grouped = false) => (
+      const renderMcqQuestion = (question: typeof block.questions[number], grouped = false, keySuffix = "0") => (
         <article
-          key={question.questionNumber}
+          key={`mcq-${question.questionNumber}-${keySuffix}`}
           id={`q-${question.questionNumber}`}
           ref={(el) => {
             if (!el) {
@@ -2633,7 +2648,7 @@ function ListeningTestClient({
               >
                 <input
                   type={block.allowMultiple ? "checkbox" : "radio"}
-                  name={`q-${question.questionNumber}`}
+                  name={`q-${question.questionNumber}-${keySuffix}`}
                   value={choice.key}
                   checked={block.allowMultiple ? selected : answers[question.questionNumber] === choice.key}
                   onChange={(e) => {
@@ -2777,7 +2792,9 @@ function ListeningTestClient({
               })()}
             </Card>
           ) : (
-            block.questions.map((question) => renderMcqQuestion(question))
+            block.questions.map((question, questionIndex) =>
+              renderMcqQuestion(question, false, String(questionIndex))
+            )
           )}
         </div>
       );
@@ -3340,6 +3357,21 @@ function ListeningTestClient({
           ) : null}
 
           <div className="ml-auto shrink-0 min-w-0 flex items-center gap-1 sm:gap-3">
+            {!reviewMode ? (
+              <Button
+                type="button"
+                variant="outline"
+                className={cn(
+                  "h-9 shrink-0 rounded-xl border-border/70 bg-background/60 px-2 text-sm font-semibold sm:px-3",
+                  isSmallLandscape && "h-8 px-2 text-xs",
+                )}
+                aria-label={clearHighlightsLabel}
+                onClick={() => setClearHighlightsToken((prev) => prev + 1)}
+              >
+                <Eraser className="size-4" />
+                <span className="hidden sm:inline">{clearHighlightsLabel}</span>
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -3682,7 +3714,7 @@ function ListeningTestClient({
                   questions={reviewQuestions}
                   answers={reviewAnswersByQuestionId}
                   answerMetaByQuestionId={reviewAnswerMetaByQuestionId}
-                  blocks={test.sections.find((section) => section.id === resolvedActiveSectionId)?.blocks ?? []}
+                  blocks={normalizedSections.find((section) => section.id === resolvedActiveSectionId)?.blocks ?? []}
                   grading={grading}
                   expanded={expandedReviewQuestions}
                   showTopQuestionNavigator={false}
@@ -3721,6 +3753,7 @@ function ListeningTestClient({
                 notesStorageKey={`listening:${test.id}:notes`}
                 noteScopeKey={`section:${activeSection.id}`}
                 contentVersion={`${activeSection.id}:${isSmallLandscape ? "compact" : "full"}`}
+                clearToken={clearHighlightsToken}
                 className={cn(
                   "space-y-4 pb-8",
                   isSmallLandscape && "pb-6",
