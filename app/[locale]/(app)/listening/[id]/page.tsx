@@ -602,6 +602,125 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
   })];
 }
 
+function mergeDuplicateMcqQuestions(blocks: ListeningBlock[]) {
+  const cloned = blocks.map((block) => {
+    if (block.type !== "mcqGroup") return block;
+    return {
+      ...block,
+      questions: block.questions.map((question) => ({
+        ...question,
+        options: [...question.options],
+      })),
+    };
+  });
+
+  const removeByBlock = new Map<number, Set<number>>();
+  const firstByNumber = new Map<number, {blockIndex: number; questionIndex: number}>();
+
+  const isGenericPrompt = (prompt: string, questionNumber: number) => {
+    const cleaned = (prompt ?? "").trim();
+    if (!cleaned) return true;
+    if (/^question\s+\d+$/i.test(cleaned)) return true;
+    if (cleaned === String(questionNumber)) return true;
+    return false;
+  };
+
+  const mergePrompt = (base: string, incoming: string, questionNumber: number) => {
+    const a = (base ?? "").trim();
+    const b = (incoming ?? "").trim();
+    if (!a) return b;
+    if (!b) return a;
+    if (a === b) return a;
+    if (a.includes(b)) return a;
+    if (b.includes(a)) return b;
+
+    // Prefer non-generic prompt if one side is generic.
+    const aGeneric = isGenericPrompt(a, questionNumber);
+    const bGeneric = isGenericPrompt(b, questionNumber);
+    if (aGeneric && !bGeneric) return b;
+    if (!aGeneric && bGeneric) return a;
+
+    return `${a} ${b}`.replace(/\s+/g, " ").trim();
+  };
+
+  const parseKeyFromOption = (value: string) => {
+    const raw = (value ?? "").trim();
+    const match = raw.match(/^([A-Z]+)[\)\].:\-]\s*(.+)$/i);
+    if (match) {
+      return {key: match[1].toUpperCase(), label: `${match[1].toUpperCase()}. ${match[2].trim()}`};
+    }
+    if (/^[A-Z]+$/.test(raw.toUpperCase())) {
+      return {key: raw.toUpperCase(), label: raw.toUpperCase()};
+    }
+    return {key: "", label: raw};
+  };
+
+  const mergeOptions = (baseOptions: string[], incomingOptions: string[]) => {
+    const byKey = new Map<string, string>();
+    const loose: string[] = [];
+
+    const ingest = (options: string[]) => {
+      options.forEach((opt) => {
+        const parsed = parseKeyFromOption(opt);
+        if (!parsed.label) return;
+        if (parsed.key) {
+          const existing = byKey.get(parsed.key);
+          if (!existing || existing.length < parsed.label.length) {
+            byKey.set(parsed.key, parsed.label);
+          }
+          return;
+        }
+        if (!loose.includes(parsed.label)) {
+          loose.push(parsed.label);
+        }
+      });
+    };
+
+    ingest(baseOptions);
+    ingest(incomingOptions);
+
+    const sortedKeys = [...byKey.keys()].sort((a, b) => a.localeCompare(b));
+    return [...sortedKeys.map((key) => byKey.get(key)!).filter(Boolean), ...loose];
+  };
+
+  cloned.forEach((block, blockIndex) => {
+    if (block.type !== "mcqGroup") return;
+
+    block.questions.forEach((question, questionIndex) => {
+      const number = Number(question.questionNumber);
+      if (!Number.isFinite(number) || number <= 0) return;
+
+      const first = firstByNumber.get(number);
+      if (!first) {
+        firstByNumber.set(number, {blockIndex, questionIndex});
+        return;
+      }
+
+      const keeperBlock = cloned[first.blockIndex];
+      if (keeperBlock.type !== "mcqGroup") return;
+      const keeper = keeperBlock.questions[first.questionIndex];
+      if (!keeper) return;
+
+      keeper.prompt = mergePrompt(keeper.prompt, question.prompt, number);
+      keeper.options = mergeOptions(keeper.options, question.options);
+
+      const removalSet = removeByBlock.get(blockIndex) ?? new Set<number>();
+      removalSet.add(questionIndex);
+      removeByBlock.set(blockIndex, removalSet);
+    });
+  });
+
+  return cloned
+    .map((block, blockIndex) => {
+      if (block.type !== "mcqGroup") return block;
+      const removals = removeByBlock.get(blockIndex);
+      if (!removals || removals.size === 0) return block;
+      const nextQuestions = block.questions.filter((_, idx) => !removals.has(idx));
+      return nextQuestions.length ? {...block, questions: nextQuestions} : null;
+    })
+    .filter(Boolean) as ListeningBlock[];
+}
+
 function mapListeningAttemptToRuntimeTest(test: StudentTestRecord, attempt: StudentAttemptDetail): ListeningFullTest {
   const parts = attempt.listening_parts
     .slice()
@@ -616,7 +735,7 @@ function mapListeningAttemptToRuntimeTest(test: StudentTestRecord, attempt: Stud
 
   const sections: ListeningSectionFull[] = parts.map((part, index) => {
     const groups = part.question_groups.slice().sort((a, b) => a.group_order - b.group_order);
-    const blocks = groups.flatMap(mapGroupToBlocks);
+    const blocks = mergeDuplicateMcqQuestions(groups.flatMap(mapGroupToBlocks));
     const allQuestionNumbers = groups.flatMap((group) => group.questions.map((question) => Number(question.question_number)));
     const minQuestion = allQuestionNumbers.length ? Math.min(...allQuestionNumbers) : index * 10 + 1;
     const maxQuestion = allQuestionNumbers.length ? Math.max(...allQuestionNumbers) : minQuestion + 9;
