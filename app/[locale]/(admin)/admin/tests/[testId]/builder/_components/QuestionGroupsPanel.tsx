@@ -60,6 +60,23 @@ type SlotRange = {
   to: number;
 };
 
+function toMcqKey(index: number) {
+  return String.fromCharCode("A".charCodeAt(0) + index);
+}
+
+function normalizeMcqOptionKeys(raw: string) {
+  const rows = raw
+    .split("\n")
+    .map((value) => value.trim().toUpperCase())
+    .filter(Boolean)
+    .map((value) => value[0] ?? "")
+    .filter((value) => /^[A-Z]$/.test(value));
+
+  const unique = [...new Set(rows)];
+  const desiredCount = unique.length || 4;
+  return Array.from({length: desiredCount}, (_, idx) => toMcqKey(idx));
+}
+
 function collectOccupiedNumbers(groups: QuestionGroup[], excludeGroupId?: string) {
   const occupied = new Set<number>();
   for (const group of groups) {
@@ -297,7 +314,7 @@ export function QuestionGroupsPanel({
       summaryText: "",
       completionTemplateText: "",
       mcqMode: "single",
-      mcqOptions: "",
+      mcqOptions: "A\nB\nC\nD",
       wordBank: "",
       headings: "",
       choices: "",
@@ -324,12 +341,18 @@ export function QuestionGroupsPanel({
       completionTemplateText: (group.groupContentJson as any)?.template_text ?? "",
       mcqMode: (group.groupContentJson as any)?.mcq_mode === "multiple" ? "multiple" : "single",
       mcqOptions:
-        Array.isArray((group.groupContentJson as any)?.options)
-          ? ((group.groupContentJson as any).options as Array<{text?: string; label?: string; key?: string}>)
-              .map((item) => item?.text ?? item?.label ?? item?.key ?? "")
-              .filter(Boolean)
-              .join("\n")
-          : (group.questions[0] as any)?.options?.join("\n") ?? "",
+        (() => {
+          const stored = Array.isArray((group.groupContentJson as any)?.options)
+            ? ((group.groupContentJson as any).options as Array<{text?: string; label?: string; key?: string}>)
+                .map((item, index) => (item?.key ?? item?.text ?? item?.label ?? toMcqKey(index)))
+                .map((value) => String(value ?? "").trim().toUpperCase())
+                .filter((value) => /^[A-Z]$/.test(value))
+            : [];
+          const inferredCount =
+            Number((group.questions[0] as any)?.options?.length ?? 0) || stored.length || 4;
+          const keys = stored.length ? stored : Array.from({length: inferredCount}, (_, idx) => toMcqKey(idx));
+          return keys.join("\n");
+        })(),
       wordBank: Array.isArray((group.groupContentJson as any)?.word_bank) 
         ? ((group.groupContentJson as any).word_bank as string[]).join(", ") 
         : "",
@@ -359,7 +382,7 @@ export function QuestionGroupsPanel({
     const parsedChoices = editor.choices.split("\n").map((value) => value.trim()).filter(Boolean);
     const parsedWordBank = editor.wordBank.split(",").map((value) => value.trim()).filter(Boolean);
     const parsedTemplateText = editor.completionTemplateText.trim();
-    const parsedMcqOptions = editor.mcqOptions.split("\n").map((value) => value.trim()).filter(Boolean);
+    const parsedMcqKeys = normalizeMcqOptionKeys(editor.mcqOptions);
     const parsedTableColumns = editor.tableColumns.split("\n").map((value) => value.trim()).filter(Boolean);
     const parsedTableRows = editor.tableRows
       .split("\n")
@@ -379,13 +402,12 @@ export function QuestionGroupsPanel({
     }
 
     const groupContent =
-      editor.type === "multiple_choice" && module === "listening"
+      editor.type === "multiple_choice"
         ? {
             mcq_mode: editor.mcqMode,
-            options: parsedMcqOptions.map((text, index) => ({
-              key: String.fromCharCode("A".charCodeAt(0) + index),
-              text
-            }))
+            // MCQ option keys are stored for UI purposes only (backend group_content_json for MCQ is null).
+            // We intentionally keep values as single letters so each question can define its own prompts.
+            options: parsedMcqKeys.map((key) => ({key, text: key}))
           }
         : editor.type === "summary_completion"
         ? {
@@ -569,7 +591,7 @@ export function QuestionGroupsPanel({
               </>
             )}
 
-            {editor.type === "multiple_choice" && module === "listening" && (
+            {editor.type === "multiple_choice" && (
               <>
                 <div className="space-y-1.5">
                   <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCQ Mode</label>
@@ -592,14 +614,14 @@ export function QuestionGroupsPanel({
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCQ Options (shared)</label>
+                  <label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">MCQ Option Keys</label>
                   <BoldTextarea
                     value={editor.mcqOptions}
                     onChange={(nextValue) => setEditor((current) => ({...current, mcqOptions: nextValue}))}
-                    placeholder="Option A text&#10;Option B text&#10;Option C text&#10;Option D text&#10;Option E text"
+                    placeholder="A&#10;B&#10;C&#10;D&#10;E"
                     className="min-h-32 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
                   />
-                  <p className="text-[10px] text-muted-foreground">One option per line. You can add more than 4.</p>
+                  <p className="text-[10px] text-muted-foreground">One letter per line. This controls how many option prompts each question has.</p>
                 </div>
               </>
             )}

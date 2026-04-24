@@ -747,6 +747,38 @@ function resolveMcqModeFromGroupContent(groupContent: unknown): "single" | "mult
   return toStringSafe(content.mcq_mode).trim().toLowerCase() === "multiple" ? "multiple" : "single";
 }
 
+function extractMcqGroupOptionRows(raw: unknown) {
+  const record = asRecord(raw);
+  return Array.isArray(record.options) ? record.options : [];
+}
+
+function extractMcqGroupOptionTexts(raw: unknown) {
+  const rows = extractMcqGroupOptionRows(raw);
+  return rows
+    .map((item: any) => (typeof item === "string" ? item : toStringSafe(item?.text ?? item?.label ?? item?.key)))
+    .map((value: string) => value.trim())
+    .filter(Boolean);
+}
+
+function isMcqGroupKeysOnly(raw: unknown) {
+  const rows = extractMcqGroupOptionRows(raw);
+  if (!rows.length) return false;
+  return rows.every((item: any, index: number) => {
+    const key = typeof item === "string" ? "" : toStringSafe(item?.key);
+    const text = typeof item === "string" ? String(item) : toStringSafe(item?.text ?? item?.label ?? item?.key);
+    const normalizedKey = (key || toOptionKey(index)).trim().toUpperCase();
+    const normalizedText = text.trim().toUpperCase();
+    return /^[A-Z]$/.test(normalizedKey) && normalizedText === normalizedKey;
+  });
+}
+
+function resizeMcqOptionPrompts(current: unknown, desiredCount: number) {
+  const existing = Array.isArray(current) ? (current as string[]) : [];
+  const next = existing.slice(0, Math.max(0, desiredCount));
+  while (next.length < desiredCount) next.push("");
+  return next;
+}
+
 function resolveApiQuestionTypeForGroup(
   type: QuestionType,
   questionCount: number,
@@ -1189,7 +1221,9 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
 
   const enrichedQuestions = questions.map((question) => {
     if (question.type === "multiple_choice" && mcqOptions.length > 0) {
-      return {...question, options: [...mcqOptions]};
+      const existing = (question as any).options as string[] | undefined;
+      const hasPerQuestionOptions = Array.isArray(existing) && existing.some((value) => value.trim().length > 0);
+      return hasPerQuestionOptions ? question : ({...question, options: [...mcqOptions]} as any);
     }
     if (question.type === "matching_headings" && headings.length > 0) {
       return {...question, headings};
@@ -1780,11 +1814,17 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         groupContentJson: groupContent ?? baseCreatedGroup.groupContentJson,
         questions: baseCreatedGroup.questions.map((question) => {
           if (question.type === "multiple_choice" && Array.isArray((groupContent as any)?.options)) {
-            const options = (groupContent as any).options
-              .map((item: any) => (typeof item === "string" ? item : toStringSafe(item?.text ?? item?.label ?? item?.key)))
-              .map((item: string) => item.trim())
-              .filter(Boolean);
-            return options.length > 0 ? {...question, options} : question;
+            const nextCount = extractMcqGroupOptionRows(groupContent).length;
+            if (nextCount <= 0) return question;
+
+            // New flow: group contains only option keys (A/B/C/...) and each question defines its own prompts.
+            if (isMcqGroupKeysOnly(groupContent)) {
+              return {...question, options: resizeMcqOptionPrompts((question as any).options, nextCount)};
+            }
+
+            // Backwards-compatible flow: group contains shared option prompts.
+            const shared = extractMcqGroupOptionTexts(groupContent);
+            return shared.length > 0 ? {...question, options: shared} : question;
           }
           if (question.type === "matching_headings" && Array.isArray((groupContent as any)?.headings)) {
             return {...question, headings: [...(groupContent as any).headings]};
@@ -1862,6 +1902,17 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           return group;
         }
 
+        const normalizeGroupMcqOptions = (raw: any) => {
+          return extractMcqGroupOptionTexts(raw);
+        };
+
+        const previousGroupMcqOptions = normalizeGroupMcqOptions(group.groupContentJson as any);
+        const nextGroupMcqOptions = normalizeGroupMcqOptions(groupContent);
+        const nextGroupMcqCount = extractMcqGroupOptionRows(groupContent).length;
+        const nextIsKeysOnly = isMcqGroupKeysOnly(groupContent);
+        const arraysEqual = (left: string[], right: string[]) =>
+          left.length === right.length && left.every((value, idx) => value === right[idx]);
+
         const questions: BuilderQuestion[] = [];
         for (let number = from; number <= to; number += 1) {
           const existing = group.questions.find((question) => question.number === number && question.type === type);
@@ -1879,15 +1930,30 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           )) {
             (q as any).choices = [...groupContent.choices];
           }
-          if (groupContent?.options && q.type === "multiple_choice") {
-            (q as any).options = [...groupContent.options]
-              .map((item: any) =>
-                typeof item === "string"
-                  ? item
-                  : toStringSafe(item?.text ?? item?.label ?? item?.key)
-              )
-              .map((item: string) => item.trim())
-              .filter(Boolean);
+          if (q.type === "multiple_choice" && nextGroupMcqCount > 0) {
+            const currentOptions = Array.isArray((q as any).options) ? ((q as any).options as string[]) : [];
+
+            if (nextIsKeysOnly) {
+              // Keys-only: resize prompts per question, do not overwrite existing prompt text.
+              (q as any).options = resizeMcqOptionPrompts(currentOptions, nextGroupMcqCount);
+
+              // Ensure correctAnswer stays within bounds if the option count shrank.
+              const allowed = new Set(Array.from({length: nextGroupMcqCount}, (_, idx) => toOptionKey(idx)));
+              const tokens = toStringSafe((q as any).correctAnswer)
+                .split(",")
+                .map((item) => item.trim().toUpperCase())
+                .filter(Boolean)
+                .filter((token) => allowed.has(token));
+              (q as any).correctAnswer = tokens.join(", ");
+            } else if (nextGroupMcqOptions.length > 0) {
+              const normalizedCurrent = currentOptions.map((value) => value.trim()).filter(Boolean);
+              const inSyncWithPrevious = normalizedCurrent.length === 0 || arraysEqual(normalizedCurrent, previousGroupMcqOptions);
+
+              // Only overwrite options that were previously synced (or empty). This allows per-question MCQ options.
+              if (inSyncWithPrevious) {
+                (q as any).options = [...nextGroupMcqOptions];
+              }
+            }
           }
 
           questions.push(q);

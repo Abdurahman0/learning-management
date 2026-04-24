@@ -3547,6 +3547,7 @@ function ListeningTestClient({
                   questions={reviewQuestions}
                   answers={reviewAnswersByQuestionId}
                   answerMetaByQuestionId={reviewAnswerMetaByQuestionId}
+                  blocks={test.sections.find((section) => section.id === resolvedActiveSectionId)?.blocks ?? []}
                   grading={grading}
                   expanded={expandedReviewQuestions}
                   showTopQuestionNavigator={false}
