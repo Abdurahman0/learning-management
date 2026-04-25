@@ -241,6 +241,43 @@ function collectListeningSubmitMetaByNumber(attempt: StudentAttemptDetail) {
   return byNumber;
 }
 
+function normalizeTfngYnngAnswerForBackend(value: string, questionType: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+
+  const normalized = trimmed.toUpperCase().replace(/\s+/g, "_");
+  if (normalized === "NOT_GIVEN" || normalized === "NOTGIVEN") return "NOT_GIVEN";
+
+  if (questionType === "TFNG") {
+    if (normalized === "TRUE") return "TRUE";
+    if (normalized === "FALSE") return "FALSE";
+  }
+
+  if (questionType === "YNNG") {
+    if (normalized === "YES") return "YES";
+    if (normalized === "NO") return "NO";
+  }
+
+  // Keep original text for any unexpected values so we don't alter other question types/flows.
+  return trimmed;
+}
+
+function normalizeLetterKeyAnswerForBackend(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^[A-Z]$/i.test(trimmed)) return trimmed.toUpperCase();
+  const match = trimmed.match(/^\s*([A-Z])(?:\s*$|[\)\].:\-]\s+)/i);
+  return match ? match[1].toUpperCase() : trimmed;
+}
+
+function normalizeRomanKeyAnswerForBackend(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^[ivxlcdm]+$/i.test(trimmed)) return trimmed.toLowerCase();
+  const match = trimmed.match(/^\s*([ivxlcdm]+)(?:\s*$|[\)\].:\-]\s+|\s+)/i);
+  return match ? match[1].toLowerCase() : trimmed;
+}
+
 function extractValidationAnswerQuestionIdFailures(error: unknown) {
   if (!(error instanceof StudentApiError)) {
     return new Set<string>();
@@ -2301,17 +2338,35 @@ function ListeningTestClient({
             .map(([rawNumber, rawValue]) => {
               const questionNumber = Number(rawNumber);
               if (!Number.isFinite(questionNumber)) return null;
-              const normalizedRaw = toStringSafe(rawValue).trim();
+              const submitMeta = submitMetaByNumber.get(questionNumber);
+              let normalizedRaw = toStringSafe(rawValue).trim();
               if (!normalizedRaw) return null;
 
-              const submitMeta = submitMetaByNumber.get(questionNumber);
               if (!submitMeta?.candidateIds?.length) return null;
+
+              if (submitMeta.questionType === "TFNG" || submitMeta.questionType === "YNNG") {
+                normalizedRaw = normalizeTfngYnngAnswerForBackend(normalizedRaw, submitMeta.questionType);
+              } else if (submitMeta.questionType === "MATCHING_HEADINGS") {
+                normalizedRaw = normalizeRomanKeyAnswerForBackend(normalizedRaw);
+              } else if (
+                submitMeta.questionType === "MCQ_SINGLE"
+                || submitMeta.questionType === "MATCHING"
+                || submitMeta.questionType === "CLASSIFICATION"
+                || submitMeta.questionType === "LIST_SELECTION"
+                || submitMeta.questionType === "CHOOSING_TITLE"
+                || submitMeta.questionType === "MATCH_PARA_INFO"
+                || submitMeta.questionType === "MATCH_SENT_ENDINGS"
+                || submitMeta.questionType === "PLAN_MAP_DIAGRAM"
+                || submitMeta.questionType === "DIAGRAM_COMPLETION"
+              ) {
+                normalizedRaw = normalizeLetterKeyAnswerForBackend(normalizedRaw);
+              }
 
               const answerPayload = submitMeta.questionType === "MCQ_MULTIPLE"
                 ? {
                     answers: normalizedRaw
                       .split(",")
-                      .map((item) => item.trim())
+                      .map((item) => normalizeLetterKeyAnswerForBackend(item))
                       .filter(Boolean)
                   }
                 : {

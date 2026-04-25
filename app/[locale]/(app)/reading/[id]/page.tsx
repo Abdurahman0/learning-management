@@ -86,7 +86,7 @@ function isAnswered(value: AnswerValue | undefined) {
 function toSubmitAnswer(value: AnswerValue | undefined): string | string[] | null {
   if (typeof value === "string") {
     const trimmed = value.trim();
-    return trimmed.length ? value : null;
+    return trimmed.length ? trimmed : null;
   }
   if (Array.isArray(value)) {
     const cleaned = value.map((item) => item.trim()).filter(Boolean);
@@ -201,6 +201,22 @@ function normalizeTfngAnswerForBackend(value: string, options?: readonly string[
   if (normalized === "FALSE") return "FALSE";
   if (normalized === "NOT_GIVEN" || normalized === "NOTGIVEN") return "NOT_GIVEN";
   return value.trim();
+}
+
+function normalizeLetterKeyAnswerForBackend(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^[A-Z]$/i.test(trimmed)) return trimmed.toUpperCase();
+  const match = trimmed.match(/^\s*([A-Z])(?:\s*$|[\)\].:\-]\s+)/i);
+  return match ? match[1].toUpperCase() : trimmed;
+}
+
+function normalizeRomanKeyAnswerForBackend(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^[ivxlcdm]+$/i.test(trimmed)) return trimmed.toLowerCase();
+  const match = trimmed.match(/^\s*([ivxlcdm]+)(?:\s*$|[\)\].:\-]\s+|\s+)/i);
+  return match ? match[1].toLowerCase() : trimmed;
 }
 
 type MatchingHeadingsBankProps = {
@@ -406,6 +422,10 @@ function extractMcqOptions(question: StudentAttemptQuestion): string[] {
     const row = asRecord(item);
     const text = toStringSafe(row?.text);
     const key = toStringSafe(row?.key);
+    if (key && text) {
+      const cleanedText = text.replace(new RegExp(`^${key}[\\)\\].:\\-\\s]+`, "i"), "").trim();
+      return cleanedText ? `${key}. ${cleanedText}` : key;
+    }
     if (text) return text;
     if (key) return key;
     return "";
@@ -413,6 +433,65 @@ function extractMcqOptions(question: StudentAttemptQuestion): string[] {
 
   const cleaned = list.map((item) => item.trim()).filter(Boolean);
   return cleaned.length ? cleaned : ["A", "B", "C"];
+}
+
+function toAlphabetKey(rawIndex: number) {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let value = rawIndex + 1;
+  let result = "";
+  while (value > 0) {
+    value -= 1;
+    result = alphabet[value % 26] + result;
+    value = Math.floor(value / 26);
+  }
+  return result || "A";
+}
+
+function parseOptionChoice(option: string, index: number) {
+  const trimmed = option.trim();
+  const match = trimmed.match(/^\s*([A-Z])[\)\].:\-]\s*(.+)$/i);
+  if (match) {
+    const key = match[1].toUpperCase();
+    const text = match[2].trim();
+    return {
+      key,
+      text,
+      label: `${key}. ${text}`,
+    };
+  }
+
+  const key = toAlphabetKey(index);
+  return {
+    key,
+    text: trimmed,
+    label: trimmed ? `${key}. ${trimmed}` : key,
+  };
+}
+
+function resolveChoiceKeyFromRawValue(
+  rawValue: string | string[] | null | undefined,
+  parsedOptions: Array<{ key: string; label: string }>,
+  rawOptions: string[],
+) {
+  if (typeof rawValue !== "string") return "";
+  const normalized = rawValue.trim();
+  if (!normalized) return "";
+
+  const upper = normalized.toUpperCase();
+  const byKey = parsedOptions.find((option) => option.key.toUpperCase() === upper);
+  if (byKey) return byKey.key;
+
+  const byLabel = parsedOptions.find((option) => option.label.toUpperCase() === upper);
+  if (byLabel) return byLabel.key;
+
+  const byRawOption = rawOptions.findIndex((option) => option.trim().toUpperCase() === upper);
+  if (byRawOption >= 0) return parsedOptions[byRawOption]?.key ?? "";
+
+  // Accept legacy "A" / "A)" / "A." / etc stored in localStorage.
+  const keyLike = normalized.match(/^\s*([A-Z])(?:\s*$|[\)\].:\-]\s+)/i);
+  if (keyLike) return keyLike[1].toUpperCase();
+
+  return "";
 }
 
 function extractHeadingOptions(group: StudentAttemptQuestionGroup): string[] {
@@ -814,10 +893,31 @@ function collectBackendAttemptAnswerEntries(params: {
   return params.questions
     .map((question) => {
       const answer = toSubmitAnswer(params.answers[question.id]);
-      const normalizedAnswer =
-        question.type === "tfng" && typeof answer === "string"
-          ? normalizeTfngAnswerForBackend(answer, question.options)
-          : answer;
+      const normalizedAnswer = (() => {
+        if (question.type === "tfng" && typeof answer === "string") {
+          return normalizeTfngAnswerForBackend(answer, question.options);
+        }
+
+        if (question.type === "mcq" && typeof answer === "string") {
+          const parsedOptions = question.options.map((option, optionIndex) => parseOptionChoice(option, optionIndex));
+          const resolvedKey = resolveChoiceKeyFromRawValue(answer, parsedOptions, question.options);
+          return resolvedKey ? resolvedKey : normalizeLetterKeyAnswerForBackend(answer);
+        }
+
+        if (question.type === "matchingInfo" && typeof answer === "string") {
+          return normalizeLetterKeyAnswerForBackend(answer);
+        }
+
+        if (question.type === "matchingHeadings" && typeof answer === "string") {
+          return normalizeRomanKeyAnswerForBackend(answer);
+        }
+
+        if (Array.isArray(answer)) {
+          return answer.map((entry) => entry.trim()).filter(Boolean);
+        }
+
+        return answer;
+      })();
       const isFlagged = params.marked.has(question.id);
       const fromAttempt = params.submitCandidatesByNumber.get(question.number) ?? [];
       const fromQuestion = resolveSubmitCandidateIds(question);
@@ -3123,12 +3223,21 @@ function ReadingTestClient({
                                   question.options.slice(0, optionIndex).reduce((sum, option) => sum + option.length + 1, 0)
                                 )
                               : [];
+                          const mcqChoices =
+                            question.type === "mcq"
+                              ? question.options.map((option, optionIndex) => parseOptionChoice(option, optionIndex))
+                              : [];
+                          const resolvedMcqKey =
+                            question.type === "mcq"
+                              ? resolveChoiceKeyFromRawValue(value, mcqChoices, question.options)
+                              : "";
+                          const mcqOptionLabels = question.type === "mcq" ? mcqChoices.map((choice) => choice.label) : [];
                           const mcqOptionStarts =
                             question.type === "mcq"
-                              ? question.options.map((_, optionIndex) =>
+                              ? mcqOptionLabels.map((_, optionIndex) =>
                                   question.prompt.length +
                                   1 +
-                                  question.options.slice(0, optionIndex).reduce((sum, option) => sum + option.length + 1, 0)
+                                  mcqOptionLabels.slice(0, optionIndex).reduce((sum, option) => sum + option.length + 1, 0)
                                 )
                               : [];
                           const isSummary = question.type === "summaryCompletion";
@@ -3291,24 +3400,24 @@ function ReadingTestClient({
 
                               {question.type === "mcq" ? (
                                 <div className="space-y-2">
-                                  {question.options.map((option, optionIndex) => (
-                                    <label key={option} className="flex cursor-pointer items-start gap-2 text-sm">
+                                  {mcqChoices.map((choice, optionIndex) => (
+                                    <label key={`${question.id}:mcq:${choice.key}:${optionIndex}`} className="flex cursor-pointer items-start gap-2 text-sm">
                                       <input
                                         type="radio"
                                         name={question.id}
-                                        value={option}
-                                        checked={value === option}
+                                        value={choice.key}
+                                        checked={resolvedMcqKey === choice.key}
                                         disabled={reviewMode}
                                         onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
                                         className="mt-0.5 size-4 accent-blue-600"
                                       />
                                       <span className="wrap-break-word">
                                         <HighlightableText
-                                          text={option}
+                                          text={choice.label}
                                           userHighlights={getQuestionLocalHighlights(
                                             question.id,
                                             mcqOptionStarts[optionIndex] ?? 0,
-                                            option.length
+                                            choice.label.length
                                           )}
                                           notesStorageKey={`reading:${test.id}:notes`}
                                           noteScopeKey={`question:${question.id}:mcq-option:${optionIndex}`}

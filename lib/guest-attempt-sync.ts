@@ -117,7 +117,90 @@ function toBackendAnswerPayload(value: string | string[] | null): {answer: strin
 type AttemptQuestionIndex = {
   question_id: string;
   attempt_question_id: string;
+  question_type: string;
 };
+
+function normalizeTfngYnngAnswerForBackend(value: string, questionType: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+
+  const normalized = trimmed.toUpperCase().replace(/\s+/g, "_");
+  if (normalized === "NOT_GIVEN" || normalized === "NOTGIVEN") return "NOT_GIVEN";
+
+  if (questionType === "TFNG") {
+    if (normalized === "TRUE") return "TRUE";
+    if (normalized === "FALSE") return "FALSE";
+  }
+
+  if (questionType === "YNNG") {
+    if (normalized === "YES") return "YES";
+    if (normalized === "NO") return "NO";
+  }
+
+  return trimmed;
+}
+
+function normalizeLetterKeyAnswerForBackend(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^[A-Z]$/i.test(trimmed)) return trimmed.toUpperCase();
+  const match = trimmed.match(/^\s*([A-Z])(?:\s*$|[\)\].:\-]\s+)/i);
+  return match ? match[1].toUpperCase() : trimmed;
+}
+
+function normalizeRomanKeyAnswerForBackend(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (/^[ivxlcdm]+$/i.test(trimmed)) return trimmed.toLowerCase();
+  const match = trimmed.match(/^\s*([ivxlcdm]+)(?:\s*$|[\)\].:\-]\s+|\s+)/i);
+  return match ? match[1].toLowerCase() : trimmed;
+}
+
+function normalizeKeyedAnswerValueForBackend(value: string | string[] | null, questionType: string) {
+  if (value == null) return value;
+
+  const type = questionType.trim().toUpperCase();
+
+  if (typeof value === "string") {
+    if (type === "TFNG" || type === "YNNG") return normalizeTfngYnngAnswerForBackend(value, type);
+    if (type === "MATCHING_HEADINGS") return normalizeRomanKeyAnswerForBackend(value);
+
+    if (type === "MCQ_MULTIPLE") {
+      const tokens = value
+        .split(",")
+        .map((entry) => normalizeLetterKeyAnswerForBackend(entry))
+        .filter(Boolean);
+      return tokens.length ? tokens : value.trim();
+    }
+
+    if (
+      type === "MCQ_SINGLE"
+      || type === "MATCHING"
+      || type === "CLASSIFICATION"
+      || type === "LIST_SELECTION"
+      || type === "CHOOSING_TITLE"
+      || type === "MATCH_PARA_INFO"
+      || type === "MATCH_SENT_ENDINGS"
+      || type === "PLAN_MAP_DIAGRAM"
+      || type === "DIAGRAM_COMPLETION"
+    ) {
+      return normalizeLetterKeyAnswerForBackend(value);
+    }
+
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    if (type === "MCQ_MULTIPLE") {
+      const normalized = value.map((entry) => normalizeLetterKeyAnswerForBackend(entry)).filter(Boolean);
+      return normalized.length ? normalized : null;
+    }
+    const cleaned = value.map((entry) => String(entry ?? "").trim()).filter(Boolean);
+    return cleaned.length ? cleaned : null;
+  }
+
+  return value;
+}
 
 function indexAttemptQuestions(attempt: StudentAttemptDetail) {
   const byCandidateId = new Map<string, AttemptQuestionIndex>();
@@ -137,7 +220,8 @@ function indexAttemptQuestions(attempt: StudentAttemptDetail) {
 
     const entry: AttemptQuestionIndex = {
       question_id: canonical,
-      attempt_question_id: attemptScoped
+      attempt_question_id: attemptScoped,
+      question_type: String((question as any)?.question_type ?? "").trim().toUpperCase()
     };
 
     candidates.forEach((candidate) => {
@@ -185,7 +269,8 @@ export async function syncGuestPendingAttemptsOnce() {
         .map(([candidateId, answerValue]) => {
           const index = byCandidateId.get(candidateId);
           if (!index) return null;
-          const answer = toBackendAnswerPayload(answerValue);
+          const normalizedValue = normalizeKeyedAnswerValueForBackend(answerValue, index.question_type);
+          const answer = toBackendAnswerPayload(normalizedValue);
           const is_flagged = markedSet.has(candidateId);
           if (answer === null && !is_flagged) return null;
           return {
