@@ -2472,6 +2472,11 @@ function ListeningTestClient({
         return;
       }
 
+      if (isGuest) {
+        router.push(`/${locale}/listening/${test.id}/result?attempt=${attemptId}`);
+        return;
+      }
+
       // Fallback: if backend attempt is missing, keep the in-test review mode.
       setReviewMobilePanel("transcript");
       setReviewMode(true);

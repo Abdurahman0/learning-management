@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import {useEffect, useMemo, useState} from "react";
-import {useParams, useSearchParams} from "next/navigation";
+import {useParams, useRouter, useSearchParams} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
 
 import {getReadingReviewData} from "@/data/review-reading";
+import {getReadingTestById} from "@/data/reading-tests";
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
 import {gradeTest, type GradeableQuestion} from "@/lib/grading";
+import {loadAttemptResult} from "@/lib/test-attempt-storage";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
 import type {StudentAttemptDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
 import {QuestionTypePerformance, type QuestionTypePerformanceItem} from "./QuestionTypePerformance";
@@ -45,11 +47,17 @@ export function ReadingSummaryPageClient() {
   const params = useParams<{id: string}>();
   const searchParams = useSearchParams();
   const locale = useLocale();
+  const router = useRouter();
   const tResults = useTranslations("testResults");
   const tReadingResult = useTranslations("readingResult");
   const testId = typeof params?.id === "string" ? params.id : "";
   const attemptId = searchParams.get("attempt")?.trim() ?? "";
   const resolvedBackendAttemptId = isUuid(attemptId) ? attemptId : "";
+  const localAttemptId = !resolvedBackendAttemptId && attemptId ? attemptId : "";
+  const localResult = useMemo(() => {
+    if (!localAttemptId) return null;
+    return loadAttemptResult("reading", testId, localAttemptId);
+  }, [localAttemptId, testId]);
   const [reviewPayload, setReviewPayload] = useState<StudentAttemptReviewResponse | null>(null);
   const [attemptDetail, setAttemptDetail] = useState<StudentAttemptDetail | null>(null);
   const [backendReview, setBackendReview] = useState<AdaptedReadingBackendReview | null>(null);
@@ -96,6 +104,13 @@ export function ReadingSummaryPageClient() {
       active = false;
     };
   }, [resolvedBackendAttemptId]);
+
+  useEffect(() => {
+    if (resolvedBackendAttemptId) return;
+    const backendId = localResult?.backendAttemptId?.trim() ?? "";
+    if (!backendId || !isUuid(backendId)) return;
+    router.replace(`/${locale}/reading/${testId}/result?attempt=${backendId}`);
+  }, [locale, localResult?.backendAttemptId, resolvedBackendAttemptId, router, testId]);
 
   const gradingQuestions = useMemo(() => backendReview?.questions ?? [], [backendReview]);
   const gradingAnswers = useMemo(
@@ -148,16 +163,85 @@ export function ReadingSummaryPageClient() {
   }, [actionNotice]);
 
   if (!resolvedBackendAttemptId) {
+    if (!localAttemptId) {
+      return (
+        <div className="mx-auto mt-8 max-w-3xl px-4">
+          <Card className="p-6">
+            <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Attempt ID is required to load backend results.</p>
+            <Button className="mt-4" asChild>
+              <Link href={`/${locale}/reading/${testId}`}>{tResults("retakeTest")}</Link>
+            </Button>
+          </Card>
+        </div>
+      );
+    }
+
+    if (!localResult) {
+      return (
+        <div className="mx-auto mt-8 max-w-3xl px-4">
+          <Card className="p-6">
+            <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{tResults("missingAttemptDescription")}</p>
+            <Button className="mt-4" asChild>
+              <Link href={`/${locale}/reading/${testId}`}>{tResults("retakeTest")}</Link>
+            </Button>
+          </Card>
+        </div>
+      );
+    }
+
+    const test = getReadingTestById(testId);
+    const title = test?.title || (tReadingResult.has("headerLabel") ? tReadingResult("headerLabel") : "Reading Result");
+    const total = test?.totalQuestions ?? 40;
+    const answered = Object.values(localResult.answers ?? {}).filter((value) => {
+      if (typeof value === "string") return value.trim().length > 0;
+      if (Array.isArray(value)) return value.length > 0;
+      return false;
+    }).length;
+    const flagged = localResult.markedQuestionIds?.length ?? 0;
+    const elapsedSeconds = Math.max(0, Math.floor(((localResult.finishedAt ?? Date.now()) - localResult.startedAt) / 1000));
+    const mm = Math.floor(elapsedSeconds / 60).toString().padStart(2, "0");
+    const ss = (elapsedSeconds % 60).toString().padStart(2, "0");
+
     return (
-      <div className="mx-auto mt-8 max-w-3xl px-4">
-        <Card className="p-6">
-          <h1 className="text-xl font-semibold">{tResults("missingAttemptTitle")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Attempt ID is required to load backend results.</p>
-          <Button className="mt-4" asChild>
-            <Link href={`/${locale}/reading/${testId}`}>{tResults("retakeTest")}</Link>
-          </Button>
+      <section className="mx-auto w-full max-w-3xl space-y-4 px-4 pb-10 pt-6">
+        <Card className="rounded-3xl border-border/70 bg-card/80 p-6">
+          <p className="text-xs font-medium tracking-wider text-muted-foreground">{tReadingResult.has("resultLabel") ? tReadingResult("resultLabel") : "READING RESULT"}</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
+              <p className="text-[11px] font-medium text-muted-foreground">Answered</p>
+              <p className="mt-1 text-xl font-semibold">{answered} / {total}</p>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
+              <p className="text-[11px] font-medium text-muted-foreground">Flagged</p>
+              <p className="mt-1 text-xl font-semibold">{flagged}</p>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-background/40 p-4">
+              <p className="text-[11px] font-medium text-muted-foreground">Time used</p>
+              <p className="mt-1 text-xl font-semibold">{mm}:{ss}</p>
+            </div>
+          </div>
+
+          <p className="mt-4 text-sm text-muted-foreground">
+            You finished as a guest. Your answers are saved on this device. Create an account to get scoring, band estimate, explanations, and to sync this attempt to your history.
+          </p>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button asChild>
+              <Link href={`/${locale}/register`}>Create account</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href={`/${locale}/login`}>Log in</Link>
+            </Button>
+            <Button variant="ghost" asChild>
+              <Link href={`/${locale}/reading/${testId}`}>{tResults("retakeTest")}</Link>
+            </Button>
+          </div>
         </Card>
-      </div>
+      </section>
     );
   }
 

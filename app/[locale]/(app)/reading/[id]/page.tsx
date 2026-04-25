@@ -2390,6 +2390,11 @@ function ReadingTestClient({
         return;
       }
 
+      if (isGuest) {
+        router.push(`/${locale}/reading/${test.id}/result?attempt=${attemptId}`);
+        return;
+      }
+
       // Fallback: if backend attempt is missing, keep the in-test review mode.
       setReviewMode(true);
     } catch {
