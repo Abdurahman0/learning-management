@@ -1148,83 +1148,26 @@ export default function ReadingTestPage() {
             return;
           }
 
-          const detailResponse = await fetch(`/api/public/tests/reading/${encodeURIComponent(testId)}/`, { cache: "no-store" });
-          if (!detailResponse.ok) {
+          const attemptResponse = await fetch("/api/public/attempts", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify({
+              practice_test: testId,
+              mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+            }),
+            cache: "no-store"
+          });
+          if (!attemptResponse.ok) {
             setTest(null);
             setBackendAttemptId(null);
             setLoadError(t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.");
             return;
           }
-          const detailPayload = await detailResponse.json().catch(() => null);
-
-          const attemptLike: StudentAttemptDetail = {
-            id: "guest",
-            practice_test: testId,
-            practice_test_title: toStringSafe(matched.title, "Reading Test"),
-            test_type: "READING",
-            mode: requestedMode === "real" ? "REAL" : "PRACTICE",
-            status: "GUEST",
-            started_at: null,
-            time_used_seconds: 0,
-            time_limit_seconds: matched.time_limit_seconds ?? null,
-            total_questions: matched.total_questions ?? 0,
-            answered_count: 0,
-            reading_passages: asArray(asRecord(detailPayload)?.reading_passages ?? asRecord(detailPayload)?.passages).map((rawPassage, index) => {
-              const passageRecord = asRecord(rawPassage);
-              const groupsRaw = passageRecord?.question_groups ?? passageRecord?.groups ?? passageRecord?.questionGroups;
-              const passageId = toStringSafe(passageRecord?.id, `guest-p${index + 1}`);
-
-              const normalizeQuestion = (rawQuestion: unknown): StudentAttemptQuestion => {
-                const qRecord = asRecord(rawQuestion);
-                const canonicalId = toStringSafe(qRecord?.question_id ?? qRecord?.id ?? qRecord?.uuid);
-                return {
-                  id: canonicalId || toStringSafe(qRecord?.id, ""),
-                  question_id: canonicalId || null,
-                  attempt_question_id: null,
-                  candidate_question_ids: canonicalId ? [canonicalId] : [],
-                  question_number: toNumberSafe(qRecord?.question_number ?? qRecord?.number),
-                  question_text: typeof qRecord?.question_text === "string" ? qRecord.question_text : typeof qRecord?.prompt === "string" ? qRecord.prompt : null,
-                  options_json: qRecord?.options_json ?? qRecord?.options ?? null,
-                  question_type: toStringSafe(qRecord?.question_type ?? qRecord?.type),
-                  question_type_display: typeof qRecord?.question_type_display === "string" ? qRecord.question_type_display : null,
-                  student_answer: null,
-                  is_flagged: false
-                };
-              };
-
-              const normalizeGroup = (rawGroup: unknown): StudentAttemptQuestionGroup => {
-                const gRecord = asRecord(rawGroup);
-                return {
-                  id: toStringSafe(gRecord?.id),
-                  question_type: toStringSafe(gRecord?.question_type ?? gRecord?.type),
-                  question_type_display: typeof gRecord?.question_type_display === "string" ? gRecord.question_type_display : null,
-                  group_order: toNumberSafe(gRecord?.group_order ?? gRecord?.order),
-                  instructions: toStringSafe(gRecord?.instructions ?? gRecord?.instruction),
-                  question_number_start: toNumberSafe(gRecord?.question_number_start ?? gRecord?.from),
-                  question_number_end: toNumberSafe(gRecord?.question_number_end ?? gRecord?.to),
-                  word_limit: typeof gRecord?.word_limit === "number" ? gRecord.word_limit : null,
-                  number_allowed: typeof gRecord?.number_allowed === "boolean" ? gRecord.number_allowed : null,
-                  group_content_json: gRecord?.group_content_json ?? gRecord?.group_content ?? gRecord?.content_json ?? null,
-                  questions: asArray(gRecord?.questions).map(normalizeQuestion)
-                };
-              };
-
-              const groups = asArray(groupsRaw).map(normalizeGroup);
-
-              return {
-                id: passageId,
-                passage_number: toStringSafe(passageRecord?.passage_number ?? passageRecord?.passageNumber ?? `PASSAGE_${index + 1}`),
-                title: toStringSafe(passageRecord?.title, `Passage ${index + 1}`),
-                passage_text: toStringSafe(passageRecord?.passage_text ?? passageRecord?.text),
-                max_questions: toNumberSafe(passageRecord?.max_questions ?? passageRecord?.maxQuestions),
-                answered_count: 0,
-                question_groups: groups
-              } satisfies StudentAttemptReadingPassage;
-            }),
-            listening_parts: []
-          };
-
-          const mappedTest = mapBackendAttemptToReadingTest(testId, matched, attemptLike);
+          const attemptPayload = await attemptResponse.json().catch(() => null);
+          const mappedTest = mapBackendAttemptToReadingTest(testId, matched, attemptPayload as StudentAttemptDetail);
           if (!mappedTest.questions.length) {
             throw new Error("No questions returned for this reading test.");
           }

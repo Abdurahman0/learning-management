@@ -1035,81 +1035,25 @@ export default function ListeningTestPage() {
             throw new Error(t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.");
           }
 
-          const detailResponse = await fetch(`/api/public/tests/listening/${encodeURIComponent(testId)}/`, { cache: "no-store" });
-          if (!detailResponse.ok) {
+          const attemptResponse = await fetch("/api/public/attempts", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json"
+            },
+            body: JSON.stringify({
+              practice_test: matched.id,
+              mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+            }),
+            cache: "no-store"
+          });
+
+          if (!attemptResponse.ok) {
             throw new Error(t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.");
           }
 
-          const detailPayload = await detailResponse.json().catch(() => null);
-
-          const attemptLike: StudentAttemptDetail = {
-            id: "guest",
-            practice_test: matched.id,
-            practice_test_title: toStringSafe(matched.title, "Listening Test"),
-            test_type: "LISTENING",
-            mode: requestedMode === "real" ? "REAL" : "PRACTICE",
-            status: "GUEST",
-            started_at: null,
-            time_used_seconds: 0,
-            time_limit_seconds: matched.time_limit_seconds ?? null,
-            total_questions: matched.total_questions ?? 40,
-            answered_count: 0,
-            reading_passages: [],
-            listening_parts: asArray(asRecord(detailPayload)?.listening_parts ?? asRecord(detailPayload)?.parts).map((rawPart, index) => {
-              const partRecord = asRecord(rawPart);
-              const groupsRaw = partRecord?.question_groups ?? partRecord?.groups ?? partRecord?.questionGroups;
-              const partId = toStringSafe(partRecord?.id, `guest-part-${index + 1}`);
-              const audioUrl = toStringSafe(partRecord?.audio_file_url ?? partRecord?.audio_url ?? partRecord?.audio_file);
-
-              const normalizeQuestion = (rawQuestion: unknown): StudentAttemptQuestion => {
-                const qRecord = asRecord(rawQuestion);
-                const canonicalId = toStringSafe(qRecord?.question_id ?? qRecord?.id ?? qRecord?.uuid);
-                return {
-                  id: canonicalId || toStringSafe(qRecord?.id, ""),
-                  question_id: canonicalId || null,
-                  attempt_question_id: null,
-                  candidate_question_ids: canonicalId ? [canonicalId] : [],
-                  question_number: toNumberSafe(qRecord?.question_number ?? qRecord?.number),
-                  question_text: typeof qRecord?.question_text === "string" ? qRecord.question_text : typeof qRecord?.prompt === "string" ? qRecord.prompt : null,
-                  options_json: qRecord?.options_json ?? qRecord?.options ?? null,
-                  question_type: toStringSafe(qRecord?.question_type ?? qRecord?.type),
-                  question_type_display: typeof qRecord?.question_type_display === "string" ? qRecord.question_type_display : null,
-                  student_answer: null,
-                  is_flagged: false
-                };
-              };
-
-              const normalizeGroup = (rawGroup: unknown): StudentAttemptQuestionGroup => {
-                const gRecord = asRecord(rawGroup);
-                return {
-                  id: toStringSafe(gRecord?.id),
-                  question_type: toStringSafe(gRecord?.question_type ?? gRecord?.type),
-                  question_type_display: typeof gRecord?.question_type_display === "string" ? gRecord.question_type_display : null,
-                  group_order: toNumberSafe(gRecord?.group_order ?? gRecord?.order),
-                  instructions: toStringSafe(gRecord?.instructions ?? gRecord?.instruction),
-                  question_number_start: toNumberSafe(gRecord?.question_number_start ?? gRecord?.from),
-                  question_number_end: toNumberSafe(gRecord?.question_number_end ?? gRecord?.to),
-                  word_limit: typeof gRecord?.word_limit === "number" ? gRecord.word_limit : null,
-                  number_allowed: typeof gRecord?.number_allowed === "boolean" ? gRecord.number_allowed : null,
-                  group_content_json: gRecord?.group_content_json ?? gRecord?.group_content ?? gRecord?.content_json ?? null,
-                  questions: asArray(gRecord?.questions).map(normalizeQuestion)
-                };
-              };
-
-              return {
-                id: partId,
-                part_number: toStringSafe(partRecord?.part_number ?? partRecord?.partNumber ?? `PART_${index + 1}`),
-                title: toStringSafe(partRecord?.title, `Part ${index + 1}`),
-                transcript_text: toStringSafe(partRecord?.transcript_text ?? partRecord?.transcript ?? partRecord?.text),
-                audio_file_url: audioUrl || null,
-                max_questions: toNumberSafe(partRecord?.max_questions ?? partRecord?.maxQuestions),
-                answered_count: 0,
-                question_groups: asArray(groupsRaw).map(normalizeGroup)
-              } satisfies StudentAttemptListeningPart;
-            })
-          };
-
-          finalAttempt = attemptLike;
+          const attemptPayload = await attemptResponse.json().catch(() => null);
+          finalAttempt = attemptPayload as StudentAttemptDetail;
           finalAttemptId = null;
         }
 
