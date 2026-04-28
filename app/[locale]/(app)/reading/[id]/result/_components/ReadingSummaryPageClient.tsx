@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {useEffect, useMemo, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import {useParams, useRouter, useSearchParams} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
 
@@ -64,6 +64,8 @@ export function ReadingSummaryPageClient() {
   const [isLoading, setIsLoading] = useState(Boolean(resolvedBackendAttemptId));
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const tReadingReview = useTranslations("readingReview");
+  const [showAiInsights, setShowAiInsights] = useState(false);
+  const aiInsightsRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -161,6 +163,19 @@ export function ReadingSummaryPageClient() {
     const timer = window.setTimeout(() => setActionNotice(null), 2200);
     return () => window.clearTimeout(timer);
   }, [actionNotice]);
+
+  const handleAiAnalysisClick = () => {
+    setShowAiInsights(true);
+    window.setTimeout(() => {
+      const node = aiInsightsRef.current;
+      if (node) {
+        node.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
+      const fallback = document.getElementById("ai-insights");
+      fallback?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
+  };
 
   if (!resolvedBackendAttemptId) {
     if (!localAttemptId) {
@@ -349,6 +364,8 @@ export function ReadingSummaryPageClient() {
         reviewHref={`/${locale}/reading/${testId}?review=1&attempt=${resolvedBackendAttemptId}`}
         bandScore={attemptDetail?.band_score ?? reviewPayload?.band_score ?? null}
         reviewVariant="analysis"
+        showAiAnalysisButton
+        onAiAnalysisClick={handleAiAnalysisClick}
       />
 
       {/* Attempt metadata card is temporarily hidden. */}
@@ -420,12 +437,22 @@ export function ReadingSummaryPageClient() {
         />
       */}
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
-        <ReviewAiCoachCard
-          coach={dynamicCoach}
-          mistakeBreakdown={dynamicMistakeBreakdown}
-          onAction={(message) => setActionNotice(tReadingReview("actionPlaceholder", {action: message}))}
-        />
+      <div
+        className={
+          showAiInsights
+            ? "grid gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]"
+            : "grid gap-5"
+        }
+      >
+        {showAiInsights ? (
+          <div ref={aiInsightsRef} id="ai-insights" className="scroll-mt-24">
+            <ReviewAiCoachCard
+              coach={dynamicCoach}
+              mistakeBreakdown={dynamicMistakeBreakdown}
+              onAction={(message) => setActionNotice(tReadingReview("actionPlaceholder", {action: message}))}
+            />
+          </div>
+        ) : null}
         <ReviewMistakeHeatmap items={dynamicHeatmap} />
       </div>
 

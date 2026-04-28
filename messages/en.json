@@ -782,6 +782,7 @@
                           "hideExplanation":  "Hide explanation",
                           "jumpToEvidence":  "Jump to evidence",
                           "resultsButton":  "Results",
+                          "aiAnalysis":  "AI analysis",
                           "summaryOnlyTitle":  "Summary Report",
                           "summaryOnlyDescription":  "This page keeps only your score summary. Open the review page to inspect questions and explanations.",
                           "openReview":  "Open Review",
