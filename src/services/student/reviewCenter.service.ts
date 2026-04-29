@@ -289,7 +289,8 @@ export const studentReviewCenterService = {
       const normalizedParams = {
         ...params,
         ...(params?.module ? {module: String(params.module).toUpperCase()} : {}),
-        ...(params?.reason ? {reason: String(params.reason).toLowerCase().replace("weakarea", "weak_area")} : {})
+        ...(params?.reason ? {reason: String(params.reason).toLowerCase().replace("weakarea", "weak_area")} : {}),
+        ...(params?.dateRange ? {dateRange: String(params.dateRange)} : {})
       } satisfies StudentListQuery;
 
       const response = await studentHttpClient.get("/review-center/", {

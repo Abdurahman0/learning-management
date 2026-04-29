@@ -222,3 +222,28 @@ export type QuestionPayload = {
   answer_evidence_json?: unknown;
   is_active?: boolean;
 };
+
+export type MistakeReasonModule = "READING" | "LISTENING" | "BOTH";
+
+export type MistakeReasonRecord = {
+  id: AdminEntityId;
+  reason: string;
+  module: MistakeReasonModule;
+  solution_1: string;
+  solution_2: string;
+  solution_3: string;
+  is_file_consists: boolean;
+  file_url: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type MistakeReasonPayload = {
+  reason: string;
+  module: MistakeReasonModule;
+  solution_1?: string;
+  solution_2?: string;
+  solution_3?: string;
+  is_file_consists?: boolean;
+  file?: File | null;
+};

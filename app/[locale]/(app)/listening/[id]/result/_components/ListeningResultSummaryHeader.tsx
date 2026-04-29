@@ -24,6 +24,8 @@ type ListeningResultSummaryHeaderProps = {
   reviewVariant?: "answers" | "analysis";
   showResultsButton?: boolean;
   resultsHref?: string;
+  showAiAnalysisButton?: boolean;
+  onAiAnalysisClick?: () => void;
 };
 
 export function ListeningResultSummaryHeader({
@@ -42,6 +44,8 @@ export function ListeningResultSummaryHeader({
   reviewVariant = "answers",
   showResultsButton = false,
   resultsHref,
+  showAiAnalysisButton = false,
+  onAiAnalysisClick,
 }: ListeningResultSummaryHeaderProps) {
   const locale = useLocale();
   const t = useTranslations("listeningResult");
@@ -70,27 +74,40 @@ export function ListeningResultSummaryHeader({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2.5">
-            <Button asChild className="h-9 rounded-xl px-4">
-              <Link href={reviewHref ?? "#review-main"}>{reviewCtaLabel}</Link>
-            </Button>
-            {showResultsButton && resultsHref ? (
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-2.5">
+              <Button asChild className="h-9 rounded-xl px-4">
+                <Link href={reviewHref ?? "#review-main"}>{reviewCtaLabel}</Link>
+              </Button>
+              {showResultsButton && resultsHref ? (
+                <Button variant="outline" asChild className="h-9 rounded-xl border-slate-200 bg-white/90 px-4 hover:bg-slate-100/80 dark:border-border/70 dark:bg-background/35">
+                  <Link href={resultsHref}>{t("resultsButton")}</Link>
+                </Button>
+              ) : null}
               <Button variant="outline" asChild className="h-9 rounded-xl border-slate-200 bg-white/90 px-4 hover:bg-slate-100/80 dark:border-border/70 dark:bg-background/35">
-                <Link href={resultsHref}>{t("resultsButton")}</Link>
+                <Link href={`/${locale}/listening/${testId}?restart=1`}>
+                  <RotateCcw className="size-4" />
+                  {t("retakeTest")}
+                </Link>
+              </Button>
+              <Button variant="outline" asChild className="h-9 rounded-xl border-slate-200 bg-white/90 px-4 hover:bg-slate-100/80 dark:border-border/70 dark:bg-background/35">
+                <Link href={`/${locale}/dashboard`}>
+                  <LayoutDashboard className="size-4" />
+                  {t("goToDashboard")}
+                </Link>
+              </Button>
+            </div>
+
+            {showAiAnalysisButton ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onAiAnalysisClick}
+                className="h-9 rounded-xl border-slate-200 bg-white/90 px-4 hover:bg-slate-100/80 dark:border-border/70 dark:bg-background/35 sm:shrink-0"
+              >
+                {t.has("aiAnalysis") ? t("aiAnalysis") : "AI analysis"}
               </Button>
             ) : null}
-            <Button variant="outline" asChild className="h-9 rounded-xl border-slate-200 bg-white/90 px-4 hover:bg-slate-100/80 dark:border-border/70 dark:bg-background/35">
-              <Link href={`/${locale}/listening/${testId}?restart=1`}>
-                <RotateCcw className="size-4" />
-                {t("retakeTest")}
-              </Link>
-            </Button>
-            <Button variant="outline" asChild className="h-9 rounded-xl border-slate-200 bg-white/90 px-4 hover:bg-slate-100/80 dark:border-border/70 dark:bg-background/35">
-              <Link href={`/${locale}/dashboard`}>
-                <LayoutDashboard className="size-4" />
-                {t("goToDashboard")}
-              </Link>
-            </Button>
           </div>
         </div>
 

@@ -1,17 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {MistakeReasonAiResponseCard} from "@/components/mistake-reasons/MistakeReasonAiResponseCard";
+import {PostTestMistakeReasonsPanel} from "@/components/mistake-reasons/PostTestMistakeReasonsPanel";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { loadAttemptResult } from "@/lib/test-attempt-storage";
 import { getListeningTestById } from "@/data/listening-tests-full";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
-import type { StudentAttemptReviewResponse } from "@/src/services/student/types";
+import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
+import type {MistakeReasonBrief, MistakeReasonDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
 import { ListeningResultSummaryHeader } from "./_components/ListeningResultSummaryHeader";
 import {
   ListeningSectionPerformance,
@@ -59,6 +62,13 @@ export default function ListeningResultPage() {
   const [reviewPayload, setReviewPayload] = useState<StudentAttemptReviewResponse | null>(null);
   const [backendReview, setBackendReview] = useState<AdaptedListeningBackendReview | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(resolvedBackendAttemptId));
+  const [showAiInsights, setShowAiInsights] = useState(false);
+  const aiInsightsRef = useRef<HTMLDivElement | null>(null);
+  const [mistakeReasons, setMistakeReasons] = useState<MistakeReasonBrief[]>([]);
+  const [selectedMistakeReason, setSelectedMistakeReason] = useState<MistakeReasonDetail | null>(null);
+  const [isReasonsLoading, setIsReasonsLoading] = useState(Boolean(resolvedBackendAttemptId));
+  const [selectingReasonId, setSelectingReasonId] = useState<string | null>(null);
+  const [mistakeReasonsError, setMistakeReasonsError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -94,6 +104,63 @@ export default function ListeningResultPage() {
       active = false;
     };
   }, [resolvedBackendAttemptId]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!resolvedBackendAttemptId) {
+      setIsReasonsLoading(false);
+      setMistakeReasons([]);
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadMistakeReasons = async () => {
+      setIsReasonsLoading(true);
+      setMistakeReasonsError(null);
+      try {
+        const response = await studentMistakeReasonsService.listForAttempt(resolvedBackendAttemptId);
+        if (!active) return;
+        setMistakeReasons(response);
+      } catch (error) {
+        if (!active) return;
+        setMistakeReasons([]);
+        setMistakeReasonsError(error instanceof Error ? error.message : "Could not load mistake reasons.");
+      } finally {
+        if (active) {
+          setIsReasonsLoading(false);
+        }
+      }
+    };
+
+    void loadMistakeReasons();
+
+    return () => {
+      active = false;
+    };
+  }, [resolvedBackendAttemptId]);
+
+  const scrollToAiInsights = () => {
+    setShowAiInsights(true);
+    window.setTimeout(() => {
+      aiInsightsRef.current?.scrollIntoView({behavior: "smooth", block: "start"});
+    }, 80);
+  };
+
+  const handleMistakeReasonSelect = async (reason: MistakeReasonBrief) => {
+    setSelectingReasonId(reason.id);
+    setMistakeReasonsError(null);
+    try {
+      const detail = await studentMistakeReasonsService.select(reason.id);
+      setSelectedMistakeReason(detail);
+      scrollToAiInsights();
+    } catch (error) {
+      setMistakeReasonsError(error instanceof Error ? error.message : "Could not load mistake reason solution.");
+    } finally {
+      setSelectingReasonId(null);
+    }
+  };
 
   useEffect(() => {
     if (resolvedBackendAttemptId) return;
@@ -253,15 +320,27 @@ export default function ListeningResultPage() {
         seconds={seconds}
         reviewHref={`/${locale}/listening/${testId}?review=1&attempt=${resolvedBackendAttemptId}`}
         reviewVariant="analysis"
+        showAiAnalysisButton
+        onAiAnalysisClick={scrollToAiInsights}
       />
 
       <ListeningSectionPerformance items={backendReview.sectionPerformance} />
       <ListeningTypePerformance items={backendReview.typePerformance} />
 
-      {/* Mock-backed listening AI/action widgets are temporarily hidden until backend endpoints are finalized. */}
-      <Card className="rounded-3xl border-border/70 bg-card/80 p-4 text-sm text-muted-foreground">
-        Extra coaching widgets are temporarily hidden while backend-only integration is in progress.
-      </Card>
+      <PostTestMistakeReasonsPanel
+        reasons={mistakeReasons}
+        selectedReason={selectedMistakeReason}
+        isLoading={isReasonsLoading}
+        selectingReasonId={selectingReasonId}
+        error={mistakeReasonsError}
+        onSelectReason={handleMistakeReasonSelect}
+      />
+
+      {showAiInsights ? (
+        <div ref={aiInsightsRef}>
+          <MistakeReasonAiResponseCard selectedReason={selectedMistakeReason} />
+        </div>
+      ) : null}
     </section>
   );
 }

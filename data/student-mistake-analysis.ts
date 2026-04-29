@@ -1,4 +1,4 @@
-export type StudentMistakeRangeKey = "last7Days" | "last30Days" | "last3Months";
+export type StudentMistakeRangeKey = "last7Days" | "last30Days" | "last3Months" | "last6Months" | "lastYear";
 
 export type StudentMistakeQuestionTypeKey =
   | "matchingHeadings"
@@ -56,7 +56,9 @@ export type StudentFocusAreaAction = {
 export const STUDENT_MISTAKE_RANGE_OPTIONS: {value: StudentMistakeRangeKey; labelKey: string}[] = [
   {value: "last7Days", labelKey: "filters.last7Days"},
   {value: "last30Days", labelKey: "filters.last30Days"},
-  {value: "last3Months", labelKey: "filters.last3Months"}
+  {value: "last3Months", labelKey: "filters.last3Months"},
+  {value: "last6Months", labelKey: "filters.last6Months"},
+  {value: "lastYear", labelKey: "filters.lastYear"}
 ];
 
 export const STUDENT_MISTAKE_ANALYSIS_BY_RANGE: Record<StudentMistakeRangeKey, StudentMistakeAnalysisSnapshot> = {
@@ -128,6 +130,52 @@ export const STUDENT_MISTAKE_ANALYSIS_BY_RANGE: Record<StudentMistakeRangeKey, S
       {id: "module-3", module: "writing", share: 13, color: "#818cf8"},
       {id: "module-4", module: "speaking", share: 8, color: "#38bdf8"}
     ]
+  },
+  last6Months: {
+    summary: {
+      totalMistakesReviewed: 247,
+      reviewedDelta: 19,
+      mostDifficultType: "matchingHeadings",
+      weakestModule: "reading",
+      accuracyTrend: 9
+    },
+    questionTypeMistakes: [
+      {id: "qt-1", type: "matchingHeadings", mistakes: 58},
+      {id: "qt-2", type: "trueFalseNotGiven", mistakes: 44},
+      {id: "qt-3", type: "multipleChoice", mistakes: 30},
+      {id: "qt-4", type: "sentenceCompletion", mistakes: 49},
+      {id: "qt-5", type: "labelling", mistakes: 24},
+      {id: "qt-6", type: "summaryCompletion", mistakes: 42}
+    ],
+    moduleDistribution: [
+      {id: "module-1", module: "reading", share: 54, color: "#6366f1"},
+      {id: "module-2", module: "listening", share: 25, color: "#3b82f6"},
+      {id: "module-3", module: "writing", share: 13, color: "#818cf8"},
+      {id: "module-4", module: "speaking", share: 8, color: "#38bdf8"}
+    ]
+  },
+  lastYear: {
+    summary: {
+      totalMistakesReviewed: 247,
+      reviewedDelta: 19,
+      mostDifficultType: "matchingHeadings",
+      weakestModule: "reading",
+      accuracyTrend: 9
+    },
+    questionTypeMistakes: [
+      {id: "qt-1", type: "matchingHeadings", mistakes: 58},
+      {id: "qt-2", type: "trueFalseNotGiven", mistakes: 44},
+      {id: "qt-3", type: "multipleChoice", mistakes: 30},
+      {id: "qt-4", type: "sentenceCompletion", mistakes: 49},
+      {id: "qt-5", type: "labelling", mistakes: 24},
+      {id: "qt-6", type: "summaryCompletion", mistakes: 42}
+    ],
+    moduleDistribution: [
+      {id: "module-1", module: "reading", share: 54, color: "#6366f1"},
+      {id: "module-2", module: "listening", share: 25, color: "#3b82f6"},
+      {id: "module-3", module: "writing", share: 13, color: "#818cf8"},
+      {id: "module-4", module: "speaking", share: 8, color: "#38bdf8"}
+    ]
   }
 };
 
@@ -142,4 +190,3 @@ export const STUDENT_RECOMMENDED_FOCUS_AREAS: StudentFocusAreaAction[] = [
   {id: "reviewParaphrasingStrategy", module: "reading", action: "toast"},
   {id: "retakeReadingDrill", module: "reading", action: "navigate", href: "/dashboard"}
 ];
-

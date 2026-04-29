@@ -32,6 +32,7 @@ const navIcons: Record<AdminNavKey, LucideIcon> = {
   users: Users,
   analytics: BarChart3,
   mistakesAnalysis: AlertCircle,
+  mistakeReasons: FileText,
   subscriptions: CreditCard,
   achievements: Award,
   reports: FileText,

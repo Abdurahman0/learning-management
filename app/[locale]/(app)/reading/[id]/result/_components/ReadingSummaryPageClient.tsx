@@ -9,10 +9,12 @@ import {getReadingReviewData} from "@/data/review-reading";
 import {getReadingTestById} from "@/data/reading-tests";
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
+import {PostTestMistakeReasonsPanel} from "@/components/mistake-reasons/PostTestMistakeReasonsPanel";
 import {gradeTest, type GradeableQuestion} from "@/lib/grading";
 import {loadAttemptResult} from "@/lib/test-attempt-storage";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
-import type {StudentAttemptDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
+import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
+import type {MistakeReasonBrief, MistakeReasonDetail, StudentAttemptDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
 import {QuestionTypePerformance, type QuestionTypePerformanceItem} from "./QuestionTypePerformance";
 import {ReviewAiCoachCard} from "./ReviewAiCoachCard";
 import {ReviewHeader} from "./ReviewHeader";
@@ -66,6 +68,11 @@ export function ReadingSummaryPageClient() {
   const tReadingReview = useTranslations("readingReview");
   const [showAiInsights, setShowAiInsights] = useState(false);
   const aiInsightsRef = useRef<HTMLDivElement | null>(null);
+  const [mistakeReasons, setMistakeReasons] = useState<MistakeReasonBrief[]>([]);
+  const [selectedMistakeReason, setSelectedMistakeReason] = useState<MistakeReasonDetail | null>(null);
+  const [isReasonsLoading, setIsReasonsLoading] = useState(Boolean(resolvedBackendAttemptId));
+  const [selectingReasonId, setSelectingReasonId] = useState<string | null>(null);
+  const [mistakeReasonsError, setMistakeReasonsError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -101,6 +108,42 @@ export function ReadingSummaryPageClient() {
     };
 
     void loadBackendReview();
+
+    return () => {
+      active = false;
+    };
+  }, [resolvedBackendAttemptId]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!resolvedBackendAttemptId) {
+      setIsReasonsLoading(false);
+      setMistakeReasons([]);
+      return () => {
+        active = false;
+      };
+    }
+
+    const loadMistakeReasons = async () => {
+      setIsReasonsLoading(true);
+      setMistakeReasonsError(null);
+      try {
+        const response = await studentMistakeReasonsService.listForAttempt(resolvedBackendAttemptId);
+        if (!active) return;
+        setMistakeReasons(response);
+      } catch (error) {
+        if (!active) return;
+        setMistakeReasons([]);
+        setMistakeReasonsError(error instanceof Error ? error.message : "Could not load mistake reasons.");
+      } finally {
+        if (active) {
+          setIsReasonsLoading(false);
+        }
+      }
+    };
+
+    void loadMistakeReasons();
 
     return () => {
       active = false;
@@ -175,6 +218,26 @@ export function ReadingSummaryPageClient() {
       const fallback = document.getElementById("ai-insights");
       fallback?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 60);
+  };
+
+  const handleMistakeReasonSelect = async (reason: MistakeReasonBrief) => {
+    setSelectingReasonId(reason.id);
+    setMistakeReasonsError(null);
+    try {
+      const detail = await studentMistakeReasonsService.select(reason.id);
+      setSelectedMistakeReason(detail);
+      setShowAiInsights(true);
+      window.setTimeout(() => {
+        const node = aiInsightsRef.current;
+        if (node) {
+          node.scrollIntoView({behavior: "smooth", block: "start"});
+        }
+      }, 80);
+    } catch (error) {
+      setMistakeReasonsError(error instanceof Error ? error.message : "Could not load mistake reason solution.");
+    } finally {
+      setSelectingReasonId(null);
+    }
   };
 
   if (!resolvedBackendAttemptId) {
@@ -384,6 +447,15 @@ export function ReadingSummaryPageClient() {
 
       <QuestionTypePerformance items={accuracyByType} />
 
+      <PostTestMistakeReasonsPanel
+        reasons={mistakeReasons}
+        selectedReason={selectedMistakeReason}
+        isLoading={isReasonsLoading}
+        selectingReasonId={selectingReasonId}
+        error={mistakeReasonsError}
+        onSelectReason={handleMistakeReasonSelect}
+      />
+
       {questionTypeStats ? (
         <Card className="rounded-3xl border-border/70 bg-card/80 p-4 text-sm">
           <h3 className="mb-3 text-base font-semibold">Question Type Stats</h3>
@@ -449,6 +521,7 @@ export function ReadingSummaryPageClient() {
             <ReviewAiCoachCard
               coach={dynamicCoach}
               mistakeBreakdown={dynamicMistakeBreakdown}
+              selectedMistakeReason={selectedMistakeReason}
               onAction={(message) => setActionNotice(tReadingReview("actionPlaceholder", {action: message}))}
             />
           </div>

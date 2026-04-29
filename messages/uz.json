@@ -837,6 +837,7 @@
                             "jumpToEvidence":  "Dalilga o\u0027tish",
                             "goToQuestion":  "Savolga o\u0027tish",
                             "resultsButton":  "Natijalar",
+                            "aiAnalysis":  "AI tahlil",
                             "summaryOnlyTitle":  "Qisqa natija hisoboti",
                             "summaryOnlyDescription":  "Bu sahifada faqat umumiy natijalar ko\u0027rsatiladi. Chuqur tahlil uchun Review sahifasini oching.",
                             "openReview":  "Review sahifasini ochish",
@@ -872,6 +873,23 @@
                                                   "text":  "Matn to\u0027ldirish",
                                                   "matching":  "Moslashtirish"
                                               }
+                        },
+    "mistakeReasons":  {
+                            "title":  "Xatolardan o'rganing",
+                            "subtitle":  "Xatolaringizga eng mos sababni tanlang. Backend uni maslahatlar ro'yxatiga saqlaydi va yechimni AI xulosalarida ko'rsatadi.",
+                            "loading":  "Mos xato sabablari yuklanmoqda...",
+                            "attachment":  "Biriktirma",
+                            "viewAiAnswer":  "AI javobni ko'rish",
+                            "aiInsightsTitle":  "AI xulosalari",
+                            "aiAnswerTitle":  "Tavsiya qilingan yechim",
+                            "chooseReasonTitle":  "Xato sababini tanlang",
+                            "chooseReasonDescription":  "Backenddan kelgan yechim shu yerda chiqishi uchun yuqoridan bitta sababni tanlang.",
+                            "thinking":  "Tavsiyangiz tayyorlanmoqda...",
+                            "downloadGuide":  "Qo'llanmani yuklab olish",
+                            "adviceTitle":  "Siz uchun tavsiyalar",
+                            "adviceSubtitle":  "Oxirgi tanlangan xato sabablaringiz va yechimlar.",
+                            "emptyAdvice":  "Maslahatlar ro'yxatini yaratish uchun testdan keyin xato sabablarini tanlang.",
+                            "updated":  "Yangilandi: {date}"
                         },
     "dashboard":  {
                       "nav":  {
@@ -1004,6 +1022,7 @@
                                                          "users":  "Foydalanuvchilar",
                                                          "analytics":  "Analitika",
                                                          "mistakesAnalysis":  "Xatolar tahlili",
+                                                         "mistakeReasons":  "Xato sabablari",
                                                          "subscriptions":  "Obunalar",
                                                          "achievements":  "Yutuqlar",
                                                          "reports":  "Hisobotlar",
@@ -1976,8 +1995,50 @@
                                   "threshold":  {
                                                     "strict":  "Qattiq (10%)",
                                                     "moderate":  "O\u0027rtacha (35%)",
-                                                    "relaxed":  "Yengil (60%)"
+                                                  "relaxed":  "Yengil (60%)"
                                                 }
+                              },
+    "adminMistakeReasons":  {
+                                  "title":  "Xato sabablari",
+                                  "subtitle":  "Testdan keyin o'quvchilarga ko'rinadigan sabablar va yechimlarni boshqaring.",
+                                  "create":  "Sabab qo'shish",
+                                  "searchPlaceholder":  "Sabab yoki yechimlarni qidiring...",
+                                  "listTitle":  "Sabablar kutubxonasi",
+                                  "loading":  "Xato sabablari yuklanmoqda...",
+                                  "empty":  "Xato sabablari topilmadi.",
+                                  "fileAttached":  "Fayl biriktirilgan",
+                                  "download":  "Yuklab olish",
+                                  "edit":  "Tahrirlash",
+                                  "delete":  "O'chirish",
+                                  "cancel":  "Bekor qilish",
+                                  "save":  "O'zgarishlarni saqlash",
+                                  "modules":  {
+                                                  "all":  "Barcha modullar",
+                                                  "READING":  "Reading",
+                                                  "LISTENING":  "Listening",
+                                                  "BOTH":  "Ikkalasi"
+                                              },
+                                  "form":  {
+                                               "createTitle":  "Xato sababini qo'shish",
+                                               "editTitle":  "Xato sababini tahrirlash",
+                                               "description":  "Aniq sabab va uchtagacha yechim qadamini kiriting. Faylni faqat o'quvchiga yuklab olinadigan qo'llanma kerak bo'lsa biriktiring.",
+                                               "reason":  "Sabab",
+                                               "module":  "Modul",
+                                               "solution":  "{number}-yechim",
+                                               "file":  "Biriktirma",
+                                               "removeFile":  "Mavjud faylni olib tashlash"
+                                           },
+                                  "deleteModal":  {
+                                                      "title":  "Xato sababini o'chirish",
+                                                      "description":  "\"{reason}\" o'chirilsinmi? Biriktirilgan fayl bo'lsa, u ham o'chiriladi.",
+                                                      "confirm":  "O'chirish"
+                                                  },
+                                  "errors":  {
+                                                "load":  "Xato sabablarini yuklab bo'lmadi.",
+                                                "save":  "Xato sababini saqlab bo'lmadi.",
+                                                "delete":  "Xato sababini o'chirib bo'lmadi.",
+                                                "reasonRequired":  "Sabab majburiy."
+                                            }
                               },
     "adminAchievements":  {
                               "title":  "Yutuqlar va gamifikatsiya",
@@ -3031,7 +3092,9 @@
                             "filters":  {
                                             "last7Days":  "Oxirgi 7 kun",
                                             "last30Days":  "Oxirgi 30 kun",
-                                            "last3Months":  "Oxirgi 3 oy"
+                                            "last3Months":  "Oxirgi 3 oy",
+                                            "last6Months":  "Oxirgi 6 oy",
+                                            "lastYear":  "Oxirgi yil"
                                         },
                             "summary":  {
                                             "totalMistakesReviewed":  {
@@ -3069,8 +3132,16 @@
                                        },
                             "sections":  {
                                              "commonErrorPatterns":  "Ko\u0027p uchraydigan xato andozalari",
-                                             "recommendedNextSteps":  "Tavsiya etilgan keyingi qadamlar"
+                                             "recommendedNextSteps":  "Tavsiya etilgan keyingi qadamlar",
+                                             "recommendedAdvice":  "Siz uchun tavsiyalar",
+                                             "recommendedAdviceDescription":  "Testlardan keyin tanlagan xato sabablaringizdan saqlangan maslahatlar."
                                          },
+                            "advice":  {
+                                           "slot":  "{slot}-slot",
+                                           "updated":  "Yangilandi: {date}",
+                                           "download":  "Qo'llanmani yuklab olish",
+                                           "empty":  "Hali maslahat yo'q. Testni tugatgandan keyin xato sababini tanlasangiz, u shu yerga saqlanadi."
+                                       },
                             "questionTypes":  {
                                                   "matchingHeadings":  "Matching Headings",
                                                   "trueFalseNotGiven":  "True / False / Not Given",

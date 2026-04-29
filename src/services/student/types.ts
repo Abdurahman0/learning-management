@@ -7,6 +7,7 @@ export type StudentListQuery = {
   difficulty?: "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | string;
   module?: "READING" | "LISTENING" | "WRITING" | "SPEAKING" | string;
   reason?: "wrong" | "saved" | "weak_area" | "flagged" | string;
+  dateRange?: "last_7_days" | "last_30_days" | "last_3_months" | "last_6_months" | "last_year" | string;
 };
 
 export type StudentPaginatedResponse<T> = {
@@ -500,4 +501,30 @@ export type StudentReviewCenterUpdatePayload = {
   is_saved?: boolean;
   is_weak_area?: boolean;
   is_flagged?: boolean;
+};
+
+export type MistakeReasonModule = "READING" | "LISTENING" | "BOTH";
+
+export type MistakeReasonBrief = {
+  id: string;
+  reason: string;
+  module: MistakeReasonModule;
+  module_display: string;
+  is_file_consists: boolean;
+};
+
+export type MistakeReasonDetail = MistakeReasonBrief & {
+  solution_1: string;
+  solution_2: string;
+  solution_3: string;
+  file_url: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type StudentMistakeAdvice = {
+  id: string;
+  slot: 1 | 2 | 3 | 4;
+  updated_at: string | null;
+  reason: MistakeReasonDetail;
 };

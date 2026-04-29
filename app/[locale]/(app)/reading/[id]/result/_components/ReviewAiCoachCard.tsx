@@ -1,21 +1,62 @@
 ﻿"use client";
 
-import { Sparkles, WandSparkles } from "lucide-react";
+import {Download, Sparkles, WandSparkles} from "lucide-react";
+import {useEffect, useMemo, useState} from "react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { AiCoachData, MistakeBreakdownItem } from "@/data/review-reading";
+import type {MistakeReasonDetail} from "@/src/services/student/types";
 
 type ReviewAiCoachCardProps = {
   coach: AiCoachData;
   mistakeBreakdown: MistakeBreakdownItem[];
   onAction: (message: string) => void;
+  selectedMistakeReason?: MistakeReasonDetail | null;
 };
 
-export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction }: ReviewAiCoachCardProps) {
+function isSafeDownloadUrl(value: string | null) {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction, selectedMistakeReason = null }: ReviewAiCoachCardProps) {
   const t = useTranslations("readingReview");
+  const tMistakeReasons = useTranslations("mistakeReasons");
+  const solutionText = useMemo(() => {
+    if (!selectedMistakeReason) return "";
+    return [selectedMistakeReason.solution_1, selectedMistakeReason.solution_2, selectedMistakeReason.solution_3]
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .join("\n\n");
+  }, [selectedMistakeReason]);
+  const [typedSolution, setTypedSolution] = useState("");
+
+  useEffect(() => {
+    if (!solutionText) {
+      setTypedSolution("");
+      return;
+    }
+
+    setTypedSolution("");
+    let index = 0;
+    const timer = window.setInterval(() => {
+      index += 4;
+      setTypedSolution(solutionText.slice(0, index));
+      if (index >= solutionText.length) {
+        window.clearInterval(timer);
+      }
+    }, 16);
+
+    return () => window.clearInterval(timer);
+  }, [solutionText]);
 
   return (
     <section className="space-y-3">
@@ -49,14 +90,36 @@ export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction }: ReviewA
           ))}
         </div>
 
-        <Card className="border-blue-300/70 bg-blue-100/70 p-3 dark:border-blue-500/35 dark:bg-blue-500/10">
-          <p className="mb-2 text-sm font-semibold">{t("aiInsights")}</p>
-          <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90">
-            {coach.insights.map((insight) => (
-              <li key={insight} className="leading-relaxed">{insight}</li>
-            ))}
-          </ul>
-        </Card>
+        {selectedMistakeReason ? (
+          <Card className="border-blue-300/70 bg-blue-100/70 p-3 dark:border-blue-500/35 dark:bg-blue-500/10">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold">{tMistakeReasons("aiAnswerTitle")}</p>
+                <p className="text-xs text-muted-foreground">{selectedMistakeReason.reason}</p>
+              </div>
+              {isSafeDownloadUrl(selectedMistakeReason.file_url) ? (
+                <Button size="sm" variant="outline" asChild>
+                  <a href={selectedMistakeReason.file_url ?? "#"} target="_blank" rel="noopener noreferrer">
+                    <Download className="size-4" />
+                    {tMistakeReasons("downloadGuide")}
+                  </a>
+                </Button>
+              ) : null}
+            </div>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+              {typedSolution || tMistakeReasons("thinking")}
+            </p>
+          </Card>
+        ) : (
+          <Card className="border-blue-300/70 bg-blue-100/70 p-3 dark:border-blue-500/35 dark:bg-blue-500/10">
+            <p className="mb-2 text-sm font-semibold">{t("aiInsights")}</p>
+            <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90">
+              {coach.insights.map((insight) => (
+                <li key={insight} className="leading-relaxed">{insight}</li>
+              ))}
+            </ul>
+          </Card>
+        )}
 
         <div className="space-y-2">
           <p className="text-sm font-semibold">{t("personalizedImprovementPlan")}</p>

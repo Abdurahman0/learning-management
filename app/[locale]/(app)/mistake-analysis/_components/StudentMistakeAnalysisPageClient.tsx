@@ -3,7 +3,7 @@
 import {useEffect, useId, useMemo, useState} from "react";
 import {useLocale, useTranslations} from "next-intl";
 import {useRouter} from "next/navigation";
-import {ArrowUpRight, BookCheck, Clock3, FileSearch2, Target, TrendingUp, TriangleAlert} from "lucide-react";
+import {ArrowUpRight, BookCheck, ChevronDown, Clock3, Download, FileSearch2, Target, TrendingUp, TriangleAlert} from "lucide-react";
 import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
 
 import {
@@ -14,8 +14,9 @@ import {
   type StudentMistakeRangeKey
 } from "@/data/student-mistake-analysis";
 import {getQuestionTypeDisplayLabel, getQuestionTypeShortCode} from "@/src/services/student/questionTypeLabels";
+import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
 import {studentReviewCenterService} from "@/src/services/student/reviewCenter.service";
-import type {StudentReviewCenterResponse} from "@/src/services/student/types";
+import type {StudentMistakeAdvice, StudentReviewCenterResponse} from "@/src/services/student/types";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
@@ -63,7 +64,17 @@ const MODULE_COLORS: Record<SupportedModule, string> = {
 const RANGE_DAYS: Record<StudentMistakeRangeKey, number> = {
   last7Days: 7,
   last30Days: 30,
-  last3Months: 90
+  last3Months: 90,
+  last6Months: 180,
+  lastYear: 365
+};
+
+const API_DATE_RANGE_BY_KEY: Record<StudentMistakeRangeKey, string> = {
+  last7Days: "last_7_days",
+  last30Days: "last_30_days",
+  last3Months: "last_3_months",
+  last6Months: "last_6_months",
+  lastYear: "last_year"
 };
 
 const EMPTY_REVIEW_CENTER: StudentReviewCenterResponse = {
@@ -130,6 +141,23 @@ function getRangeDelta<T extends {createdAt?: string | null}>(items: T[], select
   return Math.max(0, currentWindow - previousWindow);
 }
 
+function formatAdviceDate(value: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat(undefined, {month: "short", day: "numeric"}).format(date);
+}
+
+function isSafeDownloadUrl(value: string | null) {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export function StudentMistakeAnalysisPageClient() {
   const t = useTranslations("studentMistakes");
   const locale = useLocale();
@@ -140,6 +168,8 @@ export function StudentMistakeAnalysisPageClient() {
   const [notice, setNotice] = useState<ActionNotice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [reviewData, setReviewData] = useState<StudentReviewCenterResponse>(EMPTY_REVIEW_CENTER);
+  const [adviceItems, setAdviceItems] = useState<StudentMistakeAdvice[]>([]);
+  const [expandedAdviceIds, setExpandedAdviceIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     let active = true;
@@ -147,7 +177,7 @@ export function StudentMistakeAnalysisPageClient() {
     const loadMistakeData = async () => {
       setIsLoading(true);
       try {
-        const response = await studentReviewCenterService.list();
+        const response = await studentReviewCenterService.list({dateRange: API_DATE_RANGE_BY_KEY[selectedRange]});
         if (!active) {
           return;
         }
@@ -176,6 +206,27 @@ export function StudentMistakeAnalysisPageClient() {
     };
 
     void loadMistakeData();
+
+    return () => {
+      active = false;
+    };
+  }, [selectedRange]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadAdvice = async () => {
+      try {
+        const response = await studentMistakeReasonsService.advice();
+        if (!active) return;
+        setAdviceItems(response);
+      } catch {
+        if (!active) return;
+        setAdviceItems([]);
+      }
+    };
+
+    void loadAdvice();
 
     return () => {
       active = false;
@@ -579,26 +630,99 @@ export function StudentMistakeAnalysisPageClient() {
         </section>
 
         <section className="space-y-3">
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">{t("sections.recommendedAdvice")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{t("sections.recommendedAdviceDescription")}</p>
+          </div>
+          {adviceItems.length ? (
+            <div className="space-y-2">
+              {adviceItems.map((item) => {
+                const isOpen = expandedAdviceIds.has(item.id);
+                const solutions = [item.reason.solution_1, item.reason.solution_2, item.reason.solution_3].map((solution) => solution.trim()).filter(Boolean);
+
+                return (
+                  <article key={item.id} className="rounded-2xl border border-border/70 bg-card/85 p-4 shadow-none">
+                    <button
+                      type="button"
+                      className="flex w-full items-start justify-between gap-4 text-left"
+                      onClick={() => {
+                        setExpandedAdviceIds((current) => {
+                          const next = new Set(current);
+                          if (next.has(item.id)) {
+                            next.delete(item.id);
+                          } else {
+                            next.add(item.id);
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      <span className="min-w-0">
+                        <span className="mb-2 flex flex-wrap items-center gap-2">
+                          <Badge className="rounded-full border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-200">
+                            {item.reason.module_display}
+                          </Badge>
+                          <Badge variant="outline" className="rounded-full">
+                            {t("advice.slot", {slot: item.slot})}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">{t("advice.updated", {date: formatAdviceDate(item.updated_at)})}</span>
+                        </span>
+                        <span className="block text-base font-semibold leading-snug text-foreground">{item.reason.reason}</span>
+                      </span>
+                      <ChevronDown className={cn("mt-1 size-4 shrink-0 transition-transform", isOpen && "rotate-180")} />
+                    </button>
+
+                    {isOpen ? (
+                      <div className="mt-3 space-y-3 border-t border-border/70 pt-3">
+                        <ul className="space-y-2 text-sm text-muted-foreground">
+                          {solutions.map((solution, index) => (
+                            <li key={`${item.id}-${index}`} className="flex gap-2">
+                              <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+                              <span>{solution}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {isSafeDownloadUrl(item.reason.file_url) ? (
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={item.reason.file_url ?? "#"} target="_blank" rel="noopener noreferrer">
+                              <Download className="size-4" />
+                              {t("advice.download")}
+                            </a>
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <Card className={cardClassName}>
+              <CardContent className="p-4 text-sm text-muted-foreground">{t("advice.empty")}</CardContent>
+            </Card>
+          )}
+        </section>
+
+        <section className="space-y-3">
           <h2 className="text-xl font-semibold tracking-tight text-foreground">{t("sections.commonErrorPatterns")}</h2>
-          <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="space-y-2">
             {STUDENT_COMMON_ERROR_PATTERNS.map((pattern) => {
               const Icon = patternIcons[pattern.icon];
 
               return (
-                <Card key={pattern.id} className={cn(cardClassName, "relative h-full overflow-hidden")}>
-                  <span className="pointer-events-none absolute -right-8 -bottom-8 h-24 w-24 rounded-full bg-blue-500/10 blur-2xl" />
-                  <CardContent className="relative flex h-full flex-col p-5">
-                    <div className="mb-4 inline-flex size-10 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/14 text-blue-700 dark:text-blue-300">
+                <div key={pattern.id} className="flex gap-3 rounded-2xl border border-border/70 bg-card/85 p-4">
+                  <div className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/14 text-blue-700 dark:text-blue-300">
                       <Icon className="size-4.5" />
-                    </div>
-                    <h3 className="text-lg font-semibold tracking-tight text-foreground">{t(`errorPatterns.items.${pattern.id}.title`)}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground dark:text-slate-300">{t(`errorPatterns.items.${pattern.id}.description`)}</p>
-                    <div className="mt-4 rounded-xl border border-border/70 bg-background/70 p-3 dark:border-slate-700/55 dark:bg-slate-900/40">
-                      <p className="text-xs font-semibold tracking-[0.08em] text-blue-600 dark:text-blue-300 uppercase">{t("errorPatterns.learningTip")}</p>
-                      <p className="mt-2 text-sm leading-relaxed text-foreground/90 dark:text-slate-200">{t(`errorPatterns.items.${pattern.id}.tip`)}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold tracking-tight text-foreground">{t(`errorPatterns.items.${pattern.id}.title`)}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground dark:text-slate-300">{t(`errorPatterns.items.${pattern.id}.description`)}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-foreground/90 dark:text-slate-200">
+                      <span className="font-semibold text-blue-600 dark:text-blue-300">{t("errorPatterns.learningTip")}: </span>
+                      {t(`errorPatterns.items.${pattern.id}.tip`)}
+                    </p>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -606,24 +730,24 @@ export function StudentMistakeAnalysisPageClient() {
 
         <section className="space-y-3">
           <h2 className="text-xl font-semibold tracking-tight text-foreground">{t("sections.recommendedNextSteps")}</h2>
-          <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="space-y-2">
             {STUDENT_RECOMMENDED_FOCUS_AREAS.map((item) => (
-              <Card key={item.id} className={cn(cardClassName, "h-full")}>
-                <CardContent className="flex h-full flex-col p-5">
-                  <div className="mb-3 flex items-center justify-between gap-3">
+              <div key={item.id} className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/85 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h3 className="text-base font-semibold text-foreground">{t(`actions.items.${item.id}.title`)}</h3>
                     <Badge className="border border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-200">{t(`modules.${item.module}`)}</Badge>
                   </div>
-                  <p className="text-sm leading-relaxed text-muted-foreground dark:text-slate-300">{t(`actions.items.${item.id}.description`)}</p>
-                  <Button
-                    className="mt-5 h-10 rounded-xl bg-indigo-500 text-slate-50 hover:bg-indigo-400"
-                    variant="default"
-                    onClick={() => handleFocusAction(item)}
-                  >
-                    {t(`actions.items.${item.id}.button`)}
-                  </Button>
-                </CardContent>
-              </Card>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground dark:text-slate-300">{t(`actions.items.${item.id}.description`)}</p>
+                </div>
+                <Button
+                  className="h-10 shrink-0 rounded-xl bg-indigo-500 text-slate-50 hover:bg-indigo-400"
+                  variant="default"
+                  onClick={() => handleFocusAction(item)}
+                >
+                  {t(`actions.items.${item.id}.button`)}
+                </Button>
+              </div>
             ))}
           </div>
         </section>

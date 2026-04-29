@@ -195,6 +195,7 @@ export function toListQuery(params?: StudentListQuery) {
     ...(typeof params.premium === "boolean" ? {premium: params.premium} : {}),
     ...(params.difficulty ? {difficulty: params.difficulty} : {}),
     ...(params.module ? {module: params.module} : {}),
-    ...(params.reason ? {reason: params.reason} : {})
+    ...(params.reason ? {reason: params.reason} : {}),
+    ...(params.dateRange ? {date_range: params.dateRange} : {})
   };
 }
