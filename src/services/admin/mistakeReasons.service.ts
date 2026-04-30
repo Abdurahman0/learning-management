@@ -1,5 +1,5 @@
 import {adminHttpClient, toAdminApiError} from "./httpClient";
-import type {AdminPaginatedResponse, MistakeReasonModule, MistakeReasonPayload, MistakeReasonRecord} from "./types";
+import type {AdminPaginatedResponse, MistakeReasonCategory, MistakeReasonModule, MistakeReasonPayload, MistakeReasonRecord} from "./types";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -32,6 +32,14 @@ function normalizeModule(value: unknown): MistakeReasonModule {
   return "BOTH";
 }
 
+function normalizeCategory(value: unknown): MistakeReasonCategory {
+  const normalized = toStringSafe(value, "fully_incorrect").trim().toLowerCase();
+  if (normalized === "fully_incorrect" || normalized === "blank_answer" || normalized === "misspelled") {
+    return normalized;
+  }
+  return "fully_incorrect";
+}
+
 function normalizeFileUrl(value: unknown) {
   const raw = toStringSafe(value).trim();
   if (!raw) return null;
@@ -60,6 +68,8 @@ function normalizeReason(value: unknown): MistakeReasonRecord | null {
     id,
     reason,
     module: normalizeModule(record.module),
+    mistake_category: normalizeCategory(record.mistake_category),
+    mistake_category_display: toStringSafe(record.mistake_category_display, toStringSafe(record.mistake_category, "Fully incorrect")),
     solution_1: toStringSafe(record.solution_1),
     solution_2: toStringSafe(record.solution_2),
     solution_3: toStringSafe(record.solution_3),
@@ -107,10 +117,17 @@ function normalizeList(data: unknown): AdminPaginatedResponse<MistakeReasonRecor
 }
 
 export const mistakeReasonsService = {
-  async list(params?: {module?: MistakeReasonModule | "all"}) {
+  async list(params?: {module?: MistakeReasonModule | "all"; mistakeCategory?: MistakeReasonCategory | "all"}) {
     try {
+      const requestParams: Record<string, string> = {};
+      if (params?.module && params.module !== "all") {
+        requestParams.module = params.module;
+      }
+      if (params?.mistakeCategory && params.mistakeCategory !== "all") {
+        requestParams.mistake_category = params.mistakeCategory;
+      }
       const response = await adminHttpClient.get("/mistake-reasons/", {
-        params: params?.module && params.module !== "all" ? {module: params.module} : undefined
+        params: Object.keys(requestParams).length ? requestParams : undefined
       });
       return normalizeList(response.data);
     } catch (error) {

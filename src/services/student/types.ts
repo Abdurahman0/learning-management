@@ -504,12 +504,15 @@ export type StudentReviewCenterUpdatePayload = {
 };
 
 export type MistakeReasonModule = "READING" | "LISTENING" | "BOTH";
+export type MistakeReasonCategory = "fully_incorrect" | "blank_answer" | "misspelled";
 
 export type MistakeReasonBrief = {
   id: string;
   reason: string;
   module: MistakeReasonModule;
   module_display: string;
+  mistake_category: MistakeReasonCategory;
+  mistake_category_display: string;
   is_file_consists: boolean;
 };
 

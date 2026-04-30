@@ -22,7 +22,7 @@
 | Area | Change |
 |---|---|
 | Mistake Analysis page | `date_range` filter now works on the chart and stats |
-| After test ends | New panel: list of reasons → user taps one → solution appears |
+| After test ends | New panel: backend returns full performance-matched reasons and solutions automatically |
 | Mistake Analysis page | New section: 4 rotating advice cards (slots 1-4) |
 | Admin panel | New CRUD screens for managing Mistake Reason content |
 
@@ -70,9 +70,9 @@ const fetchMistakeAnalysis = (dateRange: string) =>
 
 ## 3. Post-Test Flow — Mistake Reasons Panel
 
-After a test is submitted and the result screen is shown, display a **"Learn from your mistakes"** panel. The flow has two steps.
+After a test is submitted and the result screen is shown, display a **"Learn from your mistakes"** panel. The backend now assigns matching reasons automatically, so the frontend only needs to load and render them.
 
-### Step 1 — Load the reasons list
+### Load the assigned reasons
 
 Immediately after the test result is available, fetch the reasons for that attempt:
 
@@ -81,8 +81,31 @@ GET /api/v1/student/attempts/{attempt_id}/mistake-reasons/
 ```
 
 - No body required.
-- Returns all reasons relevant to the module of the completed test (Reading or Listening), plus any "BOTH" reasons.
-- This is a **brief** list — no solutions are included yet.
+- The attempt must already be completed.
+- The backend checks every answer from the attempt and detects which mistake categories occurred.
+- Returns reasons relevant to the test module (Reading or Listening), plus any "BOTH" reasons, **only for categories that occurred at least once**.
+- Returns full reason details, including solutions and file URL.
+- The same matched reasons are automatically saved to the student's 4-slot advice store.
+
+Optional category filter:
+
+```
+GET /api/v1/student/attempts/{attempt_id}/mistake-reasons/?mistake_category=misspelled
+```
+
+Allowed values: `fully_incorrect`, `blank_answer`, `misspelled`.
+
+#### Mistake category logic
+
+| Category | When it appears |
+|---|---|
+| `fully_incorrect` | At least one answered question is wrong and is not a spelling-near-match |
+| `blank_answer` | At least one question was left blank / skipped |
+| `misspelled` | At least one text-entry completion answer is close to a correct answer but not exactly correct |
+
+If an attempt has 1+ mistakes in multiple categories, the endpoint returns all matching reasons for all of those categories.
+
+The previous `POST /api/v1/student/mistake-reasons/{reason_id}/select/` endpoint has been removed. Remove any frontend usage of it; do not render a separate "select reason" action.
 
 #### Response
 
@@ -93,54 +116,37 @@ GET /api/v1/student/attempts/{attempt_id}/mistake-reasons/
     "reason": "Difficulty identifying True / False / Not Given distinctions",
     "module": "READING",
     "module_display": "Reading",
-    "is_file_consists": false
+    "mistake_category": "fully_incorrect",
+    "mistake_category_display": "Fully incorrect",
+    "solution_1": "Read the statement carefully and locate the relevant section...",
+    "solution_2": "A common trap: the passage discusses a related topic...",
+    "solution_3": "Practice with timed drills: set 45 seconds per TFNG question...",
+    "is_file_consists": false,
+    "file_url": null,
+    "created_at": "2026-04-29T10:00:00Z",
+    "updated_at": "2026-04-29T10:00:00Z"
   },
   {
     "id": "uuid",
     "reason": "Short Answer questions exceed the word limit",
     "module": "READING",
     "module_display": "Reading",
-    "is_file_consists": false
+    "mistake_category": "fully_incorrect",
+    "mistake_category_display": "Fully incorrect",
+    "solution_1": "Always re-read the instruction...",
+    "solution_2": "",
+    "solution_3": "",
+    "is_file_consists": false,
+    "file_url": null,
+    "created_at": "2026-04-29T10:00:00Z",
+    "updated_at": "2026-04-29T10:00:00Z"
   }
 ]
 ```
 
 #### UI Suggestion
 
-Render the `reason` text as a clickable card or list item. If `is_file_consists` is `true`, show a small attachment icon so the user knows a downloadable file exists before they tap.
-
----
-
-### Step 2 — User taps a reason → get full solution
-
-When the user taps a reason card, call:
-
-```
-POST /api/v1/student/mistake-reasons/{reason_id}/select/
-```
-
-- No request body required.
-- This simultaneously:
-  1. Returns the full solution content.
-  2. Saves the reason to the student's 4-slot advice store (used on the Mistake Analysis page).
-
-#### Response
-
-```json
-{
-  "id": "uuid",
-  "reason": "Difficulty identifying True / False / Not Given distinctions",
-  "module": "READING",
-  "module_display": "Reading",
-  "solution_1": "Read the statement carefully and locate the relevant section...",
-  "solution_2": "A common trap: the passage discusses a related topic...",
-  "solution_3": "Practice with timed drills: set 45 seconds per TFNG question...",
-  "is_file_consists": false,
-  "file_url": null,
-  "created_at": "2026-04-29T10:00:00Z",
-  "updated_at": "2026-04-29T10:00:00Z"
-}
-```
+Render each reason as an expandable card. Show the `reason` text as the title, `mistake_category_display` as a category badge, and reveal `solution_1`, `solution_2`, and `solution_3` inside the card.
 
 #### Notes on solutions
 
@@ -158,9 +164,10 @@ POST /api/v1/student/mistake-reasons/{reason_id}/select/
 
 #### Advice slot behavior (invisible to user, for your awareness)
 
-Each time `POST /select/` is called, the backend silently saves that reason into the student's advice store:
+Each completed registered-user test automatically saves the matched reasons into the student's advice store:
 - Slots 1 → 2 → 3 → 4 → (overwrites oldest) → repeating.
-- The user never sees or interacts with this directly here — it just means the Mistake Analysis page will always show their most recent 4 selections.
+- Re-loading `GET /attempts/{attempt_id}/mistake-reasons/` also backfills the same advice slots without duplicating existing reasons.
+- The user never sees or interacts with this directly here — it just means the Mistake Analysis page will always show their most recent matching recommendations.
 
 ---
 
@@ -215,7 +222,7 @@ GET /api/v1/student/mistake-analysis/advice/
 - Expand/collapse on tap to reveal `solution_1`, `solution_2`, `solution_3`.
 - If `reason.is_file_consists` is `true`, show a download button linking to `reason.file_url`.
 - If fewer than 4 slots are filled (e.g. a new user), show filled slots only — no empty placeholders needed.
-- Refresh this section after every `POST /select/` call so newly saved advice appears immediately.
+- Refresh this section after a test submission or after loading post-test reasons so newly assigned advice appears immediately.
 
 ---
 
@@ -229,7 +236,11 @@ Admins create and manage the reason+solution content that students see.
 GET /api/v1/admin/mistake-reasons/
 ```
 
-Optional filter: `?module=READING` or `?module=LISTENING` or `?module=BOTH`
+Optional filters:
+
+- `?module=READING` or `?module=LISTENING` or `?module=BOTH`
+- `?mistake_category=fully_incorrect` or `?mistake_category=blank_answer` or `?mistake_category=misspelled`
+- `?category=misspelled` is also accepted as a shorter alias.
 
 #### Response
 
@@ -239,6 +250,8 @@ Optional filter: `?module=READING` or `?module=LISTENING` or `?module=BOTH`
     "id": "uuid",
     "reason": "Difficulty identifying True / False / Not Given distinctions",
     "module": "READING",
+    "mistake_category": "fully_incorrect",
+    "mistake_category_display": "Fully incorrect",
     "solution_1": "...",
     "solution_2": "...",
     "solution_3": "...",
@@ -263,6 +276,7 @@ Content-Type: multipart/form-data
 |---|---|---|---|
 | `reason` | string | Yes | Short label shown to students |
 | `module` | string | Yes | `READING` / `LISTENING` / `BOTH` |
+| `mistake_category` | string | Yes | `fully_incorrect` / `blank_answer` / `misspelled` |
 | `solution_1` | string | No | First solution paragraph |
 | `solution_2` | string | No | Second solution paragraph |
 | `solution_3` | string | No | Third solution paragraph |
@@ -272,6 +286,16 @@ Content-Type: multipart/form-data
 **If no file:** send as `application/json` (omit `file` and `is_file_consists`).  
 **If file included:** must use `multipart/form-data`.
 
+#### Category selector
+
+Show a required selector named `mistake_category` in the admin create/edit form:
+
+| Label | Value |
+|---|---|
+| Fully incorrect | `fully_incorrect` |
+| Blank answer | `blank_answer` |
+| Misspelled | `misspelled` |
+
 #### Response — 201 Created
 
 ```json
@@ -279,6 +303,8 @@ Content-Type: multipart/form-data
   "id": "uuid",
   "reason": "...",
   "module": "READING",
+  "mistake_category": "fully_incorrect",
+  "mistake_category_display": "Fully incorrect",
   "solution_1": "...",
   "solution_2": "",
   "solution_3": "",
@@ -333,19 +359,7 @@ DELETE /api/v1/admin/mistake-reasons/{reason_id}/
 
 ## 6. Full Response Schemas
 
-### MistakeReason (brief) — used in reason list after test
-
-```ts
-interface MistakeReasonBrief {
-  id: string;           // UUID
-  reason: string;       // Short label
-  module: "READING" | "LISTENING" | "BOTH";
-  module_display: string;
-  is_file_consists: boolean;
-}
-```
-
-### MistakeReason (detail) — returned on select + in advice slots
+### MistakeReasonDetail — returned after test + in advice slots
 
 ```ts
 interface MistakeReasonDetail {
@@ -353,6 +367,8 @@ interface MistakeReasonDetail {
   reason: string;
   module: "READING" | "LISTENING" | "BOTH";
   module_display: string;
+  mistake_category: "fully_incorrect" | "blank_answer" | "misspelled";
+  mistake_category_display: string;
   solution_1: string;   // may be ""
   solution_2: string;   // may be ""
   solution_3: string;   // may be ""
@@ -381,10 +397,9 @@ interface StudentMistakeAdvice {
 | Method | URL | Auth | Purpose |
 |---|---|---|---|
 | `GET` | `/api/v1/student/review-center/?date_range=last_3_months` | Student | Mistake Analysis page with date filter |
-| `GET` | `/api/v1/student/attempts/{id}/mistake-reasons/` | Student | Load reasons after a test |
-| `POST` | `/api/v1/student/mistake-reasons/{id}/select/` | Student | Tap a reason → get solution + save to advice |
+| `GET` | `/api/v1/student/attempts/{id}/mistake-reasons/` | Student | Load full category-matched reasons after a test; also auto-saves advice |
 | `GET` | `/api/v1/student/mistake-analysis/advice/` | Student | Load 4 advice cards for Mistake Analysis page |
-| `GET` | `/api/v1/admin/mistake-reasons/` | Admin | List all reasons |
+| `GET` | `/api/v1/admin/mistake-reasons/` | Admin | List all reasons; supports `module` and `mistake_category` filters |
 | `POST` | `/api/v1/admin/mistake-reasons/` | Admin | Create reason (JSON or multipart) |
 | `GET` | `/api/v1/admin/mistake-reasons/{id}/` | Admin | Get single reason |
 | `PATCH` | `/api/v1/admin/mistake-reasons/{id}/` | Admin | Update reason (partial) |

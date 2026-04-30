@@ -224,11 +224,14 @@ export type QuestionPayload = {
 };
 
 export type MistakeReasonModule = "READING" | "LISTENING" | "BOTH";
+export type MistakeReasonCategory = "fully_incorrect" | "blank_answer" | "misspelled";
 
 export type MistakeReasonRecord = {
   id: AdminEntityId;
   reason: string;
   module: MistakeReasonModule;
+  mistake_category: MistakeReasonCategory;
+  mistake_category_display: string;
   solution_1: string;
   solution_2: string;
   solution_3: string;
@@ -241,6 +244,7 @@ export type MistakeReasonRecord = {
 export type MistakeReasonPayload = {
   reason: string;
   module: MistakeReasonModule;
+  mistake_category: MistakeReasonCategory;
   solution_1?: string;
   solution_2?: string;
   solution_3?: string;

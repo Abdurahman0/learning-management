@@ -14,7 +14,7 @@ import {gradeTest, type GradeableQuestion} from "@/lib/grading";
 import {loadAttemptResult} from "@/lib/test-attempt-storage";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
-import type {MistakeReasonBrief, MistakeReasonDetail, StudentAttemptDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
+import type {MistakeReasonDetail, StudentAttemptDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
 import {QuestionTypePerformance, type QuestionTypePerformanceItem} from "./QuestionTypePerformance";
 import {ReviewAiCoachCard} from "./ReviewAiCoachCard";
 import {ReviewHeader} from "./ReviewHeader";
@@ -68,10 +68,9 @@ export function ReadingSummaryPageClient() {
   const tReadingReview = useTranslations("readingReview");
   const [showAiInsights, setShowAiInsights] = useState(false);
   const aiInsightsRef = useRef<HTMLDivElement | null>(null);
-  const [mistakeReasons, setMistakeReasons] = useState<MistakeReasonBrief[]>([]);
+  const [mistakeReasons, setMistakeReasons] = useState<MistakeReasonDetail[]>([]);
   const [selectedMistakeReason, setSelectedMistakeReason] = useState<MistakeReasonDetail | null>(null);
   const [isReasonsLoading, setIsReasonsLoading] = useState(Boolean(resolvedBackendAttemptId));
-  const [selectingReasonId, setSelectingReasonId] = useState<string | null>(null);
   const [mistakeReasonsError, setMistakeReasonsError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -220,24 +219,16 @@ export function ReadingSummaryPageClient() {
     }, 60);
   };
 
-  const handleMistakeReasonSelect = async (reason: MistakeReasonBrief) => {
-    setSelectingReasonId(reason.id);
+  const handleMistakeReasonSelect = (reason: MistakeReasonDetail) => {
     setMistakeReasonsError(null);
-    try {
-      const detail = await studentMistakeReasonsService.select(reason.id);
-      setSelectedMistakeReason(detail);
-      setShowAiInsights(true);
-      window.setTimeout(() => {
-        const node = aiInsightsRef.current;
-        if (node) {
-          node.scrollIntoView({behavior: "smooth", block: "start"});
-        }
-      }, 80);
-    } catch (error) {
-      setMistakeReasonsError(error instanceof Error ? error.message : "Could not load mistake reason solution.");
-    } finally {
-      setSelectingReasonId(null);
-    }
+    setSelectedMistakeReason(reason);
+    setShowAiInsights(true);
+    window.setTimeout(() => {
+      const node = aiInsightsRef.current;
+      if (node) {
+        node.scrollIntoView({behavior: "smooth", block: "start"});
+      }
+    }, 80);
   };
 
   if (!resolvedBackendAttemptId) {
@@ -451,7 +442,6 @@ export function ReadingSummaryPageClient() {
         reasons={mistakeReasons}
         selectedReason={selectedMistakeReason}
         isLoading={isReasonsLoading}
-        selectingReasonId={selectingReasonId}
         error={mistakeReasonsError}
         onSelectReason={handleMistakeReasonSelect}
       />

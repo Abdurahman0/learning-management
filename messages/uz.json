@@ -876,7 +876,7 @@
                         },
     "mistakeReasons":  {
                             "title":  "Xatolardan o'rganing",
-                            "subtitle":  "Xatolaringizga eng mos sababni tanlang. Backend uni maslahatlar ro'yxatiga saqlaydi va yechimni AI xulosalarida ko'rsatadi.",
+                            "subtitle":  "Backend testdagi xato turlarini aniqlaydi va shu urinishga mos sabab hamda yechimlarni ko'rsatadi.",
                             "loading":  "Mos xato sabablari yuklanmoqda...",
                             "attachment":  "Biriktirma",
                             "viewAiAnswer":  "AI javobni ko'rish",
@@ -886,6 +886,13 @@
                             "chooseReasonDescription":  "Backenddan kelgan yechim shu yerda chiqishi uchun yuqoridan bitta sababni tanlang.",
                             "thinking":  "Tavsiyangiz tayyorlanmoqda...",
                             "downloadGuide":  "Qo'llanmani yuklab olish",
+                            "reasonCount":  "{count} ta sabab",
+                            "emptySolutions":  "Bu sabab uchun yechim hali kiritilmagan.",
+                            "categories":  {
+                                               "fully_incorrect":  "To'liq noto'g'ri",
+                                               "blank_answer":  "Bo'sh qoldirilgan",
+                                               "misspelled":  "Imlo xatosi"
+                                           },
                             "adviceTitle":  "Siz uchun tavsiyalar",
                             "adviceSubtitle":  "Oxirgi tanlangan xato sabablaringiz va yechimlar.",
                             "emptyAdvice":  "Maslahatlar ro'yxatini yaratish uchun testdan keyin xato sabablarini tanlang.",
@@ -2012,20 +2019,27 @@
                                   "delete":  "O'chirish",
                                   "cancel":  "Bekor qilish",
                                   "save":  "O'zgarishlarni saqlash",
-                                  "modules":  {
-                                                  "all":  "Barcha modullar",
-                                                  "READING":  "Reading",
-                                                  "LISTENING":  "Listening",
-                                                  "BOTH":  "Ikkalasi"
-                                              },
-                                  "form":  {
-                                               "createTitle":  "Xato sababini qo'shish",
-                                               "editTitle":  "Xato sababini tahrirlash",
-                                               "description":  "Aniq sabab va uchtagacha yechim qadamini kiriting. Faylni faqat o'quvchiga yuklab olinadigan qo'llanma kerak bo'lsa biriktiring.",
-                                               "reason":  "Sabab",
-                                               "module":  "Modul",
-                                               "solution":  "{number}-yechim",
-                                               "file":  "Biriktirma",
+                                    "modules":  {
+                                                    "all":  "Barcha modullar",
+                                                    "READING":  "Reading",
+                                                    "LISTENING":  "Listening",
+                                                    "BOTH":  "Ikkalasi"
+                                                },
+                                    "categories":  {
+                                                       "all":  "Barcha xato turlari",
+                                                       "fully_incorrect":  "To'liq noto'g'ri",
+                                                       "blank_answer":  "Bo'sh qoldirilgan",
+                                                       "misspelled":  "Imlo xatosi"
+                                                   },
+                                    "form":  {
+                                                 "createTitle":  "Xato sababini qo'shish",
+                                                 "editTitle":  "Xato sababini tahrirlash",
+                                                 "description":  "Aniq sabab va uchtagacha yechim qadamini kiriting. Faylni faqat o'quvchiga yuklab olinadigan qo'llanma kerak bo'lsa biriktiring.",
+                                                 "reason":  "Sabab",
+                                                 "module":  "Modul",
+                                                 "category":  "Xato turi",
+                                                 "solution":  "{number}-yechim",
+                                                 "file":  "Biriktirma",
                                                "removeFile":  "Mavjud faylni olib tashlash"
                                            },
                                   "deleteModal":  {
@@ -2035,11 +2049,12 @@
                                                   },
                                   "errors":  {
                                                 "load":  "Xato sabablarini yuklab bo'lmadi.",
-                                                "save":  "Xato sababini saqlab bo'lmadi.",
-                                                "delete":  "Xato sababini o'chirib bo'lmadi.",
-                                                "reasonRequired":  "Sabab majburiy."
-                                            }
-                              },
+                                                  "save":  "Xato sababini saqlab bo'lmadi.",
+                                                  "delete":  "Xato sababini o'chirib bo'lmadi.",
+                                                  "reasonRequired":  "Sabab majburiy.",
+                                                  "categoryRequired":  "Xato turi majburiy."
+                                              }
+                                },
     "adminAchievements":  {
                               "title":  "Yutuqlar va gamifikatsiya",
                               "searchPlaceholder":  "Yutuqlarni qidiring...",

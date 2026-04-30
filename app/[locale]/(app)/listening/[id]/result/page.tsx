@@ -14,7 +14,7 @@ import { loadAttemptResult } from "@/lib/test-attempt-storage";
 import { getListeningTestById } from "@/data/listening-tests-full";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
-import type {MistakeReasonBrief, MistakeReasonDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
+import type {MistakeReasonDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
 import { ListeningResultSummaryHeader } from "./_components/ListeningResultSummaryHeader";
 import {
   ListeningSectionPerformance,
@@ -64,10 +64,9 @@ export default function ListeningResultPage() {
   const [isLoading, setIsLoading] = useState(Boolean(resolvedBackendAttemptId));
   const [showAiInsights, setShowAiInsights] = useState(false);
   const aiInsightsRef = useRef<HTMLDivElement | null>(null);
-  const [mistakeReasons, setMistakeReasons] = useState<MistakeReasonBrief[]>([]);
+  const [mistakeReasons, setMistakeReasons] = useState<MistakeReasonDetail[]>([]);
   const [selectedMistakeReason, setSelectedMistakeReason] = useState<MistakeReasonDetail | null>(null);
   const [isReasonsLoading, setIsReasonsLoading] = useState(Boolean(resolvedBackendAttemptId));
-  const [selectingReasonId, setSelectingReasonId] = useState<string | null>(null);
   const [mistakeReasonsError, setMistakeReasonsError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -148,18 +147,10 @@ export default function ListeningResultPage() {
     }, 80);
   };
 
-  const handleMistakeReasonSelect = async (reason: MistakeReasonBrief) => {
-    setSelectingReasonId(reason.id);
+  const handleMistakeReasonSelect = (reason: MistakeReasonDetail) => {
     setMistakeReasonsError(null);
-    try {
-      const detail = await studentMistakeReasonsService.select(reason.id);
-      setSelectedMistakeReason(detail);
-      scrollToAiInsights();
-    } catch (error) {
-      setMistakeReasonsError(error instanceof Error ? error.message : "Could not load mistake reason solution.");
-    } finally {
-      setSelectingReasonId(null);
-    }
+    setSelectedMistakeReason(reason);
+    scrollToAiInsights();
   };
 
   useEffect(() => {
@@ -331,7 +322,6 @@ export default function ListeningResultPage() {
         reasons={mistakeReasons}
         selectedReason={selectedMistakeReason}
         isLoading={isReasonsLoading}
-        selectingReasonId={selectingReasonId}
         error={mistakeReasonsError}
         onSelectReason={handleMistakeReasonSelect}
       />

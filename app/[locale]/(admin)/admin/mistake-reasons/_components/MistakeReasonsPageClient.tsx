@@ -14,15 +14,17 @@ import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/c
 import {Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle} from "@/components/ui/sheet";
 import {cn} from "@/lib/utils";
 import {mistakeReasonsService} from "@/src/services/admin/mistakeReasons.service";
-import type {MistakeReasonModule, MistakeReasonPayload, MistakeReasonRecord} from "@/src/services/admin/types";
+import type {MistakeReasonCategory, MistakeReasonModule, MistakeReasonPayload, MistakeReasonRecord} from "@/src/services/admin/types";
 
 import {AdminSidebar, AdminSidebarMobileNav} from "../../_components/AdminSidebar";
 
 type ModuleFilter = MistakeReasonModule | "all";
+type CategoryFilter = MistakeReasonCategory | "all";
 
 type FormState = {
   reason: string;
   module: MistakeReasonModule;
+  mistake_category: MistakeReasonCategory;
   solution_1: string;
   solution_2: string;
   solution_3: string;
@@ -33,6 +35,7 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   reason: "",
   module: "READING",
+  mistake_category: "fully_incorrect",
   solution_1: "",
   solution_2: "",
   solution_3: "",
@@ -44,6 +47,7 @@ function trimPayload(form: FormState): MistakeReasonPayload {
   return {
     reason: form.reason.trim(),
     module: form.module,
+    mistake_category: form.mistake_category,
     solution_1: form.solution_1.trim(),
     solution_2: form.solution_2.trim(),
     solution_3: form.solution_3.trim(),
@@ -56,6 +60,7 @@ function toEditForm(record: MistakeReasonRecord): FormState {
   return {
     reason: record.reason,
     module: record.module,
+    mistake_category: record.mistake_category,
     solution_1: record.solution_1,
     solution_2: record.solution_2,
     solution_3: record.solution_3,
@@ -80,6 +85,7 @@ export function MistakeReasonsPageClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [moduleFilter, setModuleFilter] = useState<ModuleFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
   const [search, setSearch] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<MistakeReasonRecord | null>(null);
@@ -87,10 +93,10 @@ export function MistakeReasonsPageClient() {
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MistakeReasonRecord | null>(null);
 
-  const loadReasons = async (module: ModuleFilter = moduleFilter) => {
+  const loadReasons = async (module: ModuleFilter = moduleFilter, mistakeCategory: CategoryFilter = categoryFilter) => {
     setIsLoading(true);
     try {
-      const response = await mistakeReasonsService.list({module});
+      const response = await mistakeReasonsService.list({module, mistakeCategory});
       setItems(response.results);
     } catch (requestError) {
       setItems([]);
@@ -101,9 +107,9 @@ export function MistakeReasonsPageClient() {
   };
 
   useEffect(() => {
-    void loadReasons(moduleFilter);
+    void loadReasons(moduleFilter, categoryFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [moduleFilter]);
+  }, [moduleFilter, categoryFilter]);
 
   const filteredItems = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -155,9 +161,10 @@ export function MistakeReasonsPageClient() {
       } else {
         const createPayload: MistakeReasonPayload = form.file
           ? {...payload, is_file_consists: true}
-          : {
+            : {
               reason: payload.reason,
               module: payload.module,
+              mistake_category: payload.mistake_category,
               solution_1: payload.solution_1,
               solution_2: payload.solution_2,
               solution_3: payload.solution_3
@@ -167,7 +174,7 @@ export function MistakeReasonsPageClient() {
       setSheetOpen(false);
       setEditing(null);
       setForm(EMPTY_FORM);
-      await loadReasons(moduleFilter);
+      await loadReasons(moduleFilter, categoryFilter);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t("errors.save"));
     } finally {
@@ -181,7 +188,7 @@ export function MistakeReasonsPageClient() {
     try {
       await mistakeReasonsService.remove(String(deleteTarget.id));
       setDeleteTarget(null);
-      await loadReasons(moduleFilter);
+      await loadReasons(moduleFilter, categoryFilter);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : t("errors.delete"));
     } finally {
@@ -239,6 +246,17 @@ export function MistakeReasonsPageClient() {
                   <SelectItem value="BOTH">{t("modules.BOTH")}</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}>
+                <SelectTrigger className="h-10 w-full rounded-xl sm:w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("categories.all")}</SelectItem>
+                  <SelectItem value="fully_incorrect">{t("categories.fully_incorrect")}</SelectItem>
+                  <SelectItem value="blank_answer">{t("categories.blank_answer")}</SelectItem>
+                  <SelectItem value="misspelled">{t("categories.misspelled")}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Card className="rounded-2xl border-border/70 bg-card/80 shadow-none">
@@ -262,6 +280,9 @@ export function MistakeReasonsPageClient() {
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge className="rounded-full border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-200">
                               {t(`modules.${item.module}`)}
+                            </Badge>
+                            <Badge variant="outline" className="rounded-full">
+                              {item.mistake_category_display || t(`categories.${item.mistake_category}`)}
                             </Badge>
                             {item.is_file_consists ? (
                               <Badge variant="outline" className="rounded-full">
@@ -330,6 +351,19 @@ export function MistakeReasonsPageClient() {
                   <SelectItem value="READING">{t("modules.READING")}</SelectItem>
                   <SelectItem value="LISTENING">{t("modules.LISTENING")}</SelectItem>
                   <SelectItem value="BOTH">{t("modules.BOTH")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>{t("form.category")}</Label>
+              <Select value={form.mistake_category} onValueChange={(value) => setForm((current) => ({...current, mistake_category: value as MistakeReasonCategory}))}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fully_incorrect">{t("categories.fully_incorrect")}</SelectItem>
+                  <SelectItem value="blank_answer">{t("categories.blank_answer")}</SelectItem>
+                  <SelectItem value="misspelled">{t("categories.misspelled")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -1,5 +1,5 @@
 import {studentHttpClient, toStudentApiError} from "./httpClient";
-import type {MistakeReasonBrief, MistakeReasonDetail, MistakeReasonModule, StudentMistakeAdvice} from "./types";
+import type {MistakeReasonCategory, MistakeReasonDetail, MistakeReasonModule, StudentMistakeAdvice} from "./types";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -30,6 +30,14 @@ function normalizeModule(value: unknown): MistakeReasonModule {
   return "BOTH";
 }
 
+function normalizeCategory(value: unknown): MistakeReasonCategory {
+  const normalized = toStringSafe(value, "fully_incorrect").trim().toLowerCase();
+  if (normalized === "fully_incorrect" || normalized === "blank_answer" || normalized === "misspelled") {
+    return normalized;
+  }
+  return "fully_incorrect";
+}
+
 function normalizeFileUrl(value: unknown) {
   const raw = toStringSafe(value).trim();
   if (!raw) return null;
@@ -46,7 +54,7 @@ function normalizeFileUrl(value: unknown) {
   return null;
 }
 
-function normalizeBrief(value: unknown): MistakeReasonBrief | null {
+function normalizeDetail(value: unknown): MistakeReasonDetail | null {
   const record = asRecord(value);
   if (!record) return null;
 
@@ -60,17 +68,9 @@ function normalizeBrief(value: unknown): MistakeReasonBrief | null {
     reason,
     module,
     module_display: toStringSafe(record.module_display, module),
-    is_file_consists: Boolean(record.is_file_consists)
-  };
-}
-
-function normalizeDetail(value: unknown): MistakeReasonDetail | null {
-  const brief = normalizeBrief(value);
-  const record = asRecord(value);
-  if (!brief || !record) return null;
-
-  return {
-    ...brief,
+    mistake_category: normalizeCategory(record.mistake_category),
+    mistake_category_display: toStringSafe(record.mistake_category_display, toStringSafe(record.mistake_category, "Fully incorrect")),
+    is_file_consists: Boolean(record.is_file_consists),
     solution_1: toStringSafe(record.solution_1),
     solution_2: toStringSafe(record.solution_2),
     solution_3: toStringSafe(record.solution_3),
@@ -98,25 +98,13 @@ function normalizeAdvice(value: unknown): StudentMistakeAdvice | null {
 }
 
 export const studentMistakeReasonsService = {
-  async listForAttempt(attemptId: string) {
+  async listForAttempt(attemptId: string, category?: MistakeReasonCategory) {
     try {
       const normalizedAttemptId = encodeURIComponent(attemptId);
-      const response = await studentHttpClient.get(`/attempts/${normalizedAttemptId}/mistake-reasons/`);
-      return asArray(response.data).map(normalizeBrief).filter((item): item is MistakeReasonBrief => Boolean(item));
-    } catch (error) {
-      throw toStudentApiError(error);
-    }
-  },
-
-  async select(reasonId: string) {
-    try {
-      const normalizedReasonId = encodeURIComponent(reasonId);
-      const response = await studentHttpClient.post(`/mistake-reasons/${normalizedReasonId}/select/`);
-      const detail = normalizeDetail(response.data);
-      if (!detail) {
-        throw new Error("Invalid mistake reason response.");
-      }
-      return detail;
+      const response = await studentHttpClient.get(`/attempts/${normalizedAttemptId}/mistake-reasons/`, {
+        params: category ? {mistake_category: category} : undefined
+      });
+      return asArray(response.data).map(normalizeDetail).filter((item): item is MistakeReasonDetail => Boolean(item));
     } catch (error) {
       throw toStudentApiError(error);
     }

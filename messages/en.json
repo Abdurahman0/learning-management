@@ -876,7 +876,7 @@
                         },
     "mistakeReasons":  {
                             "title":  "Learn from your mistakes",
-                            "subtitle":  "Choose the reason that best matches your errors. The backend will save it to your advice list and show the solution in AI Insights.",
+                            "subtitle":  "The backend detects the mistake categories in this attempt and returns the matching reasons and solutions.",
                             "loading":  "Loading relevant mistake reasons...",
                             "attachment":  "Attachment",
                             "viewAiAnswer":  "View AI answer",
@@ -886,6 +886,13 @@
                             "chooseReasonDescription":  "Select one reason above to generate the backend-backed solution here.",
                             "thinking":  "Preparing your recommendation...",
                             "downloadGuide":  "Download guide",
+                            "reasonCount":  "{count} reasons",
+                            "emptySolutions":  "No solution has been added for this reason yet.",
+                            "categories":  {
+                                               "fully_incorrect":  "Fully incorrect",
+                                               "blank_answer":  "Blank answer",
+                                               "misspelled":  "Misspelled"
+                                           },
                             "adviceTitle":  "Recommended for You",
                             "adviceSubtitle":  "Your latest selected mistake reasons and solutions.",
                             "emptyAdvice":  "Select mistake reasons after a test to build your advice list.",
@@ -2012,20 +2019,27 @@
                                   "delete":  "Delete",
                                   "cancel":  "Cancel",
                                   "save":  "Save Changes",
-                                  "modules":  {
-                                                  "all":  "All modules",
-                                                  "READING":  "Reading",
-                                                  "LISTENING":  "Listening",
-                                                  "BOTH":  "Both"
-                                              },
-                                  "form":  {
-                                               "createTitle":  "Add mistake reason",
-                                               "editTitle":  "Edit mistake reason",
-                                               "description":  "Add a clear reason and up to three solution steps. Attach a file only when students need a downloadable guide.",
-                                               "reason":  "Reason",
-                                               "module":  "Module",
-                                               "solution":  "Solution {number}",
-                                               "file":  "Attachment",
+                                    "modules":  {
+                                                    "all":  "All modules",
+                                                    "READING":  "Reading",
+                                                    "LISTENING":  "Listening",
+                                                    "BOTH":  "Both"
+                                                },
+                                    "categories":  {
+                                                       "all":  "All mistake types",
+                                                       "fully_incorrect":  "Fully incorrect",
+                                                       "blank_answer":  "Blank answer",
+                                                       "misspelled":  "Misspelled"
+                                                   },
+                                    "form":  {
+                                                 "createTitle":  "Add mistake reason",
+                                                 "editTitle":  "Edit mistake reason",
+                                                 "description":  "Add a clear reason and up to three solution steps. Attach a file only when students need a downloadable guide.",
+                                                 "reason":  "Reason",
+                                                 "module":  "Module",
+                                                 "category":  "Mistake type",
+                                                 "solution":  "Solution {number}",
+                                                 "file":  "Attachment",
                                                "removeFile":  "Remove existing file"
                                            },
                                   "deleteModal":  {
@@ -2035,11 +2049,12 @@
                                                   },
                                   "errors":  {
                                                 "load":  "Could not load mistake reasons.",
-                                                "save":  "Could not save mistake reason.",
-                                                "delete":  "Could not delete mistake reason.",
-                                                "reasonRequired":  "Reason is required."
-                                            }
-                              },
+                                                  "save":  "Could not save mistake reason.",
+                                                  "delete":  "Could not delete mistake reason.",
+                                                  "reasonRequired":  "Reason is required.",
+                                                  "categoryRequired":  "Mistake type is required."
+                                              }
+                                },
     "adminAchievements":  {
                               "title":  "Achievements \u0026 Gamification",
                               "searchPlaceholder":  "Search achievements...",
