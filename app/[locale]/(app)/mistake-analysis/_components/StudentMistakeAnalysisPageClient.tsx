@@ -582,7 +582,7 @@ export function StudentMistakeAnalysisPageClient() {
             ) : null}
           </div>
           {adviceItems.length ? (
-            <div className="grid gap-3 xl:grid-cols-2">
+            <div className="space-y-3">
               {adviceItems.map((item) => {
                 const isOpen = expandedAdviceIds.has(item.id);
                 const solutions = [item.reason.solution_1, item.reason.solution_2, item.reason.solution_3].map((solution) => solution.trim()).filter(Boolean);
