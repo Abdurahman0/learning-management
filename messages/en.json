@@ -3181,12 +3181,16 @@
                                              "recommendedAdvice":  "Recommended for You",
                                              "recommendedAdviceDescription":  "Advice saved from the mistake reasons you selected after tests."
                                          },
-                            "advice":  {
-                                           "slot":  "Slot {slot}",
-                                           "updated":  "Updated {date}",
-                                           "download":  "Download guide",
-                                           "empty":  "No advice yet. Choose a mistake reason after finishing a test to save one here."
-                                       },
+    "advice":  {
+                   "slot":  "Slot {slot}",
+                   "updated":  "Updated {date}",
+                   "download":  "Download guide",
+                   "empty":  "No advice yet. Choose a mistake reason after finishing a test to save one here.",
+                   "modernTitle":  "Advice based on your latest mistakes",
+                   "count":  "{count} active recommendations",
+                   "solutionSummary":  "{count} solution steps available",
+                   "planLabel":  "Improvement plan"
+               },
                             "questionTypes":  {
                                                   "matchingHeadings":  "Matching Headings",
                                                   "trueFalseNotGiven":  "True / False / Not Given",

@@ -3180,12 +3180,16 @@
                                              "recommendedAdvice":  "Siz uchun tavsiyalar",
                                              "recommendedAdviceDescription":  "Testlardan keyin tanlagan xato sabablaringizdan saqlangan maslahatlar."
                                          },
-                            "advice":  {
-                                           "slot":  "{slot}-slot",
-                                           "updated":  "Yangilandi: {date}",
-                                           "download":  "Qo'llanmani yuklab olish",
-                                           "empty":  "Hali maslahat yo'q. Testni tugatgandan keyin xato sababini tanlasangiz, u shu yerga saqlanadi."
-                                       },
+    "advice":  {
+                   "slot":  "{slot}-slot",
+                   "updated":  "Yangilandi: {date}",
+                   "download":  "Qo'llanmani yuklab olish",
+                   "empty":  "Hali maslahat yo'q. Testni tugatgandan keyin xato sababini tanlasangiz, u shu yerga saqlanadi.",
+                   "modernTitle":  "So'nggi xatolaringiz asosidagi tavsiyalar",
+                   "count":  "{count} ta faol tavsiya",
+                   "solutionSummary":  "{count} ta yechim qadami mavjud",
+                   "planLabel":  "Rivojlanish rejasi"
+               },
                             "questionTypes":  {
                                                   "matchingHeadings":  "Matching Headings",
                                                   "trueFalseNotGiven":  "True / False / Not Given",

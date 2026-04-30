@@ -1,16 +1,12 @@
 "use client";
 
 import {useEffect, useId, useMemo, useState} from "react";
-import {useLocale, useTranslations} from "next-intl";
-import {useRouter} from "next/navigation";
-import {ArrowUpRight, BookCheck, ChevronDown, Clock3, Download, FileSearch2, Target, TrendingUp, TriangleAlert} from "lucide-react";
+import {useTranslations} from "next-intl";
+import {ArrowUpRight, ChevronDown, Download, Sparkles, Target, TrendingUp, TriangleAlert} from "lucide-react";
 import {Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
 
 import {
-  STUDENT_COMMON_ERROR_PATTERNS,
   STUDENT_MISTAKE_RANGE_OPTIONS,
-  STUDENT_RECOMMENDED_FOCUS_AREAS,
-  type StudentFocusAreaAction,
   type StudentMistakeRangeKey
 } from "@/data/student-mistake-analysis";
 import {getQuestionTypeDisplayLabel, getQuestionTypeShortCode} from "@/src/services/student/questionTypeLabels";
@@ -23,11 +19,6 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {ChartContainer} from "@/components/ui/chart";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {cn} from "@/lib/utils";
-
-type ActionNotice = {
-  title: string;
-  description: string;
-};
 
 type SupportedModule = "reading" | "listening";
 
@@ -49,12 +40,6 @@ type ModuleSeriesItem = {
 
 const cardClassName =
   "rounded-2xl border border-border/70 bg-card/95 dark:border-slate-700/45 dark:bg-[linear-gradient(155deg,rgba(17,24,39,0.92),rgba(15,23,42,0.9))] shadow-none";
-
-const patternIcons = {
-  keyword: FileSearch2,
-  time: Clock3,
-  instructions: TriangleAlert
-} as const;
 
 const MODULE_COLORS: Record<SupportedModule, string> = {
   reading: "#6366f1",
@@ -160,12 +145,9 @@ function isSafeDownloadUrl(value: string | null) {
 
 export function StudentMistakeAnalysisPageClient() {
   const t = useTranslations("studentMistakes");
-  const locale = useLocale();
-  const router = useRouter();
   const gradientId = useId().replace(/:/g, "");
 
   const [selectedRange, setSelectedRange] = useState<StudentMistakeRangeKey>("last30Days");
-  const [notice, setNotice] = useState<ActionNotice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [reviewData, setReviewData] = useState<StudentReviewCenterResponse>(EMPTY_REVIEW_CENTER);
   const [adviceItems, setAdviceItems] = useState<StudentMistakeAdvice[]>([]);
@@ -232,15 +214,6 @@ export function StudentMistakeAnalysisPageClient() {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!notice) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => setNotice(null), 2500);
-    return () => window.clearTimeout(timer);
-  }, [notice]);
 
   const itemsInRange = useMemo(() => getRangeItems(reviewData.items, selectedRange), [reviewData.items, selectedRange]);
 
@@ -358,23 +331,6 @@ export function StudentMistakeAnalysisPageClient() {
     };
   }, [dominantModule?.module, itemsInRange.length, questionTypeSeries, reviewData.summary, reviewedDelta]);
 
-  const handleFocusAction = (action: StudentFocusAreaAction) => {
-    if (action.action === "navigate" && action.href) {
-      if (action.href === "/dashboard") {
-        router.push(`/${locale}/dashboard#weak-areas`);
-        return;
-      }
-
-      router.push(`/${locale}${action.href}`);
-      return;
-    }
-
-    setNotice({
-      title: t(`actions.feedback.${action.id}.title`),
-      description: t(`actions.feedback.${action.id}.description`)
-    });
-  };
-
   return (
     <main className="mx-auto min-w-0 w-full max-w-445 overflow-x-hidden px-2 py-5 sm:px-4 sm:py-6 lg:px-6">
       <section className="space-y-5 sm:space-y-6">
@@ -382,26 +338,6 @@ export function StudentMistakeAnalysisPageClient() {
           <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t("title")}</h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-[15px]">{t("subtitle")}</p>
         </header>
-
-        {isLoading ? (
-          <Card className={cardClassName}>
-            <CardContent className="p-4 text-sm text-muted-foreground">{t("subtitle")}</CardContent>
-          </Card>
-        ) : null}
-
-        {notice ? (
-          <Card className="rounded-xl border-blue-400/35 bg-blue-500/10 shadow-none">
-            <CardContent className="flex items-start gap-3 p-3 text-sm">
-              <span className="mt-0.5 inline-flex size-6 items-center justify-center rounded-md bg-blue-500/20 text-blue-700 dark:text-blue-200">
-                <BookCheck className="size-3.5" />
-              </span>
-              <div>
-                <p className="font-semibold text-blue-700 dark:text-blue-100">{notice.title}</p>
-                <p className="text-blue-700/90 dark:text-blue-100/85">{notice.description}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
 
         <section className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <Card className={cn(cardClassName, "relative overflow-hidden")}>
@@ -630,21 +566,39 @@ export function StudentMistakeAnalysisPageClient() {
         </section>
 
         <section className="space-y-3">
-          <div>
-            <h2 className="text-xl font-semibold tracking-tight text-foreground">{t("sections.recommendedAdvice")}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t("sections.recommendedAdviceDescription")}</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-blue-400/25 bg-blue-500/10 px-3 py-1 text-xs font-semibold text-blue-700 dark:text-blue-200">
+                <Sparkles className="size-3.5" />
+                {t("sections.recommendedAdvice")}
+              </div>
+              <h2 className="text-2xl font-semibold tracking-tight text-foreground">{t("advice.modernTitle")}</h2>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{t("sections.recommendedAdviceDescription")}</p>
+            </div>
+            {adviceItems.length ? (
+              <Badge variant="outline" className="w-fit rounded-full px-3 py-1">
+                {t("advice.count", {count: adviceItems.length})}
+              </Badge>
+            ) : null}
           </div>
           {adviceItems.length ? (
-            <div className="space-y-2">
+            <div className="grid gap-3 xl:grid-cols-2">
               {adviceItems.map((item) => {
                 const isOpen = expandedAdviceIds.has(item.id);
                 const solutions = [item.reason.solution_1, item.reason.solution_2, item.reason.solution_3].map((solution) => solution.trim()).filter(Boolean);
 
                 return (
-                  <article key={item.id} className="rounded-2xl border border-border/70 bg-card/85 p-4 shadow-none">
+                  <article
+                    key={item.id}
+                    className={cn(
+                      "group relative overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-none transition-colors",
+                      isOpen && "border-blue-400/45 bg-blue-500/5"
+                    )}
+                  >
+                    <span className="pointer-events-none absolute -right-12 -top-12 size-32 rounded-full bg-blue-500/10 blur-2xl" />
                     <button
                       type="button"
-                      className="flex w-full items-start justify-between gap-4 text-left"
+                      className="relative flex w-full items-start justify-between gap-4 p-4 text-left"
                       onClick={() => {
                         setExpandedAdviceIds((current) => {
                           const next = new Set(current);
@@ -657,33 +611,44 @@ export function StudentMistakeAnalysisPageClient() {
                         });
                       }}
                     >
-                      <span className="min-w-0">
+                      <span className="flex min-w-0 gap-3">
+                        <span className="mt-0.5 inline-flex size-10 shrink-0 items-center justify-center rounded-2xl border border-blue-400/30 bg-blue-500/12 text-sm font-semibold text-blue-700 dark:text-blue-200">
+                          {item.slot}
+                        </span>
+                        <span className="min-w-0">
                         <span className="mb-2 flex flex-wrap items-center gap-2">
                           <Badge className="rounded-full border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-200">
                             {item.reason.module_display}
                           </Badge>
-                          <Badge variant="outline" className="rounded-full">
-                            {t("advice.slot", {slot: item.slot})}
-                          </Badge>
+                          {"mistake_category_display" in item.reason && item.reason.mistake_category_display ? (
+                            <Badge variant="outline" className="rounded-full">{item.reason.mistake_category_display}</Badge>
+                          ) : null}
                           <span className="text-xs text-muted-foreground">{t("advice.updated", {date: formatAdviceDate(item.updated_at)})}</span>
                         </span>
                         <span className="block text-base font-semibold leading-snug text-foreground">{item.reason.reason}</span>
+                        <span className="mt-2 block text-xs text-muted-foreground">{t("advice.solutionSummary", {count: solutions.length})}</span>
+                        </span>
                       </span>
-                      <ChevronDown className={cn("mt-1 size-4 shrink-0 transition-transform", isOpen && "rotate-180")} />
+                      <span className="mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/70">
+                        <ChevronDown className={cn("size-4 transition-transform", isOpen && "rotate-180")} />
+                      </span>
                     </button>
 
                     {isOpen ? (
-                      <div className="mt-3 space-y-3 border-t border-border/70 pt-3">
-                        <ul className="space-y-2 text-sm text-muted-foreground">
+                      <div className="relative space-y-3 border-t border-border/70 px-4 pb-4 pt-3">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t("advice.planLabel")}</p>
+                        <ol className="space-y-2 text-sm text-muted-foreground">
                           {solutions.map((solution, index) => (
-                            <li key={`${item.id}-${index}`} className="flex gap-2">
-                              <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+                            <li key={`${item.id}-${index}`} className="flex gap-2 rounded-2xl border border-border/60 bg-background/55 p-3">
+                              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-blue-500/12 text-[11px] font-semibold text-blue-700 dark:text-blue-200">
+                                {index + 1}
+                              </span>
                               <span>{solution}</span>
                             </li>
                           ))}
-                        </ul>
+                        </ol>
                         {isSafeDownloadUrl(item.reason.file_url) ? (
-                          <Button size="sm" variant="outline" asChild>
+                          <Button size="sm" variant="outline" className="rounded-xl" asChild>
                             <a href={item.reason.file_url ?? "#"} target="_blank" rel="noopener noreferrer">
                               <Download className="size-4" />
                               {t("advice.download")}
@@ -703,6 +668,8 @@ export function StudentMistakeAnalysisPageClient() {
           )}
         </section>
 
+        {/* Common Error Patterns is temporarily hidden. */}
+        {/*
         <section className="space-y-3">
           <h2 className="text-xl font-semibold tracking-tight text-foreground">{t("sections.commonErrorPatterns")}</h2>
           <div className="space-y-2">
@@ -727,7 +694,10 @@ export function StudentMistakeAnalysisPageClient() {
             })}
           </div>
         </section>
+        */}
 
+        {/* Recommended Next Steps is temporarily hidden. */}
+        {/*
         <section className="space-y-3">
           <h2 className="text-xl font-semibold tracking-tight text-foreground">{t("sections.recommendedNextSteps")}</h2>
           <div className="space-y-2">
@@ -751,6 +721,7 @@ export function StudentMistakeAnalysisPageClient() {
             ))}
           </div>
         </section>
+        */}
       </section>
     </main>
   );
