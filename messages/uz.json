@@ -888,6 +888,35 @@
                             "downloadGuide":  "Qo'llanmani yuklab olish",
                             "reasonCount":  "{count} ta sabab",
                             "emptySolutions":  "Bu sabab uchun yechim hali kiritilmagan.",
+                            "aiReasonsTitle":  "Xato sabablari",
+                            "aiReasonsDescription":  "Bular backend aniqlagan xato turlaridan siz tanlagan sabablar.",
+                            "improvementPlanTitle":  "Shaxsiy rivojlanish rejasi",
+                            "modal":  {
+                                          "badge":  "AI xato tahlili",
+                                          "description":  "Ushbu urinishda aniqlangan xatolarni ko'ring, mos sabablarni belgilang va EnglishLabs ularni aniq rivojlanish rejasiga aylantiradi.",
+                                          "close":  "Yopish",
+                                          "empty":  "Bu urinish uchun xato sabablari qaytmadi.",
+                                          "cancel":  "Bekor qilish",
+                                          "analyze":  "Xatolarni tahlil qilish",
+                                          "analyzing":  "AI tanlangan sabablarni tahlil qilib, rivojlanish rejangizni tayyorlamoqda...",
+                                          "selectHint":  "Davom etish uchun kamida bitta sababni belgilang.",
+                                          "selected":  "{count} ta tanlandi",
+                                          "categoryTitle":  {
+                                                              "fully_incorrect":  "Bu savollarga noto'g'ri javob berdingiz",
+                                                              "blank_answer":  "Bu savollarni javobsiz qoldirdingiz",
+                                                              "misspelled":  "Bu javoblar yaqin, lekin aniq emas"
+                                                          },
+                                          "categoryDescription":  {
+                                                                    "fully_incorrect":  "Savollar: {questions}. Nima uchun xato bo'lganini tanlang.",
+                                                                    "blank_answer":  "Savollar: {questions}. Nima uchun bo'sh qoldirilganini tanlang.",
+                                                                    "misspelled":  "Savollar: {questions}. Nima uchun aniq javob topilmaganini tanlang."
+                                                                },
+                                          "categoryFallback":  {
+                                                                 "fully_incorrect":  "Noto'g'ri javoblaringizni eng yaxshi tushuntiradigan sabablarni tanlang.",
+                                                                 "blank_answer":  "Bo'sh javoblaringizni eng yaxshi tushuntiradigan sabablarni tanlang.",
+                                                                 "misspelled":  "Imlo yoki aniq so'z xatolarini eng yaxshi tushuntiradigan sabablarni tanlang."
+                                                             }
+                                      },
                             "categories":  {
                                                "fully_incorrect":  "To'liq noto'g'ri",
                                                "blank_answer":  "Bo'sh qoldirilgan",

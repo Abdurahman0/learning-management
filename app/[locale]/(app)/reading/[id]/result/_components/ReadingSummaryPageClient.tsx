@@ -14,7 +14,7 @@ import {gradeTest, type GradeableQuestion} from "@/lib/grading";
 import {loadAttemptResult} from "@/lib/test-attempt-storage";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
-import type {MistakeReasonDetail, StudentAttemptDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
+import type {MistakeReasonCategory, MistakeReasonDetail, StudentAttemptDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
 import {QuestionTypePerformance, type QuestionTypePerformanceItem} from "./QuestionTypePerformance";
 import {ReviewAiCoachCard} from "./ReviewAiCoachCard";
 import {ReviewHeader} from "./ReviewHeader";
@@ -45,6 +45,27 @@ function normalizeStoredAnswers(input: Record<string, string | string[] | null>)
   return normalized;
 }
 
+function getReadingCategoryQuestionNumbers(review: StudentAttemptReviewResponse | null): Partial<Record<MistakeReasonCategory, number[]>> {
+  const result: Partial<Record<MistakeReasonCategory, number[]>> = {
+    blank_answer: [],
+    fully_incorrect: []
+  };
+
+  for (const passage of review?.passages ?? []) {
+    for (const group of passage.question_groups ?? []) {
+      for (const question of group.questions ?? []) {
+        if (question.is_skipped) {
+          result.blank_answer?.push(question.question_number);
+        } else if (!question.is_correct) {
+          result.fully_incorrect?.push(question.question_number);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
 export function ReadingSummaryPageClient() {
   const params = useParams<{id: string}>();
   const searchParams = useSearchParams();
@@ -67,9 +88,12 @@ export function ReadingSummaryPageClient() {
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const tReadingReview = useTranslations("readingReview");
   const [showAiInsights, setShowAiInsights] = useState(false);
+  const [mistakeModalOpen, setMistakeModalOpen] = useState(false);
+  const [isMistakeAnalyzing, setIsMistakeAnalyzing] = useState(false);
   const aiInsightsRef = useRef<HTMLDivElement | null>(null);
   const [mistakeReasons, setMistakeReasons] = useState<MistakeReasonDetail[]>([]);
   const [selectedMistakeReason, setSelectedMistakeReason] = useState<MistakeReasonDetail | null>(null);
+  const [selectedMistakeReasonIds, setSelectedMistakeReasonIds] = useState<string[]>([]);
   const [isReasonsLoading, setIsReasonsLoading] = useState(Boolean(resolvedBackendAttemptId));
   const [mistakeReasonsError, setMistakeReasonsError] = useState<string | null>(null);
 
@@ -207,29 +231,49 @@ export function ReadingSummaryPageClient() {
   }, [actionNotice]);
 
   const handleAiAnalysisClick = () => {
-    setShowAiInsights(true);
-    window.setTimeout(() => {
-      const node = aiInsightsRef.current;
-      if (node) {
-        node.scrollIntoView({ behavior: "smooth", block: "start" });
-        return;
-      }
-      const fallback = document.getElementById("ai-insights");
-      fallback?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 60);
+    setMistakeModalOpen(true);
   };
 
   const handleMistakeReasonSelect = (reason: MistakeReasonDetail) => {
     setMistakeReasonsError(null);
     setSelectedMistakeReason(reason);
-    setShowAiInsights(true);
-    window.setTimeout(() => {
-      const node = aiInsightsRef.current;
-      if (node) {
-        node.scrollIntoView({behavior: "smooth", block: "start"});
+    setSelectedMistakeReasonIds((current) => {
+      if (current.includes(reason.id)) {
+        return current.filter((id) => id !== reason.id);
       }
-    }, 80);
+      return [...current, reason.id];
+    });
   };
+
+  const selectedMistakeReasons = useMemo(
+    () => mistakeReasons.filter((reason) => selectedMistakeReasonIds.includes(reason.id)),
+    [mistakeReasons, selectedMistakeReasonIds]
+  );
+
+  const handleAnalyzeMistakes = () => {
+    if (!selectedMistakeReasons.length) return;
+    setIsMistakeAnalyzing(true);
+    window.setTimeout(() => {
+      setIsMistakeAnalyzing(false);
+      setMistakeModalOpen(false);
+      setShowAiInsights(true);
+      setSelectedMistakeReason(selectedMistakeReasons[0] ?? null);
+      window.setTimeout(() => {
+        const node = aiInsightsRef.current;
+        if (node) {
+          node.scrollIntoView({behavior: "smooth", block: "start"});
+          return;
+        }
+        const fallback = document.getElementById("ai-insights");
+        fallback?.scrollIntoView({behavior: "smooth", block: "start"});
+      }, 80);
+    }, 1100);
+  };
+
+  const categoryQuestionNumbers = useMemo(
+    () => getReadingCategoryQuestionNumbers(reviewPayload),
+    [reviewPayload]
+  );
 
   if (!resolvedBackendAttemptId) {
     if (!localAttemptId) {
@@ -439,11 +483,16 @@ export function ReadingSummaryPageClient() {
       <QuestionTypePerformance items={accuracyByType} />
 
       <PostTestMistakeReasonsPanel
+        open={mistakeModalOpen}
         reasons={mistakeReasons}
-        selectedReason={selectedMistakeReason}
+        selectedReasonIds={selectedMistakeReasonIds}
         isLoading={isReasonsLoading}
+        isAnalyzing={isMistakeAnalyzing}
         error={mistakeReasonsError}
-        onSelectReason={handleMistakeReasonSelect}
+        categoryQuestionNumbers={categoryQuestionNumbers}
+        onOpenChange={setMistakeModalOpen}
+        onToggleReason={handleMistakeReasonSelect}
+        onAnalyze={handleAnalyzeMistakes}
       />
 
       {questionTypeStats ? (
@@ -512,6 +561,7 @@ export function ReadingSummaryPageClient() {
               coach={dynamicCoach}
               mistakeBreakdown={dynamicMistakeBreakdown}
               selectedMistakeReason={selectedMistakeReason}
+              selectedMistakeReasons={selectedMistakeReasons}
               onAction={(message) => setActionNotice(tReadingReview("actionPlaceholder", {action: message}))}
             />
           </div>

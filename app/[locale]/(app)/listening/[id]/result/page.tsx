@@ -14,7 +14,7 @@ import { loadAttemptResult } from "@/lib/test-attempt-storage";
 import { getListeningTestById } from "@/data/listening-tests-full";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
-import type {MistakeReasonDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
+import type {MistakeReasonCategory, MistakeReasonDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
 import { ListeningResultSummaryHeader } from "./_components/ListeningResultSummaryHeader";
 import {
   ListeningSectionPerformance,
@@ -45,6 +45,27 @@ function normalizeStoredAnswers(input: Record<string, string | string[] | null>)
   return normalized;
 }
 
+function getListeningCategoryQuestionNumbers(review: StudentAttemptReviewResponse | null): Partial<Record<MistakeReasonCategory, number[]>> {
+  const result: Partial<Record<MistakeReasonCategory, number[]>> = {
+    blank_answer: [],
+    fully_incorrect: []
+  };
+
+  for (const part of review?.parts ?? []) {
+    for (const group of part.question_groups ?? []) {
+      for (const question of group.questions ?? []) {
+        if (question.is_skipped) {
+          result.blank_answer?.push(question.question_number);
+        } else if (!question.is_correct) {
+          result.fully_incorrect?.push(question.question_number);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
 export default function ListeningResultPage() {
   const params = useParams<{id: string}>();
   const searchParams = useSearchParams();
@@ -63,9 +84,12 @@ export default function ListeningResultPage() {
   const [backendReview, setBackendReview] = useState<AdaptedListeningBackendReview | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(resolvedBackendAttemptId));
   const [showAiInsights, setShowAiInsights] = useState(false);
+  const [mistakeModalOpen, setMistakeModalOpen] = useState(false);
+  const [isMistakeAnalyzing, setIsMistakeAnalyzing] = useState(false);
   const aiInsightsRef = useRef<HTMLDivElement | null>(null);
   const [mistakeReasons, setMistakeReasons] = useState<MistakeReasonDetail[]>([]);
   const [selectedMistakeReason, setSelectedMistakeReason] = useState<MistakeReasonDetail | null>(null);
+  const [selectedMistakeReasonIds, setSelectedMistakeReasonIds] = useState<string[]>([]);
   const [isReasonsLoading, setIsReasonsLoading] = useState(Boolean(resolvedBackendAttemptId));
   const [mistakeReasonsError, setMistakeReasonsError] = useState<string | null>(null);
 
@@ -141,17 +165,43 @@ export default function ListeningResultPage() {
   }, [resolvedBackendAttemptId]);
 
   const scrollToAiInsights = () => {
-    setShowAiInsights(true);
-    window.setTimeout(() => {
-      aiInsightsRef.current?.scrollIntoView({behavior: "smooth", block: "start"});
-    }, 80);
+    setMistakeModalOpen(true);
   };
 
   const handleMistakeReasonSelect = (reason: MistakeReasonDetail) => {
     setMistakeReasonsError(null);
     setSelectedMistakeReason(reason);
-    scrollToAiInsights();
+    setSelectedMistakeReasonIds((current) => {
+      if (current.includes(reason.id)) {
+        return current.filter((id) => id !== reason.id);
+      }
+      return [...current, reason.id];
+    });
   };
+
+  const selectedMistakeReasons = useMemo(
+    () => mistakeReasons.filter((reason) => selectedMistakeReasonIds.includes(reason.id)),
+    [mistakeReasons, selectedMistakeReasonIds]
+  );
+
+  const handleAnalyzeMistakes = () => {
+    if (!selectedMistakeReasons.length) return;
+    setIsMistakeAnalyzing(true);
+    window.setTimeout(() => {
+      setIsMistakeAnalyzing(false);
+      setMistakeModalOpen(false);
+      setShowAiInsights(true);
+      setSelectedMistakeReason(selectedMistakeReasons[0] ?? null);
+      window.setTimeout(() => {
+        aiInsightsRef.current?.scrollIntoView({behavior: "smooth", block: "start"});
+      }, 80);
+    }, 1100);
+  };
+
+  const categoryQuestionNumbers = useMemo(
+    () => getListeningCategoryQuestionNumbers(reviewPayload),
+    [reviewPayload]
+  );
 
   useEffect(() => {
     if (resolvedBackendAttemptId) return;
@@ -319,16 +369,21 @@ export default function ListeningResultPage() {
       <ListeningTypePerformance items={backendReview.typePerformance} />
 
       <PostTestMistakeReasonsPanel
+        open={mistakeModalOpen}
         reasons={mistakeReasons}
-        selectedReason={selectedMistakeReason}
+        selectedReasonIds={selectedMistakeReasonIds}
         isLoading={isReasonsLoading}
+        isAnalyzing={isMistakeAnalyzing}
         error={mistakeReasonsError}
-        onSelectReason={handleMistakeReasonSelect}
+        categoryQuestionNumbers={categoryQuestionNumbers}
+        onOpenChange={setMistakeModalOpen}
+        onToggleReason={handleMistakeReasonSelect}
+        onAnalyze={handleAnalyzeMistakes}
       />
 
       {showAiInsights ? (
-        <div ref={aiInsightsRef}>
-          <MistakeReasonAiResponseCard selectedReason={selectedMistakeReason} />
+        <div ref={aiInsightsRef} id="ai-insights" className="scroll-mt-24">
+          <MistakeReasonAiResponseCard selectedReason={selectedMistakeReason} selectedReasons={selectedMistakeReasons} />
         </div>
       ) : null}
     </section>

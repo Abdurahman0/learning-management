@@ -888,6 +888,35 @@
                             "downloadGuide":  "Download guide",
                             "reasonCount":  "{count} reasons",
                             "emptySolutions":  "No solution has been added for this reason yet.",
+                            "aiReasonsTitle":  "Mistake reasons",
+                            "aiReasonsDescription":  "These are the reasons you selected from the backend-matched mistake categories.",
+                            "improvementPlanTitle":  "Personalized Improvement Plan",
+                            "modal":  {
+                                          "badge":  "AI mistake review",
+                                          "description":  "Review the mistakes detected in this attempt, tick the reasons that match what happened, and EnglishLabs will turn them into a focused improvement plan.",
+                                          "close":  "Close",
+                                          "empty":  "No mistake reasons were returned for this attempt.",
+                                          "cancel":  "Cancel",
+                                          "analyze":  "Analyze mistakes",
+                                          "analyzing":  "AI is analyzing your selected reasons and building your improvement plan...",
+                                          "selectHint":  "Tick at least one reason to continue.",
+                                          "selected":  "{count} selected",
+                                          "categoryTitle":  {
+                                                              "fully_incorrect":  "You answered these questions incorrectly",
+                                                              "blank_answer":  "You did not answer these questions",
+                                                              "misspelled":  "These answers may be close but not exact"
+                                                          },
+                                          "categoryDescription":  {
+                                                                    "fully_incorrect":  "Questions: {questions}. Choose why these answers went wrong.",
+                                                                    "blank_answer":  "Questions: {questions}. Choose why these were left blank.",
+                                                                    "misspelled":  "Questions: {questions}. Choose why the exact answer was missed."
+                                                                },
+                                          "categoryFallback":  {
+                                                                 "fully_incorrect":  "Choose the reasons that best explain your incorrect answers.",
+                                                                 "blank_answer":  "Choose the reasons that best explain your blank answers.",
+                                                                 "misspelled":  "Choose the reasons that best explain spelling or exact-word mistakes."
+                                                             }
+                                      },
                             "categories":  {
                                                "fully_incorrect":  "Fully incorrect",
                                                "blank_answer":  "Blank answer",

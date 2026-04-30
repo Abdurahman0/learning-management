@@ -10,6 +10,7 @@ import type {MistakeReasonDetail} from "@/src/services/student/types";
 
 type MistakeReasonAiResponseCardProps = {
   selectedReason: MistakeReasonDetail | null;
+  selectedReasons?: MistakeReasonDetail[];
 };
 
 function isSafeDownloadUrl(value: string | null) {
@@ -22,15 +23,17 @@ function isSafeDownloadUrl(value: string | null) {
   }
 }
 
-export function MistakeReasonAiResponseCard({selectedReason}: MistakeReasonAiResponseCardProps) {
+export function MistakeReasonAiResponseCard({selectedReason, selectedReasons = []}: MistakeReasonAiResponseCardProps) {
   const t = useTranslations("mistakeReasons");
+  const activeReasons = selectedReasons.length ? selectedReasons : (selectedReason ? [selectedReason] : []);
   const solutionText = useMemo(() => {
-    if (!selectedReason) return "";
-    return [selectedReason.solution_1, selectedReason.solution_2, selectedReason.solution_3]
+    if (!activeReasons.length) return "";
+    return activeReasons
+      .flatMap((reason) => [reason.solution_1, reason.solution_2, reason.solution_3])
       .map((item) => item.trim())
       .filter(Boolean)
       .join("\n\n");
-  }, [selectedReason]);
+  }, [activeReasons]);
   const [typedSolution, setTypedSolution] = useState("");
 
   useEffect(() => {
@@ -59,24 +62,37 @@ export function MistakeReasonAiResponseCard({selectedReason}: MistakeReasonAiRes
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Sparkles className="size-4 text-blue-600 dark:text-blue-200" />
-            {selectedReason ? t("aiAnswerTitle") : t("chooseReasonTitle")}
+            {activeReasons.length ? t("aiAnswerTitle") : t("chooseReasonTitle")}
           </CardTitle>
-          {selectedReason ? <p className="text-sm text-muted-foreground">{selectedReason.reason}</p> : null}
+          {activeReasons.length ? <p className="text-sm text-muted-foreground">{t("aiReasonsDescription")}</p> : null}
         </CardHeader>
         <CardContent className="space-y-3">
-          {selectedReason ? (
+          {activeReasons.length ? (
             <>
+              <div className="rounded-xl border border-blue-300/60 bg-background/55 p-3">
+                <p className="mb-2 text-sm font-semibold">{t("aiReasonsTitle")}</p>
+                <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90">
+                  {activeReasons.map((reason) => (
+                    <li key={reason.id}>
+                      <span className="font-semibold">{reason.mistake_category_display}:</span> {reason.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <p className="text-sm font-semibold">{t("improvementPlanTitle")}</p>
               <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
                 {typedSolution || t("thinking")}
               </p>
-              {isSafeDownloadUrl(selectedReason.file_url) ? (
-                <Button size="sm" variant="outline" asChild>
-                  <a href={selectedReason.file_url ?? "#"} target="_blank" rel="noopener noreferrer">
-                    <Download className="size-4" />
-                    {t("downloadGuide")}
-                  </a>
-                </Button>
-              ) : null}
+              <div className="flex flex-wrap gap-2">
+                {activeReasons.filter((reason) => isSafeDownloadUrl(reason.file_url)).map((reason) => (
+                  <Button key={reason.id} size="sm" variant="outline" asChild>
+                    <a href={reason.file_url ?? "#"} target="_blank" rel="noopener noreferrer">
+                      <Download className="size-4" />
+                      {t("downloadGuide")}
+                    </a>
+                  </Button>
+                ))}
+              </div>
             </>
           ) : (
             <p className="text-sm text-muted-foreground">{t("chooseReasonDescription")}</p>

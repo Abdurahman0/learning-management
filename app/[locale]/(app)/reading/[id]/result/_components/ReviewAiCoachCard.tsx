@@ -15,6 +15,7 @@ type ReviewAiCoachCardProps = {
   mistakeBreakdown: MistakeBreakdownItem[];
   onAction: (message: string) => void;
   selectedMistakeReason?: MistakeReasonDetail | null;
+  selectedMistakeReasons?: MistakeReasonDetail[];
 };
 
 function isSafeDownloadUrl(value: string | null) {
@@ -27,16 +28,18 @@ function isSafeDownloadUrl(value: string | null) {
   }
 }
 
-export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction, selectedMistakeReason = null }: ReviewAiCoachCardProps) {
+export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction, selectedMistakeReason = null, selectedMistakeReasons = [] }: ReviewAiCoachCardProps) {
   const t = useTranslations("readingReview");
   const tMistakeReasons = useTranslations("mistakeReasons");
+  const activeReasons = selectedMistakeReasons.length ? selectedMistakeReasons : (selectedMistakeReason ? [selectedMistakeReason] : []);
   const solutionText = useMemo(() => {
-    if (!selectedMistakeReason) return "";
-    return [selectedMistakeReason.solution_1, selectedMistakeReason.solution_2, selectedMistakeReason.solution_3]
+    if (!activeReasons.length) return "";
+    return activeReasons
+      .flatMap((reason) => [reason.solution_1, reason.solution_2, reason.solution_3])
       .map((item) => item.trim())
       .filter(Boolean)
       .join("\n\n");
-  }, [selectedMistakeReason]);
+  }, [activeReasons]);
   const [typedSolution, setTypedSolution] = useState("");
 
   useEffect(() => {
@@ -90,25 +93,31 @@ export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction, selectedM
           ))}
         </div>
 
-        {selectedMistakeReason ? (
+        {activeReasons.length ? (
           <Card className="border-blue-300/70 bg-blue-100/70 p-3 dark:border-blue-500/35 dark:bg-blue-500/10">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold">{tMistakeReasons("aiAnswerTitle")}</p>
-                <p className="text-xs text-muted-foreground">{selectedMistakeReason.reason}</p>
+                <p className="text-sm font-semibold">{t("aiInsights")}</p>
+                <p className="text-xs text-muted-foreground">{tMistakeReasons("aiReasonsDescription")}</p>
               </div>
-              {isSafeDownloadUrl(selectedMistakeReason.file_url) ? (
-                <Button size="sm" variant="outline" asChild>
-                  <a href={selectedMistakeReason.file_url ?? "#"} target="_blank" rel="noopener noreferrer">
-                    <Download className="size-4" />
-                    {tMistakeReasons("downloadGuide")}
-                  </a>
-                </Button>
-              ) : null}
+              <div className="flex flex-wrap gap-2">
+                {activeReasons.filter((reason) => isSafeDownloadUrl(reason.file_url)).map((reason) => (
+                  <Button key={reason.id} size="sm" variant="outline" asChild>
+                    <a href={reason.file_url ?? "#"} target="_blank" rel="noopener noreferrer">
+                      <Download className="size-4" />
+                      {tMistakeReasons("downloadGuide")}
+                    </a>
+                  </Button>
+                ))}
+              </div>
             </div>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-              {typedSolution || tMistakeReasons("thinking")}
-            </p>
+            <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90">
+              {activeReasons.map((reason) => (
+                <li key={reason.id} className="leading-relaxed">
+                  <span className="font-semibold">{reason.mistake_category_display}:</span> {reason.reason}
+                </li>
+              ))}
+            </ul>
           </Card>
         ) : (
           <Card className="border-blue-300/70 bg-blue-100/70 p-3 dark:border-blue-500/35 dark:bg-blue-500/10">
@@ -123,11 +132,19 @@ export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction, selectedM
 
         <div className="space-y-2">
           <p className="text-sm font-semibold">{t("personalizedImprovementPlan")}</p>
-          <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90">
-            {coach.plan.map((item) => (
-              <li key={item} className="leading-relaxed">{item}</li>
-            ))}
-          </ul>
+          {activeReasons.length ? (
+            <Card className="border-emerald-300/70 bg-emerald-50/80 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                {typedSolution || tMistakeReasons("thinking")}
+              </p>
+            </Card>
+          ) : (
+            <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90">
+              {coach.plan.map((item) => (
+                <li key={item} className="leading-relaxed">{item}</li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2">
