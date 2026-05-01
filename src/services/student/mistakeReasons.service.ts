@@ -18,6 +18,12 @@ function asArray(value: unknown): unknown[] {
   return [];
 }
 
+function getNextUrl(value: unknown) {
+  const record = asRecord(value);
+  const next = record?.next;
+  return typeof next === "string" && next.trim() ? next.trim() : null;
+}
+
 function toStringSafe(value: unknown, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
@@ -97,14 +103,29 @@ function normalizeAdvice(value: unknown): StudentMistakeAdvice | null {
   const reason = normalizeDetail(record.reason);
   const slot = Number(record.slot);
   const id = toStringSafe(record.id).trim();
-  if (!id || !reason || ![1, 2, 3, 4].includes(slot)) return null;
+  if (!id || !reason || !Number.isFinite(slot) || slot < 1) return null;
 
   return {
     id,
-    slot: slot as 1 | 2 | 3 | 4,
+    slot,
     updated_at: toStringSafe(record.updated_at) || null,
     reason
   };
+}
+
+function resolveAdviceNextPath(nextUrl: string | null) {
+  if (!nextUrl) return null;
+
+  try {
+    const url = new URL(nextUrl, "https://backend.local");
+    const marker = "/mistake-analysis/advice/";
+    const markerIndex = url.pathname.indexOf(marker);
+    if (markerIndex === -1) return null;
+
+    return `${url.pathname.slice(markerIndex)}${url.search}`;
+  } catch {
+    return null;
+  }
 }
 
 export const studentMistakeReasonsService = {
@@ -122,8 +143,24 @@ export const studentMistakeReasonsService = {
 
   async advice() {
     try {
-      const response = await studentHttpClient.get("/mistake-analysis/advice/");
-      return asArray(response.data).map(normalizeAdvice).filter((item): item is StudentMistakeAdvice => Boolean(item));
+      const collected: StudentMistakeAdvice[] = [];
+      const visited = new Set<string>();
+      let path: string | null = "/mistake-analysis/advice/";
+
+      for (let page = 0; path && page < 20; page += 1) {
+        if (visited.has(path)) break;
+        visited.add(path);
+
+        const response = await studentHttpClient.get(path);
+        collected.push(...asArray(response.data).map(normalizeAdvice).filter((item): item is StudentMistakeAdvice => Boolean(item)));
+        path = resolveAdviceNextPath(getNextUrl(response.data));
+      }
+
+      return collected.sort((a, b) => {
+        const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+        const bTime = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+        return bTime - aTime;
+      });
     } catch (error) {
       throw toStudentApiError(error);
     }

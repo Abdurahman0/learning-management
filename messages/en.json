@@ -2079,7 +2079,12 @@
                                                  "link":  "Resource link",
                                                  "resourceHint":  "Add exactly one resource: either a link or one file up to 1 MB.",
                                                  "file":  "Attachment",
-                                               "removeFile":  "Remove existing file"
+                                               "existingFile":  "Existing file",
+                                               "selectedFile":  "Selected file",
+                                               "clearSelectedFile":  "Clear",
+                                               "removeFile":  "Remove file",
+                                               "undoRemoveFile":  "Undo",
+                                               "fileWillBeRemoved":  "This uploaded file will be removed when you save. Add a link or upload a replacement file before saving."
                                            },
                                   "deleteModal":  {
                                                       "title":  "Delete mistake reason",
@@ -3206,7 +3211,7 @@
                    "solutionSummary":  "{count} solution steps available",
                    "planLabel":  "Improvement plan",
                    "openResource":  "Open resource",
-                   "noGeneralSolution":  "No general solution has been added for this reason yet."
+                   "noGeneralSolution":  "Solution is not generated"
                },
                             "questionTypes":  {
                                                   "matchingHeadings":  "Matching Headings",

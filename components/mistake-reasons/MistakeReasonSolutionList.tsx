@@ -2,7 +2,7 @@
 
 import {Download, ExternalLink, Lightbulb, Sparkles} from "lucide-react";
 import {useTranslations} from "next-intl";
-import type {ReactNode} from "react";
+import {useEffect, useMemo, useState, type ReactNode} from "react";
 
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
@@ -39,13 +39,13 @@ function getDownloadFileName(value: string | null, fallback: string) {
   }
 }
 
-function resolveStudentSolution(reason: MistakeReasonDetail) {
-  const generalSolution = reason.general_solution.trim();
-  if (generalSolution) return generalSolution;
-
-  return [reason.solution_1, reason.solution_2, reason.solution_3]
+function resolveDetailedSolution(reason: MistakeReasonDetail) {
+  const solutions = [reason.solution_1, reason.solution_2, reason.solution_3]
     .map((solution) => (solution ?? "").trim())
-    .filter(Boolean)[0] ?? null;
+    .filter(Boolean);
+
+  if (!solutions.length) return null;
+  return solutions[Math.floor(Math.random() * solutions.length)] ?? null;
 }
 
 function getReasonResourceUrl(reason: MistakeReasonDetail) {
@@ -79,10 +79,45 @@ function renderFormattedText(text: string) {
 
 export function MistakeReasonSolutionList({reasons}: MistakeReasonSolutionListProps) {
   const t = useTranslations("mistakeReasons");
-  const cards: ReasonSolutionCard[] = reasons.map((reason) => ({
-    reason,
-    solution: resolveStudentSolution(reason)
-  }));
+  const cards: ReasonSolutionCard[] = useMemo(
+    () => reasons.map((reason) => ({
+      reason,
+      solution: resolveDetailedSolution(reason)
+    })),
+    [reasons]
+  );
+  const typingSignature = cards.map(({reason, solution}) => `${reason.id}:${reason.reason}:${solution ?? ""}`).join("|");
+  const [activeTypingIndex, setActiveTypingIndex] = useState(0);
+  const [typedSolutions, setTypedSolutions] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setActiveTypingIndex(0);
+    setTypedSolutions({});
+  }, [typingSignature]);
+
+  useEffect(() => {
+    if (!cards.length || activeTypingIndex >= cards.length) return;
+
+    const currentCard = cards[activeTypingIndex];
+    const fullText = currentCard.solution || t("emptySolutions");
+    const currentText = typedSolutions[currentCard.reason.id] ?? "";
+
+    if (currentText.length >= fullText.length) {
+      const timeoutId = window.setTimeout(() => setActiveTypingIndex((index) => index + 1), 320);
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setTypedSolutions((current) => ({
+        ...current,
+        [currentCard.reason.id]: fullText.slice(0, Math.min(fullText.length, currentText.length + 3))
+      }));
+    }, 18);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeTypingIndex, cards, t, typedSolutions]);
+
+  const visibleCards = cards.slice(0, Math.min(cards.length, activeTypingIndex + 1));
 
   return (
     <Card className="overflow-hidden rounded-3xl border-blue-200/80 bg-gradient-to-br from-blue-50 via-white to-emerald-50 p-0 shadow-sm shadow-blue-100/70 dark:border-blue-500/25 dark:from-blue-950/30 dark:via-card/70 dark:to-emerald-950/20 dark:shadow-none">
@@ -104,10 +139,14 @@ export function MistakeReasonSolutionList({reasons}: MistakeReasonSolutionListPr
       </div>
 
       <div className="space-y-3 p-4 sm:p-5">
-        {cards.map(({reason, solution}, index) => (
+        {visibleCards.map(({reason, solution}, index) => {
+          const typedSolution = typedSolutions[reason.id] ?? "";
+          const isTyping = index === activeTypingIndex && typedSolution.length < (solution || t("emptySolutions")).length;
+
+          return (
           <article
             key={reason.id}
-            className="group rounded-2xl border border-slate-200/90 bg-white/85 p-4 shadow-sm shadow-slate-200/60 transition duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-border/70 dark:bg-background/55 dark:shadow-none"
+            className="group rounded-2xl border border-slate-200/90 bg-white/85 p-4 shadow-sm shadow-slate-200/60 transition-colors duration-200 hover:shadow-md dark:border-border/70 dark:bg-background/55 dark:shadow-none"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
@@ -139,11 +178,13 @@ export function MistakeReasonSolutionList({reasons}: MistakeReasonSolutionListPr
                 {t("solutionForReason")}
               </p>
               <p className="text-sm leading-relaxed text-foreground/90">
-                {solution ? renderFormattedText(solution) : t("emptySolutions")}
+                {renderFormattedText(typedSolution)}
+                {isTyping ? <span className="ml-0.5 inline-block h-4 w-1 animate-pulse rounded-full bg-emerald-500 align-[-2px]" /> : null}
               </p>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
     </Card>
   );

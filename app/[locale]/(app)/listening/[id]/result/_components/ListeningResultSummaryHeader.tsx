@@ -102,7 +102,7 @@ export function ListeningResultSummaryHeader({
               <Button
                 type="button"
                 onClick={onAiAnalysisClick}
-                className="h-10 rounded-xl border-0 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5 hover:from-blue-500 hover:via-cyan-500 hover:to-emerald-400 hover:text-white dark:shadow-blue-950/40 sm:shrink-0"
+                className="h-10 rounded-xl border-0 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-500 hover:via-cyan-500 hover:to-emerald-400 hover:text-white dark:shadow-blue-950/40 sm:shrink-0"
               >
                 <Sparkles className="size-4" />
                 {t.has("aiAnalysis") ? t("aiAnalysis") : "AI analysis"}

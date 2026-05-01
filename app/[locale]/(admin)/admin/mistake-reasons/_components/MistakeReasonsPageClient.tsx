@@ -527,20 +527,60 @@ export function MistakeReasonsPageClient() {
                 }}
               />
               {form.file ? (
-                <p className="text-xs text-muted-foreground">
-                  {form.file.name} - {Math.ceil(form.file.size / 1024)} KB
-                </p>
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/25 px-3 py-2 text-xs">
+                  <span className="min-w-0 truncate text-muted-foreground">
+                    {t("form.selectedFile")}: {form.file.name} - {Math.ceil(form.file.size / 1024)} KB
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 shrink-0 rounded-lg px-2 text-rose-600 hover:text-rose-600"
+                    onClick={() => setForm((current) => ({...current, file: null}))}
+                  >
+                    <Trash2 className="size-3.5" />
+                    {t("form.clearSelectedFile")}
+                  </Button>
+                </div>
               ) : null}
-              {editing?.file_url ? (
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={form.removeFile}
-                    onChange={(event) => setForm((current) => ({...current, removeFile: event.target.checked, file: event.target.checked ? null : current.file}))}
-                    className="size-4"
-                  />
-                  {t("form.removeFile")}
-                </label>
+              {editing?.file_url && !form.file ? (
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3">
+                  {form.removeFile ? (
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-xs text-rose-600 dark:text-rose-300">{t("form.fileWillBeRemoved")}</p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-lg"
+                        onClick={() => setForm((current) => ({...current, removeFile: false}))}
+                      >
+                        {t("form.undoRemoveFile")}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <a
+                        href={editing.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-w-0 truncate text-xs font-medium text-blue-600 hover:underline dark:text-blue-300"
+                      >
+                        {t("form.existingFile")}: {getFileNameFromUrl(editing.file_url, t("download"))}
+                      </a>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-lg border-rose-300/70 text-rose-600 hover:text-rose-600"
+                        onClick={() => setForm((current) => ({...current, removeFile: true, file: null}))}
+                      >
+                        <Trash2 className="size-3.5" />
+                        {t("form.removeFile")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               ) : null}
             </div>
 

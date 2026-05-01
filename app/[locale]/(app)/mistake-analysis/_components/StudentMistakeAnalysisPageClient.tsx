@@ -601,9 +601,8 @@ export function StudentMistakeAnalysisPageClient() {
             <div className="space-y-3">
               {adviceItems.map((item) => {
                 const isOpen = expandedAdviceIds.has(item.id);
-                const generalSolution = item.reason.general_solution.trim()
-                  || [item.reason.solution_1, item.reason.solution_2, item.reason.solution_3].map((solution) => solution.trim()).filter(Boolean)[0]
-                  || "";
+                const generalSolution = item.reason.general_solution.trim();
+                const solutionText = generalSolution || t("advice.noGeneralSolution");
                 const resourceUrl = getAdviceResourceUrl(item);
 
                 return (
@@ -639,19 +638,14 @@ export function StudentMistakeAnalysisPageClient() {
                           <Badge className="rounded-full border-blue-400/30 bg-blue-500/10 text-blue-700 dark:text-blue-200">
                             {item.reason.module_display}
                           </Badge>
-                          {"mistake_category_display" in item.reason && item.reason.mistake_category_display ? (
-                            <Badge variant="outline" className="rounded-full">{item.reason.mistake_category_display}</Badge>
-                          ) : null}
                           <span className="text-xs text-muted-foreground">{t("advice.updated", {date: formatAdviceDate(item.updated_at)})}</span>
                         </span>
                         <span className="block text-base font-semibold leading-snug text-foreground">
                           <InlineBoldText text={item.reason.reason} />
                         </span>
-                        {generalSolution ? (
-                          <span className="mt-2 block text-sm leading-relaxed text-muted-foreground">
-                            <InlineBoldText text={generalSolution} />
-                          </span>
-                        ) : null}
+                        <span className="mt-2 block text-sm leading-relaxed text-muted-foreground">
+                          <InlineBoldText text={solutionText} />
+                        </span>
                         </span>
                       </span>
                       <span className="mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/70">
@@ -663,7 +657,7 @@ export function StudentMistakeAnalysisPageClient() {
                       <div className="relative space-y-3 border-t border-border/70 px-4 pb-4 pt-3">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t("advice.planLabel")}</p>
                         <div className="rounded-2xl border border-blue-400/20 bg-blue-500/8 p-3 text-sm leading-relaxed text-foreground/90">
-                          {generalSolution ? <InlineBoldText text={generalSolution} /> : t("advice.noGeneralSolution")}
+                          <InlineBoldText text={solutionText} />
                         </div>
                         {isSafeDownloadUrl(resourceUrl) ? (
                           <Button size="sm" variant="outline" className="rounded-xl" asChild>

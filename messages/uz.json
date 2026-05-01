@@ -2079,7 +2079,12 @@
                                                  "link":  "Resurs havolasi",
                                                  "resourceHint":  "Faqat bitta resurs qo'shing: havola yoki 1 MB gacha fayl.",
                                                  "file":  "Biriktirma",
-                                               "removeFile":  "Mavjud faylni olib tashlash"
+                                               "existingFile":  "Mavjud fayl",
+                                               "selectedFile":  "Tanlangan fayl",
+                                               "clearSelectedFile":  "Tozalash",
+                                               "removeFile":  "Faylni olib tashlash",
+                                               "undoRemoveFile":  "Bekor qilish",
+                                               "fileWillBeRemoved":  "Saqlaganingizda bu yuklangan fayl olib tashlanadi. Saqlashdan oldin havola qo'shing yoki yangi fayl yuklang."
                                            },
                                   "deleteModal":  {
                                                       "title":  "Xato sababini o'chirish",
@@ -3205,7 +3210,7 @@
                    "solutionSummary":  "{count} ta yechim qadami mavjud",
                    "planLabel":  "Rivojlanish rejasi",
                    "openResource":  "Resursni ochish",
-                   "noGeneralSolution":  "Bu sabab uchun umumiy yechim hali kiritilmagan."
+                   "noGeneralSolution":  "Yechim hali yaratilmagan"
                },
                             "questionTypes":  {
                                                   "matchingHeadings":  "Matching Headings",

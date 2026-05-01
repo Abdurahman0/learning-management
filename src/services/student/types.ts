@@ -531,7 +531,7 @@ export type MistakeReasonDetail = MistakeReasonBrief & {
 
 export type StudentMistakeAdvice = {
   id: string;
-  slot: 1 | 2 | 3 | 4;
+  slot: number;
   updated_at: string | null;
   reason: MistakeReasonDetail;
 };
