@@ -232,11 +232,15 @@ export type MistakeReasonRecord = {
   module: MistakeReasonModule;
   mistake_category: MistakeReasonCategory;
   mistake_category_display: string;
+  general_solution: string;
   solution_1: string;
   solution_2: string;
   solution_3: string;
   is_file_consists: boolean;
   file_url: string | null;
+  link_url: string | null;
+  resource_type: "file" | "link" | null;
+  resource_url: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -245,9 +249,11 @@ export type MistakeReasonPayload = {
   reason: string;
   module: MistakeReasonModule;
   mistake_category: MistakeReasonCategory;
+  general_solution?: string;
   solution_1?: string;
   solution_2?: string;
   solution_3?: string;
+  link_url?: string;
   is_file_consists?: boolean;
   file?: File | null;
 };

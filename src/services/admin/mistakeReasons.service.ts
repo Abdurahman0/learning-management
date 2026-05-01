@@ -56,6 +56,12 @@ function normalizeFileUrl(value: unknown) {
   return null;
 }
 
+function normalizeResourceType(value: unknown): "file" | "link" | null {
+  const normalized = toStringSafe(value).trim().toLowerCase();
+  if (normalized === "file" || normalized === "link") return normalized;
+  return null;
+}
+
 function normalizeReason(value: unknown): MistakeReasonRecord | null {
   const record = asRecord(value);
   if (!record) return null;
@@ -70,11 +76,15 @@ function normalizeReason(value: unknown): MistakeReasonRecord | null {
     module: normalizeModule(record.module),
     mistake_category: normalizeCategory(record.mistake_category),
     mistake_category_display: toStringSafe(record.mistake_category_display, toStringSafe(record.mistake_category, "Fully incorrect")),
+    general_solution: toStringSafe(record.general_solution),
     solution_1: toStringSafe(record.solution_1),
     solution_2: toStringSafe(record.solution_2),
     solution_3: toStringSafe(record.solution_3),
     is_file_consists: Boolean(record.is_file_consists),
     file_url: normalizeFileUrl(record.file_url),
+    link_url: normalizeFileUrl(record.link_url),
+    resource_type: normalizeResourceType(record.resource_type),
+    resource_url: normalizeFileUrl(record.resource_url),
     created_at: toStringSafe(record.created_at) || null,
     updated_at: toStringSafe(record.updated_at) || null
   };

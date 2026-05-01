@@ -888,12 +888,13 @@
                             "chooseReasonDescription":  "Backenddan kelgan yechim shu yerda chiqishi uchun yuqoridan bitta sababni tanlang.",
                             "thinking":  "Tavsiyangiz tayyorlanmoqda...",
                             "downloadGuide":  "Qo'llanmani yuklab olish",
+                            "openResource":  "Resursni ochish",
                             "reasonCount":  "{count} ta sabab",
                             "emptySolutions":  "Bu sabab uchun yechim hali kiritilmagan.",
                             "aiReasonsTitle":  "Xato sabablari",
                             "aiReasonsDescription":  "Bular backend aniqlagan xato turlaridan siz tanlagan sabablar.",
                             "improvementPlanTitle":  "Shaxsiy rivojlanish rejasi",
-                            "oneSolutionPerReason":  "Har bir sabab uchun bitta aniq yechim tanlanadi va sababning pastida ko'rsatiladi.",
+                            "oneSolutionPerReason":  "Har bir tanlangan sabab uchun umumiy yechim uning pastida ko'rsatiladi.",
                             "solutionForReason":  "Shaxsiy yechim",
                             "modal":  {
                                           "badge":  "AI xato tahlili",
@@ -2047,7 +2048,9 @@
                                   "loading":  "Xato sabablari yuklanmoqda...",
                                   "empty":  "Xato sabablari topilmadi.",
                                   "fileAttached":  "Fayl biriktirilgan",
+                                  "linkAttached":  "Havola biriktirilgan",
                                   "download":  "Yuklab olish",
+                                  "openLink":  "Havolani ochish",
                                   "edit":  "Tahrirlash",
                                   "delete":  "O'chirish",
                                   "cancel":  "Bekor qilish",
@@ -2069,9 +2072,12 @@
                                                  "editTitle":  "Xato sababini tahrirlash",
                                                  "description":  "Aniq sabab va uchtagacha yechim qadamini kiriting. Faylni faqat o'quvchiga yuklab olinadigan qo'llanma kerak bo'lsa biriktiring.",
                                                  "reason":  "Sabab",
+                                                 "generalSolution":  "Umumiy yechim",
                                                  "module":  "Modul",
                                                  "category":  "Xato turi",
                                                  "solution":  "{number}-yechim",
+                                                 "link":  "Resurs havolasi",
+                                                 "resourceHint":  "Faqat bitta resurs qo'shing: havola yoki 1 MB gacha fayl.",
                                                  "file":  "Biriktirma",
                                                "removeFile":  "Mavjud faylni olib tashlash"
                                            },
@@ -2085,7 +2091,12 @@
                                                   "save":  "Xato sababini saqlab bo'lmadi.",
                                                   "delete":  "Xato sababini o'chirib bo'lmadi.",
                                                   "reasonRequired":  "Sabab majburiy.",
-                                                  "categoryRequired":  "Xato turi majburiy."
+                                                  "categoryRequired":  "Xato turi majburiy.",
+                                                  "generalSolutionRequired":  "Umumiy yechim majburiy.",
+                                                  "resourceRequired":  "Bitta resurs qo'shing: havola yoki fayl.",
+                                                  "singleResourceOnly":  "Fayl yoki havoladan faqat bittasini tanlang.",
+                                                  "fileTooLarge":  "Fayl 1 MB dan katta. Kichikroq fayl yuklang.",
+                                                  "fileRead":  "Bu faylni o'qib yoki siqib bo'lmadi."
                                               }
                                 },
     "adminAchievements":  {
@@ -3192,7 +3203,9 @@
                    "modernTitle":  "So'nggi xatolaringiz asosidagi tavsiyalar",
                    "count":  "{count} ta faol tavsiya",
                    "solutionSummary":  "{count} ta yechim qadami mavjud",
-                   "planLabel":  "Rivojlanish rejasi"
+                   "planLabel":  "Rivojlanish rejasi",
+                   "openResource":  "Resursni ochish",
+                   "noGeneralSolution":  "Bu sabab uchun umumiy yechim hali kiritilmagan."
                },
                             "questionTypes":  {
                                                   "matchingHeadings":  "Matching Headings",

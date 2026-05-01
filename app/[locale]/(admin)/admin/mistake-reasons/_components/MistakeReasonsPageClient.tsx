@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
-import {Download, Edit3, FileText, Loader2, Plus, Search, Trash2} from "lucide-react";
+import {Download, Edit3, ExternalLink, FileText, Loader2, Plus, Search, Trash2} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Badge} from "@/components/ui/badge";
@@ -25,20 +25,26 @@ type FormState = {
   reason: string;
   module: MistakeReasonModule;
   mistake_category: MistakeReasonCategory;
+  general_solution: string;
   solution_1: string;
   solution_2: string;
   solution_3: string;
+  link_url: string;
   removeFile: boolean;
   file: File | null;
 };
+
+const MAX_REASON_FILE_BYTES = 1024 * 1024;
 
 const EMPTY_FORM: FormState = {
   reason: "",
   module: "READING",
   mistake_category: "fully_incorrect",
+  general_solution: "",
   solution_1: "",
   solution_2: "",
   solution_3: "",
+  link_url: "",
   removeFile: false,
   file: null
 };
@@ -48,9 +54,11 @@ function trimPayload(form: FormState): MistakeReasonPayload {
     reason: form.reason.trim(),
     module: form.module,
     mistake_category: form.mistake_category,
+    general_solution: form.general_solution.trim(),
     solution_1: form.solution_1.trim(),
     solution_2: form.solution_2.trim(),
     solution_3: form.solution_3.trim(),
+    link_url: form.link_url.trim(),
     is_file_consists: Boolean(form.file),
     file: form.file
   };
@@ -61,9 +69,11 @@ function toEditForm(record: MistakeReasonRecord): FormState {
     reason: record.reason,
     module: record.module,
     mistake_category: record.mistake_category,
+    general_solution: record.general_solution,
     solution_1: record.solution_1,
     solution_2: record.solution_2,
     solution_3: record.solution_3,
+    link_url: record.link_url ?? "",
     removeFile: false,
     file: null
   };
@@ -76,6 +86,56 @@ function isSafeDownloadUrl(value: string | null) {
     return url.protocol === "https:" || url.protocol === "http:";
   } catch {
     return false;
+  }
+}
+
+function getResourceUrl(item: MistakeReasonRecord) {
+  return item.resource_url ?? item.file_url ?? item.link_url;
+}
+
+function getFileNameFromUrl(value: string | null, fallback: string) {
+  if (!value) return fallback;
+  try {
+    const url = new URL(value);
+    const name = url.pathname.split("/").filter(Boolean).pop();
+    return name ? decodeURIComponent(name).replace(/[_-]+/g, " ") : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function compressImageFile(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) {
+    return file;
+  }
+
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Could not read image file."));
+      img.src = imageUrl;
+    });
+    const canvas = document.createElement("canvas");
+    const maxDimension = 1600;
+    const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) return file;
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, file.type === "image/png" ? "image/webp" : "image/jpeg", 0.78);
+    });
+    if (!blob || blob.size >= file.size) return file;
+
+    const extension = blob.type === "image/webp" ? "webp" : "jpg";
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "mistake-resource";
+    return new File([blob], `${baseName}.${extension}`, {type: blob.type, lastModified: Date.now()});
+  } finally {
+    URL.revokeObjectURL(imageUrl);
   }
 }
 
@@ -117,9 +177,11 @@ export function MistakeReasonsPageClient() {
     return items.filter((item) => {
       return (
         item.reason.toLowerCase().includes(query) ||
+        item.general_solution.toLowerCase().includes(query) ||
         item.solution_1.toLowerCase().includes(query) ||
         item.solution_2.toLowerCase().includes(query) ||
-        item.solution_3.toLowerCase().includes(query)
+        item.solution_3.toLowerCase().includes(query) ||
+        (item.link_url ?? "").toLowerCase().includes(query)
       );
     });
   }, [items, search]);
@@ -138,10 +200,47 @@ export function MistakeReasonsPageClient() {
     setSheetOpen(true);
   };
 
+  const handleFileChange = async (file: File | null) => {
+    if (!file) {
+      setForm((current) => ({...current, file: null}));
+      return;
+    }
+
+    setError(null);
+    try {
+      const nextFile = await compressImageFile(file);
+      if (nextFile.size > MAX_REASON_FILE_BYTES) {
+        setForm((current) => ({...current, file: null}));
+        setError(t("errors.fileTooLarge"));
+        return;
+      }
+
+      setForm((current) => ({...current, file: nextFile, link_url: "", removeFile: false}));
+    } catch {
+      setForm((current) => ({...current, file: null}));
+      setError(t("errors.fileRead"));
+    }
+  };
+
   const handleSubmit = async () => {
     const payload = trimPayload(form);
     if (!payload.reason) {
       setError(t("errors.reasonRequired"));
+      return;
+    }
+    if (!payload.general_solution) {
+      setError(t("errors.generalSolutionRequired"));
+      return;
+    }
+    const hasExistingFile = Boolean(editing?.file_url) && !form.removeFile;
+    const hasFileResource = Boolean(form.file) || hasExistingFile;
+    const hasLinkResource = Boolean(payload.link_url);
+    if (hasFileResource && hasLinkResource) {
+      setError(t("errors.singleResourceOnly"));
+      return;
+    }
+    if (!hasFileResource && !hasLinkResource) {
+      setError(t("errors.resourceRequired"));
       return;
     }
 
@@ -154,20 +253,23 @@ export function MistakeReasonsPageClient() {
           updatePayload.is_file_consists = false;
         } else if (form.file) {
           updatePayload.is_file_consists = true;
+          updatePayload.link_url = "";
         } else {
           delete updatePayload.is_file_consists;
         }
         await mistakeReasonsService.update(String(editing.id), updatePayload);
       } else {
         const createPayload: MistakeReasonPayload = form.file
-          ? {...payload, is_file_consists: true}
+          ? {...payload, link_url: "", is_file_consists: true}
             : {
               reason: payload.reason,
               module: payload.module,
               mistake_category: payload.mistake_category,
+              general_solution: payload.general_solution,
               solution_1: payload.solution_1,
               solution_2: payload.solution_2,
-              solution_3: payload.solution_3
+              solution_3: payload.solution_3,
+              link_url: payload.link_url
             };
         await mistakeReasonsService.create(createPayload);
       }
@@ -290,8 +392,19 @@ export function MistakeReasonsPageClient() {
                                 {t("fileAttached")}
                               </Badge>
                             ) : null}
+                            {item.resource_type === "link" ? (
+                              <Badge variant="outline" className="rounded-full">
+                                <ExternalLink className="size-3" />
+                                {t("linkAttached")}
+                              </Badge>
+                            ) : null}
                           </div>
                           <h2 className="text-base font-semibold leading-snug">{item.reason}</h2>
+                          {item.general_solution ? (
+                            <p className="rounded-2xl border border-blue-400/20 bg-blue-500/8 px-3 py-2 text-sm leading-relaxed text-foreground/90">
+                              {item.general_solution}
+                            </p>
+                          ) : null}
                           <ul className="space-y-1.5 text-sm text-muted-foreground">
                             {[item.solution_1, item.solution_2, item.solution_3].filter(Boolean).map((solution, index) => (
                               <li key={`${item.id}-solution-${index}`} className="flex gap-2">
@@ -302,11 +415,13 @@ export function MistakeReasonsPageClient() {
                           </ul>
                         </div>
                         <div className="flex flex-wrap gap-2 lg:justify-end">
-                          {isSafeDownloadUrl(item.file_url) ? (
+                          {isSafeDownloadUrl(getResourceUrl(item)) ? (
                             <Button variant="outline" size="sm" asChild>
-                              <a href={item.file_url ?? "#"} target="_blank" rel="noopener noreferrer">
-                                <Download className="size-4" />
-                                {t("download")}
+                              <a href={getResourceUrl(item) ?? "#"} target="_blank" rel="noopener noreferrer">
+                                {item.resource_type === "link" ? <ExternalLink className="size-4" /> : <Download className="size-4" />}
+                                {item.resource_type === "link"
+                                  ? t("openLink")
+                                  : getFileNameFromUrl(getResourceUrl(item), t("download"))}
                               </a>
                             </Button>
                           ) : null}
@@ -340,6 +455,15 @@ export function MistakeReasonsPageClient() {
             <div className="grid gap-2">
               <Label htmlFor="reason">{t("form.reason")}</Label>
               <Input id="reason" value={form.reason} onChange={(event) => setForm((current) => ({...current, reason: event.target.value}))} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="general-solution">{t("form.generalSolution")}</Label>
+              <textarea
+                id="general-solution"
+                value={form.general_solution}
+                onChange={(event) => setForm((current) => ({...current, general_solution: event.target.value}))}
+                className="min-h-24 resize-y rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              />
             </div>
             <div className="grid gap-2">
               <Label>{t("form.module")}</Label>
@@ -379,13 +503,34 @@ export function MistakeReasonsPageClient() {
               </div>
             ))}
             <div className="grid gap-2">
+              <Label htmlFor="reason-link">{t("form.link")}</Label>
+              <Input
+                id="reason-link"
+                type="url"
+                value={form.link_url}
+                disabled={Boolean(form.file) || (Boolean(editing?.file_url) && !form.removeFile)}
+                placeholder="https://..."
+                onChange={(event) => setForm((current) => ({...current, link_url: event.target.value, file: event.target.value.trim() ? null : current.file}))}
+              />
+              <p className="text-xs text-muted-foreground">{t("form.resourceHint")}</p>
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="reason-file">{t("form.file")}</Label>
               <Input
                 id="reason-file"
                 type="file"
                 accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                onChange={(event) => setForm((current) => ({...current, file: event.target.files?.[0] ?? null, removeFile: false}))}
+                disabled={Boolean(form.link_url.trim())}
+                onChange={(event) => {
+                  void handleFileChange(event.target.files?.[0] ?? null);
+                  event.currentTarget.value = "";
+                }}
               />
+              {form.file ? (
+                <p className="text-xs text-muted-foreground">
+                  {form.file.name} - {Math.ceil(form.file.size / 1024)} KB
+                </p>
+              ) : null}
               {editing?.file_url ? (
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <input

@@ -3274,13 +3274,15 @@ function ReadingTestClient({
                           const listSelectionQuestions = isListSelection
                             ? visibleGroupQuestions.filter((item): item is Extract<ReadingQuestion, {type: "listSelection"}> => item.type === "listSelection")
                             : [];
+                          if (isListSelection && listSelectionQuestions[0]?.id !== question.id) {
+                            return null;
+                          }
                           const sharedBlockKey = isSummary
                             ? `summary:${question.summaryText}`
                             : isTable
                               ? `table:${JSON.stringify({columns: question.tableColumns, rows: question.tableRows})}`
                               : isListSelection
                                 ? `list:${JSON.stringify({
-                                    prompt: question.prompt,
                                     options: question.listOptions,
                                     numbers: listSelectionQuestions.map((item) => item.number)
                                   })}`

@@ -888,12 +888,13 @@
                             "chooseReasonDescription":  "Select one reason above to generate the backend-backed solution here.",
                             "thinking":  "Preparing your recommendation...",
                             "downloadGuide":  "Download guide",
+                            "openResource":  "Open resource",
                             "reasonCount":  "{count} reasons",
                             "emptySolutions":  "No solution has been added for this reason yet.",
                             "aiReasonsTitle":  "Mistake reasons",
                             "aiReasonsDescription":  "These are the reasons you selected from the backend-matched mistake categories.",
                             "improvementPlanTitle":  "Personalized Improvement Plan",
-                            "oneSolutionPerReason":  "One focused solution is selected for each reason and shown directly below it.",
+                            "oneSolutionPerReason":  "The general solution for each selected reason is shown directly below it.",
                             "solutionForReason":  "Personalized solution",
                             "modal":  {
                                           "badge":  "AI mistake review",
@@ -2047,7 +2048,9 @@
                                   "loading":  "Loading mistake reasons...",
                                   "empty":  "No mistake reasons found.",
                                   "fileAttached":  "File attached",
+                                  "linkAttached":  "Link attached",
                                   "download":  "Download",
+                                  "openLink":  "Open link",
                                   "edit":  "Edit",
                                   "delete":  "Delete",
                                   "cancel":  "Cancel",
@@ -2069,9 +2072,12 @@
                                                  "editTitle":  "Edit mistake reason",
                                                  "description":  "Add a clear reason and up to three solution steps. Attach a file only when students need a downloadable guide.",
                                                  "reason":  "Reason",
+                                                 "generalSolution":  "General solution",
                                                  "module":  "Module",
                                                  "category":  "Mistake type",
                                                  "solution":  "Solution {number}",
+                                                 "link":  "Resource link",
+                                                 "resourceHint":  "Add exactly one resource: either a link or one file up to 1 MB.",
                                                  "file":  "Attachment",
                                                "removeFile":  "Remove existing file"
                                            },
@@ -2085,7 +2091,12 @@
                                                   "save":  "Could not save mistake reason.",
                                                   "delete":  "Could not delete mistake reason.",
                                                   "reasonRequired":  "Reason is required.",
-                                                  "categoryRequired":  "Mistake type is required."
+                                                  "categoryRequired":  "Mistake type is required.",
+                                                  "generalSolutionRequired":  "General solution is required.",
+                                                  "resourceRequired":  "Add one resource: either a link or a file.",
+                                                  "singleResourceOnly":  "Use either a file or a link, not both.",
+                                                  "fileTooLarge":  "File is bigger than 1 MB. Please upload a smaller file.",
+                                                  "fileRead":  "Could not read or compress this file."
                                               }
                                 },
     "adminAchievements":  {
@@ -3193,7 +3204,9 @@
                    "modernTitle":  "Advice based on your latest mistakes",
                    "count":  "{count} active recommendations",
                    "solutionSummary":  "{count} solution steps available",
-                   "planLabel":  "Improvement plan"
+                   "planLabel":  "Improvement plan",
+                   "openResource":  "Open resource",
+                   "noGeneralSolution":  "No general solution has been added for this reason yet."
                },
                             "questionTypes":  {
                                                   "matchingHeadings":  "Matching Headings",

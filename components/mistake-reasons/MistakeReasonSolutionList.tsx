@@ -1,6 +1,6 @@
 "use client";
 
-import {Download, Lightbulb, Sparkles} from "lucide-react";
+import {Download, ExternalLink, Lightbulb, Sparkles} from "lucide-react";
 import {useTranslations} from "next-intl";
 import type {ReactNode} from "react";
 
@@ -39,22 +39,17 @@ function getDownloadFileName(value: string | null, fallback: string) {
   }
 }
 
-function hashString(value: string) {
-  let hash = 0;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
-  }
-  return hash;
+function resolveStudentSolution(reason: MistakeReasonDetail) {
+  const generalSolution = reason.general_solution.trim();
+  if (generalSolution) return generalSolution;
+
+  return [reason.solution_1, reason.solution_2, reason.solution_3]
+    .map((solution) => (solution ?? "").trim())
+    .filter(Boolean)[0] ?? null;
 }
 
-function pickStableSolution(reason: MistakeReasonDetail) {
-  const solutions = [reason.solution_1, reason.solution_2, reason.solution_3]
-    .map((solution) => (solution ?? "").trim())
-    .filter(Boolean);
-
-  if (!solutions.length) return null;
-
-  return solutions[hashString(`${reason.id}:${reason.reason}`) % solutions.length];
+function getReasonResourceUrl(reason: MistakeReasonDetail) {
+  return reason.resource_url ?? reason.file_url ?? reason.link_url;
 }
 
 function renderFormattedText(text: string) {
@@ -86,7 +81,7 @@ export function MistakeReasonSolutionList({reasons}: MistakeReasonSolutionListPr
   const t = useTranslations("mistakeReasons");
   const cards: ReasonSolutionCard[] = reasons.map((reason) => ({
     reason,
-    solution: pickStableSolution(reason)
+    solution: resolveStudentSolution(reason)
   }));
 
   return (
@@ -126,11 +121,13 @@ export function MistakeReasonSolutionList({reasons}: MistakeReasonSolutionListPr
                 </div>
               </div>
 
-              {isSafeDownloadUrl(reason.file_url) ? (
+              {isSafeDownloadUrl(getReasonResourceUrl(reason)) ? (
                 <Button size="sm" variant="outline" asChild>
-                  <a href={reason.file_url ?? "#"} target="_blank" rel="noopener noreferrer">
-                    <Download className="size-4" />
-                    {getDownloadFileName(reason.file_url, t("downloadGuide"))}
+                  <a href={getReasonResourceUrl(reason) ?? "#"} target="_blank" rel="noopener noreferrer">
+                    {reason.resource_type === "link" ? <ExternalLink className="size-4" /> : <Download className="size-4" />}
+                    {reason.resource_type === "link"
+                      ? t("openResource")
+                      : getDownloadFileName(getReasonResourceUrl(reason), t("downloadGuide"))}
                   </a>
                 </Button>
               ) : null}

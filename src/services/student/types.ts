@@ -517,10 +517,14 @@ export type MistakeReasonBrief = {
 };
 
 export type MistakeReasonDetail = MistakeReasonBrief & {
+  general_solution: string;
   solution_1: string;
   solution_2: string;
   solution_3: string;
   file_url: string | null;
+  link_url: string | null;
+  resource_type: "file" | "link" | null;
+  resource_url: string | null;
   created_at: string | null;
   updated_at: string | null;
 };

@@ -18,6 +18,7 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {ChartContainer} from "@/components/ui/chart";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import {InlineBoldText} from "@/components/test/InlineBoldText";
 import {cn} from "@/lib/utils";
 
 type SupportedModule = "reading" | "listening";
@@ -140,6 +141,21 @@ function isSafeDownloadUrl(value: string | null) {
     return url.protocol === "https:" || url.protocol === "http:";
   } catch {
     return false;
+  }
+}
+
+function getAdviceResourceUrl(item: StudentMistakeAdvice) {
+  return item.reason.resource_url ?? item.reason.file_url ?? item.reason.link_url;
+}
+
+function getResourceFileName(value: string | null, fallback: string) {
+  if (!value) return fallback;
+  try {
+    const url = new URL(value);
+    const name = url.pathname.split("/").filter(Boolean).pop();
+    return name ? decodeURIComponent(name).replace(/[_-]+/g, " ") : fallback;
+  } catch {
+    return fallback;
   }
 }
 
@@ -585,7 +601,10 @@ export function StudentMistakeAnalysisPageClient() {
             <div className="space-y-3">
               {adviceItems.map((item) => {
                 const isOpen = expandedAdviceIds.has(item.id);
-                const solutions = [item.reason.solution_1, item.reason.solution_2, item.reason.solution_3].map((solution) => solution.trim()).filter(Boolean);
+                const generalSolution = item.reason.general_solution.trim()
+                  || [item.reason.solution_1, item.reason.solution_2, item.reason.solution_3].map((solution) => solution.trim()).filter(Boolean)[0]
+                  || "";
+                const resourceUrl = getAdviceResourceUrl(item);
 
                 return (
                   <article
@@ -625,8 +644,14 @@ export function StudentMistakeAnalysisPageClient() {
                           ) : null}
                           <span className="text-xs text-muted-foreground">{t("advice.updated", {date: formatAdviceDate(item.updated_at)})}</span>
                         </span>
-                        <span className="block text-base font-semibold leading-snug text-foreground">{item.reason.reason}</span>
-                        <span className="mt-2 block text-xs text-muted-foreground">{t("advice.solutionSummary", {count: solutions.length})}</span>
+                        <span className="block text-base font-semibold leading-snug text-foreground">
+                          <InlineBoldText text={item.reason.reason} />
+                        </span>
+                        {generalSolution ? (
+                          <span className="mt-2 block text-sm leading-relaxed text-muted-foreground">
+                            <InlineBoldText text={generalSolution} />
+                          </span>
+                        ) : null}
                         </span>
                       </span>
                       <span className="mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/70">
@@ -637,21 +662,16 @@ export function StudentMistakeAnalysisPageClient() {
                     {isOpen ? (
                       <div className="relative space-y-3 border-t border-border/70 px-4 pb-4 pt-3">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{t("advice.planLabel")}</p>
-                        <ol className="space-y-2 text-sm text-muted-foreground">
-                          {solutions.map((solution, index) => (
-                            <li key={`${item.id}-${index}`} className="flex gap-2 rounded-2xl border border-border/60 bg-background/55 p-3">
-                              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-blue-500/12 text-[11px] font-semibold text-blue-700 dark:text-blue-200">
-                                {index + 1}
-                              </span>
-                              <span>{solution}</span>
-                            </li>
-                          ))}
-                        </ol>
-                        {isSafeDownloadUrl(item.reason.file_url) ? (
+                        <div className="rounded-2xl border border-blue-400/20 bg-blue-500/8 p-3 text-sm leading-relaxed text-foreground/90">
+                          {generalSolution ? <InlineBoldText text={generalSolution} /> : t("advice.noGeneralSolution")}
+                        </div>
+                        {isSafeDownloadUrl(resourceUrl) ? (
                           <Button size="sm" variant="outline" className="rounded-xl" asChild>
-                            <a href={item.reason.file_url ?? "#"} target="_blank" rel="noopener noreferrer">
-                              <Download className="size-4" />
-                              {t("advice.download")}
+                            <a href={resourceUrl ?? "#"} target="_blank" rel="noopener noreferrer">
+                              {item.reason.resource_type === "link" ? <ArrowUpRight className="size-4" /> : <Download className="size-4" />}
+                              {item.reason.resource_type === "link"
+                                ? t("advice.openResource")
+                                : getResourceFileName(resourceUrl, t("advice.download"))}
                             </a>
                           </Button>
                         ) : null}
