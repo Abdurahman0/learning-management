@@ -73,6 +73,7 @@ export const QUESTION_TYPE_OPTIONS_BY_MODULE: Record<TestModule, {value: Questio
     {value: "tfng", labelKey: "questionTypes.tfng"},
     {value: "yes_no_not_given", labelKey: "questionTypes.yes_no_not_given"},
     {value: "multiple_choice", labelKey: "questionTypes.multiple_choice"},
+    {value: "selecting_from_a_list", labelKey: "questionTypes.selecting_from_a_list"},
     {value: "matching_headings", labelKey: "questionTypes.matching_headings"},
     {value: "matching_information", labelKey: "questionTypes.matching_information"},
     {value: "matching_features", labelKey: "questionTypes.matching_features"},

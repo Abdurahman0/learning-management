@@ -13,11 +13,20 @@ type QuestionEditorModalProps = {
   question: BuilderQuestion | null;
   module?: "reading" | "listening";
   mcqMode?: "single" | "multiple";
+  summaryWordBankOptions?: string[];
   onOpenChange: (open: boolean) => void;
   onQuestionChange: (question: BuilderQuestion) => void;
 };
 
-export function QuestionEditorModal({open, question, module = "reading", mcqMode = "single", onOpenChange, onQuestionChange}: QuestionEditorModalProps) {
+export function QuestionEditorModal({
+  open,
+  question,
+  module = "reading",
+  mcqMode = "single",
+  summaryWordBankOptions = [],
+  onOpenChange,
+  onQuestionChange
+}: QuestionEditorModalProps) {
   const t = useTranslations("adminTestBuilder");
 
   return (
@@ -36,7 +45,15 @@ export function QuestionEditorModal({open, question, module = "reading", mcqMode
         </SheetHeader>
 
         <div className="p-5">
-          {question ? <QuestionTypeFields question={question} module={module} mcqMode={mcqMode} onChange={onQuestionChange} /> : null}
+          {question ? (
+            <QuestionTypeFields
+              question={question}
+              module={module}
+              mcqMode={mcqMode}
+              summaryWordBankOptions={summaryWordBankOptions}
+              onChange={onQuestionChange}
+            />
+          ) : null}
         </div>
       </SheetContent>
     </Sheet>

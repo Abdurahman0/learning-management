@@ -335,6 +335,43 @@ function toOptionKey(index: number) {
   return result || "A";
 }
 
+function generateRangeOptions(startRaw: string, endRaw: string): string[] {
+  const start = startRaw.trim().toUpperCase();
+  const end = endRaw.trim().toUpperCase();
+  if (!start || !end) return [];
+
+  if (/^\d+$/.test(start) && /^\d+$/.test(end)) {
+    const from = Number(start);
+    const to = Number(end);
+    if (!Number.isFinite(from) || !Number.isFinite(to)) return [];
+    const step = from <= to ? 1 : -1;
+    const out: string[] = [];
+    for (let number = from; step > 0 ? number <= to : number >= to; number += step) {
+      out.push(String(number));
+    }
+    return out;
+  }
+
+  if (/^[A-Z]$/.test(start) && /^[A-Z]$/.test(end)) {
+    const from = start.charCodeAt(0);
+    const to = end.charCodeAt(0);
+    const step = from <= to ? 1 : -1;
+    const out: string[] = [];
+    for (let code = from; step > 0 ? code <= to : code >= to; code += step) {
+      out.push(String.fromCharCode(code));
+    }
+    return out;
+  }
+
+  return [];
+}
+
+function extractRangeFromInstructionText(text: string) {
+  const match = String(text ?? "").match(/\b([A-Z]|\d{1,2})\s*[-–—]\s*([A-Z]|\d{1,2})\b/i);
+  if (!match) return [];
+  return generateRangeOptions(match[1] ?? "", match[2] ?? "");
+}
+
 function normalizeMcqAnswerTokens(rawValue: string, optionCount: number) {
   const validKeys = new Set(Array.from({length: Math.max(0, optionCount)}, (_, index) => toOptionKey(index)));
   const rawTokens = rawValue
@@ -378,6 +415,36 @@ function extractSharedMcqOptions(groupContent: unknown) {
     .filter(Boolean);
 }
 
+function extractSharedChoiceOptions(groupContent: unknown) {
+  const content = asRecord(groupContent);
+  const rows = Array.isArray(content.choices)
+    ? content.choices
+    : Array.isArray(content.options)
+      ? content.options
+      : Array.isArray(content.labels)
+        ? content.labels
+        : Array.isArray(content.categories)
+          ? content.categories
+          : [];
+
+  return rows
+    .map((item) => {
+      if (typeof item === "string") return item;
+      const row = asRecord(item);
+      return toStringSafe(row.text ?? row.label ?? row.key);
+    })
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function extractSummaryWordBankOptions(groupContent: unknown) {
+  const content = asRecord(groupContent);
+  const rows = Array.isArray(content.word_bank) ? content.word_bank : [];
+  return rows
+    .map((item) => toStringSafe(item).trim())
+    .filter(Boolean);
+}
+
 function buildTemplateText(from: number, to: number) {
   const lines: string[] = [];
   for (let number = from; number <= to; number += 1) {
@@ -393,7 +460,7 @@ function buildDefaultGroupContentJson(type: QuestionType, from: number, to: numb
       return {template_text: buildTemplateText(from, to)};
     case "summary_completion": {
       const blanks = Array.from({length: Math.max(1, to - from + 1)}, (_, index) => `{${from + index}}`).join(" ");
-      return {summary_text: `Summary: ${blanks}`.trim(), word_bank: ["word1"]};
+      return {summary_text: `Summary: ${blanks}`.trim(), word_bank: null};
     }
     case "table_completion":
       return {
@@ -611,14 +678,15 @@ function ensureGroupContentForApi(
 
   if (type === "summary_completion") {
     const summaryText = toStringSafe(content.summary_text).trim();
-    const wordBank = Array.isArray(content.word_bank)
-      ? content.word_bank.map((item) => toStringSafe(item).trim()).filter(Boolean)
-      : [];
+    const hasWordBank = Array.isArray(content.word_bank);
+    const wordBank = hasWordBank
+      ? (content.word_bank as unknown[]).map((item) => toStringSafe(item).trim()).filter(Boolean)
+      : null;
     const fallbackSummary = asRecord(fallback);
 
     return {
       summary_text: summaryText || toStringSafe(fallbackSummary.summary_text),
-      word_bank: wordBank.length ? wordBank : ["word1"]
+      word_bank: wordBank && wordBank.length ? wordBank : null
     };
   }
 
@@ -1139,7 +1207,9 @@ function mapApiQuestionToBuilderQuestion(
       .map((item) => {
         if (typeof item === "string") return item;
         const itemRecord = asRecord(item);
-        return toStringSafe(itemRecord.key ?? itemRecord.label ?? itemRecord.text);
+        return builderQuestion.type === "selecting_from_a_list"
+          ? toStringSafe(itemRecord.text ?? itemRecord.label ?? itemRecord.key)
+          : toStringSafe(itemRecord.key ?? itemRecord.label ?? itemRecord.text);
       })
       .map((item) => item.trim())
       .filter(Boolean);
@@ -1209,6 +1279,11 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
     })
     .map((item) => item.trim())
     .filter(Boolean);
+  const derivedMatchingInfoChoices =
+    type === "matching_information" && !choices.length
+      ? extractRangeFromInstructionText(toStringSafe(group.instructions ?? ""))
+      : [];
+  const resolvedChoices = choices.length ? choices : derivedMatchingInfoChoices;
 
   const mcqOptions = mcqRows
     .map((item) => {
@@ -1230,9 +1305,9 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
     }
     if (
       (question.type === "matching_information" || question.type === "matching_features" || question.type === "selecting_from_a_list")
-      && choices.length > 0
+      && resolvedChoices.length > 0
     ) {
-      return {...question, choices};
+      return {...question, choices: resolvedChoices};
     }
     return question;
   });
@@ -1590,7 +1665,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     if (!group || !question) {
       return null;
     }
-    return {group, question};
+    return {group, question, summaryWordBankOptions: extractSummaryWordBankOptions(group.groupContentJson)};
   }, [activeGroups, selectedQuestion]);
 
   const availableContentBankPassages = useMemo<ContentBankPassage[]>(() => {
@@ -1809,10 +1884,23 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
       const created = await questionGroupsService.create(payload);
       const baseCreatedGroup = normalizeGroup(mapApiQuestionGroupToBuilderGroup(created, from));
+      const localChoiceOptions = extractSharedChoiceOptions(groupContent);
       const createdGroup = normalizeGroup({
         ...baseCreatedGroup,
         groupContentJson: groupContent ?? baseCreatedGroup.groupContentJson,
         questions: baseCreatedGroup.questions.map((question) => {
+          if (
+            (
+              question.type === "matching_information" ||
+              question.type === "matching_features" ||
+              question.type === "selecting_from_a_list" ||
+              question.type === "map"
+            )
+            && localChoiceOptions.length > 0
+          ) {
+            return {...question, choices: localChoiceOptions};
+          }
+
           if (question.type === "multiple_choice" && Array.isArray((groupContent as any)?.options)) {
             const nextCount = extractMcqGroupOptionRows(groupContent).length;
             if (nextCount <= 0) return question;
@@ -2681,6 +2769,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         question={selectedQuestionData?.question ?? null}
         module={test.module}
         mcqMode="single"
+        summaryWordBankOptions={selectedQuestionData?.summaryWordBankOptions ?? []}
         onOpenChange={setQuestionEditorOpen}
         onQuestionChange={(nextQuestion) => {
           if (!selectedQuestion) {

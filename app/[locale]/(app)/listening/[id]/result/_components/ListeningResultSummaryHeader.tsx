@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard, RotateCcw } from "lucide-react";
+import { LayoutDashboard, RotateCcw, Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
@@ -101,10 +101,10 @@ export function ListeningResultSummaryHeader({
             {showAiAnalysisButton ? (
               <Button
                 type="button"
-                variant="outline"
                 onClick={onAiAnalysisClick}
-                className="h-9 rounded-xl border-slate-200 bg-white/90 px-4 hover:bg-slate-100/80 dark:border-border/70 dark:bg-background/35 sm:shrink-0"
+                className="h-10 rounded-xl border-0 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5 hover:from-blue-500 hover:via-cyan-500 hover:to-emerald-400 hover:text-white dark:shadow-blue-950/40 sm:shrink-0"
               >
+                <Sparkles className="size-4" />
                 {t.has("aiAnalysis") ? t("aiAnalysis") : "AI analysis"}
               </Button>
             ) : null}

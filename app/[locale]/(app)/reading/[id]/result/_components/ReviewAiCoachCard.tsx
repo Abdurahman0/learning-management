@@ -1,10 +1,10 @@
 ﻿"use client";
 
-import {Download, Sparkles, WandSparkles} from "lucide-react";
-import {useEffect, useMemo, useState} from "react";
+import {Sparkles, WandSparkles} from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
+import {MistakeReasonSolutionList} from "@/components/mistake-reasons/MistakeReasonSolutionList";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { AiCoachData, MistakeBreakdownItem } from "@/data/review-reading";
@@ -18,48 +18,9 @@ type ReviewAiCoachCardProps = {
   selectedMistakeReasons?: MistakeReasonDetail[];
 };
 
-function isSafeDownloadUrl(value: string | null) {
-  if (!value) return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
-  } catch {
-    return false;
-  }
-}
-
 export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction, selectedMistakeReason = null, selectedMistakeReasons = [] }: ReviewAiCoachCardProps) {
   const t = useTranslations("readingReview");
-  const tMistakeReasons = useTranslations("mistakeReasons");
   const activeReasons = selectedMistakeReasons.length ? selectedMistakeReasons : (selectedMistakeReason ? [selectedMistakeReason] : []);
-  const solutionText = useMemo(() => {
-    if (!activeReasons.length) return "";
-    return activeReasons
-      .flatMap((reason) => [reason.solution_1, reason.solution_2, reason.solution_3])
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .join("\n\n");
-  }, [activeReasons]);
-  const [typedSolution, setTypedSolution] = useState("");
-
-  useEffect(() => {
-    if (!solutionText) {
-      setTypedSolution("");
-      return;
-    }
-
-    setTypedSolution("");
-    let index = 0;
-    const timer = window.setInterval(() => {
-      index += 4;
-      setTypedSolution(solutionText.slice(0, index));
-      if (index >= solutionText.length) {
-        window.clearInterval(timer);
-      }
-    }, 16);
-
-    return () => window.clearInterval(timer);
-  }, [solutionText]);
 
   return (
     <section className="space-y-3">
@@ -94,31 +55,7 @@ export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction, selectedM
         </div>
 
         {activeReasons.length ? (
-          <Card className="border-blue-300/70 bg-blue-100/70 p-3 dark:border-blue-500/35 dark:bg-blue-500/10">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="text-sm font-semibold">{t("aiInsights")}</p>
-                <p className="text-xs text-muted-foreground">{tMistakeReasons("aiReasonsDescription")}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {activeReasons.filter((reason) => isSafeDownloadUrl(reason.file_url)).map((reason) => (
-                  <Button key={reason.id} size="sm" variant="outline" asChild>
-                    <a href={reason.file_url ?? "#"} target="_blank" rel="noopener noreferrer">
-                      <Download className="size-4" />
-                      {tMistakeReasons("downloadGuide")}
-                    </a>
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90">
-              {activeReasons.map((reason) => (
-                <li key={reason.id} className="leading-relaxed">
-                  <span className="font-semibold">{reason.mistake_category_display}:</span> {reason.reason}
-                </li>
-              ))}
-            </ul>
-          </Card>
+          <MistakeReasonSolutionList reasons={activeReasons} />
         ) : (
           <Card className="border-blue-300/70 bg-blue-100/70 p-3 dark:border-blue-500/35 dark:bg-blue-500/10">
             <p className="mb-2 text-sm font-semibold">{t("aiInsights")}</p>
@@ -130,22 +67,16 @@ export function ReviewAiCoachCard({ coach, mistakeBreakdown, onAction, selectedM
           </Card>
         )}
 
+        {!activeReasons.length ? (
         <div className="space-y-2">
           <p className="text-sm font-semibold">{t("personalizedImprovementPlan")}</p>
-          {activeReasons.length ? (
-            <Card className="border-emerald-300/70 bg-emerald-50/80 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-                {typedSolution || tMistakeReasons("thinking")}
-              </p>
-            </Card>
-          ) : (
-            <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90">
-              {coach.plan.map((item) => (
-                <li key={item} className="leading-relaxed">{item}</li>
-              ))}
-            </ul>
-          )}
+          <ul className="list-disc space-y-1.5 pl-5 text-sm text-foreground/90">
+            {coach.plan.map((item) => (
+              <li key={item} className="leading-relaxed">{item}</li>
+            ))}
+          </ul>
         </div>
+        ) : null}
 
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => onAction(t("startPracticeSession"))}>

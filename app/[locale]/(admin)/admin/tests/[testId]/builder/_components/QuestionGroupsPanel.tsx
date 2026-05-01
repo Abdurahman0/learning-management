@@ -10,6 +10,7 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle} from "@/components/ui/sheet";
+import {Switch} from "@/components/ui/switch";
 import type {BuilderMode, BuilderStructureItem, QuestionGroup, QuestionType, TestModule} from "@/data/admin-test-builder";
 import {QUESTION_TYPE_OPTIONS_BY_MODULE, getStructureRange} from "@/data/admin-test-builder";
 import {BoldTextarea} from "./BoldTextarea";
@@ -48,6 +49,7 @@ type GroupEditorState = {
   completionTemplateText: string;
   mcqMode: "single";
   mcqOptions: string;
+  summaryWordBankEnabled: boolean;
   wordBank: string;
   headings: string;
   choices: string;
@@ -128,6 +130,22 @@ function buildTemplateText(from: number, to: number) {
 
 function toLineJoinedValues(value: unknown) {
   return Array.isArray(value) ? value.map((item) => String(item ?? "").trim()).filter(Boolean).join("\n") : "";
+}
+
+function parseWordBankOptions(value: string) {
+  return value
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getStoredWordBank(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => String(item ?? "").trim()).filter(Boolean);
+}
+
+function isPlaceholderWordBank(values: string[]) {
+  return values.length === 1 && values[0]?.toLowerCase() === "word1";
 }
 
 function toTableRowsText(value: unknown) {
@@ -239,6 +257,7 @@ export function QuestionGroupsPanel({
     completionTemplateText: "",
     mcqMode: "single",
     mcqOptions: "",
+    summaryWordBankEnabled: false,
     wordBank: "",
     headings: "",
     choices: "",
@@ -273,7 +292,11 @@ export function QuestionGroupsPanel({
   }, [editor.from, editor.to, occupiedForEditor]);
 
   const hasRangeError = editor.from < range.from || editor.to > range.to || editor.from > editor.to;
-  const hasError = hasRangeError || hasRangeOverlap;
+  const hasSummaryWordBankError =
+    editor.type === "summary_completion" &&
+    editor.summaryWordBankEnabled &&
+    parseWordBankOptions(editor.wordBank).length === 0;
+  const hasError = hasRangeError || hasRangeOverlap || hasSummaryWordBankError;
 
   const groupActionsById = useMemo(() => {
     const occupiedAll = collectOccupiedNumbers(groups);
@@ -315,6 +338,7 @@ export function QuestionGroupsPanel({
       completionTemplateText: "",
       mcqMode: "single",
       mcqOptions: "A\nB\nC\nD",
+      summaryWordBankEnabled: false,
       wordBank: "",
       headings: "",
       choices: "",
@@ -328,6 +352,8 @@ export function QuestionGroupsPanel({
       group.type === "matching_information" && module === "reading"
         ? extractRangeFromInstructionText(group.instructions ?? "").join("\n")
         : "";
+    const storedWordBank = getStoredWordBank((group.groupContentJson as any)?.word_bank);
+    const hasStoredWordBank = storedWordBank.length > 0 && !isPlaceholderWordBank(storedWordBank);
 
     setEditor({
       open: true,
@@ -353,9 +379,8 @@ export function QuestionGroupsPanel({
           const keys = stored.length ? stored : Array.from({length: inferredCount}, (_, idx) => toMcqKey(idx));
           return keys.join("\n");
         })(),
-      wordBank: Array.isArray((group.groupContentJson as any)?.word_bank) 
-        ? ((group.groupContentJson as any).word_bank as string[]).join(", ") 
-        : "",
+      summaryWordBankEnabled: hasStoredWordBank,
+      wordBank: hasStoredWordBank ? storedWordBank.join("\n") : "",
       headings: (group.questions[0] as any)?.headings?.join("\n") ?? toLineJoinedValues((group.groupContentJson as any)?.headings),
       choices:
         ((group.questions[0] as any)?.choices?.join("\n") || (
@@ -380,7 +405,7 @@ export function QuestionGroupsPanel({
 
     const parsedHeadings = editor.headings.split("\n").map((value) => value.trim()).filter(Boolean);
     const parsedChoices = editor.choices.split("\n").map((value) => value.trim()).filter(Boolean);
-    const parsedWordBank = editor.wordBank.split(",").map((value) => value.trim()).filter(Boolean);
+    const parsedWordBank = parseWordBankOptions(editor.wordBank);
     const parsedTemplateText = editor.completionTemplateText.trim();
     const parsedMcqKeys = normalizeMcqOptionKeys(editor.mcqOptions);
     const parsedTableColumns = editor.tableColumns.split("\n").map((value) => value.trim()).filter(Boolean);
@@ -412,7 +437,7 @@ export function QuestionGroupsPanel({
         : editor.type === "summary_completion"
         ? {
             summary_text: editor.summaryText,
-            word_bank: parsedWordBank.length ? parsedWordBank : ["word1"]
+            word_bank: editor.summaryWordBankEnabled ? parsedWordBank : null
           }
         : editor.type === "matching_headings"
           ? {headings: parsedHeadings}
@@ -588,6 +613,36 @@ export function QuestionGroupsPanel({
                   />
                   <p className="text-[10px] text-muted-foreground">{t("groups.fields.summaryTextHint")}</p>
                 </div>
+                {module === "reading" ? (
+                  <div className="rounded-2xl border border-border/70 bg-muted/20 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <label htmlFor="summary-word-bank-switch" className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                          {t("groups.fields.wordBank")}
+                        </label>
+                        <p className="text-[11px] leading-relaxed text-muted-foreground">{t("groups.fields.wordBankHint")}</p>
+                      </div>
+                      <Switch
+                        id="summary-word-bank-switch"
+                        checked={editor.summaryWordBankEnabled}
+                        onCheckedChange={(checked) => setEditor((current) => ({...current, summaryWordBankEnabled: checked}))}
+                        aria-label={t("groups.fields.wordBank")}
+                      />
+                    </div>
+
+                    {editor.summaryWordBankEnabled ? (
+                      <div className="mt-3 space-y-1.5">
+                        <BoldTextarea
+                          value={editor.wordBank}
+                          onChange={(nextValue) => setEditor((current) => ({...current, wordBank: nextValue}))}
+                          placeholder={t("groups.fields.wordBankPlaceholder")}
+                          className="min-h-28 w-full resize-y rounded-xl border border-border/70 bg-background/55 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
+                        />
+                        <p className="text-[10px] text-muted-foreground">{t("groups.fields.wordBankHint")}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </>
             )}
 
@@ -684,6 +739,7 @@ export function QuestionGroupsPanel({
 
             {hasRangeError ? <p className="text-xs text-rose-400">{t("groups.validationRange")}</p> : null}
             {hasRangeOverlap ? <p className="text-xs text-rose-400">{t("groups.validationOverlap")}</p> : null}
+            {hasSummaryWordBankError ? <p className="text-xs text-rose-400">{t("groups.fields.wordBankHint")}</p> : null}
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={() => setEditor((current) => ({...current, open: false}))}>

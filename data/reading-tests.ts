@@ -34,6 +34,7 @@ export type ReadingQuestion =
   | (BaseQuestion & { type: "sentenceCompletion"; blanks: number })
   | (BaseQuestion & { type: "summaryCompletion"; summaryText: string; wordBank?: string[] | null })
   | (BaseQuestion & { type: "tableCompletion"; tableColumns: string[]; tableRows: string[][] })
+  | (BaseQuestion & { type: "listSelection"; listOptions: string[] })
   | (BaseQuestion & { type: "matchingInfo"; paragraphOptions: string[] });
 
 export type ReadingFullTest = {

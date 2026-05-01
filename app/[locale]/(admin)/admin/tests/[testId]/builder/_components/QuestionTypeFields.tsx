@@ -6,6 +6,7 @@ import {useTranslations} from "next-intl";
 import {Badge} from "@/components/ui/badge";
 import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import {InlineBoldText} from "@/components/test/InlineBoldText";
 import type {BuilderQuestion, TextInputQuestion} from "@/data/admin-test-builder";
 import {BoldTextarea} from "./BoldTextarea";
 
@@ -13,8 +14,11 @@ type QuestionTypeFieldsProps = {
   question: BuilderQuestion;
   module?: "reading" | "listening";
   mcqMode?: "single" | "multiple";
+  summaryWordBankOptions?: string[];
   onChange: (question: BuilderQuestion) => void;
 };
+
+type MatchingStyleBuilderQuestion = Extract<BuilderQuestion, {items: string[]; choices: string[]; correctAnswer: Record<string, string>}>;
 
 const fieldClassName =
   "min-h-[88px] w-full rounded-xl border border-border/70 bg-background/45 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-primary/35";
@@ -42,13 +46,34 @@ function isTextInputQuestion(question: BuilderQuestion): question is TextInputQu
   ].includes(question.type);
 }
 
-function isMatchingStyleQuestion(question: BuilderQuestion): question is Extract<BuilderQuestion, {type: "matching_information" | "matching_features" | "selecting_from_a_list" | "map"}> {
+function isMatchingStyleQuestion(question: BuilderQuestion): question is MatchingStyleBuilderQuestion {
   return (
     question.type === "matching_information" ||
     question.type === "matching_features" ||
     question.type === "selecting_from_a_list" ||
     question.type === "map"
   );
+}
+
+function stripInlineBoldMarkup(value: string) {
+  return value.replace(/\*\*([^*]+)\*\*/g, "$1").trim();
+}
+
+function buildSummaryAnswerOptions(options: string[], currentAnswer: string) {
+  const byValue = new Map<string, string>();
+  for (const option of options) {
+    const label = String(option ?? "").trim();
+    const value = stripInlineBoldMarkup(label);
+    if (value && !byValue.has(value)) {
+      byValue.set(value, label);
+    }
+  }
+
+  if (currentAnswer && !byValue.has(currentAnswer)) {
+    byValue.set(currentAnswer, currentAnswer);
+  }
+
+  return Array.from(byValue, ([value, label]) => ({value, label}));
 }
 
 function toOptionKey(index: number) {
@@ -67,7 +92,25 @@ function isMatchingChoiceQuestion(question: BuilderQuestion): question is Extrac
   return question.type === "matching_information" || question.type === "matching_features";
 }
 
-export function QuestionTypeFields({question, module = "reading", mcqMode = "single", onChange}: QuestionTypeFieldsProps) {
+function resolveListSelectionAnswerValue(question: MatchingStyleBuilderQuestion, item: string) {
+  const stored =
+    question.correctAnswer[item]
+    ?? Object.values(question.correctAnswer).find((value) => String(value ?? "").trim().length > 0)
+    ?? "";
+  const normalized = String(stored).trim();
+  if (/^[A-Z]+$/.test(normalized)) return normalized;
+
+  const matchedIndex = question.choices.findIndex((choice) => choice.trim() === normalized);
+  return matchedIndex >= 0 ? toOptionKey(matchedIndex) : "";
+}
+
+export function QuestionTypeFields({
+  question,
+  module = "reading",
+  mcqMode = "single",
+  summaryWordBankOptions = [],
+  onChange
+}: QuestionTypeFieldsProps) {
   const t = useTranslations("adminTestBuilder");
   const showListeningMcqHint = module === "listening" && question.type === "multiple_choice";
   const autoListSelectionItem = question.type === "selecting_from_a_list"
@@ -79,6 +122,11 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
     }
     return Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : String(question.correctAnswer ?? "");
   }, [question]);
+  const summaryAnswerOptions = useMemo(
+    () => buildSummaryAnswerOptions(summaryWordBankOptions, answerValue.trim()),
+    [answerValue, summaryWordBankOptions]
+  );
+  const useSummaryWordBankAnswerSelect = question.type === "summary_completion" && summaryAnswerOptions.length > 0;
 
   return (
     <div className="space-y-4">
@@ -262,7 +310,7 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
       {isMatchingChoiceQuestion(question) ? (
         <div className="space-y-3">
           {(() => {
-            const matchingQuestion = question as Extract<BuilderQuestion, {type: "matching_information" | "matching_features" | "selecting_from_a_list" | "map"}>;
+            const matchingQuestion = question as MatchingStyleBuilderQuestion;
             return (
           <div className="space-y-1.5">
             <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctAnswer")}</Label>
@@ -331,14 +379,13 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
           <div className="space-y-2">
             <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.mapping")}</Label>
             {(question.type === "selecting_from_a_list" ? [autoListSelectionItem] : question.items).map((item) => (
-              <div key={`${question.id}-mapping-${item}`} className="grid grid-cols-[minmax(0,1fr)_120px] gap-2">
+              <div key={`${question.id}-mapping-${item}`} className="grid grid-cols-[minmax(0,1fr)_minmax(140px,180px)] gap-2">
                 <input value={item} readOnly className={`${inputClassName} text-muted-foreground`} />
                 <Select
                   value={
-                    question.correctAnswer[item]
-                    ?? (question.type === "selecting_from_a_list"
-                      ? Object.values(question.correctAnswer).find((value) => String(value ?? "").trim().length > 0) ?? ""
-                      : "")
+                    question.type === "selecting_from_a_list"
+                      ? resolveListSelectionAnswerValue(question, item)
+                      : question.correctAnswer[item] ?? ""
                   }
                   onValueChange={(value) =>
                     onChange({
@@ -355,11 +402,23 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
                     <SelectValue placeholder={t("questions.fields.selectChoice")} />
                   </SelectTrigger>
                   <SelectContent>
-                    {question.choices.map((choice) => (
-                      <SelectItem key={`${question.id}-${item}-${choice}`} value={choice}>
-                        {choice}
+                    {question.choices.map((choice, choiceIndex) => {
+                      const choiceKey = question.type === "selecting_from_a_list" ? toOptionKey(choiceIndex) : choice;
+                      return (
+                      <SelectItem key={`${question.id}-${item}-${choiceKey}`} value={choiceKey}>
+                        {question.type === "selecting_from_a_list" ? (
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-border/70 bg-muted/35 px-2 text-[11px] font-semibold">
+                              {choiceKey}
+                            </span>
+                            <span className="min-w-0 truncate">{choice || choiceKey}</span>
+                          </span>
+                        ) : (
+                          choice
+                        )}
                       </SelectItem>
-                    ))}
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -371,18 +430,33 @@ export function QuestionTypeFields({question, module = "reading", mcqMode = "sin
       {isTextInputQuestion(question) ? (
         <div className="space-y-1.5">
           <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.acceptableAnswers")}</Label>
-          <input
-            value={answerValue}
-            onChange={(event) => {
-              const values = toArray(event.target.value);
-              onChange({
-                ...question,
-                correctAnswer: values.length <= 1 ? (values[0] ?? "") : values
-              });
-            }}
-            className={inputClassName}
-            placeholder={t("questions.fields.acceptableAnswersPlaceholder")}
-          />
+          {useSummaryWordBankAnswerSelect ? (
+            <Select value={answerValue.trim()} onValueChange={(value) => onChange({...question, correctAnswer: value})}>
+              <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">
+                <SelectValue placeholder={t("questions.fields.selectChoice")} />
+              </SelectTrigger>
+              <SelectContent>
+                {summaryAnswerOptions.map((option) => (
+                  <SelectItem key={`${question.id}-summary-answer-${option.value}`} value={option.value}>
+                    <InlineBoldText text={option.label} />
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <input
+              value={answerValue}
+              onChange={(event) => {
+                const values = toArray(event.target.value);
+                onChange({
+                  ...question,
+                  correctAnswer: values.length <= 1 ? (values[0] ?? "") : values
+                });
+              }}
+              className={inputClassName}
+              placeholder={t("questions.fields.acceptableAnswersPlaceholder")}
+            />
+          )}
         </div>
       ) : null}
 

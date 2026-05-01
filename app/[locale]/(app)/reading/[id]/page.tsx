@@ -57,6 +57,7 @@ import { enqueueGuestPendingAttempt } from "@/lib/guest-attempt-sync";
 const DEFAULT_SPLIT = 50;
 const HEADING_DND_MIME = "application/x-reading-heading";
 const MATCHING_INFO_DND_MIME = "application/x-reading-matching-info";
+const SUMMARY_WORD_BANK_DND_MIME = "application/x-reading-summary-word-bank";
 const TFNG_OPTIONS: ["TRUE", "FALSE", "NOT GIVEN"] = ["TRUE", "FALSE", "NOT GIVEN"];
 const YNNG_OPTIONS: ["YES", "NO", "NOT GIVEN"] = ["YES", "NO", "NOT GIVEN"];
 
@@ -217,6 +218,10 @@ function normalizeRomanKeyAnswerForBackend(value: string) {
   if (/^[ivxlcdm]+$/i.test(trimmed)) return trimmed.toLowerCase();
   const match = trimmed.match(/^\s*([ivxlcdm]+)(?:\s*$|[\)\].:\-]\s+|\s+)/i);
   return match ? match[1].toLowerCase() : trimmed;
+}
+
+function stripInlineBoldMarkup(value: string) {
+  return value.replace(/\*\*([^*]+)\*\*/g, "$1").trim();
 }
 
 type MatchingHeadingsBankProps = {
@@ -908,6 +913,10 @@ function collectBackendAttemptAnswerEntries(params: {
           return normalizeLetterKeyAnswerForBackend(answer);
         }
 
+        if (question.type === "listSelection" && typeof answer === "string") {
+          return normalizeLetterKeyAnswerForBackend(answer);
+        }
+
         if (question.type === "matchingHeadings" && typeof answer === "string") {
           return normalizeRomanKeyAnswerForBackend(answer);
         }
@@ -1079,6 +1088,25 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
             groupInstruction: instruction,
             prompt,
             options: extractMcqOptions(question),
+            correctAnswer: "",
+            explanation: "",
+            evidenceSpans
+          });
+          continue;
+        }
+
+        if (qType === "LIST_SELECTION" || qType === "SELECTING_FROM_A_LIST") {
+          questions.push({
+            id: questionId,
+            number,
+            passageId,
+            type: "listSelection",
+            backendQuestionId: submitQuestionId || undefined,
+            backendQuestionCandidateIds: submitQuestionCandidates.length ? submitQuestionCandidates : undefined,
+            groupTitle,
+            groupInstruction: instruction,
+            prompt: prompt || `Question ${number}`,
+            listOptions: matchingChoiceOptions,
             correctAnswer: "",
             explanation: "",
             evidenceSpans
@@ -3242,11 +3270,21 @@ function ReadingTestClient({
                               : [];
                           const isSummary = question.type === "summaryCompletion";
                           const isTable = question.type === "tableCompletion";
+                          const isListSelection = question.type === "listSelection";
+                          const listSelectionQuestions = isListSelection
+                            ? visibleGroupQuestions.filter((item): item is Extract<ReadingQuestion, {type: "listSelection"}> => item.type === "listSelection")
+                            : [];
                           const sharedBlockKey = isSummary
                             ? `summary:${question.summaryText}`
                             : isTable
                               ? `table:${JSON.stringify({columns: question.tableColumns, rows: question.tableRows})}`
-                              : "";
+                              : isListSelection
+                                ? `list:${JSON.stringify({
+                                    prompt: question.prompt,
+                                    options: question.listOptions,
+                                    numbers: listSelectionQuestions.map((item) => item.number)
+                                  })}`
+                                : "";
                           const isDuplicateSharedBlock = Boolean(sharedBlockKey) && renderedSharedBlocksInGroup.has(sharedBlockKey);
                           if (isDuplicateSharedBlock) {
                             return null;
@@ -3276,10 +3314,10 @@ function ReadingTestClient({
                                   return;
                                 }
                                 questionRefs.current.set(question.number, el);
-                                // Summary/table blocks render once but carry multiple questions.
-                                if (question.type === "summaryCompletion" || question.type === "tableCompletion") {
+                                // Shared blocks render once but carry multiple questions.
+                                if (question.type === "summaryCompletion" || question.type === "tableCompletion" || question.type === "listSelection") {
                                   visibleGroupQuestions.forEach((q) => {
-                                    if (q.type === "summaryCompletion" || q.type === "tableCompletion") {
+                                    if (q.type === "summaryCompletion" || q.type === "tableCompletion" || q.type === "listSelection") {
                                       questionRefs.current.set(q.number, el);
                                     }
                                   });
@@ -3288,14 +3326,14 @@ function ReadingTestClient({
                             >
                               <div className="mb-2 flex items-start justify-between gap-2">
                                 <p className="min-w-0 wrap-break-word text-base font-medium leading-relaxed text-foreground">
-                                  {isSummary || isTable ? (
+                                  {isSummary || isTable || isListSelection ? (
                                     <>
                                       {visibleGroupQuestions[0]?.number}-{visibleGroupQuestions[visibleGroupQuestions.length - 1]?.number}.{" "}
                                     </>
                                   ) : (
                                     <>{question.number}.{" "}</>
                                   )}
-                                   {!isSummary && !isTable && (
+                                   {!isSummary && !isTable && !isListSelection && (
                                     <HighlightableText
                                       text={question.prompt}
                                       userHighlights={getQuestionLocalHighlights(question.id, promptStart, question.prompt.length)}
@@ -3322,7 +3360,7 @@ function ReadingTestClient({
                                     Marked
                                   </Badge>
                                 ) : null}
-                                {reviewMode && !isSummary && !isTable ? (
+                                {reviewMode && !isSummary && !isTable && !isListSelection ? (
                                   <div className="flex shrink-0 items-start gap-1.5">
                                     <Button
                                       type="button"
@@ -3351,7 +3389,7 @@ function ReadingTestClient({
                                 ) : null}
                               </div>
 
-                                {reviewMode && !isSummary && !isTable ? (
+                                {reviewMode && !isSummary && !isTable && !isListSelection ? (
                                   <p className="test-muted-copy mb-3 text-xs text-muted-foreground">
                                     {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
                                     {reviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
@@ -3439,6 +3477,165 @@ function ReadingTestClient({
                                   ))}
                                 </div>
                               ) : null}
+
+                              {question.type === "listSelection" ? (() => {
+                                const parsedOptions = question.listOptions.map((option, optionIndex) => parseOptionChoice(option, optionIndex));
+                                const orderedOptionKeys = parsedOptions.map((option) => option.key);
+                                const selectedKeys = new Set(
+                                  listSelectionQuestions
+                                    .map((item) => resolveChoiceKeyFromRawValue(answers[item.id], parsedOptions, question.listOptions))
+                                    .filter(Boolean)
+                                );
+                                const maxSelections = Math.max(1, listSelectionQuestions.length);
+                                const groupNumbers = listSelectionQuestions.map((item) => item.number);
+                                const toggleListSelection = (choiceKey: string) => {
+                                  if (reviewMode) return;
+                                  const current = new Set(selectedKeys);
+                                  if (current.has(choiceKey)) {
+                                    current.delete(choiceKey);
+                                  } else if (current.size < maxSelections) {
+                                    current.add(choiceKey);
+                                  } else {
+                                    return;
+                                  }
+                                  const nextKeys = orderedOptionKeys.filter((key) => current.has(key));
+
+                                  setAnswers((prev) => {
+                                    const next = {...prev};
+                                    listSelectionQuestions.forEach((item, itemIndex) => {
+                                      next[item.id] = nextKeys[itemIndex] ?? "";
+                                    });
+                                    return next;
+                                  });
+
+                                  const focusIndex = Math.min(
+                                    Math.max(nextKeys.indexOf(choiceKey), 0),
+                                    listSelectionQuestions.length - 1
+                                  );
+                                  const nextActive = listSelectionQuestions[focusIndex]?.number ?? listSelectionQuestions[0]?.number;
+                                  if (nextActive) {
+                                    setActiveQuestionNumber(nextActive);
+                                  }
+                                };
+
+                                return (
+                                  <div className="space-y-4">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      {groupNumbers.map((number) => (
+                                        <span
+                                          key={`${question.id}-list-number-${number}`}
+                                          className={cn(
+                                            "inline-flex size-7 items-center justify-center rounded-full border px-2 text-xs font-semibold",
+                                            activeQuestionNumber === number
+                                              ? "border-blue-600 bg-blue-600 text-white"
+                                              : "border-border/70 bg-muted/35 text-foreground"
+                                          )}
+                                        >
+                                          {number}
+                                        </span>
+                                      ))}
+                                      <p className="wrap-break-word text-sm font-medium">
+                                        <InlineBoldText text={question.prompt} />
+                                      </p>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      {parsedOptions.map((choice) => {
+                                        const checked = selectedKeys.has(choice.key);
+                                        return (
+                                          <label
+                                            key={`${question.id}-list-option-${choice.key}`}
+                                            className="flex min-w-0 items-start gap-2 text-sm"
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              name={`list-selection-${groupNumbers[0] ?? question.number}`}
+                                              value={choice.key}
+                                              checked={checked}
+                                              disabled={reviewMode}
+                                              onChange={() => toggleListSelection(choice.key)}
+                                              onFocus={() => setActiveQuestionNumber(groupNumbers[0] ?? question.number)}
+                                              className="mt-0.5"
+                                            />
+                                            <span className="inline-flex min-w-0 items-center gap-2 wrap-break-word">
+                                              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border/70 bg-muted/35 px-2 text-xs font-semibold text-foreground">
+                                                {choice.key}
+                                              </span>
+                                              <span>
+                                                <InlineBoldText text={choice.text || choice.label} />
+                                              </span>
+                                            </span>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {reviewMode ? (
+                                      <div className="space-y-2">
+                                        {listSelectionQuestions.map((targetQuestion) => {
+                                          const targetReviewedQuestion =
+                                            reviewQuestionById.get(targetQuestion.id)
+                                            ?? reviewQuestionByNumber.get(targetQuestion.number)
+                                            ?? targetQuestion;
+                                          const targetReviewedCorrectAnswer = Array.isArray(targetReviewedQuestion.correctAnswer)
+                                            ? targetReviewedQuestion.correctAnswer.join(", ")
+                                            : targetReviewedQuestion.correctAnswer;
+                                          const targetReviewedExplanation = targetReviewedQuestion.explanation?.trim()
+                                            ? targetReviewedQuestion.explanation
+                                            : (t.has("notAvailable") ? t("notAvailable") : "Not available");
+
+                                          return (
+                                            <div
+                                              key={`${question.id}-list-review-${targetQuestion.id}`}
+                                              className="rounded-lg border border-border/70 bg-muted/20 p-3"
+                                            >
+                                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <p className="text-xs font-semibold text-muted-foreground">
+                                                  Q{targetQuestion.number}: {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}{" "}
+                                                  <span className="text-foreground">{targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}</span>
+                                                </p>
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                  <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={(event) => {
+                                                      event.stopPropagation();
+                                                      openExplanation(targetQuestion);
+                                                    }}
+                                                    className="h-6 rounded-md px-2 text-[10px]"
+                                                  >
+                                                    {expandedExplanations.has(targetQuestion.id)
+                                                      ? (t.has("hideExplanation") ? t("hideExplanation") : "Hide explanation")
+                                                      : (t.has("explain") ? t("explain") : "Explain")}
+                                                  </Button>
+                                                  <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={(event) => {
+                                                      event.stopPropagation();
+                                                      jumpToEvidenceFromReview(targetQuestion.id);
+                                                    }}
+                                                    className="h-6 rounded-md border-border/70 px-2 text-[10px]"
+                                                  >
+                                                    {t.has("jumpToEvidence") ? t("jumpToEvidence") : "Jump to evidence"}
+                                                  </Button>
+                                                </div>
+                                              </div>
+                                              {expandedExplanations.has(targetQuestion.id) ? (
+                                                <div className="mt-2 rounded-md border border-border/70 bg-background/70 p-2 text-xs text-foreground/90 dark:bg-background/25">
+                                                  {targetReviewedExplanation}
+                                                </div>
+                                              ) : null}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                );
+                              })() : null}
 
                               {question.type === "matchingInfo" ? (
                                 <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -3672,8 +3869,72 @@ function ReadingTestClient({
 
                               {question.type === "summaryCompletion" ? (() => {
                                 const parts = question.summaryText.split(/(\{\d+\})/g);
+                                const summaryQuestions = visibleGroupQuestions.filter(
+                                  (item): item is Extract<ReadingQuestion, {type: "summaryCompletion"}> => item.type === "summaryCompletion"
+                                );
+                                const wordBankOptions = question.wordBank ?? [];
+                                const selectedSummaryValues = new Set(
+                                  summaryQuestions
+                                    .map((item) => (typeof answers[item.id] === "string" ? stripInlineBoldMarkup(String(answers[item.id])) : ""))
+                                    .filter(Boolean)
+                                );
+                                const fillSummaryBlank = (targetQuestion: ReadingQuestion, option: string) => {
+                                  if (reviewMode || targetQuestion.type !== "summaryCompletion") return;
+                                  setActiveQuestionNumber(targetQuestion.number);
+                                  setAnswers((prev) => ({...prev, [targetQuestion.id]: option}));
+                                };
+                                const fillActiveOrFirstEmptySummaryBlank = (option: string) => {
+                                  if (reviewMode) return;
+                                  const activeSummaryQuestion = summaryQuestions.find((item) => item.number === activeQuestionNumber);
+                                  const firstEmptyQuestion = summaryQuestions.find((item) => !isAnswered(answers[item.id]));
+                                  const targetQuestion = activeSummaryQuestion ?? firstEmptyQuestion ?? summaryQuestions[0];
+                                  if (!targetQuestion) return;
+                                  fillSummaryBlank(targetQuestion, option);
+                                };
                                 return (
                                   <div className="space-y-4">
+                                    {wordBankOptions.length ? (
+                                      <div className="rounded-2xl border border-blue-200/70 bg-gradient-to-br from-blue-50/90 via-background to-cyan-50/70 p-3 shadow-sm dark:border-blue-500/25 dark:from-blue-950/25 dark:via-background/50 dark:to-cyan-950/20">
+                                        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                          <p className="text-xs font-semibold tracking-[0.14em] text-blue-700 uppercase dark:text-blue-200">
+                                            {t.has("wordBank") ? t("wordBank") : "Word bank"}
+                                          </p>
+                                          <p className="text-[11px] text-muted-foreground">
+                                            {t.has("wordBankHint") ? t("wordBankHint") : "Drag an option into a blank."}
+                                          </p>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                          {wordBankOptions.map((option, optionIndex) => {
+                                            const displayOption = option.trim();
+                                            const answerOption = stripInlineBoldMarkup(displayOption);
+                                            const isUsed = selectedSummaryValues.has(answerOption);
+                                            return (
+                                              <button
+                                                key={`${question.id}-word-bank-${optionIndex}-${displayOption}`}
+                                                type="button"
+                                                draggable={!reviewMode}
+                                                disabled={reviewMode}
+                                                onClick={() => fillActiveOrFirstEmptySummaryBlank(answerOption)}
+                                                onDragStart={(event) => {
+                                                  event.dataTransfer.effectAllowed = "copy";
+                                                  event.dataTransfer.setData(SUMMARY_WORD_BANK_DND_MIME, answerOption);
+                                                  event.dataTransfer.setData("text/plain", answerOption);
+                                                }}
+                                                className={cn(
+                                                  "rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm transition-all",
+                                                  "border-blue-200 bg-white text-blue-950 hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md",
+                                                  "dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100",
+                                                  isUsed && "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200",
+                                                  reviewMode && "cursor-default opacity-80 hover:translate-y-0 hover:shadow-sm"
+                                                )}
+                                              >
+                                                <InlineBoldText text={displayOption} />
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    ) : null}
                                     <div className="test-soft-surface rounded-lg border border-border/60 bg-muted/20 p-4">
                                       <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
                                       {parts.map((part, partIndex) => {
@@ -3720,6 +3981,22 @@ function ReadingTestClient({
                                                     if (activeQuestionNumber !== num) {
                                                       setActiveQuestionNumber(num);
                                                     }
+                                                  }}
+                                                  onDragOver={(event) => {
+                                                    if (reviewMode || !wordBankOptions.length) return;
+                                                    event.preventDefault();
+                                                    event.dataTransfer.dropEffect = "copy";
+                                                  }}
+                                                  onDrop={(event) => {
+                                                    if (reviewMode || !wordBankOptions.length) return;
+                                                    const dropped =
+                                                      event.dataTransfer.getData(SUMMARY_WORD_BANK_DND_MIME)
+                                                      || event.dataTransfer.getData("text/plain");
+                                                    const normalizedDropped = dropped.trim();
+                                                    const validAnswers = wordBankOptions.map((option) => stripInlineBoldMarkup(option));
+                                                    if (!normalizedDropped || !validAnswers.includes(normalizedDropped)) return;
+                                                    event.preventDefault();
+                                                    fillSummaryBlank(targetQuestion, normalizedDropped);
                                                   }}
                                                   onChange={(e) => setAnswers((prev) => ({ ...prev, [targetQuestion.id]: e.target.value }))}
                                                   placeholder="………"
@@ -3783,7 +4060,7 @@ function ReadingTestClient({
                             })() : null}
 
 
-                              {reviewMode && !isSummary && !isTable ? (
+                              {reviewMode && !isSummary && !isTable && !isListSelection ? (
                                 <div className="mt-3 space-y-2">
                                   {expandedExplanations.has(question.id) ? (
                                     <div className="test-soft-surface rounded-md border border-border/80 bg-muted/25 p-3 text-sm">

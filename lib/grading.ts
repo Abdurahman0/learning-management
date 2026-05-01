@@ -1,6 +1,7 @@
 export type QuestionTypeForGrading =
   | "tfng"
   | "mcq"
+  | "listSelection"
   | "matchingHeadings"
   | "matchingInfo"
   | "sentenceCompletion"
@@ -47,7 +48,7 @@ export function normalizeTextAnswer(input: string) {
 
 function normalizeChoice(value: string) {
   const normalized = normalizeTextAnswer(value);
-  const letter = normalized.match(/^[a-d]/i)?.[0];
+  const letter = normalized.match(/^[a-z](?:$|[\s.)\]:-])/i)?.[0]?.trim().replace(/[.)\]:-]$/, "");
   return letter ? letter.toUpperCase() : normalized;
 }
 
@@ -66,7 +67,7 @@ function normalizeMatchingHeading(value: string) {
 }
 
 function toComparable(questionType: QuestionTypeForGrading, value: string) {
-  if (questionType === "mcq") return normalizeChoice(value);
+  if (questionType === "mcq" || questionType === "listSelection") return normalizeChoice(value);
   if (questionType === "tfng") return normalizeTfng(value);
   if (questionType === "matchingHeadings") return normalizeMatchingHeading(value);
   if (questionType === "matching") return normalizeChoice(value);
