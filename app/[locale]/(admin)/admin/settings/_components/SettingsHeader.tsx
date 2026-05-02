@@ -16,6 +16,7 @@ type SettingsHeaderProps = {
   resetDisabled: boolean;
   onResetToDefault: () => void;
   onSaveChanges: () => void;
+  showSaveActions?: boolean;
 };
 
 export function SettingsHeader({
@@ -23,7 +24,8 @@ export function SettingsHeader({
   saveDisabled,
   resetDisabled,
   onResetToDefault,
-  onSaveChanges
+  onSaveChanges,
+  showSaveActions = true
 }: SettingsHeaderProps) {
   const t = useTranslations("adminSettings");
 
@@ -55,6 +57,7 @@ export function SettingsHeader({
             <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{t("subtitle")}</p>
           </div>
 
+          {showSaveActions ? (
           <div className="flex w-full flex-wrap items-center justify-start gap-2 sm:w-auto sm:justify-end">
             <p
               className={`mr-1 text-xs font-medium ${hasChanges ? "text-amber-500" : "text-emerald-500"} w-full sm:w-auto`}
@@ -76,6 +79,7 @@ export function SettingsHeader({
               {t("saveChanges")}
             </Button>
           </div>
+          ) : null}
         </div>
       </div>
     </header>

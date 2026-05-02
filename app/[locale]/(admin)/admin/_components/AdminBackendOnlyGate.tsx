@@ -21,15 +21,15 @@ function isBackendOnlySupportedAdminPath(pathWithoutLocale: string) {
     "/admin/content-bank",
     "/admin/reading-tests",
     "/admin/listening-tests",
-    "/admin/question-bank"
+    "/admin/question-bank",
+    "/admin/settings"
   ];
 
   const blockedPrefixes = [
     "/admin/achievements",
     "/admin/reports",
     "/admin/subscriptions",
-    "/admin/mistakes-analysis",
-    "/admin/settings"
+    "/admin/mistakes-analysis"
   ];
 
   if (blockedPrefixes.some((prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`))) {
