@@ -243,10 +243,6 @@ export function ReadingSummaryPageClient() {
     return () => window.clearTimeout(timer);
   }, [actionNotice]);
 
-  const handleAiAnalysisClick = () => {
-    setMistakeModalOpen(true);
-  };
-
   const handleMistakeReasonSelect = (reason: MistakeReasonDetail) => {
     setMistakeReasonsError(null);
     setSelectedMistakeReason(reason);
@@ -262,9 +258,24 @@ export function ReadingSummaryPageClient() {
     () => mistakeReasons.filter((reason) => selectedMistakeReasonIds.includes(reason.id)),
     [mistakeReasons, selectedMistakeReasonIds]
   );
+  const canUseMistakeReasonAnalysis = isMistakeReasonAllowed || Boolean(mistakeReasonUsageStatus?.already_used_for_attempt);
+
+  const handleAiAnalysisClick = () => {
+    if (isReasonsLoading) {
+      setActionNotice("AI analysis is still loading. Please try again in a moment.");
+      return;
+    }
+
+    if (!canUseMistakeReasonAnalysis || !mistakeReasons.length) {
+      setActionNotice(mistakeReasonUsageStatus?.reset_message || "AI analysis is not available for this attempt yet.");
+      return;
+    }
+
+    setMistakeModalOpen(true);
+  };
 
   const handleAnalyzeMistakes = async () => {
-    if (!selectedMistakeReasons.length || !isMistakeReasonAllowed || !resolvedBackendAttemptId) return;
+    if (!selectedMistakeReasons.length || !canUseMistakeReasonAnalysis || !resolvedBackendAttemptId) return;
     setIsMistakeAnalyzing(true);
     setMistakeReasonsError(null);
     try {
@@ -514,7 +525,7 @@ export function ReadingSummaryPageClient() {
         isLoading={isReasonsLoading}
         isAnalyzing={isMistakeAnalyzing}
         error={mistakeReasonsError}
-        canAnalyze={isMistakeReasonAllowed || Boolean(mistakeReasonUsageStatus?.already_used_for_attempt)}
+        canAnalyze={canUseMistakeReasonAnalysis}
         disabledReason={mistakeReasonUsageStatus?.reset_message || null}
         categoryQuestionNumbers={categoryQuestionNumbers}
         onOpenChange={setMistakeModalOpen}

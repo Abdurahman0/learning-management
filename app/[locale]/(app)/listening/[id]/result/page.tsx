@@ -100,6 +100,7 @@ export default function ListeningResultPage() {
   const [isMistakeReasonAllowed, setIsMistakeReasonAllowed] = useState(true);
   const [isReasonsLoading, setIsReasonsLoading] = useState(Boolean(resolvedBackendAttemptId));
   const [mistakeReasonsError, setMistakeReasonsError] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -176,9 +177,11 @@ export default function ListeningResultPage() {
     };
   }, [resolvedBackendAttemptId]);
 
-  const scrollToAiInsights = () => {
-    setMistakeModalOpen(true);
-  };
+  useEffect(() => {
+    if (!actionNotice) return;
+    const timer = window.setTimeout(() => setActionNotice(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [actionNotice]);
 
   const handleMistakeReasonSelect = (reason: MistakeReasonDetail) => {
     setMistakeReasonsError(null);
@@ -195,9 +198,24 @@ export default function ListeningResultPage() {
     () => mistakeReasons.filter((reason) => selectedMistakeReasonIds.includes(reason.id)),
     [mistakeReasons, selectedMistakeReasonIds]
   );
+  const canUseMistakeReasonAnalysis = isMistakeReasonAllowed || Boolean(mistakeReasonUsageStatus?.already_used_for_attempt);
+
+  const scrollToAiInsights = () => {
+    if (isReasonsLoading) {
+      setActionNotice("AI analysis is still loading. Please try again in a moment.");
+      return;
+    }
+
+    if (!canUseMistakeReasonAnalysis || !mistakeReasons.length) {
+      setActionNotice(mistakeReasonUsageStatus?.reset_message || "AI analysis is not available for this attempt yet.");
+      return;
+    }
+
+    setMistakeModalOpen(true);
+  };
 
   const handleAnalyzeMistakes = async () => {
-    if (!selectedMistakeReasons.length || !isMistakeReasonAllowed || !resolvedBackendAttemptId) return;
+    if (!selectedMistakeReasons.length || !canUseMistakeReasonAnalysis || !resolvedBackendAttemptId) return;
     setIsMistakeAnalyzing(true);
     setMistakeReasonsError(null);
     try {
@@ -389,6 +407,12 @@ export default function ListeningResultPage() {
         onAiAnalysisClick={scrollToAiInsights}
       />
 
+      {actionNotice ? (
+        <Card className="border-blue-300/70 bg-blue-100/70 p-3 text-sm text-blue-700 dark:border-blue-500/35 dark:bg-blue-500/10 dark:text-blue-100">
+          {actionNotice}
+        </Card>
+      ) : null}
+
       <ListeningSectionPerformance items={backendReview.sectionPerformance} />
       <ListeningTypePerformance items={backendReview.typePerformance} />
 
@@ -399,7 +423,7 @@ export default function ListeningResultPage() {
         isLoading={isReasonsLoading}
         isAnalyzing={isMistakeAnalyzing}
         error={mistakeReasonsError}
-        canAnalyze={isMistakeReasonAllowed || Boolean(mistakeReasonUsageStatus?.already_used_for_attempt)}
+        canAnalyze={canUseMistakeReasonAnalysis}
         disabledReason={mistakeReasonUsageStatus?.reset_message || null}
         categoryQuestionNumbers={categoryQuestionNumbers}
         onOpenChange={setMistakeModalOpen}

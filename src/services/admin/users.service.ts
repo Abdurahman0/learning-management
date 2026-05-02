@@ -148,6 +148,33 @@ export type AdminUserDetailResponse = {
   raw: Record<string, unknown>;
 };
 
+export type AdminReasonUsageLimits = {
+  readingLimit: number;
+  listeningLimit: number;
+  updatedAt: string | null;
+};
+
+export type AdminReasonUsageLimitsPayload = {
+  readingLimit?: number;
+  listeningLimit?: number;
+};
+
+function normalizeReasonUsageLimits(payload: unknown): AdminReasonUsageLimits {
+  const row = asRecord(payload);
+  return {
+    readingLimit: asNumber(row.reading_limit ?? row.readingLimit),
+    listeningLimit: asNumber(row.listening_limit ?? row.listeningLimit),
+    updatedAt: asString(row.updated_at ?? row.updatedAt) || null
+  };
+}
+
+function toReasonUsageLimitsPayload(payload: AdminReasonUsageLimitsPayload) {
+  return {
+    ...(typeof payload.readingLimit === "number" ? {reading_limit: payload.readingLimit} : {}),
+    ...(typeof payload.listeningLimit === "number" ? {listening_limit: payload.listeningLimit} : {})
+  };
+}
+
 function normalizeListItem(payload: unknown): AdminUserListItem {
   const row = asRecord(payload);
   return {
@@ -311,6 +338,27 @@ export const adminUsersService = {
   async sendMessage(userId: string, payload: {subject: string; message: string}) {
     try {
       await adminHttpClient.post(`/users/${userId}/send-message/`, payload);
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async getReasonUsageLimits(userId: string) {
+    try {
+      const response = await adminHttpClient.get<unknown>(`/users/${userId}/reason-usage-limits/`);
+      return normalizeReasonUsageLimits(response.data);
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async updateReasonUsageLimits(userId: string, payload: AdminReasonUsageLimitsPayload) {
+    try {
+      const response = await adminHttpClient.patch<unknown>(
+        `/users/${userId}/reason-usage-limits/`,
+        toReasonUsageLimitsPayload(payload)
+      );
+      return normalizeReasonUsageLimits(response.data);
     } catch (error) {
       throw toAdminApiError(error);
     }

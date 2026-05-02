@@ -8,6 +8,8 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import type {AdminUser} from "@/data/admin-users";
 
+import {UserReasonUsageLimitsCard} from "./UserReasonUsageLimitsCard";
+
 type UserOverviewTabProps = {
   user: AdminUser;
   onSendMessage: (user: AdminUser) => void;
@@ -182,6 +184,8 @@ export function UserOverviewTab({user, onSendMessage, onResetPassword}: UserOver
           )}
         </CardContent>
       </Card>
+
+      <UserReasonUsageLimitsCard userId={user.id} />
 
       <div className="space-y-2 border-t border-border/70 pt-4">
         <Button type="button" className="h-11 w-full rounded-xl font-semibold" onClick={() => onSendMessage(user)}>
