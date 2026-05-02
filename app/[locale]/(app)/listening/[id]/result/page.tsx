@@ -199,6 +199,8 @@ export default function ListeningResultPage() {
     [mistakeReasons, selectedMistakeReasonIds]
   );
   const canUseMistakeReasonAnalysis = isMistakeReasonAllowed || Boolean(mistakeReasonUsageStatus?.already_used_for_attempt);
+  const aiAnalysisNotice =
+    actionNotice || (!canUseMistakeReasonAnalysis ? mistakeReasonUsageStatus?.reset_message || "AI analysis is not available for this attempt yet." : null);
 
   const scrollToAiInsights = () => {
     if (isReasonsLoading) {
@@ -404,14 +406,9 @@ export default function ListeningResultPage() {
         reviewHref={`/${locale}/listening/${testId}?review=1&attempt=${resolvedBackendAttemptId}`}
         reviewVariant="analysis"
         showAiAnalysisButton
+        aiAnalysisNotice={aiAnalysisNotice}
         onAiAnalysisClick={scrollToAiInsights}
       />
-
-      {actionNotice ? (
-        <Card className="border-blue-300/70 bg-blue-100/70 p-3 text-sm text-blue-700 dark:border-blue-500/35 dark:bg-blue-500/10 dark:text-blue-100">
-          {actionNotice}
-        </Card>
-      ) : null}
 
       <ListeningSectionPerformance items={backendReview.sectionPerformance} />
       <ListeningTypePerformance items={backendReview.typePerformance} />

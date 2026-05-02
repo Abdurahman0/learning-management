@@ -8,6 +8,7 @@ import {DEFAULT_GENERAL_SETTINGS, GENERAL_SETTINGS_TIMEZONE_OPTIONS, type Genera
 
 import {AdminSidebar} from "../../_components/AdminSidebar";
 import {GeneralSettingsCard} from "./GeneralSettingsCard";
+import {GlobalReasonUsageLimitsCard} from "./GlobalReasonUsageLimitsCard";
 import {SettingsHeader} from "./SettingsHeader";
 
 const SAVE_TOAST_TIMEOUT_MS = 2400;
@@ -70,6 +71,7 @@ export function SettingsPageClient() {
               onTimezoneChange={(value) => setSettings((current) => ({...current, timezone: value}))}
               onMaintenanceModeChange={(value) => setSettings((current) => ({...current, maintenanceMode: value}))}
             />
+            <GlobalReasonUsageLimitsCard />
           </main>
         </div>
       </div>

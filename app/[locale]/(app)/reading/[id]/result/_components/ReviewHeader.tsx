@@ -27,6 +27,7 @@ type ReviewHeaderProps = {
   resultsHref?: string;
   showAiAnalysisButton?: boolean;
   aiAnalysisLabel?: string;
+  aiAnalysisNotice?: string | null;
   onAiAnalysisClick?: () => void;
 };
 
@@ -48,6 +49,7 @@ export function ReviewHeader({
   resultsHref,
   showAiAnalysisButton = false,
   aiAnalysisLabel,
+  aiAnalysisNotice = null,
   onAiAnalysisClick,
 }: ReviewHeaderProps) {
   const locale = useLocale();
@@ -123,14 +125,21 @@ export function ReviewHeader({
             </div>
 
             {showAiAnalysisButton ? (
-              <Button
-                type="button"
-                onClick={onAiAnalysisClick}
-                className="h-10 rounded-xl border-0 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-500 hover:via-cyan-500 hover:to-emerald-400 hover:text-white dark:shadow-blue-950/40 sm:shrink-0"
-              >
-                <Sparkles className="size-4" />
-                {aiAnalysisLabel ?? (t.has("aiAnalysis") ? t("aiAnalysis") : "AI analysis")}
-              </Button>
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end sm:shrink-0">
+                {aiAnalysisNotice ? (
+                  <p className="max-w-sm rounded-xl border border-amber-300/70 bg-amber-100/80 px-3 py-2 text-xs font-medium text-amber-800 shadow-sm dark:border-amber-500/35 dark:bg-amber-500/10 dark:text-amber-100">
+                    {aiAnalysisNotice}
+                  </p>
+                ) : null}
+                <Button
+                  type="button"
+                  onClick={onAiAnalysisClick}
+                  className="h-10 rounded-xl border-0 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-500 hover:via-cyan-500 hover:to-emerald-400 hover:text-white dark:shadow-blue-950/40"
+                >
+                  <Sparkles className="size-4" />
+                  {aiAnalysisLabel ?? (t.has("aiAnalysis") ? t("aiAnalysis") : "AI analysis")}
+                </Button>
+              </div>
             ) : null}
           </div>
         </div>

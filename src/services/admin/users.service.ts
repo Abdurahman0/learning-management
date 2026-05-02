@@ -362,6 +362,24 @@ export const adminUsersService = {
     } catch (error) {
       throw toAdminApiError(error);
     }
+  },
+
+  async getGlobalReasonUsageLimits() {
+    try {
+      const response = await adminHttpClient.get<unknown>("/reason-usage-limits/");
+      return normalizeReasonUsageLimits(response.data);
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async updateGlobalReasonUsageLimits(payload: AdminReasonUsageLimitsPayload) {
+    try {
+      const response = await adminHttpClient.patch<unknown>("/reason-usage-limits/", toReasonUsageLimitsPayload(payload));
+      return normalizeReasonUsageLimits(response.data);
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
   }
 };
 

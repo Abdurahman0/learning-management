@@ -259,6 +259,8 @@ export function ReadingSummaryPageClient() {
     [mistakeReasons, selectedMistakeReasonIds]
   );
   const canUseMistakeReasonAnalysis = isMistakeReasonAllowed || Boolean(mistakeReasonUsageStatus?.already_used_for_attempt);
+  const aiAnalysisNotice =
+    actionNotice || (!canUseMistakeReasonAnalysis ? mistakeReasonUsageStatus?.reset_message || "AI analysis is not available for this attempt yet." : null);
 
   const handleAiAnalysisClick = () => {
     if (isReasonsLoading) {
@@ -499,6 +501,7 @@ export function ReadingSummaryPageClient() {
         bandScore={attemptDetail?.band_score ?? reviewPayload?.band_score ?? null}
         reviewVariant="analysis"
         showAiAnalysisButton
+        aiAnalysisNotice={aiAnalysisNotice}
         onAiAnalysisClick={handleAiAnalysisClick}
       />
 
@@ -569,12 +572,6 @@ export function ReadingSummaryPageClient() {
               );
             })}
           </div>
-        </Card>
-      ) : null}
-
-      {actionNotice ? (
-        <Card className="border-blue-300/70 bg-blue-100/70 p-3 text-sm text-blue-700 dark:border-blue-500/35 dark:bg-blue-500/10 dark:text-blue-100">
-          {actionNotice}
         </Card>
       ) : null}
 

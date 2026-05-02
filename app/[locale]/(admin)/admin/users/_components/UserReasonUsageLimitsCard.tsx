@@ -93,10 +93,16 @@ export function UserReasonUsageLimitsCard({userId}: UserReasonUsageLimitsCardPro
     setError(null);
     setNotice(null);
     try {
-      const response = await adminUsersService.updateReasonUsageLimits(userId, {
-        readingLimit: nextReadingLimit,
-        listeningLimit: nextListeningLimit
-      });
+      const payload = {
+        ...(limits?.readingLimit !== nextReadingLimit ? {readingLimit: nextReadingLimit} : {}),
+        ...(limits?.listeningLimit !== nextListeningLimit ? {listeningLimit: nextListeningLimit} : {})
+      };
+      if (!Object.keys(payload).length) {
+        setNotice("No limit changes to save.");
+        setIsSaving(false);
+        return;
+      }
+      const response = await adminUsersService.updateReasonUsageLimits(userId, payload);
       setLimits(response);
       setReadingLimit(String(response.readingLimit));
       setListeningLimit(String(response.listeningLimit));
