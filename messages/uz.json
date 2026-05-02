@@ -2077,14 +2077,14 @@
                                                  "category":  "Xato turi",
                                                  "solution":  "{number}-yechim",
                                                  "link":  "Resurs havolasi",
-                                                 "resourceHint":  "Faqat bitta resurs qo'shing: havola yoki 1 MB gacha fayl.",
+                                                 "resourceHint":  "Ixtiyoriy: havola yoki 1 MB gacha bitta fayl qo'shishingiz mumkin.",
                                                  "file":  "Biriktirma",
                                                "existingFile":  "Mavjud fayl",
                                                "selectedFile":  "Tanlangan fayl",
                                                "clearSelectedFile":  "Tozalash",
                                                "removeFile":  "Faylni olib tashlash",
                                                "undoRemoveFile":  "Bekor qilish",
-                                               "fileWillBeRemoved":  "Saqlaganingizda bu yuklangan fayl olib tashlanadi. Saqlashdan oldin havola qo'shing yoki yangi fayl yuklang."
+                                               "fileWillBeRemoved":  "Saqlaganingizda bu yuklangan fayl olib tashlanadi."
                                            },
                                   "deleteModal":  {
                                                       "title":  "Xato sababini o'chirish",
@@ -2098,7 +2098,7 @@
                                                   "reasonRequired":  "Sabab majburiy.",
                                                   "categoryRequired":  "Xato turi majburiy.",
                                                   "generalSolutionRequired":  "Umumiy yechim majburiy.",
-                                                  "resourceRequired":  "Bitta resurs qo'shing: havola yoki fayl.",
+                                                  "resourceRequired":  "Resurs ixtiyoriy.",
                                                   "singleResourceOnly":  "Fayl yoki havoladan faqat bittasini tanlang.",
                                                   "fileTooLarge":  "Fayl 1 MB dan katta. Kichikroq fayl yuklang.",
                                                   "fileRead":  "Bu faylni o'qib yoki siqib bo'lmadi."

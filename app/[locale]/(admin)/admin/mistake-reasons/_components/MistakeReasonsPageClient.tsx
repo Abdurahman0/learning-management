@@ -239,10 +239,6 @@ export function MistakeReasonsPageClient() {
       setError(t("errors.singleResourceOnly"));
       return;
     }
-    if (!hasFileResource && !hasLinkResource) {
-      setError(t("errors.resourceRequired"));
-      return;
-    }
 
     setIsSaving(true);
     setError(null);

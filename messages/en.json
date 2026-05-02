@@ -2077,14 +2077,14 @@
                                                  "category":  "Mistake type",
                                                  "solution":  "Solution {number}",
                                                  "link":  "Resource link",
-                                                 "resourceHint":  "Add exactly one resource: either a link or one file up to 1 MB.",
+                                                 "resourceHint":  "Optional: add either a link or one file up to 1 MB.",
                                                  "file":  "Attachment",
                                                "existingFile":  "Existing file",
                                                "selectedFile":  "Selected file",
                                                "clearSelectedFile":  "Clear",
                                                "removeFile":  "Remove file",
                                                "undoRemoveFile":  "Undo",
-                                               "fileWillBeRemoved":  "This uploaded file will be removed when you save. Add a link or upload a replacement file before saving."
+                                               "fileWillBeRemoved":  "This uploaded file will be removed when you save."
                                            },
                                   "deleteModal":  {
                                                       "title":  "Delete mistake reason",
@@ -2098,7 +2098,7 @@
                                                   "reasonRequired":  "Reason is required.",
                                                   "categoryRequired":  "Mistake type is required.",
                                                   "generalSolutionRequired":  "General solution is required.",
-                                                  "resourceRequired":  "Add one resource: either a link or a file.",
+                                                  "resourceRequired":  "Resource is optional.",
                                                   "singleResourceOnly":  "Use either a file or a link, not both.",
                                                   "fileTooLarge":  "File is bigger than 1 MB. Please upload a smaller file.",
                                                   "fileRead":  "Could not read or compress this file."
