@@ -19,6 +19,8 @@ type PostTestMistakeReasonsPanelProps = {
   isLoading: boolean;
   isAnalyzing: boolean;
   error: string | null;
+  canAnalyze?: boolean;
+  disabledReason?: string | null;
   categoryQuestionNumbers?: CategoryQuestionMap;
   onOpenChange: (open: boolean) => void;
   onToggleReason: (reason: MistakeReasonDetail) => void;
@@ -53,6 +55,8 @@ export function PostTestMistakeReasonsPanel({
   isLoading,
   isAnalyzing,
   error,
+  canAnalyze = true,
+  disabledReason = null,
   categoryQuestionNumbers,
   onOpenChange,
   onToggleReason,
@@ -211,7 +215,11 @@ export function PostTestMistakeReasonsPanel({
           ) : (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className={cn("text-sm", touched && !hasSelection ? "text-rose-600 dark:text-rose-300" : "text-muted-foreground")}>
-                {hasSelection ? t("modal.selected", {count: selectedReasonIds.length}) : t("modal.selectHint")}
+                {!canAnalyze && disabledReason
+                  ? disabledReason
+                  : hasSelection
+                    ? t("modal.selected", {count: selectedReasonIds.length})
+                    : t("modal.selectHint")}
               </p>
               <div className="flex flex-wrap gap-2 sm:justify-end">
                 <Button type="button" variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
@@ -220,7 +228,7 @@ export function PostTestMistakeReasonsPanel({
                 <Button
                   type="button"
                   className="rounded-xl bg-blue-600 px-5 hover:bg-blue-500"
-                  disabled={!hasSelection}
+                  disabled={!hasSelection || !canAnalyze}
                   onClick={() => {
                     setTouched(true);
                     onAnalyze();

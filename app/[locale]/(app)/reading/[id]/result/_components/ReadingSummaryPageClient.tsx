@@ -14,7 +14,13 @@ import {gradeTest, type GradeableQuestion} from "@/lib/grading";
 import {loadAttemptResult} from "@/lib/test-attempt-storage";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
-import type {MistakeReasonCategory, MistakeReasonDetail, StudentAttemptDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
+import type {
+  MistakeReasonCategory,
+  MistakeReasonDetail,
+  MistakeReasonUsageStatus,
+  StudentAttemptDetail,
+  StudentAttemptReviewResponse
+} from "@/src/services/student/types";
 import {QuestionTypePerformance, type QuestionTypePerformanceItem} from "./QuestionTypePerformance";
 import {ReviewAiCoachCard} from "./ReviewAiCoachCard";
 import {ReviewHeader} from "./ReviewHeader";
@@ -94,6 +100,9 @@ export function ReadingSummaryPageClient() {
   const [mistakeReasons, setMistakeReasons] = useState<MistakeReasonDetail[]>([]);
   const [selectedMistakeReason, setSelectedMistakeReason] = useState<MistakeReasonDetail | null>(null);
   const [selectedMistakeReasonIds, setSelectedMistakeReasonIds] = useState<string[]>([]);
+  const [analyzedMistakeReasons, setAnalyzedMistakeReasons] = useState<MistakeReasonDetail[]>([]);
+  const [mistakeReasonUsageStatus, setMistakeReasonUsageStatus] = useState<MistakeReasonUsageStatus | null>(null);
+  const [isMistakeReasonAllowed, setIsMistakeReasonAllowed] = useState(true);
   const [isReasonsLoading, setIsReasonsLoading] = useState(Boolean(resolvedBackendAttemptId));
   const [mistakeReasonsError, setMistakeReasonsError] = useState<string | null>(null);
 
@@ -152,12 +161,16 @@ export function ReadingSummaryPageClient() {
       setIsReasonsLoading(true);
       setMistakeReasonsError(null);
       try {
-        const response = await studentMistakeReasonsService.listForAttempt(resolvedBackendAttemptId);
+        const response = await studentMistakeReasonsService.listForAttemptWithUsage(resolvedBackendAttemptId);
         if (!active) return;
-        setMistakeReasons(response);
+        setMistakeReasons(response.results);
+        setMistakeReasonUsageStatus(response.usage_status);
+        setIsMistakeReasonAllowed(response.is_ai_allowed);
       } catch (error) {
         if (!active) return;
         setMistakeReasons([]);
+        setMistakeReasonUsageStatus(null);
+        setIsMistakeReasonAllowed(false);
         setMistakeReasonsError(error instanceof Error ? error.message : "Could not load mistake reasons.");
       } finally {
         if (active) {
@@ -250,14 +263,22 @@ export function ReadingSummaryPageClient() {
     [mistakeReasons, selectedMistakeReasonIds]
   );
 
-  const handleAnalyzeMistakes = () => {
-    if (!selectedMistakeReasons.length) return;
+  const handleAnalyzeMistakes = async () => {
+    if (!selectedMistakeReasons.length || !isMistakeReasonAllowed || !resolvedBackendAttemptId) return;
     setIsMistakeAnalyzing(true);
-    window.setTimeout(() => {
+    setMistakeReasonsError(null);
+    try {
+      const response = await studentMistakeReasonsService.selectForAttempt(resolvedBackendAttemptId, selectedMistakeReasonIds);
+      const detailedReasons = response.results.length ? response.results : selectedMistakeReasons;
+      setMistakeReasonUsageStatus(response.usage_status);
+      setIsMistakeReasonAllowed(response.is_ai_allowed || Boolean(response.usage_status?.already_used_for_attempt));
+      setAnalyzedMistakeReasons(detailedReasons);
+      setSelectedMistakeReason(detailedReasons[0] ?? null);
+
+      window.setTimeout(() => {
       setIsMistakeAnalyzing(false);
       setMistakeModalOpen(false);
       setShowAiInsights(true);
-      setSelectedMistakeReason(selectedMistakeReasons[0] ?? null);
       window.setTimeout(() => {
         const node = aiInsightsRef.current;
         if (node) {
@@ -267,7 +288,11 @@ export function ReadingSummaryPageClient() {
         const fallback = document.getElementById("ai-insights");
         fallback?.scrollIntoView({behavior: "smooth", block: "start"});
       }, 80);
-    }, 1100);
+      }, 900);
+    } catch (error) {
+      setIsMistakeAnalyzing(false);
+      setMistakeReasonsError(error instanceof Error ? error.message : "Could not analyze selected mistake reasons.");
+    }
   };
 
   const categoryQuestionNumbers = useMemo(
@@ -489,6 +514,8 @@ export function ReadingSummaryPageClient() {
         isLoading={isReasonsLoading}
         isAnalyzing={isMistakeAnalyzing}
         error={mistakeReasonsError}
+        canAnalyze={isMistakeReasonAllowed || Boolean(mistakeReasonUsageStatus?.already_used_for_attempt)}
+        disabledReason={mistakeReasonUsageStatus?.reset_message || null}
         categoryQuestionNumbers={categoryQuestionNumbers}
         onOpenChange={setMistakeModalOpen}
         onToggleReason={handleMistakeReasonSelect}
@@ -561,7 +588,7 @@ export function ReadingSummaryPageClient() {
               coach={dynamicCoach}
               mistakeBreakdown={dynamicMistakeBreakdown}
               selectedMistakeReason={selectedMistakeReason}
-              selectedMistakeReasons={selectedMistakeReasons}
+              selectedMistakeReasons={analyzedMistakeReasons}
               onAction={(message) => setActionNotice(tReadingReview("actionPlaceholder", {action: message}))}
             />
           </div>

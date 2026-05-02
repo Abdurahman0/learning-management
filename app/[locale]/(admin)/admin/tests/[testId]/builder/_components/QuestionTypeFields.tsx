@@ -122,11 +122,12 @@ export function QuestionTypeFields({
     }
     return Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : String(question.correctAnswer ?? "");
   }, [question]);
+  const hasSummaryWordBankOptions = summaryWordBankOptions.length > 0;
   const summaryAnswerOptions = useMemo(
-    () => buildSummaryAnswerOptions(summaryWordBankOptions, answerValue.trim()),
-    [answerValue, summaryWordBankOptions]
+    () => (hasSummaryWordBankOptions ? buildSummaryAnswerOptions(summaryWordBankOptions, answerValue.trim()) : []),
+    [answerValue, hasSummaryWordBankOptions, summaryWordBankOptions]
   );
-  const useSummaryWordBankAnswerSelect = question.type === "summary_completion" && summaryAnswerOptions.length > 0;
+  const useSummaryWordBankAnswerSelect = question.type === "summary_completion" && hasSummaryWordBankOptions && summaryAnswerOptions.length > 0;
 
   return (
     <div className="space-y-4">

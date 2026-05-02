@@ -1,5 +1,12 @@
 import {studentHttpClient, toStudentApiError} from "./httpClient";
-import type {MistakeReasonCategory, MistakeReasonDetail, MistakeReasonModule, StudentMistakeAdvice} from "./types";
+import type {
+  MistakeReasonAttemptResponse,
+  MistakeReasonCategory,
+  MistakeReasonDetail,
+  MistakeReasonModule,
+  MistakeReasonUsageStatus,
+  StudentMistakeAdvice
+} from "./types";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -66,6 +73,31 @@ function normalizeResourceType(value: unknown): "file" | "link" | null {
   return null;
 }
 
+function toNumberSafe(value: unknown, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function normalizeUsageStatus(value: unknown): MistakeReasonUsageStatus | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const module = normalizeModule(record.module);
+  if (module === "BOTH") return null;
+
+  return {
+    is_ai_allowed: Boolean(record.is_ai_allowed),
+    module,
+    limit: toNumberSafe(record.limit),
+    used_count: toNumberSafe(record.used_count),
+    remaining_count: toNumberSafe(record.remaining_count),
+    period_starts_at: toStringSafe(record.period_starts_at) || null,
+    period_ends_at: toStringSafe(record.period_ends_at) || null,
+    already_used_for_attempt: Boolean(record.already_used_for_attempt),
+    reset_message: toStringSafe(record.reset_message)
+  };
+}
+
 function normalizeDetail(value: unknown): MistakeReasonDetail | null {
   const record = asRecord(value);
   if (!record) return null;
@@ -113,6 +145,21 @@ function normalizeAdvice(value: unknown): StudentMistakeAdvice | null {
   };
 }
 
+function normalizeAttemptResponse(value: unknown): MistakeReasonAttemptResponse {
+  const record = asRecord(value);
+  const results = asArray(value).map(normalizeDetail).filter((item): item is MistakeReasonDetail => Boolean(item));
+  const usageStatus = normalizeUsageStatus(record?.usage_status);
+  const isAllowed = typeof record?.is_ai_allowed === "boolean"
+    ? record.is_ai_allowed
+    : (usageStatus?.is_ai_allowed ?? true);
+
+  return {
+    is_ai_allowed: isAllowed,
+    usage_status: usageStatus,
+    results
+  };
+}
+
 function resolveAdviceNextPath(nextUrl: string | null) {
   if (!nextUrl) return null;
 
@@ -130,12 +177,30 @@ function resolveAdviceNextPath(nextUrl: string | null) {
 
 export const studentMistakeReasonsService = {
   async listForAttempt(attemptId: string, category?: MistakeReasonCategory) {
+    const response = await this.listForAttemptWithUsage(attemptId, category);
+    return response.results;
+  },
+
+  async listForAttemptWithUsage(attemptId: string, category?: MistakeReasonCategory) {
     try {
       const normalizedAttemptId = encodeURIComponent(attemptId);
       const response = await studentHttpClient.get(`/attempts/${normalizedAttemptId}/mistake-reasons/`, {
         params: category ? {mistake_category: category} : undefined
       });
-      return asArray(response.data).map(normalizeDetail).filter((item): item is MistakeReasonDetail => Boolean(item));
+      return normalizeAttemptResponse(response.data);
+    } catch (error) {
+      throw toStudentApiError(error);
+    }
+  },
+
+  async selectForAttempt(attemptId: string, reasonIds: string[]) {
+    try {
+      const normalizedAttemptId = encodeURIComponent(attemptId);
+      const uniqueReasonIds = [...new Set(reasonIds.map((reasonId) => reasonId.trim()).filter(Boolean))];
+      const response = await studentHttpClient.post(`/attempts/${normalizedAttemptId}/mistake-reasons/select/`, {
+        reason_ids: uniqueReasonIds
+      });
+      return normalizeAttemptResponse(response.data);
     } catch (error) {
       throw toStudentApiError(error);
     }

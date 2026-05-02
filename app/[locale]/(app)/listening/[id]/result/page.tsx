@@ -14,7 +14,12 @@ import { loadAttemptResult } from "@/lib/test-attempt-storage";
 import { getListeningTestById } from "@/data/listening-tests-full";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
-import type {MistakeReasonCategory, MistakeReasonDetail, StudentAttemptReviewResponse} from "@/src/services/student/types";
+import type {
+  MistakeReasonCategory,
+  MistakeReasonDetail,
+  MistakeReasonUsageStatus,
+  StudentAttemptReviewResponse
+} from "@/src/services/student/types";
 import { ListeningResultSummaryHeader } from "./_components/ListeningResultSummaryHeader";
 import {
   ListeningSectionPerformance,
@@ -90,6 +95,9 @@ export default function ListeningResultPage() {
   const [mistakeReasons, setMistakeReasons] = useState<MistakeReasonDetail[]>([]);
   const [selectedMistakeReason, setSelectedMistakeReason] = useState<MistakeReasonDetail | null>(null);
   const [selectedMistakeReasonIds, setSelectedMistakeReasonIds] = useState<string[]>([]);
+  const [analyzedMistakeReasons, setAnalyzedMistakeReasons] = useState<MistakeReasonDetail[]>([]);
+  const [mistakeReasonUsageStatus, setMistakeReasonUsageStatus] = useState<MistakeReasonUsageStatus | null>(null);
+  const [isMistakeReasonAllowed, setIsMistakeReasonAllowed] = useState(true);
   const [isReasonsLoading, setIsReasonsLoading] = useState(Boolean(resolvedBackendAttemptId));
   const [mistakeReasonsError, setMistakeReasonsError] = useState<string | null>(null);
 
@@ -143,12 +151,16 @@ export default function ListeningResultPage() {
       setIsReasonsLoading(true);
       setMistakeReasonsError(null);
       try {
-        const response = await studentMistakeReasonsService.listForAttempt(resolvedBackendAttemptId);
+        const response = await studentMistakeReasonsService.listForAttemptWithUsage(resolvedBackendAttemptId);
         if (!active) return;
-        setMistakeReasons(response);
+        setMistakeReasons(response.results);
+        setMistakeReasonUsageStatus(response.usage_status);
+        setIsMistakeReasonAllowed(response.is_ai_allowed);
       } catch (error) {
         if (!active) return;
         setMistakeReasons([]);
+        setMistakeReasonUsageStatus(null);
+        setIsMistakeReasonAllowed(false);
         setMistakeReasonsError(error instanceof Error ? error.message : "Could not load mistake reasons.");
       } finally {
         if (active) {
@@ -184,18 +196,30 @@ export default function ListeningResultPage() {
     [mistakeReasons, selectedMistakeReasonIds]
   );
 
-  const handleAnalyzeMistakes = () => {
-    if (!selectedMistakeReasons.length) return;
+  const handleAnalyzeMistakes = async () => {
+    if (!selectedMistakeReasons.length || !isMistakeReasonAllowed || !resolvedBackendAttemptId) return;
     setIsMistakeAnalyzing(true);
-    window.setTimeout(() => {
+    setMistakeReasonsError(null);
+    try {
+      const response = await studentMistakeReasonsService.selectForAttempt(resolvedBackendAttemptId, selectedMistakeReasonIds);
+      const detailedReasons = response.results.length ? response.results : selectedMistakeReasons;
+      setMistakeReasonUsageStatus(response.usage_status);
+      setIsMistakeReasonAllowed(response.is_ai_allowed || Boolean(response.usage_status?.already_used_for_attempt));
+      setAnalyzedMistakeReasons(detailedReasons);
+      setSelectedMistakeReason(detailedReasons[0] ?? null);
+
+      window.setTimeout(() => {
       setIsMistakeAnalyzing(false);
       setMistakeModalOpen(false);
       setShowAiInsights(true);
-      setSelectedMistakeReason(selectedMistakeReasons[0] ?? null);
       window.setTimeout(() => {
         aiInsightsRef.current?.scrollIntoView({behavior: "smooth", block: "start"});
       }, 80);
-    }, 1100);
+      }, 900);
+    } catch (error) {
+      setIsMistakeAnalyzing(false);
+      setMistakeReasonsError(error instanceof Error ? error.message : "Could not analyze selected mistake reasons.");
+    }
   };
 
   const categoryQuestionNumbers = useMemo(
@@ -375,17 +399,19 @@ export default function ListeningResultPage() {
         isLoading={isReasonsLoading}
         isAnalyzing={isMistakeAnalyzing}
         error={mistakeReasonsError}
+        canAnalyze={isMistakeReasonAllowed || Boolean(mistakeReasonUsageStatus?.already_used_for_attempt)}
+        disabledReason={mistakeReasonUsageStatus?.reset_message || null}
         categoryQuestionNumbers={categoryQuestionNumbers}
         onOpenChange={setMistakeModalOpen}
         onToggleReason={handleMistakeReasonSelect}
         onAnalyze={handleAnalyzeMistakes}
       />
 
-      {showAiInsights ? (
-        <div ref={aiInsightsRef} id="ai-insights" className="scroll-mt-24">
-          <MistakeReasonAiResponseCard selectedReason={selectedMistakeReason} selectedReasons={selectedMistakeReasons} />
-        </div>
-      ) : null}
+        {showAiInsights ? (
+          <div ref={aiInsightsRef} id="ai-insights" className="scroll-mt-24">
+          <MistakeReasonAiResponseCard selectedReason={selectedMistakeReason} selectedReasons={analyzedMistakeReasons} />
+          </div>
+        ) : null}
     </section>
   );
 }

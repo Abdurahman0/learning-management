@@ -529,6 +529,24 @@ export type MistakeReasonDetail = MistakeReasonBrief & {
   updated_at: string | null;
 };
 
+export type MistakeReasonUsageStatus = {
+  is_ai_allowed: boolean;
+  module: "READING" | "LISTENING";
+  limit: number;
+  used_count: number;
+  remaining_count: number;
+  period_starts_at: string | null;
+  period_ends_at: string | null;
+  already_used_for_attempt: boolean;
+  reset_message: string;
+};
+
+export type MistakeReasonAttemptResponse = {
+  is_ai_allowed: boolean;
+  usage_status: MistakeReasonUsageStatus | null;
+  results: MistakeReasonDetail[];
+};
+
 export type StudentMistakeAdvice = {
   id: string;
   slot: number;

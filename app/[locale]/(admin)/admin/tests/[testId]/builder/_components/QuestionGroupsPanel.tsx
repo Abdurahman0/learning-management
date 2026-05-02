@@ -145,7 +145,7 @@ function getStoredWordBank(value: unknown) {
 }
 
 function isPlaceholderWordBank(values: string[]) {
-  return values.length === 1 && values[0]?.toLowerCase() === "word1";
+  return values.length === 1 && /^word\s*1$/i.test(values[0] ?? "");
 }
 
 function toTableRowsText(value: unknown) {

@@ -440,9 +440,11 @@ function extractSharedChoiceOptions(groupContent: unknown) {
 function extractSummaryWordBankOptions(groupContent: unknown) {
   const content = asRecord(groupContent);
   const rows = Array.isArray(content.word_bank) ? content.word_bank : [];
-  return rows
+  const options = rows
     .map((item) => toStringSafe(item).trim())
     .filter(Boolean);
+  if (options.length === 1 && /^word\s*1$/i.test(options[0])) return [];
+  return options;
 }
 
 function buildTemplateText(from: number, to: number) {
@@ -682,11 +684,12 @@ function ensureGroupContentForApi(
     const wordBank = hasWordBank
       ? (content.word_bank as unknown[]).map((item) => toStringSafe(item).trim()).filter(Boolean)
       : null;
+    const normalizedWordBank = wordBank && wordBank.length === 1 && /^word\s*1$/i.test(wordBank[0]) ? [] : wordBank;
     const fallbackSummary = asRecord(fallback);
 
     return {
       summary_text: summaryText || toStringSafe(fallbackSummary.summary_text),
-      word_bank: wordBank && wordBank.length ? wordBank : null
+      word_bank: normalizedWordBank && normalizedWordBank.length ? normalizedWordBank : null
     };
   }
 
