@@ -3328,10 +3328,12 @@ function ReadingTestClient({
                             >
                               <div className="mb-2 flex items-start justify-between gap-2">
                                 <p className="min-w-0 wrap-break-word text-base font-medium leading-relaxed text-foreground">
-                                  {isSummary || isTable || isListSelection ? (
+                                  {isSummary || isTable ? (
                                     <>
                                       {visibleGroupQuestions[0]?.number}-{visibleGroupQuestions[visibleGroupQuestions.length - 1]?.number}.{" "}
                                     </>
+                                  ) : isListSelection ? (
+                                    null
                                   ) : (
                                     <>{question.number}.{" "}</>
                                   )}
