@@ -20,6 +20,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
+import { formatAnswerForDisplay } from "@/lib/answer-display";
 import {
   clearLatestAttemptProgress,
   createAttemptId,
@@ -3267,9 +3268,7 @@ function ReadingTestClient({
                           const answered = isAnswered(value);
                           const isCorrect = result?.isCorrect;
                           const isMarked = marked.has(question.id);
-                          const reviewedCorrectAnswer = Array.isArray(reviewedQuestion.correctAnswer)
-                            ? reviewedQuestion.correctAnswer.join(", ")
-                            : reviewedQuestion.correctAnswer;
+                          const reviewedCorrectAnswer = formatAnswerForDisplay(reviewedQuestion.correctAnswer);
                           const reviewedExplanation = reviewedQuestion.explanation?.trim()
                             ? reviewedQuestion.explanation
                             : (t.has("notAvailable") ? t("notAvailable") : "Not available");
@@ -3388,7 +3387,7 @@ function ReadingTestClient({
                                     Marked
                                   </Badge>
                                 ) : null}
-                                {reviewMode && reviewAnswersVisible && !isSharedQuestionBlock ? (
+                                {reviewMode && !isSharedQuestionBlock ? (
                                   <div className="flex shrink-0 items-start gap-1.5">
                                     <Button
                                       type="button"
@@ -3432,13 +3431,13 @@ function ReadingTestClient({
                                         type="radio"
                                         name={question.id}
                                         value={option}
-                                        checked={value === option}
+                                        checked={formatAnswerForDisplay(typeof value === "string" ? value : "") === formatAnswerForDisplay(option)}
                                         disabled={reviewMode}
                                         onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
                                         className="size-4 accent-blue-600"
                                       />
                                       <HighlightableText
-                                        text={option}
+                                        text={formatAnswerForDisplay(option)}
                                         userHighlights={getQuestionLocalHighlights(
                                           question.id,
                                           tfngOptionStarts[optionIndex] ?? 0,
@@ -3585,16 +3584,14 @@ function ReadingTestClient({
                                       })}
                                     </div>
 
-                                    {reviewMode && reviewAnswersVisible ? (
+                                    {reviewMode ? (
                                       <div className="space-y-2">
                                         {listSelectionQuestions.map((targetQuestion) => {
                                           const targetReviewedQuestion =
                                             reviewQuestionById.get(targetQuestion.id)
                                             ?? reviewQuestionByNumber.get(targetQuestion.number)
                                             ?? targetQuestion;
-                                          const targetReviewedCorrectAnswer = Array.isArray(targetReviewedQuestion.correctAnswer)
-                                            ? targetReviewedQuestion.correctAnswer.join(", ")
-                                            : targetReviewedQuestion.correctAnswer;
+                                          const targetReviewedCorrectAnswer = formatAnswerForDisplay(targetReviewedQuestion.correctAnswer);
                                           const targetReviewedExplanation = targetReviewedQuestion.explanation?.trim()
                                             ? targetReviewedQuestion.explanation
                                             : (t.has("notAvailable") ? t("notAvailable") : "Not available");
@@ -3606,8 +3603,13 @@ function ReadingTestClient({
                                             >
                                               <div className="flex flex-wrap items-center justify-between gap-2">
                                                 <p className="text-xs font-semibold text-muted-foreground">
-                                                  Q{targetQuestion.number}: {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}{" "}
-                                                  <span className="text-foreground">{targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}</span>
+                                                  Q{targetQuestion.number}
+                                                  {reviewAnswersVisible ? (
+                                                    <>
+                                                      : {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}{" "}
+                                                      <span className="text-foreground">{targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}</span>
+                                                    </>
+                                                  ) : null}
                                                 </p>
                                                 <div className="flex flex-wrap items-center gap-1.5">
                                                   <Button
@@ -3784,9 +3786,7 @@ function ReadingTestClient({
                                                       reviewQuestionById.get(targetQuestion.id)
                                                       ?? reviewQuestionByNumber.get(targetQuestion.number)
                                                       ?? targetQuestion;
-                                                    const targetReviewedCorrectAnswer = Array.isArray(targetReviewedQuestion.correctAnswer)
-                                                      ? targetReviewedQuestion.correctAnswer.join(", ")
-                                                      : targetReviewedQuestion.correctAnswer;
+                                                    const targetReviewedCorrectAnswer = formatAnswerForDisplay(targetReviewedQuestion.correctAnswer);
                                                     const targetReviewedExplanation = targetReviewedQuestion.explanation?.trim()
                                                       ? targetReviewedQuestion.explanation
                                                       : (t.has("notAvailable") ? t("notAvailable") : "Not available");
@@ -3968,9 +3968,7 @@ function ReadingTestClient({
                                               reviewQuestionById.get(targetQuestion.id)
                                               ?? reviewQuestionByNumber.get(targetQuestion.number)
                                               ?? targetQuestion;
-                                            const targetReviewedCorrectAnswer = Array.isArray(targetReviewedQuestion.correctAnswer)
-                                              ? targetReviewedQuestion.correctAnswer.join(", ")
-                                              : targetReviewedQuestion.correctAnswer;
+                                            const targetReviewedCorrectAnswer = formatAnswerForDisplay(targetReviewedQuestion.correctAnswer);
                                             const targetReviewedExplanation = targetReviewedQuestion.explanation?.trim()
                                               ? targetReviewedQuestion.explanation
                                               : (t.has("notAvailable") ? t("notAvailable") : "Not available");

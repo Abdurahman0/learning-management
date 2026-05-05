@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { formatAnswerForDisplay } from "@/lib/answer-display";
 import { cn } from "@/lib/utils";
 import type { ReadingQuestion } from "@/data/reading-tests";
 import type { GradeTestResult } from "@/lib/grading";
@@ -26,9 +27,7 @@ type ReviewQuestionsPanelProps = {
 type QuestionStatus = "correct" | "incorrect" | "skipped";
 
 function normalizeAnswerValue(value: string | string[] | null | undefined) {
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.join(", ");
-  return "";
+  return formatAnswerForDisplay(value);
 }
 
 function getQuestionStatus(grading: GradeTestResult, questionId: string): QuestionStatus {
@@ -154,9 +153,7 @@ export function ReviewQuestionsPanel({
           const statusStyles = getStatusStyles(status);
           const isOpen = expanded.has(question.id);
           const userAnswer = normalizeAnswerValue(answers[question.id]);
-          const correctAnswer = Array.isArray(question.correctAnswer)
-            ? question.correctAnswer.join(", ")
-            : question.correctAnswer;
+          const correctAnswer = formatAnswerForDisplay(question.correctAnswer);
           const evidenceSnippet = question.evidenceSpans[0]?.phrase ?? "";
 
           return (

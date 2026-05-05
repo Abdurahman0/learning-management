@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { InlineBoldText } from "@/components/test/InlineBoldText";
 import type { ListeningBlock } from "@/data/listening-tests-full";
+import { formatAnswerForDisplay } from "@/lib/answer-display";
 import type { FlattenedListeningQuestion } from "@/lib/listening-questions";
 import type { GradeTestResult } from "@/lib/grading";
 import { cn } from "@/lib/utils";
@@ -79,9 +80,7 @@ function tokenizeTemplateTextWithBoldAndPlaceholders(text: string): TemplateToke
 }
 
 function normalizeAnswerValue(value: string | string[] | null | undefined) {
-  if (typeof value === "string") return value;
-  if (Array.isArray(value)) return value.join(", ");
-  return "";
+  return formatAnswerForDisplay(value);
 }
 
 function getQuestionStatus(
@@ -151,9 +150,7 @@ export function ListeningQuestionAnalysisPanel({
     const cache = new Map<string, string>();
     for (const question of questions) {
       const meta = answerMetaByQuestionId[question.id];
-      const value = Array.isArray(meta?.correctAnswer)
-        ? meta.correctAnswer.join(", ")
-        : (meta?.correctAnswer ?? "");
+      const value = formatAnswerForDisplay(meta?.correctAnswer);
       cache.set(question.id, value);
     }
     return cache;
@@ -901,9 +898,7 @@ export function ListeningQuestionAnalysisPanel({
           const answerMeta = answerMetaByQuestionId[question.id];
           const isOpen = expanded.has(question.id);
           const userAnswer = normalizeAnswerValue(answers[question.id]);
-          const correctAnswer = Array.isArray(answerMeta?.correctAnswer)
-            ? answerMeta.correctAnswer.join(", ")
-            : (answerMeta?.correctAnswer ?? "");
+          const correctAnswer = formatAnswerForDisplay(answerMeta?.correctAnswer);
           const explanationText = (answerMeta?.explanation ?? "").trim();
 
           const rawAnswer = answers[question.id];
