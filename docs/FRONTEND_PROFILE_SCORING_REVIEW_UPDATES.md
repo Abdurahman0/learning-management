@@ -644,3 +644,5 @@ Backend operators can run `python manage.py seed_mistake_reasons` (or `--overwri
 - Optionally run `python manage.py seed_mistake_reasons` to bootstrap content.
 - Frontend: stop treating `403` from `GET /mistake-reasons/` as a blocking error; gate the **Select** action on `is_ai_allowed`.
 - Frontend (admin): wire up the new `users/{user_id}/reason-usage-limits/` endpoint in the per-user admin detail screen (GET + PATCH only).
+
+finish
