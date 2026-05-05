@@ -439,6 +439,8 @@ function extractSharedChoiceOptions(groupContent: unknown) {
 
 function extractSummaryWordBankOptions(groupContent: unknown) {
   const content = asRecord(groupContent);
+  const wordBankEnabled = content.word_bank_enabled === true || content.summary_word_bank_enabled === true;
+  if (!wordBankEnabled) return [];
   const rows = Array.isArray(content.word_bank) ? content.word_bank : [];
   const options = rows
     .map((item) => toStringSafe(item).trim())
@@ -680,6 +682,7 @@ function ensureGroupContentForApi(
 
   if (type === "summary_completion") {
     const summaryText = toStringSafe(content.summary_text).trim();
+    const wordBankEnabled = content.word_bank_enabled === true || content.summary_word_bank_enabled === true;
     const hasWordBank = Array.isArray(content.word_bank);
     const wordBank = hasWordBank
       ? (content.word_bank as unknown[]).map((item) => toStringSafe(item).trim()).filter(Boolean)
@@ -689,7 +692,8 @@ function ensureGroupContentForApi(
 
     return {
       summary_text: summaryText || toStringSafe(fallbackSummary.summary_text),
-      word_bank: normalizedWordBank && normalizedWordBank.length ? normalizedWordBank : null
+      word_bank_enabled: wordBankEnabled,
+      word_bank: wordBankEnabled && normalizedWordBank && normalizedWordBank.length ? normalizedWordBank : null
     };
   }
 

@@ -354,6 +354,9 @@ export function QuestionGroupsPanel({
         : "";
     const storedWordBank = getStoredWordBank((group.groupContentJson as any)?.word_bank);
     const hasStoredWordBank = storedWordBank.length > 0 && !isPlaceholderWordBank(storedWordBank);
+    const isWordBankExplicitlyEnabled =
+      (group.groupContentJson as any)?.word_bank_enabled === true
+      || (group.groupContentJson as any)?.summary_word_bank_enabled === true;
 
     setEditor({
       open: true,
@@ -379,8 +382,8 @@ export function QuestionGroupsPanel({
           const keys = stored.length ? stored : Array.from({length: inferredCount}, (_, idx) => toMcqKey(idx));
           return keys.join("\n");
         })(),
-      summaryWordBankEnabled: hasStoredWordBank,
-      wordBank: hasStoredWordBank ? storedWordBank.join("\n") : "",
+      summaryWordBankEnabled: isWordBankExplicitlyEnabled,
+      wordBank: isWordBankExplicitlyEnabled && hasStoredWordBank ? storedWordBank.join("\n") : "",
       headings: (group.questions[0] as any)?.headings?.join("\n") ?? toLineJoinedValues((group.groupContentJson as any)?.headings),
       choices:
         ((group.questions[0] as any)?.choices?.join("\n") || (
@@ -437,6 +440,7 @@ export function QuestionGroupsPanel({
         : editor.type === "summary_completion"
         ? {
             summary_text: editor.summaryText,
+            word_bank_enabled: editor.summaryWordBankEnabled,
             word_bank: editor.summaryWordBankEnabled ? parsedWordBank : null
           }
         : editor.type === "matching_headings"

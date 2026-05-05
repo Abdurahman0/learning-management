@@ -648,7 +648,8 @@ function extractSummaryInfo(group: StudentAttemptQuestionGroup): { summaryText: 
       .join("\n");
   }
 
-  const wordBankRaw = Array.isArray(content?.word_bank) ? content.word_bank : null;
+  const wordBankEnabled = content?.word_bank_enabled === true || content?.summary_word_bank_enabled === true;
+  const wordBankRaw = wordBankEnabled && Array.isArray(content?.word_bank) ? content.word_bank : null;
   const wordBank = wordBankRaw
     ? (wordBankRaw as unknown[]).map((item) => toStringSafe(item).trim()).filter(Boolean)
     : null;
@@ -3271,6 +3272,7 @@ function ReadingTestClient({
                           const isSummary = question.type === "summaryCompletion";
                           const isTable = question.type === "tableCompletion";
                           const isListSelection = question.type === "listSelection";
+                          const isSharedQuestionBlock = isSummary || isTable || isListSelection;
                           const listSelectionQuestions = isListSelection
                             ? visibleGroupQuestions.filter((item): item is Extract<ReadingQuestion, {type: "listSelection"}> => item.type === "listSelection")
                             : [];
@@ -3326,18 +3328,10 @@ function ReadingTestClient({
                                 }
                               }}
                             >
-                              <div className="mb-2 flex items-start justify-between gap-2">
-                                <p className="min-w-0 wrap-break-word text-base font-medium leading-relaxed text-foreground">
-                                  {isSummary || isTable ? (
-                                    <>
-                                      {visibleGroupQuestions[0]?.number}-{visibleGroupQuestions[visibleGroupQuestions.length - 1]?.number}.{" "}
-                                    </>
-                                  ) : isListSelection ? (
-                                    null
-                                  ) : (
-                                    <>{question.number}.{" "}</>
-                                  )}
-                                   {!isSummary && !isTable && !isListSelection && (
+                              <div className={cn("flex items-start justify-between gap-2", !isSharedQuestionBlock && "mb-2")}>
+                                {!isSharedQuestionBlock ? (
+                                  <p className="min-w-0 wrap-break-word text-base font-medium leading-relaxed text-foreground">
+                                    {question.number}.{" "}
                                     <HighlightableText
                                       text={question.prompt}
                                       userHighlights={getQuestionLocalHighlights(question.id, promptStart, question.prompt.length)}
@@ -3356,15 +3350,15 @@ function ReadingTestClient({
                                         })
                                       }
                                     />
-                                  )}
-                                </p>
+                                  </p>
+                                ) : null}
                                 {isMarked && !reviewMode ? (
                                   <Badge variant="secondary" className="shrink-0 rounded-full border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-500/50 dark:bg-amber-500/20 dark:text-amber-200">
                                     <Bookmark className="size-3.5" />
                                     Marked
                                   </Badge>
                                 ) : null}
-                                {reviewMode && !isSummary && !isTable && !isListSelection ? (
+                                {reviewMode && !isSharedQuestionBlock ? (
                                   <div className="flex shrink-0 items-start gap-1.5">
                                     <Button
                                       type="button"
@@ -3393,7 +3387,7 @@ function ReadingTestClient({
                                 ) : null}
                               </div>
 
-                                {reviewMode && !isSummary && !isTable && !isListSelection ? (
+                                {reviewMode && !isSharedQuestionBlock ? (
                                   <p className="test-muted-copy mb-3 text-xs text-muted-foreground">
                                     {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
                                     {reviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
@@ -3525,19 +3519,6 @@ function ReadingTestClient({
                                 return (
                                   <div className="space-y-4">
                                     <div className="flex flex-wrap items-center gap-2">
-                                      {groupNumbers.map((number) => (
-                                        <span
-                                          key={`${question.id}-list-number-${number}`}
-                                          className={cn(
-                                            "inline-flex size-7 items-center justify-center rounded-full border px-2 text-xs font-semibold",
-                                            activeQuestionNumber === number
-                                              ? "border-blue-600 bg-blue-600 text-white"
-                                              : "border-border/70 bg-muted/35 text-foreground"
-                                          )}
-                                        >
-                                          {number}
-                                        </span>
-                                      ))}
                                       <p className="wrap-break-word text-sm font-medium">
                                         <InlineBoldText text={question.prompt} />
                                       </p>
@@ -4064,7 +4045,7 @@ function ReadingTestClient({
                             })() : null}
 
 
-                              {reviewMode && !isSummary && !isTable && !isListSelection ? (
+                              {reviewMode && !isSharedQuestionBlock ? (
                                 <div className="mt-3 space-y-2">
                                   {expandedExplanations.has(question.id) ? (
                                     <div className="test-soft-surface rounded-md border border-border/80 bg-muted/25 p-3 text-sm">
