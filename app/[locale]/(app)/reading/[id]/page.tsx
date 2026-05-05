@@ -1471,6 +1471,7 @@ function ReadingTestClient({
   const [finishOpen, setFinishOpen] = useState(false);
   const [restartOpen, setRestartOpen] = useState(false);
   const [reviewMode, setReviewMode] = useState(reviewDeepLinkActive);
+  const [reviewAnswersVisible, setReviewAnswersVisible] = useState(false);
   const [expandedExplanations, setExpandedExplanations] = useState<Set<string>>(new Set());
   const [activePassageId, setActivePassageId] = useState<"p1" | "p2" | "p3">("p1");
   const [activeQuestionNumber, setActiveQuestionNumber] = useState(1);
@@ -1559,6 +1560,7 @@ function ReadingTestClient({
     setRealModeInterruptionCount({ fullscreen: 0, visibility: 0 });
     setFinishOpen(false);
     setReviewMode(false);
+    setReviewAnswersVisible(false);
     setBackendReviewData(null);
     setExpandedExplanations(new Set());
     setActivePassageId("p1");
@@ -1606,6 +1608,7 @@ function ReadingTestClient({
         setFinishOpen(false);
         setRestartOpen(false);
         setReviewMode(true);
+        setReviewAnswersVisible(false);
         setBackendAttemptId(reviewDeepLinkAttemptId);
         setExpandedExplanations(new Set());
         setAnswers({});
@@ -2540,6 +2543,7 @@ function ReadingTestClient({
 
       // Fallback: if backend attempt is missing, keep the in-test review mode.
       setReviewMode(true);
+      setReviewAnswersVisible(false);
     } catch {
       // Keep submit failure silent in UI logs.
     } finally {
@@ -2881,6 +2885,18 @@ function ReadingTestClient({
             >
               {t.has("clearHighlights") ? t("clearHighlights") : "Clear highlights"}
             </Button>
+            {reviewMode ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setReviewAnswersVisible((visible) => !visible)}
+                className="h-9 rounded-xl border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 hover:bg-blue-100 dark:border-blue-500/35 dark:bg-blue-500/15 dark:text-blue-100 dark:hover:bg-blue-500/20 sm:h-10 sm:text-sm"
+              >
+                {reviewAnswersVisible
+                  ? (tReadingResult.has("hideAnswers") ? tReadingResult("hideAnswers") : "Hide answers")
+                  : (tReadingResult.has("showAnswers") ? tReadingResult("showAnswers") : "Show answers")}
+              </Button>
+            ) : null}
             {reviewMode ? (
               <Badge variant="secondary" className="h-9 rounded-xl border border-emerald-300/60 bg-emerald-100/80 px-3 text-xs font-semibold text-emerald-900 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-100 sm:h-10 sm:text-sm">
                 {t.has("correctOutOfTotal")
@@ -3372,7 +3388,7 @@ function ReadingTestClient({
                                     Marked
                                   </Badge>
                                 ) : null}
-                                {reviewMode && !isSharedQuestionBlock ? (
+                                {reviewMode && reviewAnswersVisible && !isSharedQuestionBlock ? (
                                   <div className="flex shrink-0 items-start gap-1.5">
                                     <Button
                                       type="button"
@@ -3401,7 +3417,7 @@ function ReadingTestClient({
                                 ) : null}
                               </div>
 
-                                {reviewMode && !isSharedQuestionBlock ? (
+                                {reviewMode && reviewAnswersVisible && !isSharedQuestionBlock ? (
                                   <p className="test-muted-copy mb-3 text-xs text-muted-foreground">
                                     {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
                                     {reviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
@@ -3569,7 +3585,7 @@ function ReadingTestClient({
                                       })}
                                     </div>
 
-                                    {reviewMode ? (
+                                    {reviewMode && reviewAnswersVisible ? (
                                       <div className="space-y-2">
                                         {listSelectionQuestions.map((targetQuestion) => {
                                           const targetReviewedQuestion =
@@ -3813,6 +3829,14 @@ function ReadingTestClient({
                                                         </span>
                                                         {reviewMode ? (
                                                           <span className="pl-6">
+                                                            {reviewAnswersVisible ? (
+                                                              <span className="test-muted-copy mb-1 block text-xs text-muted-foreground">
+                                                                <strong className="font-bold text-foreground">Answer:</strong>{" "}
+                                                                <strong className="font-bold text-emerald-700 dark:text-emerald-200">
+                                                                  {targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
+                                                                </strong>
+                                                              </span>
+                                                            ) : null}
                                                             <span className="flex flex-wrap items-center gap-1.5">
                                                               <Button
                                                                 type="button"
@@ -3844,10 +3868,6 @@ function ReadingTestClient({
                                                             {expandedExplanations.has(targetQuestion.id) ? (
                                                               <span className="test-soft-surface mt-1 block rounded-md border border-border/80 bg-muted/25 p-2 text-xs">
                                                                 <span className="block text-foreground/90">{targetReviewedExplanation}</span>
-                                                                <span className="test-muted-copy mt-1 block text-muted-foreground">
-                                                                  {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
-                                                                  {targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
-                                                                </span>
                                                               </span>
                                                             ) : null}
                                                           </span>
@@ -4007,6 +4027,14 @@ function ReadingTestClient({
                                                   )}
                                                   style={{ verticalAlign: "baseline" }}
                                                 />
+                                                {reviewMode && reviewAnswersVisible ? (
+                                                  <span className="ml-1 inline-block rounded-md border border-border/70 bg-background/65 px-2 py-1 text-xs text-muted-foreground">
+                                                    <strong className="font-bold text-foreground">Answer:</strong>{" "}
+                                                    <strong className="font-bold text-emerald-700 dark:text-emerald-200">
+                                                      {targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
+                                                    </strong>
+                                                  </span>
+                                                ) : null}
                                                 {reviewMode ? (
                                                   <span className="ml-1 inline-flex items-center gap-1">
                                                     <Button
@@ -4040,10 +4068,6 @@ function ReadingTestClient({
                                                 {reviewMode && expandedExplanations.has(targetQuestion.id) ? (
                                                   <span className="ml-1 inline-block rounded-md border border-border/80 bg-muted/25 px-2 py-1 text-[10px] text-foreground/90">
                                                     <span className="block">{targetReviewedExplanation}</span>
-                                                    <span className="mt-0.5 block text-muted-foreground">
-                                                      {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
-                                                      {targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
-                                                    </span>
                                                   </span>
                                                 ) : null}
                                               </span>
@@ -4064,10 +4088,12 @@ function ReadingTestClient({
                                   {expandedExplanations.has(question.id) ? (
                                     <div className="test-soft-surface rounded-md border border-border/80 bg-muted/25 p-3 text-sm">
                                       <p className="text-foreground/90">{reviewedExplanation}</p>
-                                      <p className="test-muted-copy mt-2 text-xs text-muted-foreground">
-                                        {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
-                                        {reviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
-                                      </p>
+                                      {reviewAnswersVisible ? (
+                                        <p className="test-muted-copy mt-2 text-xs text-muted-foreground">
+                                          {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
+                                          {reviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
+                                        </p>
+                                      ) : null}
                                     </div>
                                   ) : null}
                                 </div>
