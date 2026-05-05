@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
 import {
+  clearLatestAttemptProgress,
   createAttemptId,
   loadAttemptProgress,
   loadLatestAttemptId,
@@ -1625,8 +1626,21 @@ function ReadingTestClient({
 
     const latestId = loadLatestAttemptId("reading", test.id);
     const saved = latestId ? loadAttemptProgress("reading", test.id, latestId) : null;
+    const expectedBackendAttemptId = toStringSafe(initialBackendAttemptId).trim();
+    const savedBackendAttemptId = toStringSafe(saved?.backendAttemptId).trim();
+    const canRestoreSaved =
+      Boolean(saved)
+      && (isGuest
+        ? !savedBackendAttemptId
+        : expectedBackendAttemptId
+          ? savedBackendAttemptId === expectedBackendAttemptId
+          : !savedBackendAttemptId);
 
-    if (saved) {
+    if (saved && !canRestoreSaved) {
+      clearLatestAttemptProgress("reading", test.id);
+    }
+
+    if (saved && canRestoreSaved) {
       const restoredMode = saved.mode ?? "practice";
       const hydrateTimer = window.setTimeout(() => {
         setAttemptId(saved.attemptId);
@@ -1650,7 +1664,7 @@ function ReadingTestClient({
       realModeAutoFinishedRef.current = false;
     }, 0);
     return () => window.clearTimeout(initTimer);
-  }, [requestedMode, restartRequested, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.id]);
+  }, [initialBackendAttemptId, isGuest, requestedMode, restartRequested, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.id]);
 
   useEffect(() => {
     if (reviewDeepLinkActive) {

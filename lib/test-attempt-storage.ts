@@ -47,6 +47,16 @@ export function loadAttemptProgress(module: TestModule, testId: string, attemptI
   }
 }
 
+export function clearLatestAttemptProgress(module: TestModule, testId: string) {
+  if (typeof window === "undefined") return;
+  const latestKey = `${LATEST_PREFIX}:${module}:${testId}`;
+  const latestId = window.localStorage.getItem(latestKey);
+  if (latestId) {
+    window.localStorage.removeItem(buildKey(ATTEMPT_PREFIX, module, testId, latestId));
+  }
+  window.localStorage.removeItem(latestKey);
+}
+
 export function saveAttemptResult(payload: PersistedAttempt) {
   if (typeof window === "undefined") return;
   const key = buildKey(RESULT_PREFIX, payload.module, payload.testId, payload.attemptId);

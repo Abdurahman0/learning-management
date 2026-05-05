@@ -53,7 +53,7 @@ import {
 } from "@/components/ui/sheet";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
-import { createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress, saveAttemptResult, type AttemptMode } from "@/lib/test-attempt-storage";
+import { clearLatestAttemptProgress, createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress, saveAttemptResult, type AttemptMode } from "@/lib/test-attempt-storage";
 import { getListeningAnswerMeta } from "@/data/listening-answer-keys";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { flattenListeningQuestions } from "@/lib/listening-questions";
@@ -1416,8 +1416,21 @@ function ListeningTestClient({
 
     const latestId = loadLatestAttemptId("listening", test.id);
     const saved = latestId ? loadAttemptProgress("listening", test.id, latestId) : null;
+    const expectedBackendAttemptId = toStringSafe(initialBackendAttemptId).trim();
+    const savedBackendAttemptId = toStringSafe(saved?.backendAttemptId).trim();
+    const canRestoreSaved =
+      Boolean(saved)
+      && (isGuest
+        ? !savedBackendAttemptId
+        : expectedBackendAttemptId
+          ? savedBackendAttemptId === expectedBackendAttemptId
+          : !savedBackendAttemptId);
 
-    if (saved) {
+    if (saved && !canRestoreSaved) {
+      clearLatestAttemptProgress("listening", test.id);
+    }
+
+    if (saved && canRestoreSaved) {
       const restoredMode = saved.mode ?? "practice";
       const restoredAnswers: AnswersMap = {};
       Object.entries(saved.answers).forEach(([key, value]) => {
@@ -1451,14 +1464,14 @@ function ListeningTestClient({
 
     const initTimer = window.setTimeout(() => {
       setAttemptId(createAttemptId());
-      setBackendAttemptId(null);
+      setBackendAttemptId(initialBackendAttemptId);
       setStartedAt(Date.now());
       setAttemptMode(null);
       setTimerRunning(false);
       realModeAutoFinishedRef.current = false;
     }, 0);
     return () => window.clearTimeout(initTimer);
-  }, [requestedMode, restartRequested, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.durationMinutes, test.id]);
+  }, [initialBackendAttemptId, isGuest, requestedMode, restartRequested, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.durationMinutes, test.id]);
 
   useEffect(() => {
     if (reviewDeepLinkActive) {
