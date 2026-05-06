@@ -605,7 +605,13 @@
                                         "sidePoint2":  "Bir necha soniyada",
                                         "sidePoint3":  "Xavfsiz va maxfiy",
                                         "submit":  "Tiklash havolasini yuborish",
-                                        "backToLogin":  "Kirishga qaytish"
+                                        "backToLogin":  "Kirishga qaytish",
+                                        "success":  "Agar bu email mavjud bo'lsa, xavfsiz parolni tiklash havolasi yuborildi.",
+                                        "emailSentTitle":  "Emailingizni tekshiring",
+                                        "emailSentDescription":  "Biz {email} manziliga xavfsiz tiklash havolasini yubordik. Yangi parol yaratish uchun emaildagi havolani oching.",
+                                        "nextStepTitle":  "Keyingi qadam",
+                                        "nextStepDescription":  "Havola parolni tiklash sahifasini avtomatik ochadi. Email ko'rinmasa, spam, promotions yoki junk papkalarini tekshiring.",
+                                        "tryDifferentEmail":  "Boshqa email ishlatish"
                                     },
                  "verifyResetCode":  {
                                          "title":  "Tiklash kodini tasdiqlash",
@@ -634,7 +640,11 @@
                                        "submit":  "Parolni yangilash",
                                        "success":  "Parol muvaffaqiyatli yangilandi.",
                                        "backToLogin":  "Kirishga qaytish",
-                                       "goToVerifyCode":  "Tiklash kodini tasdiqlash"
+                                       "goToVerifyCode":  "Tiklash kodini tasdiqlash",
+                                       "secureLinkNotice":  "Siz xavfsiz tiklash havolasini ochdingiz. EnglishLabs akkauntingizga qayta kirish uchun quyida yangi parol kiriting.",
+                                       "invalidLinkTitle":  "Tiklash havolasi topilmadi",
+                                       "invalidLinkDescription":  "Bu sahifa parolni tiklash emailidagi havola orqali ochilishi kerak. Yangi havola so'rang va eng so'nggi emaildan foydalaning.",
+                                       "requestNewLink":  "Yangi havola so'rash"
                                    },
                  "messages":  {
                                   "genericError":  "Xatolik yuz berdi. Iltimos, qayta urinib ko'ring."

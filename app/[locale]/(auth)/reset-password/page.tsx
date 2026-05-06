@@ -4,10 +4,10 @@ import Link from "next/link";
 import {Suspense, useMemo, useState} from "react";
 import {useSearchParams} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
+import {KeyRound, ShieldAlert} from "lucide-react";
 
 import {authApi} from "@/lib/api/auth";
 import {Button} from "@/components/ui/button";
-import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {cn} from "@/lib/utils";
 
@@ -18,21 +18,20 @@ function ResetPasswordPageContent() {
   const t = useTranslations("auth");
   const locale = useLocale();
   const searchParams = useSearchParams();
-  const initialEmail = useMemo(() => searchParams.get("email") ?? "", [searchParams]);
-  const activationToken = useMemo(() => searchParams.get("activation_token") ?? "", [searchParams]);
-  const [email, setEmail] = useState(initialEmail);
+  const resetToken = useMemo(
+    () => (searchParams.get("token") ?? searchParams.get("activation_token") ?? "").trim(),
+    [searchParams]
+  );
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [statusType, setStatusType] = useState<"success" | "error" | null>(null);
-  const [needsVerification, setNeedsVerification] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setStatus(null);
     setStatusType(null);
-    setNeedsVerification(false);
 
     if (newPassword !== confirmPassword) {
       setStatus(t("validation.confirmPassword"));
@@ -43,18 +42,15 @@ function ResetPasswordPageContent() {
     setIsSubmitting(true);
 
     try {
-      const normalizedEmail = email.trim().toLowerCase();
       const response = await authApi.resetPassword({
-        email: normalizedEmail,
         new_password: newPassword,
-        activation_token: activationToken.trim()
+        token: resetToken
       });
 
       if (!response.ok) {
         const detail = response.detail ?? t("messages.genericError");
         setStatus(detail);
         setStatusType("error");
-        setNeedsVerification(detail.toLowerCase().includes("verification is required"));
         return;
       }
 
@@ -74,72 +70,77 @@ function ResetPasswordPageContent() {
       sideDescription={t("resetPassword.sideDescription")}
       sidePoints={[t("resetPassword.sidePoint1"), t("resetPassword.sidePoint2"), t("resetPassword.sidePoint3")]}
     >
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">{t("fields.email")}</Label>
-          <Input
-            id="email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder={t("placeholders.email")}
-            className="h-11 rounded-xl"
-          />
+      {!resetToken ? (
+        <div className="rounded-3xl border border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-5 shadow-sm dark:border-amber-500/25 dark:from-amber-950/30 dark:via-slate-950/40 dark:to-orange-950/20">
+          <div className="flex items-start gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-500/20">
+              <ShieldAlert className="size-6" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold tracking-tight text-foreground">{t("resetPassword.invalidLinkTitle")}</h2>
+              <p className="text-sm leading-6 text-muted-foreground">{t("resetPassword.invalidLinkDescription")}</p>
+            </div>
+          </div>
+          <Button asChild className="mt-5 h-11 rounded-xl bg-blue-600 px-5 text-base font-semibold hover:bg-blue-600/90">
+            <Link href={`/${locale}/forgot-password`}>{t("resetPassword.requestNewLink")}</Link>
+          </Button>
         </div>
+      ) : (
+        <>
+          <div className="mb-5 rounded-2xl border border-blue-200/70 bg-blue-50/70 p-4 text-sm text-blue-950 dark:border-blue-500/25 dark:bg-blue-950/20 dark:text-blue-100">
+            <div className="flex items-start gap-3">
+              <KeyRound className="mt-0.5 size-5 shrink-0 text-blue-600 dark:text-blue-300" />
+              <p className="leading-6">{t("resetPassword.secureLinkNotice")}</p>
+            </div>
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="newPassword">{t("resetPassword.newPasswordLabel")}</Label>
-          <PasswordField
-            id="newPassword"
-            value={newPassword}
-            placeholder={t("placeholders.password")}
-            showLabel={t("common.showPassword")}
-            hideLabel={t("common.hidePassword")}
-            onChange={setNewPassword}
-            autoComplete="new-password"
-          />
-        </div>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">{t("resetPassword.newPasswordLabel")}</Label>
+              <PasswordField
+                id="newPassword"
+                value={newPassword}
+                placeholder={t("placeholders.password")}
+                showLabel={t("common.showPassword")}
+                hideLabel={t("common.hidePassword")}
+                onChange={setNewPassword}
+                autoComplete="new-password"
+              />
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="confirmPassword">{t("fields.confirmPassword")}</Label>
-          <PasswordField
-            id="confirmPassword"
-            value={confirmPassword}
-            placeholder={t("placeholders.confirmPassword")}
-            showLabel={t("common.showPassword")}
-            hideLabel={t("common.hidePassword")}
-            onChange={setConfirmPassword}
-            autoComplete="new-password"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">{t("fields.confirmPassword")}</Label>
+              <PasswordField
+                id="confirmPassword"
+                value={confirmPassword}
+                placeholder={t("placeholders.confirmPassword")}
+                showLabel={t("common.showPassword")}
+                hideLabel={t("common.hidePassword")}
+                onChange={setConfirmPassword}
+                autoComplete="new-password"
+              />
+            </div>
 
-        <Button
-          type="submit"
-          className="h-11 w-full rounded-xl bg-blue-600 text-base font-semibold hover:bg-blue-600/90"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? t("common.submitting") : t("resetPassword.submit")}
-        </Button>
-      </form>
+            <Button
+              type="submit"
+              className="h-11 w-full rounded-xl bg-blue-600 text-base font-semibold hover:bg-blue-600/90"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? t("common.submitting") : t("resetPassword.submit")}
+            </Button>
+          </form>
 
-      {status ? (
-        <p className={cn("mt-4 text-sm", statusType === "error" ? "text-destructive" : "text-emerald-600")}>{status}</p>
-      ) : null}
+          {status ? (
+            <p className={cn("mt-4 text-sm", statusType === "error" ? "text-destructive" : "text-emerald-600")}>{status}</p>
+          ) : null}
 
-      {statusType === "success" ? (
-        <Button asChild variant="outline" className="mt-3 h-11 w-full rounded-xl border-border/70">
-          <Link href={`/${locale}/login`}>{t("resetPassword.backToLogin")}</Link>
-        </Button>
-      ) : null}
-
-      {needsVerification ? (
-        <Button asChild variant="link" className="mt-1 h-auto justify-start px-0">
-          <Link href={`/${locale}/verify-reset-code?email=${encodeURIComponent(email.trim().toLowerCase())}`}>
-            {t("resetPassword.goToVerifyCode")}
-          </Link>
-        </Button>
-      ) : null}
+          {statusType === "success" ? (
+            <Button asChild variant="outline" className="mt-3 h-11 w-full rounded-xl border-border/70">
+              <Link href={`/${locale}/login`}>{t("resetPassword.backToLogin")}</Link>
+            </Button>
+          ) : null}
+        </>
+      )}
     </AuthFlowShell>
   );
 }

@@ -605,7 +605,13 @@
                                         "sidePoint2":  "Works in seconds",
                                         "sidePoint3":  "Secure and private",
                                         "submit":  "Send reset link",
-                                        "backToLogin":  "Back to login"
+                                        "backToLogin":  "Back to login",
+                                        "success":  "If this email exists, a secure password reset link has been sent.",
+                                        "emailSentTitle":  "Check your inbox",
+                                        "emailSentDescription":  "We sent a secure reset link to {email}. Open that email and click the link to create a new password.",
+                                        "nextStepTitle":  "Next step",
+                                        "nextStepDescription":  "The link will open the password reset page automatically. If you do not see the email, check your spam, promotions, or junk folder.",
+                                        "tryDifferentEmail":  "Use a different email"
                                     },
                  "verifyResetCode":  {
                                          "title":  "Verify reset code",
@@ -634,7 +640,11 @@
                                        "submit":  "Reset password",
                                        "success":  "Password reset successfully.",
                                        "backToLogin":  "Back to login",
-                                       "goToVerifyCode":  "Verify reset code"
+                                       "goToVerifyCode":  "Verify reset code",
+                                       "secureLinkNotice":  "You opened a secure reset link. Enter a new password below to regain access to your EnglishLabs account.",
+                                       "invalidLinkTitle":  "Reset link is missing",
+                                       "invalidLinkDescription":  "This page must be opened from the password reset email. Request a new link and use the latest email we send you.",
+                                       "requestNewLink":  "Request a new link"
                                    },
                  "messages":  {
                                   "genericError":  "Something went wrong. Please try again."
