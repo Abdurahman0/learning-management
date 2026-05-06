@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {Suspense, useMemo, useState} from "react";
+import {Suspense, useEffect, useMemo, useState} from "react";
 import {useSearchParams} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
 import {KeyRound, ShieldAlert} from "lucide-react";
@@ -14,19 +14,36 @@ import {cn} from "@/lib/utils";
 import {AuthFlowShell} from "../auth/components/AuthFlowShell";
 import {PasswordField} from "../auth/components/PasswordField";
 
+const RESET_ACTIVATION_TOKEN_STORAGE_KEY = "englishlabs.reset.activationToken";
+
 function ResetPasswordPageContent() {
   const t = useTranslations("auth");
   const locale = useLocale();
   const searchParams = useSearchParams();
-  const resetToken = useMemo(
+  const urlResetToken = useMemo(
     () => (searchParams.get("token") ?? searchParams.get("activation_token") ?? "").trim(),
     [searchParams]
   );
+  const [emailResetToken] = useState(urlResetToken);
+  const [hasStoredActivationToken, setHasStoredActivationToken] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [statusType, setStatusType] = useState<"success" | "error" | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if (urlResetToken) {
+      window.sessionStorage.removeItem(RESET_ACTIVATION_TOKEN_STORAGE_KEY);
+      const cleanUrl = `${window.location.pathname}${window.location.hash}`;
+      window.history.replaceState(null, "", cleanUrl);
+      return;
+    }
+
+    setHasStoredActivationToken(Boolean(window.sessionStorage.getItem(RESET_ACTIVATION_TOKEN_STORAGE_KEY)));
+  }, [urlResetToken]);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -42,18 +59,52 @@ function ResetPasswordPageContent() {
     setIsSubmitting(true);
 
     try {
+      let activationToken =
+        typeof window !== "undefined"
+          ? window.sessionStorage.getItem(RESET_ACTIVATION_TOKEN_STORAGE_KEY)?.trim() ?? ""
+          : "";
+
+      if (!activationToken) {
+        const activationResponse = await authApi.activateResetToken({token: emailResetToken});
+
+        if (!activationResponse.ok) {
+          setStatus(activationResponse.detail ?? t("resetPassword.invalidLinkDescription"));
+          setStatusType("error");
+          return;
+        }
+
+        activationToken = String(activationResponse.data?.activation_token ?? "").trim();
+        if (!activationToken) {
+          setStatus(t("resetPassword.invalidLinkDescription"));
+          setStatusType("error");
+          return;
+        }
+
+        if (typeof window !== "undefined") {
+          window.sessionStorage.setItem(RESET_ACTIVATION_TOKEN_STORAGE_KEY, activationToken);
+          setHasStoredActivationToken(true);
+        }
+      }
+
       const response = await authApi.resetPassword({
         new_password: newPassword,
-        token: resetToken
+        activation_token: activationToken
       });
 
       if (!response.ok) {
         const detail = response.detail ?? t("messages.genericError");
         setStatus(detail);
         setStatusType("error");
+        if (detail.toLowerCase().includes("invalid") || detail.toLowerCase().includes("expired")) {
+          window.sessionStorage.removeItem(RESET_ACTIVATION_TOKEN_STORAGE_KEY);
+          setHasStoredActivationToken(false);
+        }
         return;
       }
 
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem(RESET_ACTIVATION_TOKEN_STORAGE_KEY);
+      }
       setStatus(response.detail ?? t("resetPassword.success"));
       setStatusType("success");
     } finally {
@@ -70,7 +121,7 @@ function ResetPasswordPageContent() {
       sideDescription={t("resetPassword.sideDescription")}
       sidePoints={[t("resetPassword.sidePoint1"), t("resetPassword.sidePoint2"), t("resetPassword.sidePoint3")]}
     >
-      {!resetToken ? (
+      {!emailResetToken && !hasStoredActivationToken ? (
         <div className="rounded-3xl border border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-5 shadow-sm dark:border-amber-500/25 dark:from-amber-950/30 dark:via-slate-950/40 dark:to-orange-950/20">
           <div className="flex items-start gap-4">
             <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-lg shadow-amber-500/20">

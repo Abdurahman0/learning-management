@@ -4075,9 +4075,9 @@ function ListeningTestClient({
                                   onClick={() => jumpToQuestion(number)}
                                   className={cn(
                                     "relative h-5 min-w-5 rounded-md border px-1 text-[10px] font-semibold shadow-none",
-                                    isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                                    isCurrent && "border-blue-700 bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-300/70 hover:bg-blue-600 dark:border-cyan-300 dark:bg-blue-500 dark:ring-cyan-300/60 dark:shadow-cyan-500/20",
                                     !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
-                                    !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                                    !isCurrent && !answered && "border-dashed border-slate-300 bg-white/70 text-slate-600 hover:border-blue-300 hover:text-blue-700 dark:border-slate-600 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-blue-400/70 dark:hover:text-blue-200",
                                     isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
                                   )}
                                 >
@@ -4156,9 +4156,9 @@ function ListeningTestClient({
                       }}
                       className={cn(
                         "relative h-8 rounded-xl px-0 text-xs font-semibold shadow-none",
-                        isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                        isCurrent && "border-blue-700 bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-300/70 hover:bg-blue-600 dark:border-cyan-300 dark:bg-blue-500 dark:ring-cyan-300/60 dark:shadow-cyan-500/20",
                         !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
-                        !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                        !isCurrent && !answered && "border-dashed border-slate-300 bg-white/70 text-slate-600 hover:border-blue-300 hover:text-blue-700 dark:border-slate-600 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-blue-400/70 dark:hover:text-blue-200",
                         isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
                       )}
                     >

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowLeft, RotateCcw, Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +60,16 @@ export function ReviewHeader({
       : t("reviewAnswers");
 
   return (
-    <Card className="gap-5 rounded-3xl border-slate-200/85 bg-linear-to-br from-white via-slate-50 to-blue-50 p-4 shadow-sm shadow-slate-200/60 dark:border-border/75 dark:bg-[linear-gradient(120deg,rgba(11,23,43,0.95),rgba(10,25,49,0.82)_52%,rgba(22,48,92,0.32))] dark:shadow-none sm:p-6">
+    <div className="space-y-3">
+      <Link
+        href={`/${locale}/dashboard`}
+        className="group inline-flex w-fit items-center gap-2 text-sm font-semibold text-slate-600 transition-colors hover:text-blue-700 dark:text-blue-200/80 dark:hover:text-blue-100"
+      >
+        <ArrowLeft className="size-4 transition-transform duration-200 group-hover:-translate-x-1" />
+        <span>{t("goToDashboard")}</span>
+      </Link>
+
+      <Card className="gap-5 rounded-3xl border-slate-200/85 bg-linear-to-br from-white via-slate-50 to-blue-50 p-4 shadow-sm shadow-slate-200/60 dark:border-border/75 dark:bg-[linear-gradient(120deg,rgba(11,23,43,0.95),rgba(10,25,49,0.82)_52%,rgba(22,48,92,0.32))] dark:shadow-none sm:p-6">
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] xl:items-start">
         <div className="space-y-5">
           <div className="space-y-2">
@@ -112,16 +121,6 @@ export function ReviewHeader({
                   {t("retakeTest")}
                 </Link>
               </Button>
-              <Button
-                variant="outline"
-                asChild
-                className="h-9 rounded-xl border-slate-200 bg-white/90 px-4 hover:bg-slate-100/80 dark:border-border/70 dark:bg-background/35"
-              >
-                <Link href={`/${locale}/dashboard`}>
-                  <LayoutDashboard className="size-4" />
-                  {t("goToDashboard")}
-                </Link>
-              </Button>
             </div>
 
             {showAiAnalysisButton ? (
@@ -156,6 +155,7 @@ export function ReviewHeader({
           />
         </div>
       </div>
-    </Card>
+      </Card>
+    </div>
   );
 }

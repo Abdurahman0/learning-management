@@ -1738,16 +1738,6 @@ function ReadingTestClient({
     [test.questions, activePassageId]
   );
 
-  const answeredNumbers = useMemo(() => {
-    const set = new Set<number>();
-    test.questions.forEach((question) => {
-      if (isAnswered(answers[question.id])) {
-        set.add(question.number);
-      }
-    });
-    return set;
-  }, [answers, test.questions]);
-
   const groupedQuestions = useMemo(() => {
     const groups: Array<{ title: string; instruction?: string; questions: ReadingQuestion[] }> = [];
     for (const question of passageQuestions) {
@@ -1797,6 +1787,16 @@ function ReadingTestClient({
     () => (backendReviewData ? normalizeBackendReviewAnswers(backendReviewData.answers) : answers),
     [answers, backendReviewData]
   );
+  const displayedAnswers = reviewMode ? reviewAnswers : answers;
+  const answeredNumbers = useMemo(() => {
+    const set = new Set<number>();
+    test.questions.forEach((question) => {
+      if (isAnswered(displayedAnswers[question.id])) {
+        set.add(question.number);
+      }
+    });
+    return set;
+  }, [displayedAnswers, test.questions]);
 
   const gradeableQuestions = useMemo<GradeableQuestion[]>(
     () =>
@@ -2219,7 +2219,7 @@ function ReadingTestClient({
       const answered = numbers.reduce((count, number) => {
         const question = questionsByNumber.get(number);
         if (!question) return count;
-        return count + (isAnswered(answers[question.id]) ? 1 : 0);
+        return count + (isAnswered(displayedAnswers[question.id]) ? 1 : 0);
       }, 0);
 
       return {
@@ -2229,7 +2229,7 @@ function ReadingTestClient({
         answered,
       };
     });
-  }, [answers, questionsByNumber, test.passages, test.questions]);
+  }, [displayedAnswers, questionsByNumber, test.passages, test.questions]);
   const activePassagePaletteSection = useMemo(
     () =>
       passagePaletteSections.find((section) => section.passageId === activePassageId)
@@ -3018,7 +3018,7 @@ function ReadingTestClient({
                     questionNumber: match.questionNumber,
                   }));
                   const headingQuestion = headerLetter ? matchingHeadingQuestionByLetter.get(headerLetter) : null;
-                  const headingAnswerValue = headingQuestion ? answers[headingQuestion.id] : undefined;
+                  const headingAnswerValue = headingQuestion ? displayedAnswers[headingQuestion.id] : undefined;
                   const headingAnswer = typeof headingAnswerValue === "string" ? headingAnswerValue : "";
                   const headingOptions = headingQuestion
                     ? headingQuestion.headingOptions
@@ -3263,7 +3263,7 @@ function ReadingTestClient({
                             ?? reviewQuestionByNumber.get(question.number)
                             ?? question;
                           const active = activeQuestionNumber === question.number;
-                          const value = answers[question.id];
+                          const value = displayedAnswers[question.id];
                           const result = gradingByNumber.get(question.number) ?? grading.byQuestion[question.id];
                           const answered = isAnswered(value);
                           const isCorrect = result?.isCorrect;
@@ -3510,7 +3510,7 @@ function ReadingTestClient({
                                 const orderedOptionKeys = parsedOptions.map((option) => option.key);
                                 const selectedKeys = new Set(
                                   listSelectionQuestions
-                                    .map((item) => resolveChoiceKeyFromRawValue(answers[item.id], parsedOptions, question.listOptions))
+                                    .map((item) => resolveChoiceKeyFromRawValue(displayedAnswers[item.id], parsedOptions, question.listOptions))
                                     .filter(Boolean)
                                 );
                                 const maxSelections = Math.max(1, listSelectionQuestions.length);
@@ -3780,7 +3780,7 @@ function ReadingTestClient({
                                                       );
                                                     }
 
-                                                    const targetValue = answers[targetQuestion.id];
+                                                    const targetValue = displayedAnswers[targetQuestion.id];
                                                     const isActiveBlank = activeQuestionNumber === targetNumber;
                                                     const targetReviewedQuestion =
                                                       reviewQuestionById.get(targetQuestion.id)
@@ -3894,7 +3894,7 @@ function ReadingTestClient({
                                 const wordBankOptions = question.wordBank ?? [];
                                 const selectedSummaryValues = new Set(
                                   summaryQuestions
-                                    .map((item) => (typeof answers[item.id] === "string" ? stripInlineBoldMarkup(String(answers[item.id])) : ""))
+                                    .map((item) => (typeof displayedAnswers[item.id] === "string" ? stripInlineBoldMarkup(String(displayedAnswers[item.id])) : ""))
                                     .filter(Boolean)
                                 );
                                 const fillSummaryBlank = (targetQuestion: ReadingQuestion, option: string) => {
@@ -3905,7 +3905,7 @@ function ReadingTestClient({
                                 const fillActiveOrFirstEmptySummaryBlank = (option: string) => {
                                   if (reviewMode) return;
                                   const activeSummaryQuestion = summaryQuestions.find((item) => item.number === activeQuestionNumber);
-                                  const firstEmptyQuestion = summaryQuestions.find((item) => !isAnswered(answers[item.id]));
+                                  const firstEmptyQuestion = summaryQuestions.find((item) => !isAnswered(displayedAnswers[item.id]));
                                   const targetQuestion = activeSummaryQuestion ?? firstEmptyQuestion ?? summaryQuestions[0];
                                   if (!targetQuestion) return;
                                   fillSummaryBlank(targetQuestion, option);
@@ -3962,7 +3962,7 @@ function ReadingTestClient({
                                           const num = Number(match[1]);
                                           const targetQuestion = questionsByNumber.get(num);
                                           if (targetQuestion) {
-                                            const questionValue = answers[targetQuestion.id];
+                                            const questionValue = displayedAnswers[targetQuestion.id];
                                             const isThisQuestion = num === activeQuestionNumber;
                                             const targetReviewedQuestion =
                                               reviewQuestionById.get(targetQuestion.id)
@@ -4202,7 +4202,7 @@ function ReadingTestClient({
                         <div className="flex w-max gap-1 pr-1">
                           {section.numbers.map((number) => {
                             const question = questionsByNumber.get(number);
-                            const answered = question ? isAnswered(answers[question.id]) : false;
+                            const answered = question ? isAnswered(displayedAnswers[question.id]) : false;
                             const isMarked = question ? marked.has(question.id) : false;
                             const isCurrent = number === activeQuestionNumber;
                             return (
@@ -4213,9 +4213,9 @@ function ReadingTestClient({
                                 aria-label={t("goToQuestion", { number })}
                                 className={cn(
                                   "relative h-5 min-w-5 rounded-md border px-1 text-[10px] font-semibold shadow-none",
-                                  isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                                  isCurrent && "border-blue-700 bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-300/70 hover:bg-blue-600 dark:border-cyan-300 dark:bg-blue-500 dark:ring-cyan-300/60 dark:shadow-cyan-500/20",
                                   !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
-                                  !isCurrent && !answered && "border-border bg-background text-foreground/85",
+                                  !isCurrent && !answered && "border-dashed border-slate-300 bg-white/70 text-slate-600 hover:border-blue-300 hover:text-blue-700 dark:border-slate-600 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-blue-400/70 dark:hover:text-blue-200",
                                   isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-300/60 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
                                 )}
                                 onClick={() => goToQuestion(number)}
@@ -4265,7 +4265,7 @@ function ReadingTestClient({
               <div className="grid grid-cols-5 gap-2">
                 {(activePassagePaletteSection?.numbers ?? []).map((num) => {
                   const q = questionsByNumber.get(num);
-                  const answered = q ? isAnswered(answers[q.id]) : false;
+                  const answered = q ? isAnswered(displayedAnswers[q.id]) : false;
                   const isMarked = q ? marked.has(q.id) : false;
                   const isCurrent = num === activeQuestionNumber;
 
@@ -4277,9 +4277,9 @@ function ReadingTestClient({
                       aria-label={t("goToQuestion", { number: num })}
                       className={cn(
                         "relative h-9 rounded-md border text-sm",
-                        isCurrent && "border-blue-700 bg-blue-600 text-white hover:bg-blue-600",
+                        isCurrent && "border-blue-700 bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-300/70 hover:bg-blue-600 dark:border-cyan-300 dark:bg-blue-500 dark:ring-cyan-300/60 dark:shadow-cyan-500/20",
                         !isCurrent && answered && "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-500/45 dark:bg-emerald-500/20 dark:text-emerald-200",
-                        !isCurrent && !answered && "border-border bg-card",
+                        !isCurrent && !answered && "border-dashed border-slate-300 bg-white/70 text-slate-600 hover:border-blue-300 hover:text-blue-700 dark:border-slate-600 dark:bg-slate-900/45 dark:text-slate-300 dark:hover:border-blue-400/70 dark:hover:text-blue-200",
                         isMarked && "border-amber-300 bg-amber-50 text-amber-900 ring-2 ring-amber-400 ring-offset-1 dark:bg-amber-500/20 dark:text-amber-100"
                       )}
                       onClick={() => {

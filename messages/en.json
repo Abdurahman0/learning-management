@@ -417,8 +417,8 @@
                                 "confirmPassword":  "Confirm Password"
                             },
                  "placeholders":  {
-                                      "fullName":  "John Doe",
-                                      "email":  "name@example.com",
+                                      "fullName":  "Sherzod A'zamov",
+                                      "email":  "abdurahmanrahmanbekov@gmail.com",
                                       "password":  "••••••••",
                                       "confirmPassword":  "••••••••"
                                   },
@@ -609,6 +609,8 @@
                                         "success":  "If this email exists, a secure password reset link has been sent.",
                                         "emailSentTitle":  "Check your inbox",
                                         "emailSentDescription":  "We sent a secure reset link to {email}. Open that email and click the link to create a new password.",
+                                        "spamWarningTitle":  "Important: check Spam, Promotions, or Junk",
+                                        "spamWarningDescription":  "Reset emails are sometimes filtered. If the message is not in your inbox within a minute, open Spam, Promotions, or Junk and use the newest EnglishLabs email.",
                                         "nextStepTitle":  "Next step",
                                         "nextStepDescription":  "The link will open the password reset page automatically. If you do not see the email, check your spam, promotions, or junk folder.",
                                         "tryDifferentEmail":  "Use a different email"

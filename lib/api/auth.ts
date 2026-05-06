@@ -138,7 +138,11 @@ export const authApi = {
     return requestAuthApi<{detail?: string; activation_token?: string}>("/api/auth/verify-reset-code", {body: payload});
   },
 
-  resetPassword(payload: {new_password: string; token: string; email?: string; activation_token?: string}) {
+  activateResetToken(payload: {token: string}) {
+    return requestAuthApi<{detail?: string; activation_token?: string}>("/api/auth/activate-reset-token", {body: payload});
+  },
+
+  resetPassword(payload: {new_password: string; activation_token: string}) {
     return requestAuthApi<{detail?: string}>("/api/auth/reset-password", {body: payload});
   }
 };

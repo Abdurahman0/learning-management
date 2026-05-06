@@ -3,7 +3,7 @@
 import {useState} from "react";
 import Link from "next/link";
 import {useLocale, useTranslations} from "next-intl";
-import {MailCheck, ShieldCheck} from "lucide-react";
+import {AlertTriangle, MailCheck, ShieldCheck} from "lucide-react";
 
 import {authApi} from "@/lib/api/auth";
 import {Button} from "@/components/ui/button";
@@ -66,6 +66,22 @@ export default function ForgotPasswordPage() {
               <p className="text-sm leading-6 text-muted-foreground">
                 {t("forgotPassword.emailSentDescription", {email: sentEmail || email.trim().toLowerCase()})}
               </p>
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-amber-300/80 bg-gradient-to-br from-amber-50 via-orange-50 to-background p-4 shadow-sm shadow-amber-500/10 dark:border-amber-500/35 dark:from-amber-500/15 dark:via-orange-500/10 dark:to-background/60">
+            <div className="flex items-start gap-3">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-md shadow-amber-500/25">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div className="min-w-0 space-y-1">
+                <p className="text-sm font-extrabold tracking-tight text-amber-950 dark:text-amber-100">
+                  {t("forgotPassword.spamWarningTitle")}
+                </p>
+                <p className="text-sm leading-6 text-amber-900/90 dark:text-amber-100/85">
+                  {t("forgotPassword.spamWarningDescription")}
+                </p>
+              </div>
             </div>
           </div>
 

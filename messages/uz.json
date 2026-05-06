@@ -417,8 +417,8 @@
                                 "confirmPassword":  "Parolni tasdiqlash"
                             },
                  "placeholders":  {
-                                      "fullName":  "John Doe",
-                                      "email":  "name@example.com",
+                                      "fullName":  "Sherzod A'zamov",
+                                      "email":  "abdurahmanrahmanbekov@gmail.com",
                                       "password":  "••••••••",
                                       "confirmPassword":  "••••••••"
                                   },
@@ -609,6 +609,8 @@
                                         "success":  "Agar bu email mavjud bo'lsa, xavfsiz parolni tiklash havolasi yuborildi.",
                                         "emailSentTitle":  "Emailingizni tekshiring",
                                         "emailSentDescription":  "Biz {email} manziliga xavfsiz tiklash havolasini yubordik. Yangi parol yaratish uchun emaildagi havolani oching.",
+                                        "spamWarningTitle":  "Muhim: Spam, Promotions yoki Junk papkalarini tekshiring",
+                                        "spamWarningDescription":  "Tiklash emaillari ba'zan filtrlanadi. Xabar bir daqiqa ichida inboxda ko'rinmasa, Spam, Promotions yoki Junk papkasini oching va eng yangi EnglishLabs emailidan foydalaning.",
                                         "nextStepTitle":  "Keyingi qadam",
                                         "nextStepDescription":  "Havola parolni tiklash sahifasini avtomatik ochadi. Email ko'rinmasa, spam, promotions yoki junk papkalarini tekshiring.",
                                         "tryDifferentEmail":  "Boshqa email ishlatish"
