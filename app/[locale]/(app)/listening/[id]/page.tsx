@@ -295,6 +295,7 @@ function extractValidationAnswerQuestionIdFailures(error: unknown) {
   for (const [questionId, detail] of Object.entries(answers)) {
     const row = asRecord(detail);
     const messages = asArray<unknown>(row?.question_id)
+      .concat(asArray<unknown>(row?.attempt_question_id))
       .map((message) => toStringSafe(message).toLowerCase())
       .filter(Boolean);
     const hasBelongMessage = messages.some((message) => message.includes("does not belong to this attempt"));
@@ -304,6 +305,75 @@ function extractValidationAnswerQuestionIdFailures(error: unknown) {
   }
 
   return failed;
+}
+
+function normalizeListeningAnswerForBackend(rawValue: unknown, questionType: string): {answer: string} | {answers: string[]} | null {
+  const normalizedType = questionType.trim().toUpperCase();
+  let normalizedRaw = toStringSafe(rawValue).trim();
+  if (!normalizedRaw) return null;
+
+  if (normalizedType === "TFNG" || normalizedType === "YNNG") {
+    normalizedRaw = normalizeTfngYnngAnswerForBackend(normalizedRaw, normalizedType);
+  } else if (normalizedType === "MATCHING_HEADINGS") {
+    normalizedRaw = normalizeRomanKeyAnswerForBackend(normalizedRaw);
+  } else if (
+    normalizedType === "MCQ_SINGLE"
+    || normalizedType === "MATCHING"
+    || normalizedType === "CLASSIFICATION"
+    || normalizedType === "LIST_SELECTION"
+    || normalizedType === "CHOOSING_TITLE"
+    || normalizedType === "MATCH_PARA_INFO"
+    || normalizedType === "MATCH_SENT_ENDINGS"
+    || normalizedType === "PLAN_MAP_DIAGRAM"
+    || normalizedType === "DIAGRAM_COMPLETION"
+  ) {
+    normalizedRaw = normalizeLetterKeyAnswerForBackend(normalizedRaw);
+  }
+
+  if (normalizedType === "MCQ_MULTIPLE") {
+    const answers = normalizedRaw
+      .split(",")
+      .map((item) => normalizeLetterKeyAnswerForBackend(item))
+      .filter(Boolean);
+    return answers.length ? { answers } : null;
+  }
+
+  return { answer: normalizedRaw };
+}
+
+function buildListeningBackendAnswerPayload(params: {
+  answers: AnswersMap;
+  marked: Set<number>;
+  submitMetaByNumber: Map<number, ListeningSubmitQuestionMeta>;
+  includeUnanswered?: boolean;
+}) {
+  return [...params.submitMetaByNumber.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([questionNumber, meta]) => {
+      const questionId = meta.candidateIds[0] ?? "";
+      if (!questionId) return null;
+
+      const answerPayload = normalizeListeningAnswerForBackend(params.answers[questionNumber], meta.questionType);
+      const isFlagged = params.marked.has(questionNumber);
+      if (!params.includeUnanswered && answerPayload === null && !isFlagged) {
+        return null;
+      }
+
+      return {
+        question_id: questionId,
+        attempt_question_id: questionId,
+        answer: answerPayload,
+        is_flagged: isFlagged
+      };
+    })
+    .filter(
+      (item): item is {
+        question_id: string;
+        attempt_question_id: string;
+        answer: {answer: string} | {answers: string[]} | null;
+        is_flagged: boolean;
+      } => item !== null
+    );
 }
 
 function extractOptionTexts(value: unknown) {
@@ -1037,7 +1107,7 @@ export default function ListeningTestPage() {
         } else if (!isGuest) {
           const createdAttempt = await studentAttemptsService.create({
             practice_test: matched.id,
-            mode: "PRACTICE"
+            mode: requestedMode === "real" ? "REAL" : "PRACTICE"
           });
           finalAttempt = createdAttempt.listening_parts?.length
             ? createdAttempt
@@ -1056,7 +1126,7 @@ export default function ListeningTestPage() {
               });
               const refreshedAttempt = await studentAttemptsService.create({
                 practice_test: matched.id,
-                mode: "PRACTICE"
+                mode: requestedMode === "real" ? "REAL" : "PRACTICE"
               });
               finalAttempt = refreshedAttempt.listening_parts?.length
                 ? refreshedAttempt
@@ -1281,6 +1351,7 @@ function ListeningTestClient({
   const realModeAutoFinishedRef = useRef(false);
   const fullscreenRequestInFlightRef = useRef(false);
   const initDoneRef = useRef(false);
+  const backendSaveChainRef = useRef<Promise<void>>(Promise.resolve());
   const realModeStartTimeoutRef = useRef<number | null>(null);
   const leaveWarningMessage = t.has("leaveWarning")
     ? t("leaveWarning")
@@ -2318,6 +2389,77 @@ function ListeningTestClient({
     return timerUsed ? timerSpentSeconds : elapsedSeconds;
   }, [remainingSeconds, startedAt, test.durationMinutes, timerRunning]);
 
+  const saveListeningAttemptToBackend = useCallback(
+    (options?: { includeAnswers?: boolean; finishedAtMs?: number }) => {
+      const includeAnswers = options?.includeAnswers ?? true;
+
+      const runSave = async () => {
+        if (!backendAttemptId || reviewMode || submitMetaByNumber.size === 0) return;
+
+        const payloadAnswers = includeAnswers
+          ? buildListeningBackendAnswerPayload({
+              answers,
+              marked,
+              submitMetaByNumber
+            }).filter((item) => item.answer !== null || item.is_flagged)
+          : [];
+
+        try {
+          await studentAttemptsService.save(backendAttemptId, {
+            time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+            answers: payloadAnswers
+          });
+          return;
+        } catch (error) {
+          const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
+          if (!failedQuestionIds.size) {
+            throw error;
+          }
+
+          try {
+            const snapshot = await studentAttemptsService.getById(backendAttemptId);
+            const freshMetaByNumber = collectListeningSubmitMetaByNumber(snapshot);
+            setSubmitMetaByNumber(freshMetaByNumber);
+            const retryPayloadAnswers = includeAnswers
+              ? buildListeningBackendAnswerPayload({
+                  answers,
+                  marked,
+                  submitMetaByNumber: freshMetaByNumber
+                }).filter((item) => item.answer !== null || item.is_flagged)
+              : [];
+            await studentAttemptsService.save(backendAttemptId, {
+              time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+              answers: retryPayloadAnswers
+            });
+          } catch {
+            // Autosave must not interrupt the test UI.
+          }
+        }
+      };
+
+      const run = backendSaveChainRef.current.then(runSave, runSave);
+      backendSaveChainRef.current = run.catch(() => undefined);
+      return run.catch(() => undefined);
+    },
+    [answers, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, submitMetaByNumber]
+  );
+
+  useEffect(() => {
+    if (isGuest || !backendAttemptId || !attemptMode || reviewMode || submitMetaByNumber.size === 0) return;
+    const autosaveTimer = window.setTimeout(() => {
+      void saveListeningAttemptToBackend({ includeAnswers: true });
+    }, 3000);
+    return () => window.clearTimeout(autosaveTimer);
+  }, [answers, attemptMode, backendAttemptId, isGuest, marked, reviewMode, saveListeningAttemptToBackend, submitMetaByNumber.size]);
+
+  useEffect(() => {
+    if (isGuest || !backendAttemptId || !attemptMode || reviewMode || submitMetaByNumber.size === 0) return;
+    const intervalId = window.setInterval(() => {
+      void saveListeningAttemptToBackend({ includeAnswers: true });
+    }, 60_000);
+    return () => window.clearInterval(intervalId);
+  }, [attemptMode, backendAttemptId, isGuest, reviewMode, saveListeningAttemptToBackend, submitMetaByNumber.size]);
+
   const finishTest = useCallback(async () => {
     if (!attemptId || isSubmittingResult) return;
     setIsSubmittingResult(true);
@@ -2330,6 +2472,7 @@ function ListeningTestClient({
       );
 
       let submitAttemptId = backendAttemptId;
+      let submitMetaForRequest = submitMetaByNumber;
       if (!isGuest && !submitAttemptId && UUID_PATTERN.test(test.id)) {
         try {
           const createdAttempt = await studentAttemptsService.create({
@@ -2338,118 +2481,41 @@ function ListeningTestClient({
           });
           submitAttemptId = toStringSafe(createdAttempt.id).trim() || null;
           setBackendAttemptId(submitAttemptId);
-          setSubmitMetaByNumber(collectListeningSubmitMetaByNumber(createdAttempt));
+          submitMetaForRequest = collectListeningSubmitMetaByNumber(createdAttempt);
+          setSubmitMetaByNumber(submitMetaForRequest);
         } catch {
           // Ignore attempt-create failure here; submit flow will continue with local result state.
         }
       }
 
-      let submitSucceeded = false;
       if (!isGuest && submitAttemptId) {
         try {
-          const activeEntries = Object.entries(answers)
-            .map(([rawNumber, rawValue]) => {
-              const questionNumber = Number(rawNumber);
-              if (!Number.isFinite(questionNumber)) return null;
-              const submitMeta = submitMetaByNumber.get(questionNumber);
-              let normalizedRaw = toStringSafe(rawValue).trim();
-              if (!normalizedRaw) return null;
+          const buildSubmitAnswers = (metaByNumber: Map<number, ListeningSubmitQuestionMeta>) =>
+            buildListeningBackendAnswerPayload({
+              answers,
+              marked,
+              submitMetaByNumber: metaByNumber,
+              includeUnanswered: true
+            });
 
-              if (!submitMeta?.candidateIds?.length) return null;
-
-              if (submitMeta.questionType === "TFNG" || submitMeta.questionType === "YNNG") {
-                normalizedRaw = normalizeTfngYnngAnswerForBackend(normalizedRaw, submitMeta.questionType);
-              } else if (submitMeta.questionType === "MATCHING_HEADINGS") {
-                normalizedRaw = normalizeRomanKeyAnswerForBackend(normalizedRaw);
-              } else if (
-                submitMeta.questionType === "MCQ_SINGLE"
-                || submitMeta.questionType === "MATCHING"
-                || submitMeta.questionType === "CLASSIFICATION"
-                || submitMeta.questionType === "LIST_SELECTION"
-                || submitMeta.questionType === "CHOOSING_TITLE"
-                || submitMeta.questionType === "MATCH_PARA_INFO"
-                || submitMeta.questionType === "MATCH_SENT_ENDINGS"
-                || submitMeta.questionType === "PLAN_MAP_DIAGRAM"
-                || submitMeta.questionType === "DIAGRAM_COMPLETION"
-              ) {
-                normalizedRaw = normalizeLetterKeyAnswerForBackend(normalizedRaw);
-              }
-
-              const answerPayload = submitMeta.questionType === "MCQ_MULTIPLE"
-                ? {
-                    answers: normalizedRaw
-                      .split(",")
-                      .map((item) => normalizeLetterKeyAnswerForBackend(item))
-                      .filter(Boolean)
-                  }
-                : {
-                    answer: normalizedRaw
-                  };
-
-              return {
-                questionNumber,
-                candidateIds: submitMeta.candidateIds,
-                answer: answerPayload
-              };
-            })
-            .filter(Boolean) as Array<{questionNumber: number; candidateIds: string[]; answer: {answer: string} | {answers: string[]}}>;
-
-          const currentIds = new Map<number, string>();
-          activeEntries.forEach((entry) => {
-            const initialId = entry.candidateIds[0] ?? "";
-            if (initialId) {
-              currentIds.set(entry.questionNumber, initialId);
-            }
-          });
-
-          let attemptIndex = 0;
-          const maxAttempts = 12;
-          while (attemptIndex < maxAttempts) {
-            const backendAnswers = activeEntries
-              .map((entry) => {
-                const questionId = currentIds.get(entry.questionNumber) ?? "";
-                if (!questionId) return null;
-
-                return {
-                  question_id: questionId,
-                  answer: entry.answer
-                };
-              })
-              .filter((item): item is {question_id: string; answer: {answer: string} | {answers: string[]}} => item !== null);
-
-            try {
-              await studentAttemptsService.submit(submitAttemptId, {
-                time_used_seconds: timeUsedSeconds,
-                answers: backendAnswers.map((item) => ({
-                  ...item,
-                  attempt_question_id: item.question_id
-                }))
-              });
-              submitSucceeded = true;
-              break;
-            } catch (error) {
-              const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
-              if (!failedQuestionIds.size) {
-                throw error;
-              }
-
-              let changed = false;
-              for (const entry of activeEntries) {
-                const currentId = currentIds.get(entry.questionNumber) ?? "";
-                if (!currentId || !failedQuestionIds.has(currentId)) continue;
-                const nextCandidate = entry.candidateIds.find((candidate) => candidate && candidate !== currentId);
-                if (nextCandidate) {
-                  currentIds.set(entry.questionNumber, nextCandidate);
-                  changed = true;
-                }
-              }
-
-              if (!changed) {
-                throw error;
-              }
+          try {
+            await studentAttemptsService.submit(submitAttemptId, {
+              time_used_seconds: timeUsedSeconds,
+              answers: buildSubmitAnswers(submitMetaForRequest)
+            });
+          } catch (error) {
+            const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
+            if (!failedQuestionIds.size) {
+              throw error;
             }
 
-            attemptIndex += 1;
+            const freshSnapshot = await studentAttemptsService.getById(submitAttemptId);
+            const freshMetaByNumber = collectListeningSubmitMetaByNumber(freshSnapshot);
+            setSubmitMetaByNumber(freshMetaByNumber);
+            await studentAttemptsService.submit(submitAttemptId, {
+              time_used_seconds: timeUsedSeconds,
+              answers: buildSubmitAnswers(freshMetaByNumber)
+            });
           }
         } catch {
           // Keep console clean on submit failure.

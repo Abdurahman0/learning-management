@@ -801,6 +801,22 @@ function collectAttemptScopedIdPool(attempt: StudentAttemptDetail) {
   return pool;
 }
 
+function collectRuntimeSubmitCandidatesByNumber(questions: ReadingQuestion[]) {
+  const byNumber = new Map<number, string[]>();
+
+  for (const question of questions) {
+    const candidates = resolveSubmitCandidateIds(question)
+      .filter((value) => UUID_PATTERN.test(value))
+      .filter((value, index, source) => source.indexOf(value) === index);
+
+    if (candidates.length > 0) {
+      byNumber.set(question.number, candidates);
+    }
+  }
+
+  return byNumber;
+}
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function collectUuidStrings(value: unknown, maxDepth = 4): string[] {
@@ -897,6 +913,7 @@ function collectBackendAttemptAnswerEntries(params: {
   marked: Set<string>;
   submitCandidatesByNumber: Map<number, string[]>;
   allowedAttemptScopedIds?: Set<string>;
+  includeUnanswered?: boolean;
 }) {
   return params.questions
     .map((question) => {
@@ -947,7 +964,7 @@ function collectBackendAttemptAnswerEntries(params: {
         .filter((value) => value && UUID_PATTERN.test(value));
       const candidateIds = (attemptScopedCandidateIds.length ? attemptScopedCandidateIds : fallbackCandidateIds)
         .filter((value, index, source) => source.indexOf(value) === index);
-      if (!candidateIds.length || (normalizedAnswer === null && !isFlagged)) {
+      if (!candidateIds.length || (!params.includeUnanswered && normalizedAnswer === null && !isFlagged)) {
         return null;
       }
 
@@ -960,6 +977,28 @@ function collectBackendAttemptAnswerEntries(params: {
       } satisfies BackendAttemptAnswerEntry;
     })
     .filter((item): item is BackendAttemptAnswerEntry => item !== null);
+}
+
+function toReadingBackendAnswerPayload(entries: BackendAttemptAnswerEntry[]) {
+  return entries
+    .map((entry) => {
+      const questionId = entry.candidateIds[0] ?? "";
+      if (!questionId) return null;
+      return {
+        question_id: questionId,
+        attempt_question_id: questionId,
+        answer: toBackendAnswerPayload(entry.answer),
+        is_flagged: entry.is_flagged
+      };
+    })
+    .filter(
+      (item): item is {
+        question_id: string;
+        attempt_question_id: string;
+        answer: {answer: string} | {answers: string[]} | null;
+        is_flagged: boolean;
+      } => item !== null
+    );
 }
 
 function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord, attempt: StudentAttemptDetail): ReadingFullTest {
@@ -1535,8 +1574,6 @@ function ReadingTestClient({
   const initDoneRef = useRef(false);
   const backendSaveChainRef = useRef<Promise<void>>(Promise.resolve());
   const initialBackendSaveAttemptRef = useRef<string | null>(null);
-  const backendRecoveryInFlightRef = useRef(false);
-  const lastBackendRecoveryAtRef = useRef(0);
   const restartNeedsFreshBackendAttemptRef = useRef(false);
   const leaveWarningMessage = t.has("leaveWarning")
     ? t("leaveWarning")
@@ -1923,182 +1960,70 @@ function ReadingTestClient({
     (options?: {strict?: boolean; includeAnswers?: boolean; context?: string; finishedAtMs?: number}) => {
       const strict = Boolean(options?.strict);
       const includeAnswers = options?.includeAnswers ?? true;
-      const context = options?.context ?? "unspecified";
 
       const runSave = async () => {
         if (!backendAttemptId || reviewMode) return;
 
-        const snapshot = await studentAttemptsService.getById(backendAttemptId);
-        const submitCandidatesByNumber = collectAttemptSubmitCandidatesByNumber(snapshot);
-        const allowedAttemptScopedIds = collectAttemptScopedIdPool(snapshot);
-
-        let activeEntries = includeAnswers
+        const runtimeSubmitCandidatesByNumber = collectRuntimeSubmitCandidatesByNumber(test.questions);
+        const activeEntries = includeAnswers
           ? collectBackendAttemptAnswerEntries({
               questions: test.questions,
               answers,
               marked,
-              submitCandidatesByNumber,
-              allowedAttemptScopedIds
+              submitCandidatesByNumber: runtimeSubmitCandidatesByNumber
             })
           : [];
-        const currentIds = new Map<string, string>();
-        activeEntries.forEach((entry) => {
-          const possiblyAttemptScoped = entry.candidateIds.find((id) => id.length > 0);
-          const selectedId = possiblyAttemptScoped ?? entry.candidateIds[0] ?? "";
-          if (selectedId) {
-            currentIds.set(entry.questionKey, selectedId);
+
+        const payloadAnswers = toReadingBackendAnswerPayload(activeEntries)
+          .filter((item) => item.answer !== null || item.is_flagged);
+
+        if (includeAnswers && activeEntries.length > 0 && payloadAnswers.length === 0) {
+          if (strict) {
+            throw new Error("No valid attempt question IDs resolved for current answers.");
           }
-        });
+          return;
+        }
 
-        const maxAttempts = 14;
-        let attemptIndex = 0;
-        while (attemptIndex < maxAttempts) {
-          const payloadAnswers = activeEntries
-            .map((entry) => {
-              const questionId = currentIds.get(entry.questionKey) ?? "";
-              const answerPayload = toBackendAnswerPayload(entry.answer);
-              if (!questionId || (answerPayload === null && !entry.is_flagged)) {
-                return null;
-              }
-              return {
-                question_id: questionId,
-                attempt_question_id: questionId,
-                answer: answerPayload,
-                is_flagged: entry.is_flagged
-              };
-            })
-            .filter(
-              (item): item is {
-                question_id: string;
-                attempt_question_id: string;
-                answer: {answer: string} | {answers: string[]} | null;
-                is_flagged: boolean;
-              } =>
-                item !== null && !!item.question_id
-            );
+        const savePayload = {
+          time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+          answers: payloadAnswers
+        };
 
-          if (includeAnswers && activeEntries.length > 0 && payloadAnswers.length === 0) {
-            if (strict) {
-              throw new Error("No valid attempt question IDs resolved for current answers.");
-            }
-            return;
+        try {
+          await studentAttemptsService.save(backendAttemptId, savePayload);
+          return;
+        } catch (error) {
+          const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
+          if (!failedQuestionIds.size) {
+            throw error;
           }
 
           try {
+            const freshSnapshot = await studentAttemptsService.getById(backendAttemptId);
+            const freshByNumber = collectAttemptSubmitCandidatesByNumber(freshSnapshot);
+            const freshAllowedAttemptScopedIds = collectAttemptScopedIdPool(freshSnapshot);
+            const retryEntries = includeAnswers
+              ? collectBackendAttemptAnswerEntries({
+                  questions: test.questions,
+                  answers,
+                  marked,
+                  submitCandidatesByNumber: freshByNumber,
+                  allowedAttemptScopedIds: freshAllowedAttemptScopedIds
+                })
+              : [];
+            const retryPayloadAnswers = toReadingBackendAnswerPayload(retryEntries)
+              .filter((item) => item.answer !== null || item.is_flagged);
+
             await studentAttemptsService.save(backendAttemptId, {
               time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
-              answers: payloadAnswers
+              answers: retryPayloadAnswers
             });
             return;
-          } catch (error) {
-            const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
-            if (!failedQuestionIds.size) {
-              throw error;
-            }
-
-            let changed = false;
-            for (const entry of activeEntries) {
-              const currentId = currentIds.get(entry.questionKey) ?? "";
-              if (!currentId || !failedQuestionIds.has(currentId)) continue;
-
-              const nextCandidate = entry.candidateIds.find((candidate) => candidate && candidate !== currentId);
-              if (nextCandidate) {
-                currentIds.set(entry.questionKey, nextCandidate);
-                changed = true;
-              }
-            }
-
-            if (!changed) {
-              const freshSnapshot = await studentAttemptsService.getById(backendAttemptId);
-              const freshByNumber = collectAttemptSubmitCandidatesByNumber(freshSnapshot);
-              const freshAllowedAttemptScopedIds = collectAttemptScopedIdPool(freshSnapshot);
-
-              for (const entry of activeEntries) {
-                const currentId = currentIds.get(entry.questionKey) ?? "";
-                if (!currentId || !failedQuestionIds.has(currentId)) continue;
-
-                const freshPool = [
-                  ...(freshByNumber.get(entry.questionNumber) ?? [])
-                ]
-                  .filter((value) => UUID_PATTERN.test(value))
-                  .filter((value) => freshAllowedAttemptScopedIds.size === 0 || freshAllowedAttemptScopedIds.has(value))
-                  .filter((value, index, source) => source.indexOf(value) === index);
-
-                if (!freshPool.length) continue;
-                entry.candidateIds = [...entry.candidateIds, ...freshPool]
-                  .filter((value) => UUID_PATTERN.test(value))
-                  .filter((value, index, source) => source.indexOf(value) === index);
-
-                const nextCandidate = entry.candidateIds.find((candidate) => candidate && candidate !== currentId);
-                if (nextCandidate) {
-                  currentIds.set(entry.questionKey, nextCandidate);
-                  changed = true;
-                }
-              }
-            }
-
-            if (!changed) {
-              if (!strict) {
-                const failedQuestionKeys = activeEntries
-                  .filter((entry) => failedQuestionIds.has(currentIds.get(entry.questionKey) ?? ""))
-                  .map((entry) => entry.questionKey);
-                if (failedQuestionKeys.length) {
-                  const failedKeySet = new Set(failedQuestionKeys);
-                  activeEntries = activeEntries.filter((entry) => !failedKeySet.has(entry.questionKey));
-                  failedQuestionKeys.forEach((questionKey) => currentIds.delete(questionKey));
-                  changed = true;
-                }
-              }
-            }
-
-            if (!changed) {
-              if (strict) {
-                throw error;
-              }
-              const now = Date.now();
-              const recoveryCooldownMs = 15_000;
-              if (
-                includeAnswers
-                && attemptMode
-                && !backendRecoveryInFlightRef.current
-                && now - lastBackendRecoveryAtRef.current >= recoveryCooldownMs
-              ) {
-                backendRecoveryInFlightRef.current = true;
-                lastBackendRecoveryAtRef.current = now;
-                try {
-                  try {
-                    await studentAttemptsService.submit(backendAttemptId, {
-                      time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
-                      answers: []
-                    });
-                  } catch {
-                    // Ignore and continue recovery create attempt path.
-                  }
-                  const createdAttempt = await studentAttemptsService.create({
-                    practice_test: test.id,
-                    mode: attemptMode === "real" ? "REAL" : "PRACTICE"
-                  });
-                  const hydratedAttempt = hasAttemptQuestionData(createdAttempt)
-                    ? createdAttempt
-                    : await studentAttemptsService.getById(String(createdAttempt.id));
-                  const nextAttemptId = String(hydratedAttempt.id);
-                  if (nextAttemptId === backendAttemptId) {
-                    return;
-                  }
-                  setBackendAttemptId(nextAttemptId);
-                  initialBackendSaveAttemptRef.current = null;
-                } catch {
-                  // Ignore autosave recovery error to avoid breaking the UI flow.
-                } finally {
-                  backendRecoveryInFlightRef.current = false;
-                }
-                return;
-              }
-              return;
+          } catch (retryError) {
+            if (strict) {
+              throw retryError;
             }
           }
-
-          attemptIndex += 1;
         }
       };
 
@@ -2111,7 +2036,7 @@ function ReadingTestClient({
 
       return run.catch(() => undefined);
     },
-    [answers, attemptMode, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, test.id, test.questions]
+    [answers, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, test.questions]
   );
 
   useEffect(() => {
@@ -2184,7 +2109,7 @@ function ReadingTestClient({
         includeAnswers: true,
         context: "change"
       });
-    }, 900);
+    }, 3000);
     return () => window.clearTimeout(autosaveTimer);
   }, [answers, attemptMode, backendAttemptId, marked, reviewMode, saveAttemptToBackend]);
 
@@ -2466,16 +2391,38 @@ function ReadingTestClient({
 
     try {
       if (backendAttemptId) {
-        await saveAttemptToBackend({
-          strict: true,
-          includeAnswers: true,
-          context: "finish-pre-submit",
-          finishedAtMs: finishedAt
-        });
-        await studentAttemptsService.submit(backendAttemptId, {
-          time_used_seconds: timeUsedSeconds,
-          answers: []
-        });
+        const buildSubmitAnswers = (
+          submitCandidatesByNumber: Map<number, string[]>,
+          allowedAttemptScopedIds?: Set<string>
+        ) => toReadingBackendAnswerPayload(collectBackendAttemptAnswerEntries({
+          questions: test.questions,
+          answers,
+          marked,
+          submitCandidatesByNumber,
+          allowedAttemptScopedIds,
+          includeUnanswered: true
+        }));
+
+        try {
+          await studentAttemptsService.submit(backendAttemptId, {
+            time_used_seconds: timeUsedSeconds,
+            answers: buildSubmitAnswers(collectRuntimeSubmitCandidatesByNumber(test.questions))
+          });
+        } catch (error) {
+          const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
+          if (!failedQuestionIds.size) {
+            throw error;
+          }
+
+          const freshSnapshot = await studentAttemptsService.getById(backendAttemptId);
+          await studentAttemptsService.submit(backendAttemptId, {
+            time_used_seconds: timeUsedSeconds,
+            answers: buildSubmitAnswers(
+              collectAttemptSubmitCandidatesByNumber(freshSnapshot),
+              collectAttemptScopedIdPool(freshSnapshot)
+            )
+          });
+        }
       }
 
       saveAttemptResult({
@@ -2560,7 +2507,6 @@ function ReadingTestClient({
     marked,
     remainingSeconds,
     resolveTimeUsedSeconds,
-    saveAttemptToBackend,
     startedAt,
     test.durationMinutes,
     test.id,
