@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { type CSSProperties, type DragEvent as ReactDragEvent, type PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Bookmark, BookmarkCheck, Clock3, Grid2x2, Maximize2, Menu, Minimize2, MoveLeft, MoveRight, Play, RotateCcw, Square, User } from "lucide-react";
+import { Bookmark, BookmarkCheck, CheckCircle2, CircleDashed, Clock3, Grid2x2, Maximize2, Menu, Minimize2, MoveLeft, MoveRight, Play, RotateCcw, Square, User, XCircle } from "lucide-react";
 import { LoadingModal } from "@/components/ui/loading-modal";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -3299,10 +3299,7 @@ function ReadingTestClient({
                                 active
                                   ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/40"
                                   : "border-border/80 bg-card/90",
-                                isMarked && "border-l-4 border-l-amber-400 bg-amber-50/40 dark:bg-amber-500/10",
-                                reviewMode && answered && isCorrect && "border-emerald-300 bg-emerald-50/40 dark:bg-emerald-500/10",
-                                reviewMode && answered && !isCorrect && "border-rose-300 bg-rose-50/40 dark:bg-rose-500/10",
-                                reviewMode && !answered && "border-border bg-muted/20"
+                                isMarked && "border-l-4 border-l-amber-400 bg-amber-50/40 dark:bg-amber-500/10"
                               )}
                               onClick={() => setActiveQuestionNumber(question.number)}
                               ref={(el) => {
@@ -3373,7 +3370,21 @@ function ReadingTestClient({
                                     >
                                       {t.has("jumpToEvidence") ? t("jumpToEvidence") : "Jump to evidence"}
                                     </Button>
-                                    <span className="shrink-0 text-xs font-semibold leading-none text-muted-foreground" aria-hidden="true">
+                                    <span
+                                      className={cn(
+                                        "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold leading-none",
+                                        !answered && "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300",
+                                        answered && isCorrect && "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200",
+                                        answered && !isCorrect && "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200"
+                                      )}
+                                    >
+                                      {!answered ? (
+                                        <CircleDashed className="size-3.5" aria-hidden="true" />
+                                      ) : isCorrect ? (
+                                        <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                                      ) : (
+                                        <XCircle className="size-3.5" aria-hidden="true" />
+                                      )}
                                       {!answered ? "Skipped" : isCorrect ? "Correct" : "Incorrect"}
                                     </span>
                                   </div>
