@@ -1821,8 +1821,26 @@ function ReadingTestClient({
     [reviewQuestions]
   );
   const reviewAnswers = useMemo(
-    () => (backendReviewData ? normalizeBackendReviewAnswers(backendReviewData.answers) : answers),
-    [answers, backendReviewData]
+    () => {
+      if (!backendReviewData) return answers;
+
+      const normalized = normalizeBackendReviewAnswers(backendReviewData.answers);
+      const merged: Record<string, AnswerValue> = {...normalized};
+      const runtimeQuestionByNumber = new Map(test.questions.map((question) => [question.number, question]));
+
+      backendReviewData.questions.forEach((reviewQuestion) => {
+        const reviewAnswer = normalized[reviewQuestion.id];
+        if (reviewAnswer === undefined) return;
+
+        const runtimeQuestion = runtimeQuestionByNumber.get(reviewQuestion.number);
+        if (runtimeQuestion) {
+          merged[runtimeQuestion.id] = reviewAnswer;
+        }
+      });
+
+      return merged;
+    },
+    [answers, backendReviewData, test.questions]
   );
   const displayedAnswers = reviewMode ? reviewAnswers : answers;
   const answeredNumbers = useMemo(() => {
