@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { authApi } from "@/lib/api/auth";
-import {seedOnboardingPending} from "@/lib/onboarding-storage";
+import {seedOnboardingPending, shouldOpenPendingOnboarding} from "@/lib/onboarding-storage";
 import { cn } from "@/lib/utils";
 
 import type { AuthMode } from "./AuthShell";
@@ -123,7 +123,7 @@ export function AuthCard({ mode }: AuthCardProps) {
         }
 
         // Frontend-only onboarding (API coming later): show after the first successful signup.
-        seedOnboardingPending();
+        seedOnboardingPending(form.email.trim().toLowerCase());
 
         setStatus(response.detail ?? successLabel);
         setStatusType("success");
@@ -149,6 +149,8 @@ export function AuthCard({ mode }: AuthCardProps) {
         router.replace(`/${locale}/admin`);
       } else if (response.data.role === "teacher") {
         router.replace(`/${locale}/teacher`);
+      } else if (shouldOpenPendingOnboarding(form.email)) {
+        router.replace(`/${locale}/onboarding?returnTo=${encodeURIComponent("/dashboard")}`);
       } else {
         router.replace(`/${locale}/reading`);
       }

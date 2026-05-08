@@ -143,14 +143,14 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
                     </linearGradient>
                   </defs>
 
-                  <CartesianGrid strokeDasharray="3 6" stroke="hsl(var(--border))" opacity={0.45} vertical={false} />
+                  <CartesianGrid strokeDasharray="3 6" stroke="var(--border)" opacity={0.65} vertical={false} />
 
                   <XAxis
                     dataKey="label"
                     interval={chartMeta.xInterval}
                     tickLine={false}
-                    axisLine={{stroke: "hsl(var(--border))"}}
-                    tick={{fill: "hsl(var(--muted-foreground))", fontSize: 12}}
+                    axisLine={{stroke: "var(--border)"}}
+                    tick={{fill: "var(--muted-foreground)", fontSize: 12, fontWeight: 500}}
                   />
                   <YAxis
                     domain={chartMeta.yDomain}
@@ -158,12 +158,12 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
                     tickLine={false}
                     axisLine={false}
                     width={36}
-                    tick={{fill: "hsl(var(--muted-foreground))", fontSize: 12}}
+                    tick={{fill: "var(--muted-foreground)", fontSize: 12, fontWeight: 500}}
                     tickFormatter={(value) => Number(value).toFixed(1)}
                   />
 
                   <Tooltip
-                    cursor={{stroke: "hsl(var(--muted-foreground))", strokeDasharray: "3 6", opacity: 0.55}}
+                    cursor={{stroke: "var(--muted-foreground)", strokeDasharray: "3 6", opacity: 0.55}}
                     content={({active, payload, label}) => {
                       if (!active || !payload?.length) return null;
                       const band = Number(payload[0].value ?? 0);
@@ -192,7 +192,7 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
                     stroke="rgb(59 130 246)"
                     strokeWidth={3}
                     dot={{r: 3.5, strokeWidth: 2, stroke: "rgb(59 130 246 / 0.35)", fill: "rgb(59 130 246)"}}
-                    activeDot={{r: 5.25, stroke: "rgb(59 130 246)", strokeWidth: 2, fill: "hsl(var(--background))"}}
+                    activeDot={{r: 5.25, stroke: "rgb(59 130 246)", strokeWidth: 2, fill: "var(--background)"}}
                     isAnimationActive
                     animationDuration={650}
                   />
@@ -201,10 +201,10 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
                     x={visiblePoints[visiblePoints.length - 1]?.label}
                     y={latestBand}
                     r={6}
-                    fill="hsl(var(--background))"
+                    fill="var(--background)"
                     stroke="rgb(59 130 246)"
                     strokeWidth={2}
-                    label={{value: "Latest", position: "top", fill: "hsl(var(--muted-foreground))", fontSize: 12}}
+                    label={{value: "Latest", position: "top", fill: "var(--muted-foreground)", fontSize: 12, fontWeight: 600}}
                   />
                 </AreaChart>
               </ResponsiveContainer>

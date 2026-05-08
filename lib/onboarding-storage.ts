@@ -17,6 +17,7 @@ export type OnboardingState = {
   version: 1;
   status: OnboardingStatus;
   updatedAt: string;
+  ownerEmail?: string;
   answers: OnboardingAnswers;
 };
 
@@ -42,6 +43,7 @@ function safeParseState(raw: string): OnboardingState | null {
       version: 1,
       status: parsed.status,
       updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : new Date().toISOString(),
+      ownerEmail: typeof parsed.ownerEmail === "string" ? parsed.ownerEmail : undefined,
       answers: {
         examDate: typeof answers.examDate === "string" ? answers.examDate : undefined,
         examTime: typeof answers.examTime === "string" ? answers.examTime : undefined,
@@ -81,7 +83,11 @@ export function writeOnboardingState(state: OnboardingState) {
   }
 }
 
-export function seedOnboardingPending() {
+function normalizeEmail(email?: string) {
+  return email?.trim().toLowerCase() || undefined;
+}
+
+export function seedOnboardingPending(ownerEmail?: string) {
   if (typeof window === "undefined") return;
   const current = readOnboardingState();
   if (current) return;
@@ -90,8 +96,19 @@ export function seedOnboardingPending() {
     version: 1,
     status: "pending",
     updatedAt: new Date().toISOString(),
+    ownerEmail: normalizeEmail(ownerEmail),
     answers: {targets: DEFAULT_TARGETS}
   });
+}
+
+export function shouldOpenPendingOnboarding(ownerEmail?: string) {
+  const state = readOnboardingState();
+  if (state?.status !== "pending") return false;
+
+  const normalizedOwner = normalizeEmail(ownerEmail);
+  if (!state.ownerEmail || !normalizedOwner) return true;
+
+  return state.ownerEmail === normalizedOwner;
 }
 
 export function setOnboardingStatus(status: OnboardingStatus, answers?: Partial<OnboardingAnswers>) {
