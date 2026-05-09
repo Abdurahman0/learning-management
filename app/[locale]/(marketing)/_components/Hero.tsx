@@ -2,7 +2,6 @@ import Link from "next/link";
 import {ArrowRight, Play} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
-import {Avatar, AvatarFallback} from "@/components/ui/avatar";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
@@ -45,20 +44,6 @@ export function Hero() {
               </Button>
             </div>
 
-            <div className="mt-8 flex items-center gap-4">
-              <div className="flex -space-x-2">
-                <Avatar className="size-8 border-2 border-card">
-                  <AvatarFallback className="bg-amber-200 text-[10px] font-semibold text-amber-900">AN</AvatarFallback>
-                </Avatar>
-                <Avatar className="size-8 border-2 border-card">
-                  <AvatarFallback className="bg-emerald-200 text-[10px] font-semibold text-emerald-900">LU</AvatarFallback>
-                </Avatar>
-                <Avatar className="size-8 border-2 border-card">
-                  <AvatarFallback className="bg-sky-200 text-[10px] font-semibold text-sky-900">MO</AvatarFallback>
-                </Avatar>
-              </div>
-              <p className="text-sm text-muted-foreground">{t("hero.socialProof")}</p>
-            </div>
           </div>
 
           <Card className="overflow-hidden border-border bg-linear-to-br from-emerald-300 via-teal-500 to-cyan-700 p-0 shadow-sm dark:shadow-black/20">

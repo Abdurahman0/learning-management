@@ -25,12 +25,12 @@
             },
     "hero":  {
                  "badge":  "Updated for 2026 Exam",
-                 "title":  "Train Like the Real Exam. Improve Like a Pro.",
+                 "title":  "Train like the real exam - Improve like a pro",
                  "titleAccent":  "Practice. Analyse. Improve. Repeat.",
                  "description":  "Want a higher IELTS score? You don\u0027t need endless practice, you need smart practice. On this platform, you work with real exam-style tasks and get clear feedback powered by AI, so you always know what to improve.",
                  "startReading":  "Start Reading",
                  "startListening":  "Start Listening",
-                 "socialProof":  "Joined by 10,000+ students this month",
+                 "socialProof":  "",
                  "watchDemo":  "Watch Demo",
                  "watchDemoAria":  "Watch demo video"
              },
@@ -475,7 +475,7 @@
                                         "proTip":  "PRO TIP",
                                         "proTipText":  "Just browsing?",
                                         "guestLink":  "Try our Guest mode",
-                                        "socialProof":  "Join 50k+ students worldwide"
+                                        "socialProof":  ""
                                     },
                 "activation":  {
                                    "title":  "Activate your account",

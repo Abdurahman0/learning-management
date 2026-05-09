@@ -34,20 +34,6 @@ export function AuthMarketing({ mode }: AuthMarketingProps) {
           </p>
         </Card>
 
-        <div className="flex items-center gap-3 text-muted-foreground">
-          <div className="flex -space-x-2">
-            {["A", "S", "M"].map((letter, index) => (
-              <span
-                key={letter}
-                className="flex size-9 items-center justify-center rounded-full border-2 border-background bg-linear-to-br from-amber-100 to-orange-200 text-xs font-semibold text-amber-800"
-                style={{ zIndex: 10 - index }}
-              >
-                {letter}
-              </span>
-            ))}
-          </div>
-          <p className="text-lg font-medium">{t("signinMarketing.socialProof")}</p>
-        </div>
       </div>
     );
   }

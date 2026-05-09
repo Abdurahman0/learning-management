@@ -25,12 +25,12 @@
             },
     "hero":  {
                  "badge":  "2026 imtihoni uchun yangilangan",
-                 "title":  "Haqiqiy imtihon kabi mashq qiling. Professional kabi yaxshilang.",
+                 "title":  "Haqiqiy imtihondek mashq qiling - professional kabi rivojlaning",
                  "titleAccent":  "Amaliyot. Tahlil. Rivojlanish. Takrorlash.",
                  "description":  "Yuqori IELTS ballini xohlaysizmi? Sizga cheksiz mashq emas, aqlli mashq kerak. Bu platformada siz haqiqiy imtihon formatidagi topshiriqlar bilan ishlaysiz va AI asosidagi aniq fikr-mulohaza olasiz, shuning uchun nima ustida ishlash kerakligini doim bilasiz.",
                  "startReading":  "Readingni boshlash",
                  "startListening":  "Listeningni boshlash",
-                 "socialProof":  "Bu oy 10 000+ talaba qo\u0027shildi",
+                 "socialProof":  "",
                  "watchDemo":  "Demoni ko\u0027rish",
                  "watchDemoAria":  "Demo videoni ko\u0027rish"
              },
@@ -475,7 +475,7 @@
                                         "proTip":  "PRO MASLAHAT",
                                         "proTipText":  "Shunchaki ko\u0027rib chiqyapsizmi?",
                                         "guestLink":  "Guest mode\u0027ni sinab ko\u0027ring",
-                                        "socialProof":  "50k+ talabalar biz bilan"
+                                        "socialProof":  ""
                                     },
                 "activation":  {
                                    "title":  "Akkauntingizni faollashtiring",
