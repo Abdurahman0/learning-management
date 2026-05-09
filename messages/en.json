@@ -26,7 +26,13 @@
     "hero":  {
                  "badge":  "Updated for 2026 Exam",
                  "title":  "Train like the real exam - Improve like a pro",
-                 "titleAccent":  "Practice. Analyse. Improve. Repeat.",
+                 "titleAccent":  "Practise->Analyze->Improve->Repeat",
+                 "flow":  {
+                              "practice":  "Practise",
+                              "analyze":  "Analyze",
+                              "improve":  "Improve",
+                              "repeat":  "Repeat"
+                          },
                  "description":  "Want a higher IELTS score? You don\u0027t need endless practice, you need smart practice. On this platform, you work with real exam-style tasks and get clear feedback powered by AI, so you always know what to improve.",
                  "startReading":  "Start Reading",
                  "startListening":  "Start Listening",

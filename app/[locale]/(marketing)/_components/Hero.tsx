@@ -22,7 +22,16 @@ export function Hero() {
             </Badge>
 
             <h1 className="max-w-2xl text-4xl leading-[1.05] font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-[62px]">
-              {t("hero.title")} <span className="text-blue-600">{t("hero.titleAccent")}</span>
+              {t("hero.title")}{" "}
+              <span className="inline-flex flex-wrap items-center gap-2 text-blue-600 sm:gap-3">
+                <span>{t("hero.flow.practice")}</span>
+                <span className="text-[0.72em] text-blue-500" aria-hidden="true">→</span>
+                <span>{t("hero.flow.analyze")}</span>
+                <span className="text-[0.72em] text-blue-500" aria-hidden="true">→</span>
+                <span>{t("hero.flow.improve")}</span>
+                <span className="text-[0.72em] text-blue-500" aria-hidden="true">→</span>
+                <span>{t("hero.flow.repeat")}</span>
+              </span>
             </h1>
 
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">{t("hero.description")}</p>

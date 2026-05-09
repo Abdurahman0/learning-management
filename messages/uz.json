@@ -26,7 +26,13 @@
     "hero":  {
                  "badge":  "2026 imtihoni uchun yangilangan",
                  "title":  "Haqiqiy imtihondek mashq qiling - professional kabi rivojlaning",
-                 "titleAccent":  "Amaliyot. Tahlil. Rivojlanish. Takrorlash.",
+                 "titleAccent":  "Amaliyot->Tahlil->Rivojlanish->Takrorlash",
+                 "flow":  {
+                              "practice":  "Amaliyot",
+                              "analyze":  "Tahlil",
+                              "improve":  "Rivojlanish",
+                              "repeat":  "Takrorlash"
+                          },
                  "description":  "Yuqori IELTS ballini xohlaysizmi? Sizga cheksiz mashq emas, aqlli mashq kerak. Bu platformada siz haqiqiy imtihon formatidagi topshiriqlar bilan ishlaysiz va AI asosidagi aniq fikr-mulohaza olasiz, shuning uchun nima ustida ishlash kerakligini doim bilasiz.",
                  "startReading":  "Readingni boshlash",
                  "startListening":  "Listeningni boshlash",
