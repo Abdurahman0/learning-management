@@ -1,6 +1,6 @@
 "use client";
 
-import {Activity, Crown, UserPlus2, Users} from "lucide-react";
+import {Activity, UserPlus2, Users} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Card, CardContent} from "@/components/ui/card";
@@ -13,8 +13,7 @@ type UserStatsCardsProps = {
 const iconMap = {
   totalUsers: Users,
   activeToday: Activity,
-  newThisMonth: UserPlus2,
-  payingUsers: Crown
+  newThisMonth: UserPlus2
 } as const;
 
 export function UserStatsCards({stats}: UserStatsCardsProps) {
@@ -23,7 +22,8 @@ export function UserStatsCards({stats}: UserStatsCardsProps) {
   return (
     <section className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {stats.map((item) => {
-        const Icon = iconMap[item.id];
+        const Icon = iconMap[item.id as keyof typeof iconMap];
+        if (!Icon) return null;
 
         return (
           <Card key={item.id} className="rounded-2xl border-border/70 bg-card/75 py-0">

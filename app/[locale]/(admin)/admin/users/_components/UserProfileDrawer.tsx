@@ -28,19 +28,17 @@ const statusClassName = {
   suspended: "border-rose-500/30 bg-rose-500/10 text-rose-300"
 } as const;
 
-const planClassName = {
-  free: "border-slate-500/35 bg-slate-500/14 text-slate-300",
-  pro: "border-blue-500/35 bg-blue-500/14 text-blue-300",
-  premium: "border-amber-500/35 bg-amber-500/14 text-amber-300"
-} as const;
-
 function formatDate(dateString: string, t: (key: string, values?: Record<string, string | number>) => string) {
-  const [year, monthStr] = dateString.split("-");
+  const parsedDate = new Date(dateString);
+  const safeDate = Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+  const year = safeDate ? String(safeDate.getFullYear()) : dateString.split("-")[0];
+  const monthStr = safeDate ? String(safeDate.getMonth() + 1) : dateString.split("-")[1];
+  const day = safeDate ? String(safeDate.getDate()).padStart(2, "0") : "";
   const monthIndex = Number(monthStr) - 1;
   const monthKeys = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const;
   const month = monthKeys[monthIndex] ?? "jan";
 
-  return `${t(`dates.months.${month}`)} ${year}`;
+  return day ? `${t(`dates.months.${month}`)} ${day}, ${year}` : `${t(`dates.months.${month}`)} ${year}`;
 }
 
 export function UserProfileDrawer({open, user, onOpenChange, onSendMessage, onResetPassword}: UserProfileDrawerProps) {
@@ -71,9 +69,6 @@ export function UserProfileDrawer({open, user, onOpenChange, onSendMessage, onRe
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     <Badge className={`border px-2 py-0.5 text-[10px] tracking-wide uppercase ${statusClassName[user.status]}`}>
                       {t(`status.${user.status}`)}
-                    </Badge>
-                    <Badge className={`border px-2 py-0.5 text-[10px] tracking-wide uppercase ${planClassName[user.plan]}`}>
-                      {t(`plan.${user.plan}`)}
                     </Badge>
                   </div>
                 </div>

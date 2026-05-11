@@ -4,7 +4,6 @@ import {ChevronLeft, ChevronRight} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
-import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
@@ -20,12 +19,6 @@ type UsersTableProps = {
   totalPages: number;
   onRowClick: (userId: string) => void;
   onPageChange: (page: number) => void;
-};
-
-const planClassName: Record<AdminUser["plan"], string> = {
-  free: "border-slate-500/35 bg-slate-500/14 text-slate-300",
-  pro: "border-blue-500/35 bg-blue-500/14 text-blue-300",
-  premium: "border-amber-500/35 bg-amber-500/14 text-amber-300"
 };
 
 const moduleColorClass: Record<keyof AdminUser["stats"], string> = {
@@ -51,6 +44,17 @@ function getVisiblePages(page: number, totalPages: number) {
   return [1, -1, page - 1, page, page + 1, -2, totalPages];
 }
 
+function formatJoinedDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric"
+  }).format(date);
+}
+
 export function UsersTable({users, selectedUserId, page, pageSize, totalItems, totalPages, onRowClick, onPageChange}: UsersTableProps) {
   const t = useTranslations("adminUsers");
   const start = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -61,11 +65,11 @@ export function UsersTable({users, selectedUserId, page, pageSize, totalItems, t
     <Card className="overflow-hidden rounded-3xl border-border/70 bg-card/70 py-0">
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <Table className="min-w-[940px]">
+          <Table className="min-w-[920px]">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("table.columns.user")}</TableHead>
-                <TableHead>{t("table.columns.plan")}</TableHead>
+                <TableHead>{t("table.columns.joined")}</TableHead>
                 <TableHead>{t("table.columns.band")}</TableHead>
                 <TableHead>{t("table.columns.moduleStats")}</TableHead>
               </TableRow>
@@ -100,11 +104,7 @@ export function UsersTable({users, selectedUserId, page, pageSize, totalItems, t
                       </div>
                     </TableCell>
 
-                    <TableCell className="py-4">
-                      <Badge className={`border px-2.5 py-0.5 text-[10px] tracking-wide uppercase ${planClassName[user.plan]}`}>
-                        {t(`plan.${user.plan}`)}
-                      </Badge>
-                    </TableCell>
+                    <TableCell className="py-4 text-sm font-medium text-muted-foreground">{formatJoinedDate(user.joinedAt)}</TableCell>
 
                     <TableCell className="py-4 text-2xl font-semibold tracking-tight">{user.overallBand.toFixed(1)}</TableCell>
 

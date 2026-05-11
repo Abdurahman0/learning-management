@@ -6,7 +6,6 @@ import {useTranslations} from "next-intl";
 import {
   type AdminUser,
   type FilterOption,
-  type PlanFilterValue,
   type RoleFilterValue,
   type StatusFilterValue,
   type UserStatCard
@@ -23,7 +22,6 @@ import {UsersTable} from "./UsersTable";
 const PAGE_SIZE = 6;
 const STATUS_FILTER_OPTIONS: FilterOption<StatusFilterValue>[] = [
   {value: "all", labelKey: "filters.status.all"},
-  {value: "verified", labelKey: "filters.status.verified"},
   {value: "active", labelKey: "filters.status.active"},
   {value: "suspended", labelKey: "filters.status.suspended"}
 ];
@@ -33,13 +31,6 @@ const ROLE_FILTER_OPTIONS: FilterOption<RoleFilterValue>[] = [
   {value: "admin", labelKey: "filters.role.admin"},
   {value: "tutor", labelKey: "filters.role.tutor"}
 ];
-const PLAN_FILTER_OPTIONS: FilterOption<PlanFilterValue>[] = [
-  {value: "all", labelKey: "filters.plan.all"},
-  {value: "free", labelKey: "filters.plan.free"},
-  {value: "pro", labelKey: "filters.plan.pro"},
-  {value: "premium", labelKey: "filters.plan.premium"}
-];
-
 type UsersPageClientProps = {
   initialQuery?: string;
 };
@@ -55,8 +46,7 @@ function initialsFromName(name: string) {
 }
 
 function toJoinedAt(value: string) {
-  if (!value) return "2026-01";
-  return value.slice(0, 7);
+  return value || "";
 }
 
 function mapRole(value: string): AdminUser["role"] {
@@ -154,7 +144,6 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
   const [searchValue, setSearchValue] = useState(initialQuery);
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("all");
   const [roleFilter, setRoleFilter] = useState<RoleFilterValue>("all");
-  const [planFilter, setPlanFilter] = useState<PlanFilterValue>("all");
   const [page, setPage] = useState(1);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -185,12 +174,10 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
   }, [initialQuery]);
 
   const stats = useMemo<UserStatCard[]>(() => {
-    const payingUsers = users.filter((user) => user.plan !== "free").length;
     return [
       {id: "totalUsers", value: metrics.totalUsers || users.length, change: "+0.0%", icon: "users"},
       {id: "activeToday", value: metrics.activeToday, change: "+0.0%", icon: "activity"},
-      {id: "newThisMonth", value: metrics.newThisMonth, change: "+0.0%", icon: "newUsers"},
-      {id: "payingUsers", value: payingUsers, change: "+0.0%", icon: "crown"}
+      {id: "newThisMonth", value: metrics.newThisMonth, change: "+0.0%", icon: "newUsers"}
     ];
   }, [metrics, users]);
 
@@ -206,17 +193,13 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
         return false;
       }
 
-      if (planFilter !== "all" && user.plan !== planFilter) {
-        return false;
-      }
-
       if (!query) {
         return true;
       }
 
       return user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query) || user.id.toLowerCase().includes(query);
     });
-  }, [users, searchValue, statusFilter, roleFilter, planFilter]);
+  }, [users, searchValue, statusFilter, roleFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -237,7 +220,6 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
     setSearchValue("");
     setStatusFilter("all");
     setRoleFilter("all");
-    setPlanFilter("all");
     setPage(1);
   };
 
@@ -303,13 +285,10 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
             <UsersFilters
               statusValue={statusFilter}
               roleValue={roleFilter}
-              planValue={planFilter}
               statusOptions={STATUS_FILTER_OPTIONS}
               roleOptions={ROLE_FILTER_OPTIONS}
-              planOptions={PLAN_FILTER_OPTIONS}
               onStatusChange={(value) => setFilterAndResetPage(setStatusFilter, value)}
               onRoleChange={(value) => setFilterAndResetPage(setRoleFilter, value)}
-              onPlanChange={(value) => setFilterAndResetPage(setPlanFilter, value)}
               onReset={handleResetFilters}
             />
 
