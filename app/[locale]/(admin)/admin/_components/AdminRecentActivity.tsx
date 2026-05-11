@@ -1,5 +1,6 @@
 "use client";
 
+import {useMemo, useState} from "react";
 import {useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
@@ -28,14 +29,25 @@ type AdminRecentActivityProps = {
 
 export function AdminRecentActivity({activity}: AdminRecentActivityProps) {
   const t = useTranslations("adminDashboard");
+  const [showAll, setShowAll] = useState(false);
+  const visibleActivity = useMemo(() => (showAll ? activity : activity.slice(0, 5)), [activity, showAll]);
+  const canViewAll = activity.length > visibleActivity.length;
 
   return (
     <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/75 py-0">
       <CardHeader className="flex flex-row items-center justify-between gap-3 pt-5 pb-4">
         <CardTitle className="text-xl">{t("activity.title")}</CardTitle>
-        <Button variant="ghost" size="sm" className="h-8 rounded-lg px-2 text-sm text-primary hover:bg-primary/10 hover:text-primary">
-          {t("activity.viewAll")}
-        </Button>
+        {canViewAll ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 rounded-lg px-2 text-sm text-primary hover:bg-primary/10 hover:text-primary"
+            onClick={() => setShowAll(true)}
+          >
+            {t("activity.viewAll")}
+          </Button>
+        ) : null}
       </CardHeader>
 
       <CardContent className="border-t border-border/65 p-0">
@@ -50,7 +62,7 @@ export function AdminRecentActivity({activity}: AdminRecentActivityProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activity.map((item) => (
+              {visibleActivity.map((item) => (
                 <TableRow key={item.id} className="h-[68px]">
                   <TableCell className="py-3.5">
                     <div className="flex items-center gap-2.5">

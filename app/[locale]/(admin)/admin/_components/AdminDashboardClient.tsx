@@ -122,7 +122,7 @@ export function AdminDashboardClient() {
   const mappedActivity = useMemo<RecentActivityItem[]>(() => {
     if (!dashboardPayload || dashboardPayload.recentUserActivity.length === 0) return [];
 
-    return dashboardPayload.recentUserActivity.slice(0, 10).map((item, index) => {
+    return dashboardPayload.recentUserActivity.map((item, index) => {
       const firstChar = String(item.userName || item.email || "U").trim().charAt(0).toUpperCase();
       const secondChar = String(item.userName || item.email || "S")
         .trim()
