@@ -88,6 +88,27 @@ function createTopRoundedBarPath(x: number, y: number, width: number, height: nu
   ].join(" ");
 }
 
+function getPointTooltipStyle(point: Point, chartWidth: number, chartHeight: number): CSSProperties {
+  const leftPct = clamp((point.x / chartWidth) * 100, 12, 88);
+  const topPct = clamp((point.y / chartHeight) * 100, 10, 82);
+  const nearTop = topPct < 28;
+  const nearRight = leftPct > 70;
+
+  if (nearTop) {
+    return {
+      left: `${leftPct}%`,
+      top: `${topPct}%`,
+      transform: nearRight ? "translate(-108%, -50%)" : "translate(8%, -50%)"
+    };
+  }
+
+  return {
+    left: `${leftPct}%`,
+    top: `${topPct}%`,
+    transform: "translate(-50%, -108%)"
+  };
+}
+
 function AdminChartCardHeader({title, subtitle, rightSlot}: AdminChartCardHeaderProps) {
   return (
     <CardHeader className="flex flex-row items-start justify-between gap-3 pt-5 pb-2">
@@ -288,11 +309,7 @@ export function AdminCharts({growthPoints, completionPoints}: AdminChartsProps) 
                 label={t("charts.userGrowth")}
                 value={activeGrowthData.users.toLocaleString()}
                 dotColor={palette.lineStroke}
-                style={{
-                  left: `${clamp((activeGrowthPoint.x / lineChart.width) * 100, 16, 84)}%`,
-                  top: `${clamp((activeGrowthPoint.y / lineChart.height) * 100, 14, 74)}%`,
-                  transform: "translate(-50%, -108%)"
-                }}
+                style={getPointTooltipStyle(activeGrowthPoint, lineChart.width, lineChart.height)}
               />
             ) : null}
           </ChartContainer>

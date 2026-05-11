@@ -408,6 +408,8 @@ export function StudentProgressAnalyticsClient() {
                       <YAxis tickLine={false} axisLine={false} tick={{fontSize: 12, fill: "#94a3b8"}} domain={bandDomain} />
                       <Tooltip
                         cursor={false}
+                        allowEscapeViewBox={{x: false, y: false}}
+                        wrapperStyle={{zIndex: 20}}
                         content={({active, payload}) => {
                           if (!active || !payload?.length) return null;
                           const point = payload[0]?.payload as {label: string; band: number};
@@ -482,6 +484,8 @@ export function StudentProgressAnalyticsClient() {
                         <YAxis tickLine={false} axisLine={false} tick={{fontSize: 11, fill: "#94a3b8"}} domain={accuracyDomain} />
                         <Tooltip
                           cursor={false}
+                          allowEscapeViewBox={{x: false, y: false}}
+                          wrapperStyle={{zIndex: 20}}
                           content={({active, payload}) => {
                             if (!active || !payload?.length) return null;
                             const point = payload[0]?.payload as {label: string; percentage: number};

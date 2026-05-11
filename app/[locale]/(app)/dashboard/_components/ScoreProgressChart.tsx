@@ -90,6 +90,12 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
       : trendTone === "down"
         ? "border-rose-400/30 bg-rose-500/10 text-rose-300"
         : "border-blue-400/30 bg-blue-500/10 text-blue-300";
+  const latestLabelPosition = (() => {
+    if (!hasPoints) return "top" as const;
+    const [min, max] = chartMeta.yDomain;
+    const range = Math.max(0.5, max - min);
+    return latestBand > max - range * 0.18 ? ("bottom" as const) : ("top" as const);
+  })();
 
   return (
     <Card className="min-w-0 overflow-hidden rounded-2xl border-border/70 bg-card/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -164,6 +170,8 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
 
                   <Tooltip
                     cursor={{stroke: "var(--muted-foreground)", strokeDasharray: "3 6", opacity: 0.55}}
+                    allowEscapeViewBox={{x: false, y: false}}
+                    wrapperStyle={{zIndex: 20}}
                     content={({active, payload, label}) => {
                       if (!active || !payload?.length) return null;
                       const band = Number(payload[0].value ?? 0);
@@ -204,7 +212,7 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
                     fill="var(--background)"
                     stroke="rgb(59 130 246)"
                     strokeWidth={2}
-                    label={{value: "Latest", position: "top", fill: "var(--muted-foreground)", fontSize: 12, fontWeight: 600}}
+                    label={{value: "Latest", position: latestLabelPosition, fill: "var(--muted-foreground)", fontSize: 12, fontWeight: 600}}
                   />
                 </AreaChart>
               </ResponsiveContainer>

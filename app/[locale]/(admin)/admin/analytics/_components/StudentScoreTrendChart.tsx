@@ -1,6 +1,6 @@
 "use client";
 
-import {useMemo, useState} from "react";
+import {useMemo, useState, type CSSProperties} from "react";
 import {useTranslations} from "next-intl";
 
 import {ChartContainer} from "@/components/ui/chart";
@@ -41,6 +41,27 @@ function createSmoothLine(points: Point[]) {
   }
 
   return path;
+}
+
+function getPointTooltipStyle(point: Point, chartWidth: number, chartHeight: number): CSSProperties {
+  const leftPct = clamp((point.x / chartWidth) * 100, 12, 88);
+  const topPct = clamp((point.y / chartHeight) * 100, 10, 82);
+  const nearTop = topPct < 28;
+  const nearRight = leftPct > 70;
+
+  if (nearTop) {
+    return {
+      left: `${leftPct}%`,
+      top: `${topPct}%`,
+      transform: nearRight ? "translate(-108%, -50%)" : "translate(8%, -50%)"
+    };
+  }
+
+  return {
+    left: `${leftPct}%`,
+    top: `${topPct}%`,
+    transform: "translate(-50%, -110%)"
+  };
 }
 
 export function StudentScoreTrendChart({points}: StudentScoreTrendChartProps) {
@@ -157,11 +178,7 @@ export function StudentScoreTrendChart({points}: StudentScoreTrendChartProps) {
           {activePoint && activeX !== null && activeY !== null ? (
             <div
               className="pointer-events-none absolute z-20 min-w-[190px] rounded-xl border border-[rgba(148,163,184,0.18)] bg-white px-4 py-3 shadow-sm dark:border-[rgba(148,163,184,0.16)] dark:bg-[#0F172A] max-sm:min-w-[146px] max-sm:rounded-lg max-sm:px-2.5 max-sm:py-1.5"
-              style={{
-                left: `${clamp((activeX / chart.width) * 100, 17, 83)}%`,
-                top: `${clamp((activeY / chart.height) * 100, 10, 68)}%`,
-                transform: "translate(-50%, -110%)"
-              }}
+              style={getPointTooltipStyle({x: activeX, y: activeY}, chart.width, chart.height)}
             >
               <p className="text-sm font-semibold text-[#0F172A] dark:text-[#F8FAFC] max-sm:text-xs">{activePoint.label}</p>
               <div className="mt-1.5 space-y-1.5 text-xs max-sm:mt-1 max-sm:space-y-1 max-sm:text-[10px]">
