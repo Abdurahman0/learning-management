@@ -235,8 +235,8 @@ function normalizeDetailResponse(payload: unknown): AdminUserDetailResponse {
       reading: asNumber(modulePerformance.reading),
       listening: asNumber(modulePerformance.listening)
     },
-    bandProgression: asArray(root.band_progression ?? root.bandProgression).map((item, index) => ({
-      label: asString(item.label) || `Point ${index + 1}`,
+    bandProgression: asArray(root.band_progress ?? root.band_progression ?? root.bandProgress ?? root.bandProgression).map((item, index) => ({
+      label: asString(item.label) || asString(item.completed_at ?? item.completedAt).slice(0, 10) || `Point ${index + 1}`,
       bandScore: asNumber(item.band_score ?? item.bandScore),
       testTitle: asString(item.test_title ?? item.testTitle),
       completedAt: asString(item.completed_at ?? item.completedAt)
@@ -245,14 +245,14 @@ function normalizeDetailResponse(payload: unknown): AdminUserDetailResponse {
       questionType: asString(item.question_type ?? item.questionType),
       questionTypeLabel: asString(item.question_type_display ?? item.questionTypeDisplay ?? item.question_type),
       module: asString(item.module),
-      accuracy: asNumber(item.accuracy)
+      accuracy: asNumber(item.accuracy_percent ?? item.accuracyPercent ?? item.accuracy)
     })),
     recentAttempts: asArray(root.recent_attempts ?? root.recentAttempts).map((item) => ({
       attemptId: asString(item.attempt_id ?? item.attemptId),
       testTitle: asString(item.test_title ?? item.testTitle ?? item.test_name ?? item.testName),
       module: asString(item.test_type ?? item.testType ?? item.module),
       score: asNumber(item.score),
-      total: asNumber(item.total),
+      total: asNumber(item.total_questions ?? item.totalQuestions ?? item.total),
       bandScore: asNumber(item.band_score ?? item.bandScore),
       completedAt: asString(item.completed_at ?? item.completedAt)
     })),

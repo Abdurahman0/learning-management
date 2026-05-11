@@ -132,7 +132,7 @@ function mapUserDetail(base: AdminUser, detail: Awaited<ReturnType<typeof adminU
       id: attempt.attemptId,
       testName: attempt.testTitle,
       module: String(attempt.module ?? "reading").toLowerCase().includes("listen") ? "listening" : "reading",
-      score: `${attempt.score}/${attempt.total}`,
+      score: attempt.bandScore > 0 ? `${attempt.score}/${attempt.total} · Band ${attempt.bandScore.toFixed(1)}` : `${attempt.score}/${attempt.total}`,
       date: attempt.completedAt
     })),
     payments: []
