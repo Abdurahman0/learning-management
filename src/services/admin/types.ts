@@ -14,6 +14,10 @@ export type AdminPaginatedResponse<T> = {
   results: T[];
 };
 
+export type AdminNotificationsResponse<T> = AdminPaginatedResponse<T> & {
+  unread_count: number;
+};
+
 export type AdminFieldErrors = Record<string, string[]>;
 
 export class AdminApiError extends Error {

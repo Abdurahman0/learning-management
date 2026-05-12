@@ -30,8 +30,21 @@ function buildBackendAdminUrl(path: string[], searchParams: URLSearchParams) {
   const base = resolveBackendBaseUrl();
   if (!base) return null;
   const adminPath = path.join("/");
+  const lastSegment = path[path.length - 1] ?? "";
+  const trailingSlash = lastSegment.includes(".") ? "" : "/";
   const query = searchParams.toString();
-  return `${base}/api/v1/admin/${adminPath}/${query ? `?${query}` : ""}`;
+  return `${base}/api/v1/admin/${adminPath}${trailingSlash}${query ? `?${query}` : ""}`;
+}
+
+function resolveForwardedAcceptHeader(request: Request, path: string[]) {
+  const lastSegment = path[path.length - 1] ?? "";
+  if (/\.pdf$/i.test(lastSegment)) {
+    // PDF endpoints on the backend can be renderer-negotiation sensitive.
+    // Use */* so the backend can return its configured binary response.
+    return "*/*";
+  }
+
+  return request.headers.get("accept") ?? "application/json";
 }
 
 async function prepareBody(request: Request): Promise<PreparedBody> {
@@ -103,9 +116,10 @@ async function forwardToBackend(params: {
   method: string;
   accessToken: string;
   preparedBody: PreparedBody;
+  acceptHeader: string;
 }) {
   const headers = new Headers();
-  headers.set("Accept", "application/json");
+  headers.set("Accept", params.acceptHeader || "application/json");
   headers.set("Authorization", `Bearer ${params.accessToken}`);
   if (params.preparedBody.contentType) {
     headers.set("Content-Type", params.preparedBody.contentType);
@@ -173,6 +187,7 @@ async function handleProxy(request: Request, context: RouteContext) {
   const parsedUrl = new URL(request.url);
   const backendUrl = buildBackendAdminUrl(path ?? [], parsedUrl.searchParams);
   const baseUrl = resolveBackendBaseUrl();
+  const forwardedAcceptHeader = resolveForwardedAcceptHeader(request, path ?? []);
 
   if (!backendUrl || !baseUrl) {
     return NextResponse.json({detail: "Admin API base URL is not configured."}, {status: 500});
@@ -202,7 +217,8 @@ async function handleProxy(request: Request, context: RouteContext) {
       url: backendUrl,
       method: request.method,
       accessToken,
-      preparedBody
+      preparedBody,
+      acceptHeader: forwardedAcceptHeader
     });
 
     let refreshedToken: string | null = null;
@@ -215,7 +231,8 @@ async function handleProxy(request: Request, context: RouteContext) {
           url: backendUrl,
           method: request.method,
           accessToken: nextToken,
-          preparedBody
+          preparedBody,
+          acceptHeader: forwardedAcceptHeader
         });
       }
     }

@@ -13,6 +13,7 @@ import {
   FileText,
   LayoutDashboard,
   Menu,
+  MessageSquareText,
   Settings,
   ShieldCheck,
   Users
@@ -31,6 +32,7 @@ const navIcons: Record<AdminNavKey, LucideIcon> = {
   contentBank: Database,
   users: Users,
   analytics: BarChart3,
+  feedback: MessageSquareText,
   mistakesAnalysis: AlertCircle,
   mistakeReasons: FileText,
   subscriptions: CreditCard,

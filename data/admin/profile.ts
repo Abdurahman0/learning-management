@@ -4,6 +4,7 @@ export type AdminNavKey =
   | "contentBank"
   | "users"
   | "analytics"
+  | "feedback"
   | "mistakesAnalysis"
   | "mistakeReasons"
   | "subscriptions"
@@ -28,6 +29,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {key: "contentBank", segment: "content-bank"},
   {key: "users", segment: "users"},
   {key: "analytics", segment: "analytics"},
+  {key: "feedback", segment: "feedback"},
   {key: "mistakeReasons", segment: "mistake-reasons"},
   // {key: "mistakesAnalysis", segment: "mistakes-analysis"},
   // {key: "subscriptions", segment: "subscriptions"},

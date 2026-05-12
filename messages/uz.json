@@ -99,8 +99,9 @@
       "subtitle": "EnglishLabs orqali maqsad bandiga erishib, chet elda o'qish orzusiga yaqinlashgan O'zbekiston bo'ylab 10 000+ talabalarga qo'shiling."
     },
     "stats": {
-      "avgRating": "O'rtacha baho",
-      "activeLearners": "Faol o'quvchilar"
+      "avgRating": "Tasdiqlangan fikrlar",
+      "activeLearners": "Faol o'quvchilar",
+      "studentFeedbackValue": "Ommaviy"
     },
     "sections": {
       "featured": "Asosiy muvaffaqiyat hikoyalari",
@@ -166,6 +167,11 @@
         "location": "Farg'ona, O'zbekiston",
         "text": "Reading va Listening vazifalarining muvozanatli bo'lishi yoqdi. Har hafta izchil tayyorlanishimga yordam berdi."
       }
+    },
+    "anonymousStudent": "EnglishLabs studenti",
+    "empty": {
+      "noFeedback": "Hozircha tasdiqlangan fikr yo?q.",
+      "loadFailed": "Hozir fikrlarni yuklab bo?lmadi."
     }
   },
   "guest": {
@@ -485,26 +491,40 @@
     },
     "activation": {
       "title": "Akkauntingizni faollashtiring",
-      "subtitle": "Emailingizni tasdiqlang va EnglishLabs'dan foydalanishni boshlang.",
+      "subtitle": "EnglishLabs'dan foydalanish uchun emailingizni tasdiqlang.",
       "badge": "Faollashtirish",
-      "sideTitle": "Yana bir qadam qoldi",
-      "sideDescription": "Faollashtirish orqali testlar, tahlillar va AI fikr-mulohazalariga kirish oling.",
-      "sidePoint1": "Bir bosishda faollashtirish",
-      "sidePoint2": "Xavfsiz email tasdiqlash",
-      "sidePoint3": "Tasdiqlangach darhol kirish",
-      "loading": "Akkaunt faollashtirilmoqda...",
-      "missingToken": "Faollashtirish havolasi topilmadi yoki noto'g'ri. Quyida qayta yuboring.",
-      "invalidToken": "Faollashtirish havolasi eskirgan yoki noto'g'ri. Qayta yuborishni so'rang.",
-      "rateLimited": "Juda ko'p urinish. Biroz kutib qayta urinib ko'ring.",
-      "success": "Akkauntingiz faollashtirildi. Kirish sahifasiga yo'naltirilmoqda...",
-      "resendPrompt": "Email kelmadimi? Faollashtirish havolasini qayta yuboring.",
+      "sideTitle": "Bitta tekshiruvdan keyin tayyor",
+      "sideDescription": "Email tasdiqlash akkauntingizni himoya qiladi va test natijalaringiz to'g'ri profilga bog'lanishini ta'minlaydi.",
+      "sidePoint1": "Ro'yxatdan o'tgan emailingizdagi xatni tekshiring",
+      "sidePoint2": "EnglishLabs'ning xavfsiz faollashtirish havolasini oching",
+      "sidePoint3": "Saqlangan progress va tahlillar bilan mashqni boshlang",
+      "loading": "Email tasdiqlanmoqda...",
+      "missingToken": "Faollashtirish havolasi to'liq emas yoki topilmadi. Quyida emailingizni kiriting, yangi havola yuboramiz.",
+      "invalidToken": "Bu faollashtirish havolasi eskirgan yoki ishlatilgan. Quyida yangi havola so'rang.",
+      "rateLimited": "Urinishlar juda ko'p. Biroz kutib qayta urinib ko'ring.",
+      "success": "Emailingiz tasdiqlandi. Kirish sahifasiga yo'naltirilmoqda...",
+      "resendPrompt": "Yangi faollashtirish havolasi kerakmi?",
       "goToLogin": "Kirishga o'tish",
-      "backToLogin": "Kirishga qaytish"
+      "backToLogin": "Kirishga qaytish",
+      "emailSentTitle": "Emailingizni tekshiring",
+      "emailSentSubtitle": "EnglishLabs faollashtirish havolasini yubordik. Akkauntingizni yakunlash uchun uni oching.",
+      "emailSentCardTitle": "Faollashtirish havolasi yuborildi",
+      "emailSentCardDescription": "Xavfsiz faollashtirish havolasini {email} manziliga yubordik. Himoya uchun havola muddati cheklangan, imkon qadar tezroq oching.",
+      "yourEmail": "email manzilingiz",
+      "spamTitle": "Ko'rinmayaptimi? Avval Spam yoki Promotions papkasini tekshiring.",
+      "spamDescription": "Ba'zi email xizmatlari yangi akkaunt xatlarini alohida papkaga yuborishi mumkin. Xat bir daqiqada ko'rinmasa, \"EnglishLabs\" deb qidiring.",
+      "resendHelp": "Xavfsizlik uchun faollashtirish emailini har 60 soniyada bir marta qayta yuborish mumkin.",
+      "resendSuccess": "Yangi faollashtirish havolasi yuborildi. Inbox, Spam yoki Promotions papkasini tekshiring."
     },
     "resendActivation": {
       "emailLabel": "Email manzil",
       "emailPlaceholder": "name@example.com",
-      "submit": "Faollashtirishni qayta yuborish"
+      "submit": "Faollashtirish emailini qayta yuborish",
+      "wait": "Qayta yuborish {seconds}s dan keyin",
+      "emailRequired": "Ro'yxatdan o'tishda ishlatgan emailingizni kiriting.",
+      "timerLabel": "Qayta yuborish vaqti",
+      "readyLabel": "Qayta yuborish mumkin",
+      "readyNow": "Hozir"
     },
     "onboarding": {
       "title": "Tezkor sozlash",
@@ -1067,6 +1087,29 @@
         "title": "Review tafsilotlari",
         "description": "Batafsil review oqimi backend attempt yozuvlari bilan keyin ulanadi."
       }
+    },
+    "feedbackModal": {
+      "button": "Fikr qoldirish",
+      "eyebrow": "Platforma bo?yicha fikr",
+      "title": "Nimani yaxshilashimiz kerak?",
+      "description": "EnglishLabs jamoasi uchun qisqa xabar yozing. Admin tasdiqlagandan keyin fikringiz ommaviy ko?rinishi mumkin.",
+      "label": "Xabaringiz",
+      "placeholder": "Nima yaxshi ishladi, nima tushunarsiz bo?ldi yoki nimani yaxshilashimizni yozing...",
+      "counter": "{count}/{max} belgi",
+      "submit": "Fikrni yuborish",
+      "submitting": "Yuborilmoqda...",
+      "cancel": "Bekor qilish",
+      "close": "Fikr modalini yopish",
+      "success": {
+        "title": "Fikr yuborildi",
+        "description": "Rahmat. Admin ommaviy ko?rsatishga ruxsat bermaguncha u yopiq turadi."
+      },
+      "errors": {
+        "title": "Fikr yuborilmadi",
+        "required": "Avval fikringizni yozing.",
+        "tooLong": "Fikr {max} belgidan oshmasligi kerak.",
+        "submit": "Fikr yuborilmadi. Qayta urinib ko?ring."
+      }
     }
   },
   "adminDashboard": {
@@ -1085,7 +1128,8 @@
         "subscriptions": "Obunalar",
         "achievements": "Yutuqlar",
         "reports": "Hisobotlar",
-        "settings": "Sozlamalar"
+        "settings": "Sozlamalar",
+        "feedback": "Fikrlar"
       }
     },
     "topbar": {
@@ -1137,7 +1181,12 @@
         "kicker": "Tezkor amal",
         "title": "Oylik hisobot yaratish",
         "description": "Joriy faol davr uchun batafsil analitikani ko'rib chiqing.",
-        "download": "PDF yuklab olish"
+        "download": "PDF yuklab olish",
+        "downloading": "PDF tayyorlanmoqda...",
+        "downloadSuccessTitle": "Oylik hisobot tayyor",
+        "downloadSuccessDescription": "PDF yuklab olish boshlandi.",
+        "downloadFailedTitle": "Hisobotni yuklab bo'lmadi",
+        "downloadFailedDescription": "Oylik hisobotni yuklab olishda xatolik yuz berdi."
       }
     },
     "activity": {
@@ -4672,6 +4721,95 @@
       "retakeReadingDrill": {
         "title": "Retake rejalandi",
         "description": "Reading retake oqimi placeholder amal sifatida ulangan."
+      }
+    }
+  },
+  "adminFeedback": {
+    "eyebrow": "Student fikrlari",
+    "title": "Fikrlarni moderatsiya qilish",
+    "refresh": "Yangilash",
+    "searchPlaceholder": "Student yoki fikr bo?yicha qidirish...",
+    "loading": "Fikrlar yuklanmoqda...",
+    "empty": "Joriy filterlar bo?yicha fikr topilmadi.",
+    "unknownStudent": "Noma?lum student",
+    "stats": {
+      "total": "Jami fikrlar",
+      "visible": "Ommaviy",
+      "hidden": "Yashirin"
+    },
+    "filters": {
+      "all": "Barchasi",
+      "visible": "Ko?rinadigan",
+      "hidden": "Yashirin"
+    },
+    "list": {
+      "title": "Student fikrlari",
+      "description": "Fikrni reviews bo?limlarida ko?rsatish uchun yoqing. Yashirish uchun o?chiring."
+    },
+    "columns": {
+      "student": "Student",
+      "feedback": "Fikr",
+      "date": "Yuborilgan",
+      "status": "Status",
+      "visible": "Ko?rinadi"
+    },
+    "status": {
+      "visible": "Ko?rinadi",
+      "hidden": "Yashirin"
+    },
+    "toggleAria": "{name} fikrining ommaviy ko?rinishini almashtirish",
+    "notices": {
+      "loadFailed": {
+        "title": "Fikrlar yuklanmadi",
+        "description": "Qayta urinib ko?ring."
+      },
+      "enabled": {
+        "title": "Fikr yoqildi",
+        "description": "Bu fikr endi ommaviy ko?rinadi."
+      },
+      "disabled": {
+        "title": "Fikr o?chirildi",
+        "description": "Bu fikr ommaviy bo?limlardan yashirildi."
+      },
+      "saveFailed": {
+        "title": "Fikr yangilanmadi",
+        "description": "Qayta urinib ko?ring."
+      }
+    }
+  },
+  "adminNotifications": {
+    "bellLabel": "Bildirishnomalar",
+    "eyebrow": "Admin bildirishnomalari",
+    "title": "Bildirishnomalar",
+    "refresh": "Yangilash",
+    "markAllRead": "Barchasini o?qilgan qilish",
+    "open": "Ochish",
+    "markRead": "O?qilgan qilish",
+    "unread": "O?qilmagan",
+    "fallbackTitle": "Bildirishnoma",
+    "emptyMessage": "Xabar matni berilmagan.",
+    "empty": "Bu filter bo?yicha bildirishnoma topilmadi.",
+    "stats": {
+      "total": "Jami",
+      "unread": "O?qilmagan",
+      "read": "O?qilgan"
+    },
+    "filters": {
+      "all": "Barcha bildirishnomalar",
+      "unread": "Faqat o?qilmagan"
+    },
+    "notices": {
+      "loadFailed": {
+        "title": "Bildirishnomalar yuklanmadi",
+        "description": "Qayta urinib ko?ring."
+      },
+      "saveFailed": {
+        "title": "Bildirishnoma yangilanmadi",
+        "description": "Qayta urinib ko?ring."
+      },
+      "allRead": {
+        "title": "Hammasi tayyor",
+        "description": "Barcha bildirishnomalar o?qilgan deb belgilandi."
       }
     }
   }

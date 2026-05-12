@@ -9,9 +9,11 @@ import type {PlatformInsights} from "@/data/admin-dashboard";
 
 type AdminInsightsProps = {
   insights: PlatformInsights;
+  isDownloadingReport?: boolean;
+  onDownloadReport?: () => void;
 };
 
-export function AdminInsights({insights}: AdminInsightsProps) {
+export function AdminInsights({insights, isDownloadingReport = false, onDownloadReport}: AdminInsightsProps) {
   const t = useTranslations("adminDashboard");
 
   return (
@@ -55,9 +57,13 @@ export function AdminInsights({insights}: AdminInsightsProps) {
           <h3 className="mt-3.5 text-[1.65rem] leading-tight font-semibold tracking-tight">{t("insights.quickAction.title")}</h3>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{t("insights.quickAction.description")}</p>
 
-          <Button className="mt-[1.375rem] h-[2.625rem] w-full rounded-xl bg-primary/92 text-primary-foreground shadow-sm hover:bg-primary">
+          <Button
+            className="mt-[1.375rem] h-[2.625rem] w-full rounded-xl bg-primary/92 text-primary-foreground shadow-sm hover:bg-primary"
+            disabled={isDownloadingReport}
+            onClick={onDownloadReport}
+          >
             <Download className="size-4" />
-            {t("insights.quickAction.download")}
+            {isDownloadingReport ? t("insights.quickAction.downloading") : t("insights.quickAction.download")}
           </Button>
         </CardContent>
       </Card>

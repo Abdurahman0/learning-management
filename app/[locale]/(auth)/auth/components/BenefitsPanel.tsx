@@ -66,20 +66,6 @@ export function BenefitsPanel({ mode }: BenefitsPanelProps) {
         ))}
       </div>
 
-      <div className="flex items-center gap-3 border-t border-border pt-6 text-muted-foreground">
-        <div className="flex -space-x-2">
-          {["A", "S", "M"].map((letter, index) => (
-            <span
-              key={`trust-${letter}-${index}`}
-              className="flex size-9 items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-semibold"
-              style={{ zIndex: 10 - index }}
-            >
-              {letter}
-            </span>
-          ))}
-        </div>
-        <p className="text-base font-medium sm:text-lg">{t("signupMarketing.trustLine")}</p>
-      </div>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {ChartContainer} from "@/components/ui/chart";
+import {AnimatedNumber} from "@/components/ui/animated-number";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {cn} from "@/lib/utils";
@@ -318,10 +319,10 @@ export function StudentProgressAnalyticsClient() {
               </div>
               <p className="text-sm text-muted-foreground dark:text-slate-300">{t("summary.currentBand.label")}</p>
               <p className="mt-1 flex items-end gap-2 text-4xl leading-none font-semibold tracking-tight text-foreground dark:text-slate-100">
-                {analyticsData.summary.currentBandEstimate.toFixed(1)}
+                <AnimatedNumber value={analyticsData.summary.currentBandEstimate} decimals={1} />
                 <span className="mb-1 text-lg font-medium text-emerald-600 dark:text-emerald-300">
                   {analyticsData.summary.currentBandDelta >= 0 ? "+" : ""}
-                  {analyticsData.summary.currentBandDelta.toFixed(1)}
+                  <AnimatedNumber value={analyticsData.summary.currentBandDelta} decimals={1} />
                 </span>
               </p>
             </CardContent>
@@ -335,7 +336,7 @@ export function StudentProgressAnalyticsClient() {
               </div>
               <p className="text-sm text-muted-foreground dark:text-slate-300">{t("summary.targetBand.label")}</p>
               <p className="mt-1 flex items-end gap-2 text-4xl leading-none font-semibold tracking-tight text-foreground dark:text-slate-100">
-                {analyticsData.summary.targetBand.toFixed(1)}
+                <AnimatedNumber value={analyticsData.summary.targetBand} decimals={1} />
                 <span className="mb-1 text-sm font-medium text-muted-foreground dark:text-slate-300">{t("summary.targetBand.meta")}</span>
               </p>
             </CardContent>
@@ -349,7 +350,7 @@ export function StudentProgressAnalyticsClient() {
               </div>
               <p className="text-sm text-muted-foreground dark:text-slate-300">{t("summary.practiceSessions.label")}</p>
               <p className="mt-1 flex items-end gap-2 text-4xl leading-none font-semibold tracking-tight text-foreground dark:text-slate-100">
-                {analyticsData.summary.practiceSessions}
+                <AnimatedNumber value={analyticsData.summary.practiceSessions} />
                 <span className="mb-1 text-sm font-medium text-muted-foreground dark:text-slate-300">{t("summary.practiceSessions.meta")}</span>
               </p>
             </CardContent>
@@ -363,10 +364,10 @@ export function StudentProgressAnalyticsClient() {
               </div>
               <p className="text-sm text-muted-foreground dark:text-slate-300">{t("summary.averageAccuracy.label")}</p>
               <p className="mt-1 flex items-end gap-2 text-4xl leading-none font-semibold tracking-tight text-foreground dark:text-slate-100">
-                {analyticsData.summary.averageAccuracy}%
+                <AnimatedNumber value={analyticsData.summary.averageAccuracy} suffix="%" />
                 <span className="mb-1 text-lg font-medium text-emerald-600 dark:text-emerald-300">
                   {analyticsData.summary.accuracyDelta >= 0 ? "+" : ""}
-                  {analyticsData.summary.accuracyDelta}%
+                  <AnimatedNumber value={analyticsData.summary.accuracyDelta} suffix="%" />
                 </span>
               </p>
             </CardContent>
@@ -442,7 +443,7 @@ export function StudentProgressAnalyticsClient() {
                   <div key={item.module} className="space-y-2">
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-medium text-foreground/90 dark:text-slate-200">{t(`modules.${item.module}`)}</p>
-                      <p className="text-sm font-semibold text-foreground dark:text-slate-100">{item.percentage}%</p>
+                      <p className="text-sm font-semibold text-foreground dark:text-slate-100"><AnimatedNumber value={item.percentage} suffix="%" /></p>
                     </div>
                     <div className="h-3 w-full overflow-hidden rounded-full bg-muted dark:bg-slate-800">
                       <div
@@ -502,8 +503,8 @@ export function StudentProgressAnalyticsClient() {
                     </ResponsiveContainer>
                   </ChartContainer>
                   <div className="mt-3 flex items-center justify-between text-xs">
-                    <p className="text-muted-foreground dark:text-slate-400">{t("charts.accuracy.start", {value: accuracyStart})}</p>
-                    <p className="font-semibold text-foreground dark:text-slate-100">{t("charts.accuracy.current", {value: accuracyCurrent})}</p>
+                    <p className="text-muted-foreground dark:text-slate-400">{t("charts.accuracy.start", {value: Math.round(accuracyStart)})}</p>
+                    <p className="font-semibold text-foreground dark:text-slate-100">{t("charts.accuracy.current", {value: Math.round(accuracyCurrent)})}</p>
                   </div>
                 </>
               )}

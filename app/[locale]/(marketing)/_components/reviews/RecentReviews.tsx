@@ -2,163 +2,140 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
-import {Star} from "lucide-react";
+import {MessageSquareQuote} from "lucide-react";
 import {useTranslations} from "next-intl";
 
-import {REVIEWS, type Review} from "@/data/reviews";
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
+import {publicFeedbackService, type FeedbackRecord} from "@/src/services/feedback.service";
 
 import {Container} from "../Container";
 
-type SortMode = "highest" | "lowest" | "recent";
-
 const PAGE_SIZE = 6;
-
-const SORT_OPTIONS: {value: SortMode}[] = [
-  {value: "highest"},
-  {value: "lowest"},
-  {value: "recent"}
-];
 
 function getInitials(name: string) {
   return name
     .split(" ")
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
+    .join("") || "EL";
 }
 
 function formatDate(dateIso: string) {
+  const date = new Date(dateIso);
+  if (Number.isNaN(date.getTime())) return dateIso || "";
+
   return new Intl.DateTimeFormat("en-US", {
     month: "long",
     day: "2-digit",
     year: "numeric"
-  }).format(new Date(dateIso));
+  }).format(date);
+}
+
+function getFeedbackName(feedback: FeedbackRecord, fallback: string) {
+  return feedback.userFullName.trim() || fallback;
 }
 
 export function RecentReviews() {
   const t = useTranslations("reviews");
-  const [sortMode, setSortMode] = useState<SortMode>("highest");
+  const [reviews, setReviews] = useState<FeedbackRecord[]>([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-  const filteredAndSortedReviews = useMemo(() => {
-    const withMeta = REVIEWS.map((review, index) => ({
-      review,
-      index,
-      timestamp: new Date(review.createdAt).getTime()
-    }));
-
-    withMeta.sort((a, b) => {
-      if (sortMode === "recent") {
-        if (b.timestamp !== a.timestamp) {
-          return b.timestamp - a.timestamp;
-        }
-        return a.index - b.index;
-      }
-
-      const ratingDiff =
-        sortMode === "highest" ? b.review.rating - a.review.rating : a.review.rating - b.review.rating;
-
-      if (ratingDiff !== 0) {
-        return ratingDiff;
-      }
-
-      if (b.timestamp !== a.timestamp) {
-        return b.timestamp - a.timestamp;
-      }
-
-      return a.index - b.index;
-    });
-
-    return withMeta.map(({review}) => review);
-  }, [sortMode]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [sortMode]);
+    let active = true;
 
-  const visibleReviews = filteredAndSortedReviews.slice(0, visibleCount);
-  const canLoadMore = visibleCount < filteredAndSortedReviews.length;
+    const loadFeedback = async () => {
+      setIsLoading(true);
+      setLoadError(false);
+      try {
+        const response = await publicFeedbackService.list();
+        if (!active) return;
+        setReviews(response.results);
+      } catch {
+        if (!active) return;
+        setReviews([]);
+        setLoadError(true);
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    };
+
+    void loadFeedback();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const sortedReviews = useMemo(() => {
+    return [...reviews].sort((a, b) => {
+      const bTime = new Date(b.createdAt).getTime();
+      const aTime = new Date(a.createdAt).getTime();
+      return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
+    });
+  }, [reviews]);
+
+  const visibleReviews = sortedReviews.slice(0, visibleCount);
+  const canLoadMore = visibleCount < sortedReviews.length;
 
   return (
     <section className="bg-background py-10 sm:py-12">
       <Container>
         <Card className="border-border bg-card py-0 shadow-sm">
           <CardContent className="p-5 sm:p-7 lg:p-8">
-            <header className="mb-6 flex flex-col gap-4 lg:mb-8 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight text-foreground">{t("sections.recent")}</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {t("helpers.showing", {visible: visibleReviews.length, total: filteredAndSortedReviews.length})}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">{t("filters.ratingLabel")}:</span>
-                  <Select value={sortMode} onValueChange={(value: SortMode) => setSortMode(value)}>
-                    <SelectTrigger className="h-7 rounded-full border-border bg-background px-3 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SORT_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {t(`filters.sort.${option.value}`)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <header className="mb-6 flex flex-col gap-2 lg:mb-8">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground">{t("sections.recent")}</h2>
+              <p className="text-xs text-muted-foreground">
+                {t("helpers.showing", {visible: visibleReviews.length, total: sortedReviews.length})}
+              </p>
             </header>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {visibleReviews.map((review: Review) => (
-                <Card key={review.id} className="border-border bg-background py-0 shadow-none">
-                  <CardContent className="p-4 sm:p-5">
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="size-9 border border-border">
-                          <AvatarFallback className="bg-muted text-xs font-semibold text-foreground">
-                            {getInitials(review.name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{review.name}</p>
-                          <p className="text-xs text-muted-foreground">{review.city}</p>
+            {isLoading ? (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {Array.from({length: 6}).map((_, index) => (
+                  <div key={index} className="h-44 animate-pulse rounded-2xl border border-border bg-muted/40" />
+                ))}
+              </div>
+            ) : loadError ? (
+              <div className="rounded-2xl border border-dashed border-border/80 bg-background/60 p-6 text-sm text-muted-foreground">
+                {t("empty.loadFailed")}
+              </div>
+            ) : visibleReviews.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border/80 bg-background/60 p-6 text-sm text-muted-foreground">
+                {t("empty.noFeedback")}
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {visibleReviews.map((review) => {
+                  const name = getFeedbackName(review, t("anonymousStudent"));
+                  return (
+                    <Card key={review.id} className="border-border bg-background py-0 shadow-none">
+                      <CardContent className="flex h-full flex-col p-4 sm:p-5">
+                        <div className="mb-4 flex items-center gap-3">
+                          <Avatar className="size-10 border border-border">
+                            <AvatarFallback className="bg-blue-500/12 text-xs font-semibold text-blue-700 dark:text-blue-200">
+                              {getInitials(name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-foreground">{name}</p>
+                            <p className="text-xs text-muted-foreground">{formatDate(review.createdAt)}</p>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-0.5" aria-label={`${review.rating} out of 5 stars`}>
-                        {Array.from({length: 5}).map((_, index) => (
-                          <Star
-                            key={index}
-                            className={
-                              index < review.rating ? "size-3.5 fill-amber-400 text-amber-400" : "size-3.5 text-border"
-                            }
-                            aria-hidden="true"
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <p className="min-h-20 text-sm leading-relaxed text-muted-foreground">&quot;{review.text}&quot;</p>
-                    <p className="mt-3 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                      {formatDate(review.createdAt)}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                        <div className="mb-3 inline-flex size-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300">
+                          <MessageSquareQuote className="size-4" aria-hidden="true" />
+                        </div>
+                        <p className="text-sm leading-relaxed text-muted-foreground">&quot;{review.feedbackText}&quot;</p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
 
             {canLoadMore && (
               <div className="mt-8 flex justify-center">

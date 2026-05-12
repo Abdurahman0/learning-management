@@ -1,4 +1,4 @@
-import {Star, Users} from "lucide-react";
+import {MessageSquareQuote, Users} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Badge} from "@/components/ui/badge";
@@ -32,12 +32,10 @@ export function ReviewsHero() {
         <div className="mx-auto mt-8 grid max-w-3xl gap-4 sm:mt-10 sm:grid-cols-2">
           <Card className="border-border bg-card py-0 shadow-sm">
             <CardContent className="p-6 text-center sm:p-7">
-              <div className="mb-4 flex items-center justify-center gap-1" aria-hidden="true">
-                {Array.from({length: 5}).map((_, index) => (
-                  <Star key={index} className="size-4 fill-amber-400 text-amber-400" />
-                ))}
+              <div className="mb-4 inline-flex size-9 items-center justify-center rounded-full bg-muted text-blue-600">
+                <MessageSquareQuote className="size-4.5" aria-hidden="true" />
               </div>
-              <p className="text-4xl font-bold tracking-tight text-foreground">4.9/5</p>
+              <p className="text-4xl font-bold tracking-tight text-foreground">{t("stats.studentFeedbackValue")}</p>
               <p className="mt-2 text-sm text-muted-foreground">{t("stats.avgRating")}</p>
             </CardContent>
           </Card>

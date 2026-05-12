@@ -4,6 +4,7 @@ import {BookOpenText, CalendarDays, Flame, GraduationCap, Headphones, TrendingUp
 import {useLocale, useTranslations} from "next-intl";
 
 import {Card, CardContent} from "@/components/ui/card";
+import {AnimatedNumber} from "@/components/ui/animated-number";
 import type {DashboardUserSummary} from "@/data/student/dashboard";
 import {cn} from "@/lib/utils";
 
@@ -56,12 +57,12 @@ export function DashboardKpis({summary, onCurrentBandClick, examDate, onExamCoun
   })();
 
   const items = [
-    {label: t("kpis.currentBand"), value: summary.currentBand, icon: TrendingUp, bubble: "bg-blue-500/15 text-blue-300", onClick: onCurrentBandClick},
+    {label: t("kpis.currentBand"), value: summary.currentBand, decimals: 1, icon: TrendingUp, bubble: "bg-blue-500/15 text-blue-300", onClick: onCurrentBandClick},
     {label: t("kpis.testsTaken"), value: summary.testsTaken, icon: GraduationCap, bubble: "bg-violet-500/15 text-violet-300"},
-    {label: t("kpis.reading"), value: `${summary.readingAccuracy}%`, icon: BookOpenText, bubble: "bg-emerald-500/15 text-emerald-300"},
-    {label: t("kpis.listening"), value: `${summary.listeningAccuracy}%`, icon: Headphones, bubble: "bg-cyan-500/15 text-cyan-300"},
-    {label: t("kpis.studyStreak"), value: `${summary.streakDays} ${t("days")}`, icon: Flame, bubble: "bg-orange-500/15 text-orange-300"},
-    {label: examCountdownLabel, value: examCountdownValue, icon: CalendarDays, bubble: "bg-fuchsia-500/15 text-fuchsia-300", onClick: onExamCountdownClick}
+    {label: t("kpis.reading"), value: summary.readingAccuracy, suffix: "%", icon: BookOpenText, bubble: "bg-emerald-500/15 text-emerald-300"},
+    {label: t("kpis.listening"), value: summary.listeningAccuracy, suffix: "%", icon: Headphones, bubble: "bg-cyan-500/15 text-cyan-300"},
+    {label: t("kpis.studyStreak"), value: summary.streakDays, suffix: ` ${t("days")}`, icon: Flame, bubble: "bg-orange-500/15 text-orange-300"},
+    {label: examCountdownLabel, textValue: examCountdownValue, icon: CalendarDays, bubble: "bg-fuchsia-500/15 text-fuchsia-300", onClick: onExamCountdownClick}
   ];
 
   return (
@@ -90,7 +91,13 @@ export function DashboardKpis({summary, onCurrentBandClick, examDate, onExamCoun
             </span>
             <div className="min-w-0">
               <p className="text-sm text-muted-foreground">{item.label}</p>
-              <p className="text-3xl leading-none font-semibold tracking-tight">{item.value}</p>
+              <p className="text-3xl leading-none font-semibold tracking-tight">
+                {"textValue" in item ? (
+                  item.textValue
+                ) : (
+                  <AnimatedNumber value={item.value} decimals={item.decimals ?? 0} suffix={item.suffix ?? ""} />
+                )}
+              </p>
             </div>
           </CardContent>
         </Card>

@@ -37,6 +37,14 @@ function asString(value: unknown, fallback = "") {
   return fallback;
 }
 
+function sanitizeFilename(value: string) {
+  try {
+    return decodeURIComponent(value).replace(/[\\/:*?"<>|]/g, "-").trim();
+  } catch {
+    return value.replace(/[\\/:*?"<>|]/g, "-").trim();
+  }
+}
+
 export type AdminDashboardResponse = {
   metrics: {
     totalUsers: number;
@@ -130,6 +138,32 @@ export const adminDashboardService = {
     try {
       const response = await adminHttpClient.get<unknown>("/dashboard/");
       return normalizeDashboardResponse(response.data);
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async downloadMonthlyReport(params?: {year?: number; month?: number}) {
+    try {
+      const response = await adminHttpClient.get<Blob>("/dashboard/monthly-report.pdf", {
+        params: {
+          ...(params?.year ? {year: params.year} : {}),
+          ...(params?.month ? {month: params.month} : {})
+        },
+        responseType: "blob",
+        headers: {
+          Accept: "*/*"
+        }
+      });
+
+      const disposition = String(response.headers["content-disposition"] ?? "");
+      const filenameMatch = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(disposition);
+      const filename = filenameMatch?.[1] ? sanitizeFilename(filenameMatch[1]) : "englishlabs-monthly-report.pdf";
+
+      return {
+        blob: response.data,
+        filename
+      };
     } catch (error) {
       throw toAdminApiError(error);
     }

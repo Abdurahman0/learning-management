@@ -65,21 +65,6 @@ export function AuthMarketing({ mode }: AuthMarketingProps) {
           </div>
         ))}
       </div>
-
-      <div className="flex items-center gap-3 border-t border-border pt-6 text-muted-foreground">
-        <div className="flex -space-x-2">
-          {["👨🏻", "👩🏻", "🧑🏻"].map((emoji, index) => (
-            <span
-              key={`${emoji}-${index}`}
-              className="flex size-9 items-center justify-center rounded-full border-2 border-background bg-muted text-sm"
-              style={{ zIndex: 10 - index }}
-            >
-              {emoji}
-            </span>
-          ))}
-        </div>
-        <p className="text-lg font-medium">{t("signupMarketing.trustLine")}</p>
-      </div>
     </div>
   );
 }

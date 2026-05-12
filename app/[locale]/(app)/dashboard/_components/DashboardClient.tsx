@@ -7,6 +7,7 @@ import {Brain, Sparkles} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {ContinueCard} from "./ContinueCard";
+import {DashboardFeedbackButton} from "./DashboardFeedbackButton";
 import {EditOnboardingButton} from "./EditOnboardingButton";
 import {GettingStartedCard} from "./GettingStartedCard";
 import {DashboardKpis} from "./DashboardKpis";
@@ -24,10 +25,12 @@ import {StudentApiError} from "@/src/services/student/types";
 import type {StudentDashboardResponse} from "@/src/services/student/types";
 import {ONBOARDING_CHANGE_EVENT, openOnboardingWizard, readOnboardingState} from "@/lib/onboarding-storage";
 import {GETTING_STARTED_CHANGE_EVENT, readGettingStartedState} from "@/lib/getting-started-storage";
+import {cn} from "@/lib/utils";
 
 type Notice = {
   title: string;
   description: string;
+  tone?: "success" | "error" | "info";
 };
 
 type DashboardUserSummary = {
@@ -291,8 +294,8 @@ export function DashboardClient() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  const pushNotice = (title: string, description: string) => {
-    setNotice({title, description});
+  const pushNotice = (title: string, description: string, tone: Notice["tone"] = "info") => {
+    setNotice({title, description, tone});
   };
 
   const handleRecentHistoryReview = async (row: DashboardRecentHistoryItem) => {
@@ -381,6 +384,7 @@ export function DashboardClient() {
             {t("practiceWeakAreas")}
           </Button>
           <EditOnboardingButton className="h-11" />
+          <DashboardFeedbackButton className="h-11" onNotice={setNotice} />
           <Button asChild className="h-11 rounded-xl px-5 text-base font-semibold">
             <Link href={`/${locale}/reading`}>{t("startNewTest")}</Link>
           </Button>
@@ -388,10 +392,41 @@ export function DashboardClient() {
       </section>
 
       {notice ? (
-        <Card className="mt-4 rounded-xl border border-blue-400/35 bg-blue-500/10 shadow-none">
+        <Card
+          className={cn(
+            "mt-4 rounded-xl border shadow-none",
+            notice.tone === "success"
+              ? "border-emerald-400/35 bg-emerald-500/10"
+              : notice.tone === "error"
+                ? "border-rose-400/35 bg-rose-500/10"
+                : "border-blue-400/35 bg-blue-500/10"
+          )}
+        >
           <CardContent className="p-3">
-            <p className="text-sm font-semibold text-blue-700 dark:text-blue-100">{notice.title}</p>
-            <p className="text-sm text-blue-700/90 dark:text-blue-100/85">{notice.description}</p>
+            <p
+              className={cn(
+                "text-sm font-semibold",
+                notice.tone === "success"
+                  ? "text-emerald-700 dark:text-emerald-100"
+                  : notice.tone === "error"
+                    ? "text-rose-700 dark:text-rose-100"
+                    : "text-blue-700 dark:text-blue-100"
+              )}
+            >
+              {notice.title}
+            </p>
+            <p
+              className={cn(
+                "text-sm",
+                notice.tone === "success"
+                  ? "text-emerald-700/90 dark:text-emerald-100/85"
+                  : notice.tone === "error"
+                    ? "text-rose-700/90 dark:text-rose-100/85"
+                    : "text-blue-700/90 dark:text-blue-100/85"
+              )}
+            >
+              {notice.description}
+            </p>
           </CardContent>
         </Card>
       ) : null}
@@ -437,17 +472,11 @@ export function DashboardClient() {
         </section>
       ) : null}
 
-      <section className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <section className="mt-4 min-w-0">
         <ScoreProgressChart points={dashboardData.scoreProgress} />
-        <SkillsSnapshot
-          id="skills-snapshot"
-          skills={dashboardData.skillsSnapshot}
-          summary={dashboardData.userSummary}
-          overallJourneyPct={dashboardData.overallJourneyPct}
-        />
       </section>
 
-      <section className="mt-4 grid min-w-0 gap-4 xl:grid-cols-2">
+      <section className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
         <Card id="weak-areas" className="rounded-2xl border-border/70 bg-card/70">
           <CardHeader>
             <CardTitle>{t("weakAreas.title")}</CardTitle>
@@ -474,24 +503,33 @@ export function DashboardClient() {
           </CardContent>
         </Card>
 
-        {dashboardData.aiRecommendation ? (
-          <Card className="rounded-2xl border-border/70 bg-card/70">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="size-4 text-blue-400" />
-                {t("aiRecommendations.title")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge className="mb-3">{dashboardData.aiRecommendation.tag}</Badge>
-              <p className="rounded-xl bg-muted/60 p-4 text-sm leading-relaxed text-muted-foreground">{dashboardData.aiRecommendation.message}</p>
-              <Button className="mt-4" onClick={() => pushNotice(t("feedback.placeholder.title"), t("feedback.placeholder.description"))}>
-                <Sparkles className="size-4" />
-                {t("aiRecommendations.startTutorial")}
-              </Button>
-            </CardContent>
-          </Card>
-        ) : null}
+        <div className="min-w-0 space-y-4">
+          <SkillsSnapshot
+            id="skills-snapshot"
+            skills={dashboardData.skillsSnapshot}
+            summary={dashboardData.userSummary}
+            overallJourneyPct={dashboardData.overallJourneyPct}
+          />
+
+          {dashboardData.aiRecommendation ? (
+            <Card className="rounded-2xl border-border/70 bg-card/70">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="size-4 text-blue-400" />
+                  {t("aiRecommendations.title")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Badge className="mb-3">{dashboardData.aiRecommendation.tag}</Badge>
+                <p className="rounded-xl bg-muted/60 p-4 text-sm leading-relaxed text-muted-foreground">{dashboardData.aiRecommendation.message}</p>
+                <Button className="mt-4" onClick={() => pushNotice(t("feedback.placeholder.title"), t("feedback.placeholder.description"))}>
+                  <Sparkles className="size-4" />
+                  {t("aiRecommendations.startTutorial")}
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
       </section>
 
       <section className="mt-4" id="recent-history">

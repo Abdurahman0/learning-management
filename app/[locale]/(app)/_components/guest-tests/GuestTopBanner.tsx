@@ -52,7 +52,7 @@ export function GuestTopBanner() {
               {typeof totalAll === "number" ? `${demoCount}/${totalAll}` : `${demoCount}`}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              {typeof totalAll === "number" ? t("banner.available", {count: totalAll}) : t("banner.available")}
+              {t("banner.available", {count: typeof totalAll === "number" ? totalAll : demoCount})}
             </p>
           </div>
           <Button asChild className="h-10 rounded-xl bg-blue-600 px-5 text-sm font-semibold hover:bg-blue-600/90">

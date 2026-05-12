@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
-import {Bell, CheckCircle2, Plus, Search, Upload} from "lucide-react";
+import {CheckCircle2, Plus, Search, Upload} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {useRouter} from "next/navigation";
 
@@ -27,6 +27,7 @@ import type {PracticeTestDetailRecord, PracticeTestRecord} from "@/src/services/
 
 import {AdminProfileMenu} from "../../_components/AdminProfileMenu";
 import {AdminSidebar, AdminSidebarMobileNav} from "../../_components/AdminSidebar";
+import {AdminNotificationBell} from "../../_components/AdminNotificationBell";
 import {TestsFilters} from "./TestsFilters";
 import {TestsTable} from "./TestsTable";
 
@@ -488,15 +489,7 @@ export function TestsManagementClient() {
               <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
                 <ThemeToggle />
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative size-9 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                  aria-label={t("topbar.notificationsLabel")}
-                >
-                  <Bell className="size-4.5" />
-                  <span className="absolute top-2.5 right-2.5 size-1.5 rounded-full bg-rose-500" />
-                </Button>
+                <AdminNotificationBell label={t("topbar.notificationsLabel")} />
 
                 <Separator orientation="vertical" className="mx-1 hidden h-6 md:block" />
                 <AdminProfileMenu />

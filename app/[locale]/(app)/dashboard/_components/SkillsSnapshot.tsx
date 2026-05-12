@@ -5,6 +5,7 @@ import {useTranslations} from "next-intl";
 import {Badge} from "@/components/ui/badge";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Progress} from "@/components/ui/progress";
+import {AnimatedNumber} from "@/components/ui/animated-number";
 import type {DashboardUserSummary, SkillItem} from "@/data/student/dashboard";
 
 type SkillsSnapshotProps = {
@@ -32,7 +33,7 @@ export function SkillsSnapshot({skills, summary, overallJourneyPct, id}: SkillsS
               <div key={item.key} className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <p className="text-muted-foreground">{t(`skills.${item.key}`)}</p>
-                  <p className="font-medium">{item.band.toFixed(1)}</p>
+                  <p className="font-medium"><AnimatedNumber value={item.band} decimals={1} /></p>
                 </div>
                 <Progress value={(item.band / 9) * 100} />
               </div>
@@ -49,7 +50,7 @@ export function SkillsSnapshot({skills, summary, overallJourneyPct, id}: SkillsS
           <p className="text-sm text-muted-foreground">{t("targetGoal.description")}</p>
           <div className="mt-3 flex items-center justify-between text-xs">
             <Badge>{t("targetGoal.overallJourney")}</Badge>
-            <span>{overallJourneyPct}%</span>
+            <span><AnimatedNumber value={overallJourneyPct} suffix="%" /></span>
           </div>
           <Progress className="mt-2" value={overallJourneyPct} />
         </CardContent>

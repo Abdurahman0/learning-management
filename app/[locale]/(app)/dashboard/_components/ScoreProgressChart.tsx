@@ -17,6 +17,7 @@ import {
 import {ChartContainer} from "@/components/ui/chart";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import {AnimatedNumber} from "@/components/ui/animated-number";
 import type {ScorePoint} from "@/data/student/dashboard";
 
 type ScoreProgressChartProps = {
@@ -108,7 +109,7 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
           <div className="mt-3 flex flex-wrap items-center gap-2.5">
             <div className="flex items-baseline gap-2">
               <p className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-                {latestBand.toFixed(1)}
+                <AnimatedNumber value={latestBand} decimals={1} />
               </p>
               <p className="text-sm text-muted-foreground">
                 {t.has("scoreProgress.bandLabel") ? t("scoreProgress.bandLabel") : "Band"}
@@ -120,7 +121,7 @@ export function ScoreProgressChart({points}: ScoreProgressChartProps) {
               title={`From ${earliestBand.toFixed(1)} to ${latestBand.toFixed(1)}`}
             >
               {trendDelta >= 0 ? "+" : ""}
-              {trendDelta.toFixed(1)} band
+              <AnimatedNumber value={trendDelta} decimals={1} /> band
             </div>
           </div>
         </div>

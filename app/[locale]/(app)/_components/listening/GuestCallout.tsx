@@ -52,7 +52,7 @@ export function GuestCallout() {
               {typeof totalAll === "number" ? `${demoCount}/${totalAll}` : `${demoCount}`}
             </p>
             <p className="text-[11px] text-muted-foreground">
-              {typeof totalAll === "number" ? t("banner.available", {count: totalAll}) : t("banner.available")}
+              {t("banner.available", {count: typeof totalAll === "number" ? totalAll : demoCount})}
             </p>
           </div>
         </div>

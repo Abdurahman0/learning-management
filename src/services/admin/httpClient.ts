@@ -150,14 +150,21 @@ export function createAdminHttpClient(): AxiosInstance {
 
   instance.interceptors.request.use((config) => {
     if (config.headers && typeof (config.headers as {set?: (name: string, value: string) => void}).set === "function") {
-      (config.headers as {set: (name: string, value: string) => void}).set("Accept", "application/json");
+      const headers = config.headers as {
+        get?: (name: string) => string | undefined;
+        set: (name: string, value: string) => void;
+      };
+      if (!headers.get?.("Accept")) {
+        headers.set("Accept", "application/json");
+      }
       return config;
     }
 
+    const currentHeaders = (config.headers ?? {}) as Record<string, unknown>;
     const next = {...config};
     next.headers = {
-      ...(config.headers ?? {}),
-      Accept: "application/json"
+      ...currentHeaders,
+      ...(!currentHeaders.Accept && !currentHeaders.accept ? {Accept: "application/json"} : {})
     } as never;
     return next;
   });

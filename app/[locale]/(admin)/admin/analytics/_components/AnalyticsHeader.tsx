@@ -1,6 +1,6 @@
 "use client";
 
-import {Bell, CalendarDays, Download} from "lucide-react";
+import {CalendarDays, Download} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Button} from "@/components/ui/button";
@@ -10,6 +10,7 @@ import {ThemeToggle} from "@/components/theme-toggle";
 import type {AnalyticsRangeKey} from "@/data/admin-analytics";
 
 import {AdminProfileMenu} from "../../_components/AdminProfileMenu";
+import {AdminNotificationBell} from "../../_components/AdminNotificationBell";
 import {AdminSidebarMobileNav} from "../../_components/AdminSidebar";
 
 type AnalyticsHeaderProps = {
@@ -51,15 +52,7 @@ export function AnalyticsHeader({selectedRange, onRangeChange, onExport}: Analyt
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative size-9 rounded-xl text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-            aria-label={t("notificationsLabel")}
-          >
-            <Bell className="size-4.5" />
-            <span className="absolute top-2.5 right-2.5 size-1.5 rounded-full bg-rose-500" />
-          </Button>
+          <AdminNotificationBell label={t("notificationsLabel")} />
 
           <Separator orientation="vertical" className="mx-1 hidden h-6 md:block" />
           <AdminProfileMenu />

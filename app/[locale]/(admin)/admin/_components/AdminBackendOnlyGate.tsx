@@ -19,6 +19,8 @@ function isBackendOnlySupportedAdminPath(pathWithoutLocale: string) {
     "/admin/users",
     "/admin/tests",
     "/admin/content-bank",
+    "/admin/feedback",
+    "/admin/notifications",
     "/admin/reading-tests",
     "/admin/listening-tests",
     "/admin/question-bank",

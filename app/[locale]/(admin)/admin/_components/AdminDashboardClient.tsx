@@ -1,9 +1,11 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
+import {useTranslations} from "next-intl";
 
 import type {ActivityStatus, AdminMonthKey, PlatformInsights, RecentActivityItem, UserGrowthPoint} from "@/data/admin-dashboard";
 import {adminDashboardService} from "@/src/services/admin/dashboard.service";
+import {SiteToast, type SiteToastNotice} from "@/components/ui/site-toast";
 
 import {AdminCharts} from "./AdminCharts";
 import {AdminInsights} from "./AdminInsights";
@@ -49,7 +51,10 @@ function toMonthKey(value: string): AdminMonthKey {
 }
 
 export function AdminDashboardClient() {
+  const t = useTranslations("adminDashboard");
   const [dashboardPayload, setDashboardPayload] = useState<Awaited<ReturnType<typeof adminDashboardService.get>> | null>(null);
+  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
+  const [notice, setNotice] = useState<SiteToastNotice | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -71,6 +76,47 @@ export function AdminDashboardClient() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  const handleDownloadMonthlyReport = async () => {
+    if (isDownloadingReport) return;
+    setIsDownloadingReport(true);
+
+    try {
+      const {blob, filename} = await adminDashboardService.downloadMonthlyReport();
+      if (!blob || blob.size === 0) {
+        throw new Error(t("insights.quickAction.downloadFailedDescription"));
+      }
+
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename || "englishlabs-monthly-report.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+
+      setNotice({
+        title: t("insights.quickAction.downloadSuccessTitle"),
+        description: t("insights.quickAction.downloadSuccessDescription"),
+        tone: "success"
+      });
+    } catch (error) {
+      setNotice({
+        title: t("insights.quickAction.downloadFailedTitle"),
+        description: error instanceof Error ? error.message : t("insights.quickAction.downloadFailedDescription"),
+        tone: "error"
+      });
+    } finally {
+      setIsDownloadingReport(false);
+    }
+  };
 
   const mappedSummary = useMemo(() => {
     if (!dashboardPayload) return [...EMPTY_SUMMARY];
@@ -144,6 +190,7 @@ export function AdminDashboardClient() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <SiteToast notice={notice} />
       <div className="flex min-h-screen">
         <AdminSidebar />
 
@@ -155,7 +202,11 @@ export function AdminDashboardClient() {
             <AdminCharts growthPoints={mappedGrowth} completionPoints={mappedCompletion} />
 
             <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.6fr)]">
-              <AdminInsights insights={mappedInsights} />
+              <AdminInsights
+                insights={mappedInsights}
+                isDownloadingReport={isDownloadingReport}
+                onDownloadReport={() => void handleDownloadMonthlyReport()}
+              />
               <AdminRecentActivity activity={mappedActivity} />
             </section>
           </main>

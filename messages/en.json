@@ -99,8 +99,9 @@
       "subtitle": "Join over 10,000 students across Uzbekistan who used EnglishLabs to achieve their dream band scores and study abroad."
     },
     "stats": {
-      "avgRating": "Average Rating",
-      "activeLearners": "Active Learners"
+      "avgRating": "Approved Feedback",
+      "activeLearners": "Active Learners",
+      "studentFeedbackValue": "Public"
     },
     "sections": {
       "featured": "Featured Success Stories",
@@ -166,6 +167,11 @@
         "location": "Fergana, Uzbekistan",
         "text": "I liked the balanced mix of Reading and Listening tasks. It helped me prepare steadily every week."
       }
+    },
+    "anonymousStudent": "EnglishLabs student",
+    "empty": {
+      "noFeedback": "No approved feedback is available yet.",
+      "loadFailed": "Could not load feedback right now."
     }
   },
   "guest": {
@@ -487,24 +493,38 @@
       "title": "Activate your account",
       "subtitle": "Verify your email to start using EnglishLabs.",
       "badge": "Activation",
-      "sideTitle": "You're almost there",
-      "sideDescription": "Activate your account to access practice tests, analytics, and AI feedback.",
-      "sidePoint1": "One-click activation",
-      "sidePoint2": "Secure email verification",
-      "sidePoint3": "Instant access after confirmation",
-      "loading": "Activating your account...",
-      "missingToken": "Activation link is missing or invalid. Please request a new one below.",
-      "invalidToken": "This activation link is invalid or expired. Request a new activation email below.",
+      "sideTitle": "One quick check, then you are in",
+      "sideDescription": "Email verification keeps your account secure and makes sure your test results stay attached to the right profile.",
+      "sidePoint1": "Check the inbox for the email you used to register",
+      "sidePoint2": "Open the secure EnglishLabs activation link",
+      "sidePoint3": "Start practicing with saved progress and analytics",
+      "loading": "Verifying your email...",
+      "missingToken": "This activation link is missing or incomplete. Enter your email below and we will send a fresh one.",
+      "invalidToken": "This activation link has expired or was already used. Request a fresh link below.",
       "rateLimited": "Too many attempts. Please wait a moment and try again.",
-      "success": "Your account has been activated. Redirecting you to login...",
-      "resendPrompt": "Didn't get the email? Resend the activation link.",
+      "success": "Your email is verified. Taking you to login...",
+      "resendPrompt": "Need a new activation link?",
       "goToLogin": "Go to login",
-      "backToLogin": "Back to login"
+      "backToLogin": "Back to login",
+      "emailSentTitle": "Check your email",
+      "emailSentSubtitle": "We sent your EnglishLabs activation link. Open it to finish creating your account.",
+      "emailSentCardTitle": "Your activation link is on its way",
+      "emailSentCardDescription": "We sent a secure activation link to {email}. The link expires for your protection, so open it as soon as you can.",
+      "yourEmail": "your email address",
+      "spamTitle": "Still not seeing the email? Check Spam or Promotions.",
+      "spamDescription": "Sometimes verification emails are filtered by your email provider. If it is not in your inbox, search for \"EnglishLabs\" or check your Spam, Promotions, and Updates folders.",
+      "resendHelp": "For security, you can request another activation email once every 60 seconds.",
+      "resendSuccess": "A new activation link has been sent. Please check your inbox, Spam, or Promotions folder."
     },
     "resendActivation": {
       "emailLabel": "Email address",
       "emailPlaceholder": "name@example.com",
-      "submit": "Resend activation email"
+      "submit": "Resend activation email",
+      "wait": "Resend available in {seconds}s",
+      "emailRequired": "Enter the email address you used to register.",
+      "timerLabel": "You can resend after",
+      "readyLabel": "Resend is available",
+      "readyNow": "Now"
     },
     "onboarding": {
       "title": "Quick setup",
@@ -1067,6 +1087,29 @@
         "title": "Review details",
         "description": "Detailed review flow will be connected to backend attempt records."
       }
+    },
+    "feedbackModal": {
+      "button": "Leave feedback",
+      "eyebrow": "Platform feedback",
+      "title": "Tell us what to improve",
+      "description": "Write a short message for the EnglishLabs team. After admin approval, your feedback may appear publicly.",
+      "label": "Your message",
+      "placeholder": "Share what worked well, what felt confusing, or what you want us to improve...",
+      "counter": "{count}/{max} characters",
+      "submit": "Send feedback",
+      "submitting": "Sending...",
+      "cancel": "Cancel",
+      "close": "Close feedback modal",
+      "success": {
+        "title": "Feedback sent",
+        "description": "Thanks. It will stay private until an admin approves it for public display."
+      },
+      "errors": {
+        "title": "Could not send feedback",
+        "required": "Please write your feedback first.",
+        "tooLong": "Feedback must be {max} characters or fewer.",
+        "submit": "Could not send feedback. Please try again."
+      }
     }
   },
   "adminDashboard": {
@@ -1085,7 +1128,8 @@
         "subscriptions": "Subscriptions",
         "achievements": "Achievements",
         "reports": "Reports",
-        "settings": "Settings"
+        "settings": "Settings",
+        "feedback": "Feedback"
       }
     },
     "topbar": {
@@ -1137,7 +1181,12 @@
         "kicker": "Quick Action",
         "title": "Generate Monthly Report",
         "description": "Review detailed analytics for the current active period.",
-        "download": "Download PDF"
+        "download": "Download PDF",
+        "downloading": "Preparing PDF...",
+        "downloadSuccessTitle": "Monthly report ready",
+        "downloadSuccessDescription": "The PDF download has started.",
+        "downloadFailedTitle": "Could not download report",
+        "downloadFailedDescription": "Failed to download monthly report."
       }
     },
     "activity": {
@@ -4673,6 +4722,95 @@
       "retakeReadingDrill": {
         "title": "Retake Planned",
         "description": "Reading retake workflow is connected with a placeholder action."
+      }
+    }
+  },
+  "adminFeedback": {
+    "eyebrow": "Student feedback",
+    "title": "Feedback moderation",
+    "refresh": "Refresh",
+    "searchPlaceholder": "Search by student or feedback...",
+    "loading": "Loading feedback...",
+    "empty": "No feedback found for the current filters.",
+    "unknownStudent": "Unknown student",
+    "stats": {
+      "total": "Total feedback",
+      "visible": "Public",
+      "hidden": "Hidden"
+    },
+    "filters": {
+      "all": "All",
+      "visible": "Visible",
+      "hidden": "Hidden"
+    },
+    "list": {
+      "title": "Student feedback",
+      "description": "Enable feedback to show it publicly on reviews sections. Disable it to hide it again."
+    },
+    "columns": {
+      "student": "Student",
+      "feedback": "Feedback",
+      "date": "Sent",
+      "status": "Status",
+      "visible": "Visible"
+    },
+    "status": {
+      "visible": "Visible",
+      "hidden": "Hidden"
+    },
+    "toggleAria": "Toggle public visibility for {name}",
+    "notices": {
+      "loadFailed": {
+        "title": "Could not load feedback",
+        "description": "Please retry."
+      },
+      "enabled": {
+        "title": "Feedback enabled",
+        "description": "This feedback is now visible publicly."
+      },
+      "disabled": {
+        "title": "Feedback disabled",
+        "description": "This feedback is hidden from public sections."
+      },
+      "saveFailed": {
+        "title": "Could not update feedback",
+        "description": "Please retry."
+      }
+    }
+  },
+  "adminNotifications": {
+    "bellLabel": "Notifications",
+    "eyebrow": "Admin notifications",
+    "title": "Notifications",
+    "refresh": "Refresh",
+    "markAllRead": "Mark all read",
+    "open": "Open",
+    "markRead": "Mark read",
+    "unread": "Unread",
+    "fallbackTitle": "Notification",
+    "emptyMessage": "No message was provided.",
+    "empty": "No notifications found for this filter.",
+    "stats": {
+      "total": "Total",
+      "unread": "Unread",
+      "read": "Read"
+    },
+    "filters": {
+      "all": "All notifications",
+      "unread": "Unread only"
+    },
+    "notices": {
+      "loadFailed": {
+        "title": "Could not load notifications",
+        "description": "Please retry."
+      },
+      "saveFailed": {
+        "title": "Could not update notification",
+        "description": "Please retry."
+      },
+      "allRead": {
+        "title": "All caught up",
+        "description": "Every notification is marked as read."
       }
     }
   }
