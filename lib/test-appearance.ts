@@ -15,9 +15,43 @@ const DEFAULT_APPEARANCE: TestAppearanceState = {
   contrast: "black-on-white",
   textSize: "medium",
 };
+const FALLBACK_FULLSCREEN_CLASS = "englishlabs-test-fallback-fullscreen";
 
 function getStorageKey(scope: string) {
   return `englishlabs:test-appearance:${scope}`;
+}
+
+function isIosWebKit() {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function shouldUseFallbackFullscreen() {
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  return isIosWebKit() || !document.fullscreenEnabled || typeof document.documentElement.requestFullscreen !== "function";
+}
+
+function isFallbackFullscreenActive() {
+  if (typeof document === "undefined") {
+    return false;
+  }
+
+  return document.documentElement.classList.contains(FALLBACK_FULLSCREEN_CLASS);
+}
+
+function setFallbackFullscreenClass(active: boolean) {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  document.documentElement.classList.toggle(FALLBACK_FULLSCREEN_CLASS, active);
+  document.body.classList.toggle(FALLBACK_FULLSCREEN_CLASS, active);
 }
 
 function getDefaultContrastMode(): TestContrastMode {
@@ -67,11 +101,13 @@ function readInitialAppearance(scope: string): TestAppearanceState {
 export function useTestAppearance(scope = "default") {
   const [appearance, setAppearance] = useState<TestAppearanceState>(DEFAULT_APPEARANCE);
   const [initializedScope, setInitializedScope] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(() => {
+  const [nativeFullscreen, setNativeFullscreen] = useState<boolean>(() => {
     if (typeof document === "undefined") return false;
     return Boolean(document.fullscreenElement);
   });
+  const [fallbackFullscreen, setFallbackFullscreen] = useState<boolean>(() => isFallbackFullscreenActive());
   const { setTheme } = useTheme();
+  const isFullscreen = nativeFullscreen || fallbackFullscreen;
 
   useEffect(() => {
     setAppearance(readInitialAppearance(scope));
@@ -91,11 +127,19 @@ export function useTestAppearance(scope = "default") {
   }, [appearance, initializedScope, scope]);
 
   useEffect(() => {
-    const onFullscreenChange = () =>
-      setIsFullscreen(Boolean(document.fullscreenElement));
+    const onFullscreenChange = () => {
+      setNativeFullscreen(Boolean(document.fullscreenElement));
+      setFallbackFullscreen(isFallbackFullscreenActive());
+    };
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () =>
       document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      setFallbackFullscreenClass(false);
+    };
   }, []);
 
   useEffect(() => {
@@ -119,23 +163,59 @@ export function useTestAppearance(scope = "default") {
     setAppearance((prev) => ({ ...prev, textSize }));
   }, []);
 
-  const toggleFullscreen = useCallback(async () => {
+  const enterFullscreen = useCallback(async () => {
+    try {
+      if (document.fullscreenElement) {
+        setNativeFullscreen(true);
+        return true;
+      }
+
+      if (shouldUseFallbackFullscreen()) {
+        setFallbackFullscreenClass(true);
+        setFallbackFullscreen(true);
+        return true;
+      }
+
+      await document.documentElement.requestFullscreen();
+      const enteredFullscreen = Boolean(document.fullscreenElement);
+      setNativeFullscreen(enteredFullscreen);
+      return enteredFullscreen;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const exitFullscreen = useCallback(async () => {
+    setFallbackFullscreenClass(false);
+    setFallbackFullscreen(false);
+
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
-        return;
       }
-      await document.documentElement.requestFullscreen();
     } catch {
       // Ignore browser fullscreen failures.
+    } finally {
+      setNativeFullscreen(Boolean(document.fullscreenElement));
     }
   }, []);
+
+  const toggleFullscreen = useCallback(async () => {
+    if (isFullscreen) {
+      await exitFullscreen();
+      return;
+    }
+
+    await enterFullscreen();
+  }, [enterFullscreen, exitFullscreen, isFullscreen]);
 
   return {
     appearance,
     setContrast,
     setTextSize,
     isFullscreen,
+    enterFullscreen,
+    exitFullscreen,
     toggleFullscreen,
   };
 }

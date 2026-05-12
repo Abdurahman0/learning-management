@@ -91,6 +91,14 @@
     @apply bg-background text-foreground antialiased;
   }
 
+  html.englishlabs-test-fallback-fullscreen,
+  html.englishlabs-test-fallback-fullscreen body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+
   a {
     @apply outline-ring/50;
   }

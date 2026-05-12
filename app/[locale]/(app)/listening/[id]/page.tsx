@@ -1338,6 +1338,8 @@ function ListeningTestClient({
     setContrast,
     setTextSize,
     isFullscreen,
+    enterFullscreen,
+    exitFullscreen,
     toggleFullscreen,
   } = useTestAppearance("test-taking");
 
@@ -2221,7 +2223,7 @@ function ListeningTestClient({
     setAudioSectionId("s1");
     setActiveQuestionNumber(1);
     if (!isFullscreen) {
-      await toggleFullscreen();
+      await enterFullscreen();
     }
 
     setRealModeStarting(true);
@@ -2236,25 +2238,21 @@ function ListeningTestClient({
   };
 
   const requestRealModeFullscreen = useCallback(async () => {
-    if (typeof document === "undefined") {
-      return false;
-    }
-    if (document.fullscreenElement) {
+    if (isFullscreen) {
       return true;
     }
 
     try {
       fullscreenRequestInFlightRef.current = true;
-      await document.documentElement.requestFullscreen();
-      return Boolean(document.fullscreenElement);
+      return await enterFullscreen();
     } catch {
-      return Boolean(document.fullscreenElement);
+      return false;
     } finally {
       window.setTimeout(() => {
         fullscreenRequestInFlightRef.current = false;
       }, 120);
     }
-  }, []);
+  }, [enterFullscreen, isFullscreen]);
 
   const triggerRealModeInterruption = useCallback((reason: RealModeInterruptionReason) => {
     const realModeSessionActive = isRealMode && timerRunning;
@@ -2284,10 +2282,8 @@ function ListeningTestClient({
     stopSectionAudioPlayback();
     setAudioPlaying(false);
 
-    if (typeof document !== "undefined" && document.fullscreenElement) {
-      void document.exitFullscreen().catch(() => undefined);
-    }
-  }, []);
+    void exitFullscreen();
+  }, [exitFullscreen]);
 
   const returnToRealMode = useCallback(async () => {
     const enteredFullscreen = await requestRealModeFullscreen();
