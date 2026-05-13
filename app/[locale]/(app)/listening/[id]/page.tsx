@@ -1338,6 +1338,7 @@ function ListeningTestClient({
     setContrast,
     setTextSize,
     isFullscreen,
+    fullscreenSupported,
     enterFullscreen,
     exitFullscreen,
     toggleFullscreen,
@@ -2222,7 +2223,7 @@ function ListeningTestClient({
     setActiveSectionId("s1");
     setAudioSectionId("s1");
     setActiveQuestionNumber(1);
-    if (!isFullscreen) {
+    if (fullscreenSupported && !isFullscreen) {
       await enterFullscreen();
     }
 
@@ -2238,6 +2239,9 @@ function ListeningTestClient({
   };
 
   const requestRealModeFullscreen = useCallback(async () => {
+    if (!fullscreenSupported) {
+      return true;
+    }
     if (isFullscreen) {
       return true;
     }
@@ -2252,7 +2256,7 @@ function ListeningTestClient({
         fullscreenRequestInFlightRef.current = false;
       }, 120);
     }
-  }, [enterFullscreen, isFullscreen]);
+  }, [enterFullscreen, fullscreenSupported, isFullscreen]);
 
   const triggerRealModeInterruption = useCallback((reason: RealModeInterruptionReason) => {
     const realModeSessionActive = isRealMode && timerRunning;
@@ -2296,7 +2300,7 @@ function ListeningTestClient({
 
   useEffect(() => {
     const realModeSessionActive = isRealMode && timerRunning;
-    if (!realModeSessionActive || reviewMode || isFullscreen || realModeInterruption !== null) {
+    if (!fullscreenSupported || !realModeSessionActive || reviewMode || isFullscreen || realModeInterruption !== null) {
       return;
     }
 
@@ -2308,6 +2312,7 @@ function ListeningTestClient({
   }, [
     isFullscreen,
     isRealMode,
+    fullscreenSupported,
     realModeInterruption,
     requestRealModeFullscreen,
     reviewMode,
@@ -2317,14 +2322,14 @@ function ListeningTestClient({
 
   useEffect(() => {
     const realModeSessionActive = isRealMode && timerRunning;
-    if (!realModeSessionActive || reviewMode || realModeInterruption !== null) {
+    if (!fullscreenSupported || !realModeSessionActive || reviewMode || realModeInterruption !== null) {
       return;
     }
     if (isFullscreen || fullscreenRequestInFlightRef.current) {
       return;
     }
     triggerRealModeInterruption("fullscreen");
-  }, [isFullscreen, isRealMode, realModeInterruption, reviewMode, timerRunning, triggerRealModeInterruption]);
+  }, [fullscreenSupported, isFullscreen, isRealMode, realModeInterruption, reviewMode, timerRunning, triggerRealModeInterruption]);
 
   useEffect(() => {
     const realModeSessionActive = isRealMode && timerRunning;
@@ -3624,15 +3629,17 @@ function ListeningTestClient({
                 <span className="hidden sm:inline">{clearHighlightsLabel}</span>
               </Button>
             ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              className="h-9 w-9 shrink-0 rounded-xl border-border/70 bg-background/60 p-0"
-              aria-label={isFullscreen ? tOptions("exitFullscreen") : tOptions("enterFullscreen")}
-              onClick={toggleFullscreen}
-            >
-              {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-            </Button>
+            {fullscreenSupported ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 w-9 shrink-0 rounded-xl border-border/70 bg-background/60 p-0"
+                aria-label={isFullscreen ? tOptions("exitFullscreen") : tOptions("enterFullscreen")}
+                onClick={toggleFullscreen}
+              >
+                {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"

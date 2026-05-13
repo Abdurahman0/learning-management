@@ -15,7 +15,6 @@ const DEFAULT_APPEARANCE: TestAppearanceState = {
   contrast: "black-on-white",
   textSize: "medium",
 };
-const FALLBACK_FULLSCREEN_CLASS = "englishlabs-test-fallback-fullscreen";
 
 function getStorageKey(scope: string) {
   return `englishlabs:test-appearance:${scope}`;
@@ -29,29 +28,12 @@ function isIosWebKit() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
-function shouldUseFallbackFullscreen() {
+function canUseNativeFullscreen() {
   if (typeof document === "undefined") {
     return false;
   }
 
-  return isIosWebKit() || !document.fullscreenEnabled || typeof document.documentElement.requestFullscreen !== "function";
-}
-
-function isFallbackFullscreenActive() {
-  if (typeof document === "undefined") {
-    return false;
-  }
-
-  return document.documentElement.classList.contains(FALLBACK_FULLSCREEN_CLASS);
-}
-
-function setFallbackFullscreenClass(active: boolean) {
-  if (typeof document === "undefined") {
-    return;
-  }
-
-  document.documentElement.classList.toggle(FALLBACK_FULLSCREEN_CLASS, active);
-  document.body.classList.toggle(FALLBACK_FULLSCREEN_CLASS, active);
+  return !isIosWebKit() && document.fullscreenEnabled && typeof document.documentElement.requestFullscreen === "function";
 }
 
 function getDefaultContrastMode(): TestContrastMode {
@@ -105,13 +87,14 @@ export function useTestAppearance(scope = "default") {
     if (typeof document === "undefined") return false;
     return Boolean(document.fullscreenElement);
   });
-  const [fallbackFullscreen, setFallbackFullscreen] = useState<boolean>(() => isFallbackFullscreenActive());
+  const [fullscreenSupported, setFullscreenSupported] = useState(false);
   const { setTheme } = useTheme();
-  const isFullscreen = nativeFullscreen || fallbackFullscreen;
+  const isFullscreen = nativeFullscreen;
 
   useEffect(() => {
     setAppearance(readInitialAppearance(scope));
     setInitializedScope(scope);
+    setFullscreenSupported(canUseNativeFullscreen());
   }, [scope]);
 
   useEffect(() => {
@@ -129,17 +112,10 @@ export function useTestAppearance(scope = "default") {
   useEffect(() => {
     const onFullscreenChange = () => {
       setNativeFullscreen(Boolean(document.fullscreenElement));
-      setFallbackFullscreen(isFallbackFullscreenActive());
     };
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () =>
       document.removeEventListener("fullscreenchange", onFullscreenChange);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      setFallbackFullscreenClass(false);
-    };
   }, []);
 
   useEffect(() => {
@@ -170,10 +146,8 @@ export function useTestAppearance(scope = "default") {
         return true;
       }
 
-      if (shouldUseFallbackFullscreen()) {
-        setFallbackFullscreenClass(true);
-        setFallbackFullscreen(true);
-        return true;
+      if (!canUseNativeFullscreen()) {
+        return false;
       }
 
       await document.documentElement.requestFullscreen();
@@ -186,9 +160,6 @@ export function useTestAppearance(scope = "default") {
   }, []);
 
   const exitFullscreen = useCallback(async () => {
-    setFallbackFullscreenClass(false);
-    setFallbackFullscreen(false);
-
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
@@ -206,14 +177,19 @@ export function useTestAppearance(scope = "default") {
       return;
     }
 
+    if (!fullscreenSupported) {
+      return;
+    }
+
     await enterFullscreen();
-  }, [enterFullscreen, exitFullscreen, isFullscreen]);
+  }, [enterFullscreen, exitFullscreen, fullscreenSupported, isFullscreen]);
 
   return {
     appearance,
     setContrast,
     setTextSize,
     isFullscreen,
+    fullscreenSupported,
     enterFullscreen,
     exitFullscreen,
     toggleFullscreen,

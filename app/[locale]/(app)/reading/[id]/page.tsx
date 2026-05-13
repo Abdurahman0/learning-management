@@ -1560,6 +1560,7 @@ function ReadingTestClient({
     setContrast,
     setTextSize,
     isFullscreen,
+    fullscreenSupported,
     enterFullscreen,
     exitFullscreen,
     toggleFullscreen,
@@ -2537,6 +2538,9 @@ function ReadingTestClient({
   ]);
 
   const requestRealModeFullscreen = useCallback(async () => {
+    if (!fullscreenSupported) {
+      return true;
+    }
     if (isFullscreen) {
       return true;
     }
@@ -2551,7 +2555,7 @@ function ReadingTestClient({
         fullscreenRequestInFlightRef.current = false;
       }, 120);
     }
-  }, [enterFullscreen, isFullscreen]);
+  }, [enterFullscreen, fullscreenSupported, isFullscreen]);
 
   const triggerRealModeInterruption = useCallback(
     (reason: RealModeInterruptionReason) => {
@@ -2616,7 +2620,7 @@ function ReadingTestClient({
   };
 
   useEffect(() => {
-    if (!isRealMode || reviewMode || isFullscreen || realModeInterruption !== null) {
+    if (!fullscreenSupported || !isRealMode || reviewMode || isFullscreen || realModeInterruption !== null) {
       return;
     }
     void requestRealModeFullscreen().then((enteredFullscreen) => {
@@ -2624,17 +2628,17 @@ function ReadingTestClient({
         triggerRealModeInterruption("fullscreen");
       }
     });
-  }, [isFullscreen, isRealMode, realModeInterruption, requestRealModeFullscreen, reviewMode, triggerRealModeInterruption]);
+  }, [fullscreenSupported, isFullscreen, isRealMode, realModeInterruption, requestRealModeFullscreen, reviewMode, triggerRealModeInterruption]);
 
   useEffect(() => {
-    if (!isRealMode || reviewMode || realModeInterruption !== null) {
+    if (!fullscreenSupported || !isRealMode || reviewMode || realModeInterruption !== null) {
       return;
     }
     if (isFullscreen || fullscreenRequestInFlightRef.current) {
       return;
     }
     triggerRealModeInterruption("fullscreen");
-  }, [isFullscreen, isRealMode, realModeInterruption, reviewMode, triggerRealModeInterruption]);
+  }, [fullscreenSupported, isFullscreen, isRealMode, realModeInterruption, reviewMode, triggerRealModeInterruption]);
 
   useEffect(() => {
     if (!isRealMode || reviewMode) {
@@ -2820,15 +2824,17 @@ function ReadingTestClient({
           ) : null}
 
           <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={toggleFullscreen}
-              className="h-9 w-9 rounded-xl border-border/70 bg-background/60 p-0 sm:h-10 sm:w-10"
-              aria-label={isFullscreen ? tOptions("exitFullscreen") : tOptions("enterFullscreen")}
-            >
-              {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
-            </Button>
+            {fullscreenSupported ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={toggleFullscreen}
+                className="h-9 w-9 rounded-xl border-border/70 bg-background/60 p-0 sm:h-10 sm:w-10"
+                aria-label={isFullscreen ? tOptions("exitFullscreen") : tOptions("enterFullscreen")}
+              >
+                {isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"

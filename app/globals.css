@@ -99,6 +99,21 @@
     touch-action: manipulation;
   }
 
+  html.englishlabs-test-fallback-fullscreen body .test-appearance-root {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0 !important;
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    overflow: hidden;
+  }
+
   a {
     @apply outline-ring/50;
   }
