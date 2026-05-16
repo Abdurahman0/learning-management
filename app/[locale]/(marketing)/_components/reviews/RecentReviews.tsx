@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
@@ -113,8 +112,12 @@ export function RecentReviews() {
                   const name = getFeedbackName(review, t("anonymousStudent"));
                   return (
                     <Card key={review.id} className="border-border bg-background py-0 shadow-none">
-                      <CardContent className="flex h-full flex-col p-4 sm:p-5">
-                        <div className="mb-4 flex items-center gap-3">
+                      <CardContent className="relative flex h-full flex-col p-4 sm:p-5">
+                        <div className="absolute top-4 right-4 inline-flex size-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300">
+                          <MessageSquareQuote className="size-4" aria-hidden="true" />
+                        </div>
+
+                        <div className="mb-4 flex items-center gap-3 pr-10">
                           <Avatar className="size-10 border border-border">
                             <AvatarFallback className="bg-blue-500/12 text-xs font-semibold text-blue-700 dark:text-blue-200">
                               {getInitials(name)}
@@ -126,9 +129,6 @@ export function RecentReviews() {
                           </div>
                         </div>
 
-                        <div className="mb-3 inline-flex size-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-300">
-                          <MessageSquareQuote className="size-4" aria-hidden="true" />
-                        </div>
                         <p className="text-sm leading-relaxed text-muted-foreground">&quot;{review.feedbackText}&quot;</p>
                       </CardContent>
                     </Card>
