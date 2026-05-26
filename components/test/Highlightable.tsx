@@ -229,6 +229,7 @@ export function Highlightable({
   const notesPanelRef = useRef<HTMLDivElement | null>(null);
   const selectionTimeoutRef = useRef<number | null>(null);
   const selectionFrameRef = useRef<number | null>(null);
+  const queueSelectionReadRef = useRef<(() => void) | null>(null);
   const [highlights, setHighlights] = useState<StoredHighlight[]>(() => loadHighlights(storageKey));
   const [color, setColor] = useState<HighlightColor>("yellow");
   const [selection, setSelection] = useState<SelectionState | null>(null);
@@ -245,9 +246,12 @@ export function Highlightable({
 
   useEffect(() => {
     if (clearToken === undefined || clearToken === null) return;
-    setSelection(null);
-    setHighlights([]);
+    const timeoutId = window.setTimeout(() => {
+      setSelection(null);
+      setHighlights([]);
+    }, 0);
     // Notes intentionally preserved: this button is "Clear highlights" only.
+    return () => window.clearTimeout(timeoutId);
   }, [clearToken]);
 
   useEffect(() => {
@@ -363,8 +367,11 @@ export function Highlightable({
       return;
     }
 
-    const element = (anchorNode.nodeType === Node.ELEMENT_NODE ? anchorNode : anchorNode.parentElement) as HTMLElement | null;
-    if (element?.closest("input, textarea, select, [contenteditable='true']")) {
+    const anchorElement = (anchorNode.nodeType === Node.ELEMENT_NODE ? anchorNode : anchorNode.parentElement) as HTMLElement | null;
+    const focusElement = (focusNode.nodeType === Node.ELEMENT_NODE ? focusNode : focusNode.parentElement) as HTMLElement | null;
+    const anchorEditable = anchorElement?.closest("input, textarea, select, [contenteditable='true']");
+    const focusEditable = focusElement?.closest("input, textarea, select, [contenteditable='true']");
+    if (anchorEditable && focusEditable && anchorEditable === focusEditable) {
       setSelection(null);
       return;
     }
@@ -429,6 +436,34 @@ export function Highlightable({
       readSelection();
     });
   };
+  useEffect(() => {
+    queueSelectionReadRef.current = queueSelectionRead;
+  });
+
+  useEffect(() => {
+    const readIfSelectionBelongsHere = () => {
+      const root = rootRef.current;
+      const sel = window.getSelection();
+      if (!root || !sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+
+      const anchorNode = sel.anchorNode;
+      const focusNode = sel.focusNode;
+      if (!anchorNode || !focusNode) return;
+      if (!root.contains(anchorNode) || !root.contains(focusNode)) return;
+
+      queueSelectionReadRef.current?.();
+    };
+
+    document.addEventListener("selectionchange", readIfSelectionBelongsHere);
+    document.addEventListener("mouseup", readIfSelectionBelongsHere);
+    document.addEventListener("touchend", readIfSelectionBelongsHere);
+
+    return () => {
+      document.removeEventListener("selectionchange", readIfSelectionBelongsHere);
+      document.removeEventListener("mouseup", readIfSelectionBelongsHere);
+      document.removeEventListener("touchend", readIfSelectionBelongsHere);
+    };
+  }, []);
 
   const toggleSelection = () => {
     if (!selection) return;

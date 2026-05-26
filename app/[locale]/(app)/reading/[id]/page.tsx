@@ -3865,6 +3865,13 @@ function ReadingTestClient({
 
                               {question.type === "summaryCompletion" ? (() => {
                                 const parts = question.summaryText.split(/(\{\d+\})/g);
+                                let summaryTextOffset = 0;
+                                const partsWithOffsets = parts.map((part) => {
+                                  const start = summaryTextOffset;
+                                  summaryTextOffset += part.length;
+                                  return {part, start};
+                                });
+                                const summaryHighlightKey = `summary:${question.id}`;
                                 const summaryQuestions = visibleGroupQuestions.filter(
                                   (item): item is Extract<ReadingQuestion, {type: "summaryCompletion"}> => item.type === "summaryCompletion"
                                 );
@@ -3932,8 +3939,8 @@ function ReadingTestClient({
                                       </div>
                                     ) : null}
                                     <div className="test-soft-surface rounded-lg border border-border/60 bg-muted/20 p-4">
-                                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-                                      {parts.map((part, partIndex) => {
+                                      <div className="select-text whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                                      {partsWithOffsets.map(({part, start: partStart}, partIndex) => {
                                         const match = part.match(/^\{(\d+)\}$/);
                                         if (match) {
                                           const num = Number(match[1]);
@@ -3951,7 +3958,7 @@ function ReadingTestClient({
                                               : (t.has("notAvailable") ? t("notAvailable") : "Not available");
 
                                             return (
-                                              <span key={partIndex} className="inline-flex items-baseline gap-1 mx-0.5">
+                                              <span key={partIndex} className="inline-flex select-none items-baseline gap-1 mx-0.5">
                                                 <span 
                                                   className={cn(
                                                     "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white transition-colors",
@@ -4049,9 +4056,31 @@ function ReadingTestClient({
                                             );
                                           }
                                         }
-                                        return part ? <InlineBoldText key={partIndex} text={part} /> : null;
+                                        return part ? (
+                                          <HighlightableText
+                                            key={partIndex}
+                                            text={part}
+                                            enableMarkdownBold
+                                            userHighlights={getQuestionLocalHighlights(summaryHighlightKey, partStart, part.length)}
+                                            notesStorageKey={`reading:${test.id}:notes`}
+                                            noteScopeKey={`question:${question.id}:summary-part:${partIndex}`}
+                                            interactive={!reviewMode}
+                                            markLabel={t.has("markText") ? t("markText") : "Mark"}
+                                            unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
+                                            onToggle={({ start, end, color, action }) =>
+                                              toggleHighlight({
+                                                scope: "question",
+                                                questionId: summaryHighlightKey,
+                                                start: partStart + start,
+                                                end: partStart + end,
+                                                color,
+                                                action,
+                                              })
+                                            }
+                                          />
+                                        ) : null;
                                       })}
-                                    </p>
+                                    </div>
                                   </div>
                                 </div>
                               );

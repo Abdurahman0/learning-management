@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Eraser, Highlighter, NotebookPen, Trash2, X } from "lucide-react";
 
@@ -205,6 +205,7 @@ export function HighlightableText({
   const notesPanelRef = useRef<HTMLDivElement | null>(null);
   const selectionTimeoutRef = useRef<number | null>(null);
   const selectionFrameRef = useRef<number | null>(null);
+  const queueSelectionReadRef = useRef<(() => void) | null>(null);
   const [selection, setSelection] = useState<SelectionInfo | null>(null);
   const [color, setColor] = useState<ReadingHighlightColor>("yellow");
   const defaultNotesKey = useMemo(
@@ -222,15 +223,15 @@ export function HighlightableText({
 
   const displayText = parsedText.displayText;
 
-  const toDisplayOffset = (rawOffset: number) => {
+  const toDisplayOffset = useCallback((rawOffset: number) => {
     const clamped = clamp(rawOffset, 0, text.length);
     return parsedText.rawToDisplay[clamped] ?? 0;
-  };
+  }, [parsedText.rawToDisplay, text.length]);
 
-  const toRawOffset = (displayOffset: number) => {
+  const toRawOffset = useCallback((displayOffset: number) => {
     const clamped = clamp(displayOffset, 0, displayText.length);
     return parsedText.displayToRaw[clamped] ?? 0;
-  };
+  }, [displayText.length, parsedText.displayToRaw]);
 
   const mergedUserRanges = useMemo(
     () => mergeRanges(userHighlights.map((item) => ({ start: item.start, end: item.end }))),
@@ -256,7 +257,7 @@ export function HighlightableText({
       kind: "answer" as const,
     })).filter((item) => item.end > item.start);
     return [...user, ...answer];
-  }, [answerHighlights, parsedText, text.length, userHighlights]);
+  }, [answerHighlights, toDisplayOffset, userHighlights]);
 
   const ranges = useMemo(() => buildRanges(displayText, sourceHighlights), [displayText, sourceHighlights]);
   const noteRanges = useMemo(
@@ -278,7 +279,7 @@ export function HighlightableText({
         })
         .map((item) => ({ start: toDisplayOffset(item.start), end: toDisplayOffset(item.end) }))
         .filter((item) => item.end > item.start),
-    [displayText, noteScopeKey, notes, parsedText, text]
+    [displayText, noteScopeKey, notes, text.length, toDisplayOffset]
   );
   const renderedRanges = useMemo(() => {
     const output: Array<
@@ -392,7 +393,7 @@ export function HighlightableText({
     if (!interactive || !onToggle) return;
     const container = containerRef.current;
     const sel = window.getSelection();
-    if (!container || !sel || sel.rangeCount === 0) {
+    if (!container || !sel || sel.rangeCount === 0 || sel.isCollapsed) {
       setSelection(null);
       return;
     }
@@ -401,6 +402,15 @@ export function HighlightableText({
     const anchor = sel.anchorNode;
     const focus = sel.focusNode;
     if (!anchor || !focus || !container.contains(anchor) || !container.contains(focus)) {
+      setSelection(null);
+      return;
+    }
+
+    const anchorElement = (anchor.nodeType === Node.ELEMENT_NODE ? anchor : anchor.parentElement) as HTMLElement | null;
+    const focusElement = (focus.nodeType === Node.ELEMENT_NODE ? focus : focus.parentElement) as HTMLElement | null;
+    const anchorEditable = anchorElement?.closest("input, textarea, select, [contenteditable='true']");
+    const focusEditable = focusElement?.closest("input, textarea, select, [contenteditable='true']");
+    if (anchorEditable && focusEditable && anchorEditable === focusEditable) {
       setSelection(null);
       return;
     }
@@ -461,6 +471,35 @@ export function HighlightableText({
       readSelection();
     });
   };
+
+  useEffect(() => {
+    queueSelectionReadRef.current = queueSelectionRead;
+  });
+
+  useEffect(() => {
+    const readIfSelectionBelongsHere = () => {
+      const container = containerRef.current;
+      const sel = window.getSelection();
+      if (!container || !sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+
+      const anchor = sel.anchorNode;
+      const focus = sel.focusNode;
+      if (!anchor || !focus) return;
+      if (!container.contains(anchor) || !container.contains(focus)) return;
+
+      queueSelectionReadRef.current?.();
+    };
+
+    document.addEventListener("selectionchange", readIfSelectionBelongsHere);
+    document.addEventListener("mouseup", readIfSelectionBelongsHere);
+    document.addEventListener("touchend", readIfSelectionBelongsHere);
+
+    return () => {
+      document.removeEventListener("selectionchange", readIfSelectionBelongsHere);
+      document.removeEventListener("mouseup", readIfSelectionBelongsHere);
+      document.removeEventListener("touchend", readIfSelectionBelongsHere);
+    };
+  }, []);
 
   const applyToggle = () => {
     if (!selection || !onToggle) return;

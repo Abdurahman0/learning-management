@@ -3323,7 +3323,7 @@ function ListeningTestClient({
       return (
         <Card className="test-panel test-soft-surface min-w-0 gap-0 rounded-lg border border-border bg-muted/20 p-4 overflow-hidden">
           <div className="rounded-lg border border-border/60 bg-muted/15 p-3">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+            <div className="select-text whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
               {tokens.map((token, tokenIndex) => {
                 if (token.kind === "placeholder") {
                   const num = token.questionNumber;
@@ -3341,11 +3341,10 @@ function ListeningTestClient({
                         questionRefs.current.set(num, el);
                       }}
                       className={cn(
-                        "mx-0.5 inline-flex items-baseline gap-1 scroll-mt-24 align-baseline",
+                        "mx-0.5 inline-flex select-none items-baseline gap-1 scroll-mt-24 align-baseline",
                         token.bold && "font-semibold",
                         markedQuestionClass(num),
                       )}
-                      onClick={() => setActiveQuestionNumber(num)}
                     >
                       <QuestionChip number={num} active={isCurrent} />
                       <Input
@@ -3382,7 +3381,7 @@ function ListeningTestClient({
                   />
                 );
               })}
-            </p>
+            </div>
           </div>
         </Card>
       );
@@ -3402,28 +3401,29 @@ function ListeningTestClient({
                 }
                 questionRefs.current.set(line.questionNumber, el);
               }}
-              className={cn("flex flex-wrap items-center gap-2 scroll-mt-24", markedQuestionClass(line.questionNumber))}
-              onClick={() => setActiveQuestionNumber(line.questionNumber)}
+              className={cn("flex flex-wrap items-center gap-2 scroll-mt-24 select-text", markedQuestionClass(line.questionNumber))}
             >
               <FormattedInstructionText
                 text={line.before}
                 className="wrap-break-word"
               />
-              <QuestionChip
-                number={line.questionNumber}
-                active={activeQuestionNumber === line.questionNumber}
-              />
-              <Input
-                aria-label={`Question ${line.questionNumber}`}
-                value={answers[line.questionNumber] ?? ""}
-                onChange={(e) => setAnswer(line.questionNumber, e.target.value)}
-                onFocus={() => setActiveQuestionNumber(line.questionNumber)}
-                placeholder="..."
-                className={cn(
-                  "test-input-surface w-full min-w-0 h-10 sm:w-44",
-                  isSmallLandscape && "h-11",
-                )}
-              />
+              <span className="inline-flex select-none items-center gap-2">
+                <QuestionChip
+                  number={line.questionNumber}
+                  active={activeQuestionNumber === line.questionNumber}
+                />
+                <Input
+                  aria-label={`Question ${line.questionNumber}`}
+                  value={answers[line.questionNumber] ?? ""}
+                  onChange={(e) => setAnswer(line.questionNumber, e.target.value)}
+                  onFocus={() => setActiveQuestionNumber(line.questionNumber)}
+                  placeholder="..."
+                  className={cn(
+                    "test-input-surface w-full min-w-0 h-10 sm:w-44",
+                    isSmallLandscape && "h-11",
+                  )}
+                />
+              </span>
               <FormattedInstructionText
                 text={line.after}
                 className="wrap-break-word"
