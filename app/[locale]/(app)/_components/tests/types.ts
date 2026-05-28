@@ -4,6 +4,7 @@ export type PracticeSource = "custom" | "real" | "cambridge";
 export type ReadingGuestTest = {
   id: string;
   title: string;
+  testFormat?: "full" | "part" | "both";
   isPremium: boolean;
   durationMinutes: number;
   totalQuestions: number;
@@ -21,6 +22,7 @@ export type ListeningDifficulty = Difficulty;
 export type ListeningTestItem = {
   id: string;
   title: string;
+  testFormat?: "full" | "part" | "both";
   isPremium: boolean;
   difficulty: ListeningDifficulty;
   practiceSource: PracticeSource;

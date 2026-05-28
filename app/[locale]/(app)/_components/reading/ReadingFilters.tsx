@@ -14,6 +14,7 @@ import {
 import type {Difficulty, PracticeSource} from "../tests/types";
 
 type ReadingTab = "all" | "free" | "premium";
+type ReadingKindFilter = "full" | "passages";
 type DifficultyFilter = "all" | Difficulty;
 type SourceFilter = "all" | PracticeSource;
 type SortFilter = "newest" | "az";
@@ -21,6 +22,8 @@ type SortFilter = "newest" | "az";
 type ReadingFiltersProps = {
   tab: ReadingTab;
   onTabChange: (value: ReadingTab) => void;
+  kind: ReadingKindFilter;
+  onKindChange: (value: ReadingKindFilter) => void;
   source: SourceFilter;
   onSourceChange: (value: SourceFilter) => void;
   search: string;
@@ -34,6 +37,8 @@ type ReadingFiltersProps = {
 export function ReadingFilters({
   tab,
   onTabChange,
+  kind,
+  onKindChange,
   source,
   onSourceChange,
   search,
@@ -68,6 +73,11 @@ export function ReadingFilters({
           <Button type="button" size="sm" variant={source === "all" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("all")}>{t("filters.sourceAll")}</Button>
           <Button type="button" size="sm" variant={source === "cambridge" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("cambridge")}>{t("filters.sourceCambridge")}</Button>
           <Button type="button" size="sm" variant={source === "real" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("real")}>{t("filters.sourceReal")}</Button>
+        </div>
+
+        <div className="inline-flex w-full items-center gap-1 rounded-xl bg-muted p-1 sm:w-auto" aria-label={t("reading.practiceType")}>
+          <Button type="button" size="sm" variant={kind === "full" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onKindChange("full")}>{t("reading.fullTestsTitle")}</Button>
+          <Button type="button" size="sm" variant={kind === "passages" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onKindChange("passages")}>{t("reading.passagesTitle")}</Button>
         </div>
       </div>
 
@@ -107,5 +117,3 @@ export function ReadingFilters({
     </div>
   );
 }
-
-

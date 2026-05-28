@@ -19,6 +19,7 @@ function normalizeTestRecord(item: StudentTestRecord): StudentTestRecord {
     title: String(item.title ?? ""),
     description: String(item.description ?? ""),
     test_type: String(item.test_type ?? ""),
+    test_format: typeof item.test_format === "string" ? item.test_format : null,
     type_display: String(item.type_display ?? ""),
     difficulty_level: String(item.difficulty_level ?? ""),
     difficulty_display: String(item.difficulty_display ?? ""),

@@ -34,6 +34,7 @@ import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { HighlightableText } from "@/components/test/HighlightableText";
 import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
 import { InlineBoldText } from "@/components/test/InlineBoldText";
+import { TestNotesButton } from "@/components/test/TestNotesButton";
 import {
   clampSplitPct,
   mergeRanges,
@@ -2844,6 +2845,7 @@ function ReadingTestClient({
             >
               <Menu className="size-4" />
             </Button>
+            <TestNotesButton storageKey={`reading:${test.id}:notes`} />
             <Button
               type="button"
               variant="outline"
@@ -4515,4 +4517,3 @@ function ReadingTestClient({
     </section>
   );
 }
-

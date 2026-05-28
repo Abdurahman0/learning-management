@@ -69,6 +69,7 @@ export type StudentTestRecord = {
   title: string;
   description: string;
   test_type: string;
+  test_format?: string | null;
   type_display: string;
   difficulty_level: string;
   difficulty_display: string;

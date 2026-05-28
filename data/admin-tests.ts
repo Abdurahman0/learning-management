@@ -43,6 +43,7 @@ export type AdminTest = {
   id: string;
   name: string;
   module: TestModule;
+  testFormat?: "full" | "part" | "both";
   book: string;
   questions: number;
   difficulty: TestDifficulty;

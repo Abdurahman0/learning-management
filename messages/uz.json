@@ -253,6 +253,11 @@
     "reading": {
       "title": "Reading testlarini mashq qiling",
       "subtitle": "Haqiqiy IELTS reading matnlari bilan tezlik va aniqlikni oshiring.",
+      "practiceType": "Reading mashq turi",
+      "fullTestsTitle": "Full Tests",
+      "passagesTitle": "Passage Practice",
+      "noFullTests": "Hozirgi filterlarga mos full reading testlari yo'q.",
+      "noPassages": "Hozirgi filterlarga mos passage testlari yo'q.",
       "upgradeTitle": "Ko'proq testlarni oching",
       "upgradeDesc": "Barcha testlar va batafsil tahlilga kirish uchun akkaunt yarating.",
       "seePlans": "Tariflarni ko'rish"
@@ -260,6 +265,11 @@
     "listening": {
       "title": "Listening testlarini mashq qiling",
       "subtitle": "Imtihon formatidagi listening setlar bilan aniqlik va tezlikni oshiring.",
+      "practiceType": "Listening mashq turi",
+      "fullTestsTitle": "Full Tests",
+      "partsTitle": "Part Practice",
+      "noFullTests": "Hozirgi filterlarga mos full listening testlari yo'q.",
+      "noParts": "Hozirgi filterlarga mos listening part practice yo'q.",
       "upgradeTitle": "Ko'proq testlarni oching",
       "upgradeDesc": "Barcha testlar va batafsil tahlilga kirish uchun akkaunt yarating.",
       "seePlans": "Tariflarni ko'rish"
@@ -1212,7 +1222,9 @@
       "createTest": "Yangi test yaratish",
       "createMenuLabel": "Test turini tanlang",
       "createReadingDefault": "Reading (Asosiy)",
+      "createReadingPassage": "Reading Passage",
       "createListening": "Listening",
+      "createListeningPart": "Listening Part",
       "notificationsLabel": "Bildirishnomalar"
     },
     "toolbar": {
@@ -1332,6 +1344,8 @@
     },
     "row": {
       "newDraftTitle": "Maxsus test {index}",
+      "newPassageDraftTitle": "Maxsus passage testi {index}",
+      "newListeningPartDraftTitle": "Maxsus listening part {index}",
       "customBook": "Maxsus",
       "defaultPassageTitle": "Yangi passage",
       "defaultPassageDescription": "Backend ulangandan keyin to'liq passage matni va savollarni qo'shing.",
@@ -1471,6 +1485,7 @@
       "title": "Savol guruhlari",
       "totalCount": "{count} ta jami",
       "totalCountWithLimit": "{assigned}/{required} ta jami",
+      "totalCountFlexible": "{assigned} ta jami",
       "questionCount": "{count} ta savol",
       "addGroup": "Savol guruhi qo'shish",
       "createTitle": "Savol guruhi yaratish",

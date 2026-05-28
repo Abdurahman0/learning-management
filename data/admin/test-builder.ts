@@ -41,6 +41,7 @@ export type AdminBuilderTest = {
   name: string;
   book: string;
   module: TestModule;
+  testFormat?: "full" | "part" | "both";
   difficulty: TestDifficulty;
   status: BuilderStatus;
   // Test-level metadata stored on PracticeTest.

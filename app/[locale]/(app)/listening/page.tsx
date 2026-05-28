@@ -18,10 +18,12 @@ type DifficultyFilter = "all" | ListeningDifficulty;
 type PracticeSource = "custom" | "real" | "cambridge";
 type SourceFilter = "all" | PracticeSource;
 type SortFilter = "newest" | "az";
+type ListeningKindFilter = "full" | "parts";
 
 type ListeningTestItem = {
   id: string;
   title: string;
+  testFormat: "full" | "part" | "both";
   isPremium: boolean;
   difficulty: ListeningDifficulty;
   practiceSource: PracticeSource;
@@ -32,6 +34,10 @@ type ListeningTestItem = {
     questions: number;
   }>;
 };
+
+function isPartPractice(test: ListeningTestItem) {
+  return test.testFormat === "part" || test.sections.length === 1 || test.totalQuestions < 40 || test.durationMins <= 12;
+}
 
 function sortListeningTests(tests: ListeningTestItem[], sort: SortFilter) {
   const copy = [...tests];
@@ -63,7 +69,14 @@ function mapPracticeSource(value: unknown): PracticeSource {
   return "custom";
 }
 
-function toSections(item: StudentTestRecord, fallbackQuestions: number) {
+function mapTestFormat(value: unknown): ListeningTestItem["testFormat"] {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "PART_TEST") return "part";
+  if (normalized === "BOTH") return "both";
+  return "full";
+}
+
+function toSections(item: StudentTestRecord, fallbackQuestions: number, testFormat: ListeningTestItem["testFormat"]) {
   const parts = item.listening_parts
     .slice()
     .sort((a, b) => {
@@ -76,6 +89,10 @@ function toSections(item: StudentTestRecord, fallbackQuestions: number) {
     label: part.part_number || `Part ${index + 1}`,
     questions: Number(part.max_questions || 0)
   }));
+
+  if (testFormat === "part") {
+    return (sections.length ? sections : [{label: "Part 1", questions: fallbackQuestions}]).slice(0, 1) as ListeningTestItem["sections"];
+  }
 
   while (sections.length < 4) {
     const index = sections.length;
@@ -91,17 +108,20 @@ function toSections(item: StudentTestRecord, fallbackQuestions: number) {
 function mapStudentListeningTest(item: StudentTestRecord): ListeningTestItem {
   const difficulty = mapDifficulty(item.difficulty_level || item.difficulty_display);
   const practiceSource = mapPracticeSource(item.practice_source);
+  const explicitFormat = mapTestFormat(item.test_format);
+  const resolvedFormat = explicitFormat === "full" && item.listening_parts.length === 1 ? "part" : explicitFormat;
   const totalQuestions = item.total_questions || 40;
 
   return {
     id: item.id,
     title: item.title || "Listening Test",
+    testFormat: resolvedFormat,
     isPremium: item.is_premium,
     difficulty,
     practiceSource,
     durationMins: Math.max(1, Math.ceil((item.time_limit_seconds ?? 1800) / 60)),
     totalQuestions,
-    sections: toSections(item, totalQuestions)
+    sections: toSections(item, totalQuestions, resolvedFormat)
   };
 }
 
@@ -158,6 +178,7 @@ export default function ListeningPage() {
   const [difficulty, setDifficulty] = useState<DifficultyFilter>("all");
   const [source, setSource] = useState<SourceFilter>("all");
   const [sort, setSort] = useState<SortFilter>("newest");
+  const [kind, setKind] = useState<ListeningKindFilter>("full");
 
   useEffect(() => {
     let active = true;
@@ -182,13 +203,6 @@ export default function ListeningPage() {
       active = false;
     };
   }, [isGuest]);
-
-  // Premium filtering is temporarily disabled (tab is visible but non-interactive).
-  useEffect(() => {
-    if (tab === "premium") {
-      setTab("all");
-    }
-  }, [tab]);
 
   const filteredTests = useMemo(() => {
     let tests = [...apiTests];
@@ -215,6 +229,9 @@ export default function ListeningPage() {
     return sortListeningTests(tests, sort);
   }, [apiTests, difficulty, search, sort, tab, source]);
 
+  const fullTests = useMemo(() => filteredTests.filter((test) => !isPartPractice(test)), [filteredTests]);
+  const partTests = useMemo(() => filteredTests.filter(isPartPractice), [filteredTests]);
+
   return (
     <div>
       <div className="mx-auto w-full max-w-245 pb-8 pt-4 lg:pt-0">
@@ -227,7 +244,9 @@ export default function ListeningPage() {
           <div className="mt-4">
             <ListeningFilters
               tab={tab}
-              onTabChange={setTab}
+              onTabChange={(nextTab) => setTab(nextTab === "premium" ? "all" : nextTab)}
+              kind={kind}
+              onKindChange={setKind}
               source={source}
               onSourceChange={setSource}
               search={search}
@@ -240,12 +259,17 @@ export default function ListeningPage() {
           </div>
 
           <div className="mt-4 space-y-3.5">
-            {filteredTests.map((test) => (
-              <ListeningTestCard
-                key={test.id}
-                test={test}
-              />
-            ))}
+            {kind === "full" ? (
+              fullTests.length ? (
+                fullTests.map((test) => <ListeningTestCard key={test.id} test={test} />)
+              ) : (
+                <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("listening.noFullTests")}</p>
+              )
+            ) : partTests.length ? (
+              partTests.map((test) => <ListeningTestCard key={test.id} test={test} />)
+            ) : (
+              <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("listening.noParts")}</p>
+            )}
           </div>
 
           {isGuest ? (

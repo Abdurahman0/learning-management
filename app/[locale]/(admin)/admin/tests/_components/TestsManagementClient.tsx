@@ -100,17 +100,28 @@ function mapStatus(isActive: boolean): AdminTest["status"] {
   return isActive ? "published" : "draft";
 }
 
+function mapTestFormat(value: unknown): NonNullable<AdminTest["testFormat"]> {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "PART_TEST") return "part";
+  if (normalized === "BOTH") return "both";
+  return "full";
+}
+
 function mapPracticeTestToAdminTest(item: PracticeTestRecord): AdminTest {
   const testModule = String(item.test_type ?? "").trim().toUpperCase().includes("LISTENING") ? "listening" : "reading";
+  const testFormat = mapTestFormat(item.test_format);
   const readingCount = Number(item.reading_passages_count ?? 0);
   const listeningCount = Number(item.listening_parts_count ?? 0);
-  const sectionsCount = testModule === "reading" ? Math.max(readingCount, 3) : Math.max(listeningCount, 4);
+  const defaultReadingCount = testFormat === "part" ? 1 : 3;
+  const defaultListeningCount = testFormat === "part" ? 1 : 4;
+  const sectionsCount = testModule === "reading" ? Math.max(readingCount, defaultReadingCount) : Math.max(listeningCount, defaultListeningCount);
   const questionsPerSection = testModule === "reading" ? [13, 13, 14] : [10, 10, 10, 10];
 
   return {
     id: String(item.id),
     name: item.title || "Untitled Test",
     module: testModule,
+    testFormat,
     book: "Custom Practice",
     questions: Number(item.total_questions ?? 0),
     difficulty: mapDifficulty(item.difficulty_level),
@@ -329,10 +340,18 @@ export function TestsManagementClient() {
     router.push(query.size ? `${basePath}?${query.toString()}` : basePath);
   };
 
-  const handleCreateTest = async (module: TestModule = "reading") => {
+  const handleCreateTest = async (module: TestModule = "reading", format: "full" | "part" = "full") => {
+    const isReadingPart = module === "reading" && format === "part";
+    const isListeningPart = module === "listening" && format === "part";
+    const isPart = isReadingPart || isListeningPart;
+
     try {
       const created = await practiceTestsService.create({
-        title: t("row.newDraftTitle", {index: tests.length + 1}),
+        title: isReadingPart
+          ? t("row.newPassageDraftTitle", {index: tests.length + 1})
+          : isListeningPart
+            ? t("row.newListeningPartDraftTitle", {index: tests.length + 1})
+            : t("row.newDraftTitle", {index: tests.length + 1}),
         description: "",
         test_type: module.toUpperCase(),
         difficulty_level: "INTERMEDIATE",
@@ -340,9 +359,9 @@ export function TestsManagementClient() {
         active_for_registered_users: true,
         // Default: custom/admin-created test (backend can default if field is optional).
         practice_source: "CUSTOM_PRACTICE",
-        test_format: "FULL_TEST",
-        total_questions: 40,
-        time_limit_seconds: module === "reading" ? 3600 : 1800,
+        test_format: isPart ? "PART_TEST" : "FULL_TEST",
+        total_questions: isReadingPart ? 13 : isListeningPart ? 10 : 40,
+        time_limit_seconds: isReadingPart ? 1200 : isListeningPart ? 600 : module === "reading" ? 3600 : 1800,
         is_active: false
       });
 
@@ -480,8 +499,10 @@ export function TestsManagementClient() {
                   <DropdownMenuContent align="end" className="w-52">
                     <DropdownMenuLabel>{t("topbar.createMenuLabel")}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => handleCreateTest("reading")}>{t("topbar.createReadingDefault")}</DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => handleCreateTest("listening")}>{t("topbar.createListening")}</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleCreateTest("reading", "full")}>{t("topbar.createReadingDefault")}</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleCreateTest("reading", "part")}>{t("topbar.createReadingPassage")}</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleCreateTest("listening", "full")}>{t("topbar.createListening")}</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleCreateTest("listening", "part")}>{t("topbar.createListeningPart")}</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -521,8 +542,10 @@ export function TestsManagementClient() {
                 <DropdownMenuContent align="start" className="w-[240px]">
                   <DropdownMenuLabel>{t("topbar.createMenuLabel")}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => handleCreateTest("reading")}>{t("topbar.createReadingDefault")}</DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => handleCreateTest("listening")}>{t("topbar.createListening")}</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => handleCreateTest("reading", "full")}>{t("topbar.createReadingDefault")}</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => handleCreateTest("reading", "part")}>{t("topbar.createReadingPassage")}</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => handleCreateTest("listening", "full")}>{t("topbar.createListening")}</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => handleCreateTest("listening", "part")}>{t("topbar.createListeningPart")}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

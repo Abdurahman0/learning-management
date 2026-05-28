@@ -21,6 +21,7 @@ type QuestionGroupsPanelProps = {
   mode: BuilderMode;
   module: TestModule;
   activeStructure: BuilderStructureItem;
+  flexibleQuestionCount?: boolean;
   groups: QuestionGroup[];
   collapsedGroups: Record<string, boolean>;
   selectedQuestionId: string | null;
@@ -225,6 +226,7 @@ export function QuestionGroupsPanel({
   mode,
   module,
   activeStructure,
+  flexibleQuestionCount = false,
   groups,
   collapsedGroups,
   selectedQuestionId,
@@ -242,7 +244,6 @@ export function QuestionGroupsPanel({
 }: QuestionGroupsPanelProps) {
   const t = useTranslations("adminTestBuilder");
   const range = useMemo(() => getStructureRange(activeStructure), [activeStructure]);
-  const requiredCount = range.to - range.from + 1;
   const availableQuestionTypes = QUESTION_TYPE_OPTIONS_BY_MODULE[module];
   const defaultType = availableQuestionTypes[0]?.value ?? "multiple_choice";
   const [editor, setEditor] = useState<GroupEditorState>({
@@ -276,6 +277,7 @@ export function QuestionGroupsPanel({
     }
     return assigned.size;
   }, [groups, range.from, range.to]);
+  const requiredCount = flexibleQuestionCount ? assignedCount : range.to - range.from + 1;
 
   const occupiedForEditor = useMemo(() => {
     const excludeId = editor.mode === "edit" ? editor.groupId ?? undefined : undefined;
@@ -481,7 +483,9 @@ export function QuestionGroupsPanel({
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-sm tracking-[0.14em] text-muted-foreground uppercase">{t("groups.title")}</CardTitle>
           <Badge className="rounded-md border border-border/70 bg-muted/35 px-2 py-0.5 text-[10px] tracking-wide uppercase">
-            {t("groups.totalCountWithLimit", {assigned: assignedCount, required: requiredCount})}
+            {flexibleQuestionCount
+              ? t("groups.totalCountFlexible", {assigned: assignedCount})
+              : t("groups.totalCountWithLimit", {assigned: assignedCount, required: requiredCount})}
           </Badge>
         </div>
       </CardHeader>
@@ -516,7 +520,7 @@ export function QuestionGroupsPanel({
             variant="outline"
             className="h-11 w-full rounded-xl border-dashed border-border/80 bg-background/35"
             onClick={openCreateEditor}
-            disabled={assignedCount >= requiredCount}
+            disabled={!flexibleQuestionCount && assignedCount >= requiredCount}
           >
             <Plus className="size-4" />
             {t("groups.addGroup")}

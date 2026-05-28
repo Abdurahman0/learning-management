@@ -14,6 +14,7 @@ import {
 import type {ListeningDifficulty, PracticeSource} from "../tests/types";
 
 type ListeningTab = "all" | "free" | "premium";
+type ListeningKindFilter = "full" | "parts";
 type DifficultyFilter = "all" | ListeningDifficulty;
 type SourceFilter = "all" | PracticeSource;
 type SortFilter = "newest" | "az";
@@ -21,6 +22,8 @@ type SortFilter = "newest" | "az";
 type ListeningFiltersProps = {
   tab: ListeningTab;
   onTabChange: (value: ListeningTab) => void;
+  kind: ListeningKindFilter;
+  onKindChange: (value: ListeningKindFilter) => void;
   source: SourceFilter;
   onSourceChange: (value: SourceFilter) => void;
   search: string;
@@ -34,6 +37,8 @@ type ListeningFiltersProps = {
 export function ListeningFilters({
   tab,
   onTabChange,
+  kind,
+  onKindChange,
   source,
   onSourceChange,
   search,
@@ -88,6 +93,11 @@ export function ListeningFilters({
         <Button type="button" size="sm" variant={source === "cambridge" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("cambridge")}>{t("filters.sourceCambridge")}</Button>
         <Button type="button" size="sm" variant={source === "real" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onSourceChange("real")}>{t("filters.sourceReal")}</Button>
       </div>
+
+      <div className="inline-flex w-full items-center gap-1 rounded-xl bg-muted p-1 sm:w-auto" aria-label={t("listening.practiceType")}>
+        <Button type="button" size="sm" variant={kind === "full" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onKindChange("full")}>{t("listening.fullTestsTitle")}</Button>
+        <Button type="button" size="sm" variant={kind === "parts" ? "default" : "ghost"} className="h-9 flex-1 rounded-lg px-3 text-sm sm:flex-none" onClick={() => onKindChange("parts")}>{t("listening.partsTitle")}</Button>
+      </div>
       </div>
 
       <label className="relative block">
@@ -126,5 +136,3 @@ export function ListeningFilters({
     </div>
   );
 }
-
-

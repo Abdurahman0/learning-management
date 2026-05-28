@@ -253,6 +253,11 @@
     "reading": {
       "title": "Practice Reading Tests",
       "subtitle": "Improve speed and accuracy with real IELTS reading passages.",
+      "practiceType": "Reading practice type",
+      "fullTestsTitle": "Full Tests",
+      "passagesTitle": "Passage Practice",
+      "noFullTests": "No full reading tests match the current filters.",
+      "noPassages": "No passage tests match the current filters.",
       "upgradeTitle": "Unlock more tests",
       "upgradeDesc": "Create an account to access all tests and detailed analysis.",
       "seePlans": "See plans"
@@ -260,6 +265,11 @@
     "listening": {
       "title": "Practice Listening Tests",
       "subtitle": "Build accuracy and timing with exam-style listening sets.",
+      "practiceType": "Listening practice type",
+      "fullTestsTitle": "Full Tests",
+      "partsTitle": "Part Practice",
+      "noFullTests": "No full listening tests match the current filters.",
+      "noParts": "No listening part practice matches the current filters.",
       "upgradeTitle": "Unlock more tests",
       "upgradeDesc": "Create an account to access all tests and detailed analysis.",
       "seePlans": "See plans"
@@ -1212,7 +1222,9 @@
       "createTest": "Create New Test",
       "createMenuLabel": "Create Test Type",
       "createReadingDefault": "Reading (Default)",
+      "createReadingPassage": "Reading Passage",
       "createListening": "Listening",
+      "createListeningPart": "Listening Part",
       "notificationsLabel": "Notifications"
     },
     "toolbar": {
@@ -1332,6 +1344,8 @@
     },
     "row": {
       "newDraftTitle": "Custom Test {index}",
+      "newPassageDraftTitle": "Custom Passage Test {index}",
+      "newListeningPartDraftTitle": "Custom Listening Part {index}",
       "customBook": "Custom",
       "defaultPassageTitle": "New Passage",
       "defaultPassageDescription": "Add full passage content and questions when backend is connected.",
@@ -1471,6 +1485,7 @@
       "title": "Question Groups",
       "totalCount": "{count} total",
       "totalCountWithLimit": "{assigned}/{required} total",
+      "totalCountFlexible": "{assigned} total",
       "questionCount": "{count} questions",
       "addGroup": "Add Question Group",
       "createTitle": "Create Question Group",

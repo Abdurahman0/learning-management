@@ -40,18 +40,20 @@ export function ReviewPassagePanel({
         return {
           start,
           end: start + phrase.length,
-          questionNumber: item.questionNumber,
+          questionNumbers: [item.questionNumber],
         };
       })
-      .filter((value): value is { start: number; end: number; questionNumber: number } => Boolean(value))
+      .filter((value): value is { start: number; end: number; questionNumbers: number[] } => Boolean(value))
       .sort((a, b) => a.start - b.start);
 
     if (!ranges.length) return text;
 
-    const merged: Array<{ start: number; end: number; questionNumber: number }> = [];
+    const merged: Array<{ start: number; end: number; questionNumbers: number[] }> = [];
     for (const range of ranges) {
       const last = merged[merged.length - 1];
       if (last && range.start < last.end) {
+        last.end = Math.max(last.end, range.end);
+        last.questionNumbers = [...new Set([...last.questionNumbers, ...range.questionNumbers])].sort((a, b) => a - b);
         continue;
       }
       merged.push(range);
@@ -73,9 +75,14 @@ export function ReviewPassagePanel({
           className="rounded-md bg-blue-100 px-1 py-0.5 text-blue-800 shadow-[inset_0_-1px_0_rgba(59,130,246,0.28)] dark:bg-blue-400/20 dark:text-blue-50"
         >
           {marked}
-          <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full border border-blue-300 bg-blue-200 px-1 text-[10px] font-semibold leading-none text-blue-800 align-text-top dark:border-blue-300/50 dark:bg-blue-500/35 dark:text-blue-50">
-            {range.questionNumber}
-          </span>
+          {range.questionNumbers.map((questionNumber) => (
+            <span
+              key={`${range.start}-${range.end}-${questionNumber}`}
+              className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full border border-blue-300 bg-blue-200 px-1 text-[10px] font-semibold leading-none text-blue-800 align-text-top dark:border-blue-300/50 dark:bg-blue-500/35 dark:text-blue-50"
+            >
+              {questionNumber}
+            </span>
+          ))}
         </span>
       );
       cursor = range.end;

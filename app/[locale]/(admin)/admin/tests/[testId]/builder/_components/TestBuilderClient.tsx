@@ -208,6 +208,7 @@ function mapBuilderPracticeSourceToApi(value: AdminBuilderTest["practiceSource"]
 
 const DEFAULT_READING_SLOT_QUESTION_COUNTS = [13, 13, 14] as const;
 const DEFAULT_LISTENING_SLOT_QUESTION_COUNTS = [10, 10, 10, 10] as const;
+const FLEXIBLE_PART_QUESTION_CAPACITY = 200;
 
 function parseStructureIndex(label: string, fallback: number) {
   const match = String(label ?? "").match(/\d+/);
@@ -1087,9 +1088,12 @@ function buildVariantSummary(groups: Array<{type: QuestionType; count: number}>)
   return groups.map((group) => `${group.type} x${group.count}`).join(" • ");
 }
 
-function isVariantCompatibleWithSlot(variant: ContentBankVariantSet, module: "reading" | "listening", slotIndex: number) {
+function isVariantCompatibleWithSlot(variant: ContentBankVariantSet, module: "reading" | "listening", slotIndex: number, flexible = false) {
   if (variant.module !== module) {
     return false;
+  }
+  if (flexible) {
+    return true;
   }
   const total = variant.groups.reduce((sum, group) => sum + Math.max(0, Number(group.count) || 0), 0);
   return total === getAllowedQuestionCount(module, slotIndex);
@@ -1334,7 +1338,14 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
 
 async function ensureBackendStructuresForTest(testId: string, detail: PracticeTestDetailRecord) {
   const moduleType: "reading" | "listening" = String(detail.test_type ?? "").toUpperCase().includes("LISTENING") ? "listening" : "reading";
-  const expectedCounts = moduleType === "reading" ? [...DEFAULT_READING_SLOT_QUESTION_COUNTS] : [...DEFAULT_LISTENING_SLOT_QUESTION_COUNTS];
+  const isPartTest = String(detail.test_format ?? "").trim().toUpperCase() === "PART_TEST";
+  const expectedCounts = moduleType === "reading"
+    ? isPartTest
+      ? [Math.max(1, toNumberSafe(detail.total_questions, 13))]
+      : [...DEFAULT_READING_SLOT_QUESTION_COUNTS]
+    : isPartTest
+      ? [Math.max(1, toNumberSafe(detail.total_questions, 10))]
+      : [...DEFAULT_LISTENING_SLOT_QUESTION_COUNTS];
   const existingRows = moduleType === "reading" ? [...(detail.reading_passages ?? [])] : [...(detail.listening_parts ?? [])];
 
   const usedSlots = new Set<number>();
@@ -1386,6 +1397,8 @@ async function ensureBackendStructuresForTest(testId: string, detail: PracticeTe
 
 function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDetailRecord): AdminBuilderTest {
   const moduleType: "reading" | "listening" = String(detail.test_type ?? "").toUpperCase().includes("LISTENING") ? "listening" : "reading";
+  const testFormat = String(detail.test_format ?? "").trim().toUpperCase() === "PART_TEST" ? "part" : "full";
+  const flexiblePart = testFormat === "part";
 
   const structures: BuilderStructureItem[] = [];
   const questionGroupsByStructure: Record<string, QuestionGroup[]> = {};
@@ -1398,7 +1411,9 @@ function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDeta
     );
 
     passages.forEach((passage, index) => {
-      const count = Math.max(1, toNumberSafe(passage.max_questions, 13));
+      const count = flexiblePart
+        ? Math.max(FLEXIBLE_PART_QUESTION_CAPACITY, toNumberSafe(passage.max_questions, 13))
+        : Math.max(1, toNumberSafe(passage.max_questions, 13));
       const from = cursor;
       const to = cursor + count - 1;
       cursor = to + 1;
@@ -1427,7 +1442,9 @@ function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDeta
     );
 
     parts.forEach((part, index) => {
-      const count = Math.max(1, toNumberSafe(part.max_questions, 10));
+      const count = flexiblePart
+        ? Math.max(FLEXIBLE_PART_QUESTION_CAPACITY, toNumberSafe(part.max_questions, 10))
+        : Math.max(1, toNumberSafe(part.max_questions, 10));
       const from = cursor;
       const to = cursor + count - 1;
       cursor = to + 1;
@@ -1462,6 +1479,7 @@ function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDeta
     name: toStringSafe(detail.title, "Practice Test"),
     book: toStringSafe(detail.title, "Practice Test"),
     module: moduleType,
+    testFormat,
     difficulty: mapApiDifficultyToBuilder(detail.difficulty_level),
     practiceSource: mapApiPracticeSourceToBuilder((detail as {practice_source?: unknown}).practice_source),
     activeForRegisteredUsers: Boolean((detail as {active_for_registered_users?: unknown}).active_for_registered_users),
@@ -1703,12 +1721,13 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
   const availableVariantSets = useMemo<ContentBankVariantSet[]>(() => {
     if (!activeStructure?.linkedPassageId) return [];
+    const flexible = test.testFormat === "part";
     return contentBankVariants.filter(
       (variant) =>
         variant.passageId === activeStructure.linkedPassageId
-        && isVariantCompatibleWithSlot(variant, test.module, activeStructure.index)
+        && isVariantCompatibleWithSlot(variant, test.module, activeStructure.index, flexible)
     );
-  }, [activeStructure, contentBankVariants, test.module]);
+  }, [activeStructure, contentBankVariants, test.module, test.testFormat]);
 
   const selectedVariantSet = useMemo(() => {
     if (!activeStructure?.linkedVariantSetId) return null;
@@ -1717,13 +1736,15 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
   const slotRequiredQuestions = useMemo(() => {
     if (!activeStructure) return 0;
+    if (test.testFormat === "part") {
+      return 0;
+    }
     return getAllowedQuestionCount(test.module, activeStructure.index);
-  }, [activeStructure, test.module]);
+  }, [activeStructure, test.module, test.testFormat]);
 
   const structureQuestionProgress = useMemo(() => {
     return test.structures.map((structure) => {
       const range = getStructureRange(structure);
-      const required = range.to - range.from + 1;
       const groups = test.questionGroupsByStructure[structure.id] ?? [];
       const assignedSet = new Set<number>();
       let inRangeEntries = 0;
@@ -1741,6 +1762,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       }
 
       const assigned = assignedSet.size;
+      const required = test.testFormat === "part" ? Math.max(assigned, 1) : range.to - range.from + 1;
       const hasOverlap = inRangeEntries !== assigned;
       return {
         structureId: structure.id,
@@ -1751,10 +1773,12 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         entryCount: inRangeEntries,
         hasOverlap,
         outOfRangeEntries,
-        complete: assigned === required && !hasOverlap && outOfRangeEntries === 0
+        complete: test.testFormat === "part"
+          ? assigned > 0 && !hasOverlap && outOfRangeEntries === 0
+          : assigned === required && !hasOverlap && outOfRangeEntries === 0
       };
     });
-  }, [test.questionGroupsByStructure, test.structures]);
+  }, [test.questionGroupsByStructure, test.structures, test.testFormat]);
 
   const questionProgressByStructureId = useMemo(() => {
     return structureQuestionProgress.reduce<Record<string, {assigned: number; required: number; complete: boolean}>>((accumulator, item) => {
@@ -2431,6 +2455,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         difficulty_level: mapBuilderDifficultyToApi(test.difficulty),
         ...(typeof test.activeForRegisteredUsers === "boolean" ? {active_for_registered_users: test.activeForRegisteredUsers} : {}),
         ...(test.practiceSource ? {practice_source: mapBuilderPracticeSourceToApi(test.practiceSource)} : {}),
+        ...(test.testFormat === "part" ? {total_questions: Math.max(totalAssignedQuestions, 1)} : {}),
         is_active: nextStatus === "published"
       });
 
@@ -2441,7 +2466,13 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
       for (const structure of test.structures) {
         const range = getStructureRange(structure);
-        const maxQuestions = Math.max(1, range.to - range.from + 1);
+        const localGroupsForStructure = test.questionGroupsByStructure[structure.id] ?? [];
+        const highestAssignedNumber = localGroupsForStructure.reduce((highest, group) => {
+          return Math.max(highest, ...group.questions.map((question) => question.number));
+        }, 0);
+        const maxQuestions = test.testFormat === "part"
+          ? Math.max(1, highestAssignedNumber - range.from + 1)
+          : Math.max(1, range.to - range.from + 1);
         const fullText = structure.content.join("\n\n").trim();
 
         if (test.module === "reading") {
@@ -2467,7 +2498,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           nextAudioLabelByStructureId[structure.id] = toStringSafe(updatedPart.audio_url ?? updatedPart.audio_file ?? "");
         }
 
-        const localGroups = [...(test.questionGroupsByStructure[structure.id] ?? [])]
+        const localGroups = [...localGroupsForStructure]
           .map((group) => normalizeGroup(group))
           .sort((left, right) => left.from - right.from);
 
@@ -2750,6 +2781,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
                   mode={mode}
                   module={test.module}
                   activeStructure={activeStructure}
+                  flexibleQuestionCount={test.testFormat === "part"}
                   groups={activeGroups}
                   collapsedGroups={collapsedGroups}
                   selectedQuestionId={selectedQuestion?.questionId ?? null}

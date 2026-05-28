@@ -60,6 +60,7 @@ import { flattenListeningQuestions } from "@/lib/listening-questions";
 import { Highlightable } from "@/components/test/Highlightable";
 import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
 import { InlineBoldText } from "@/components/test/InlineBoldText";
+import { TestNotesButton } from "@/components/test/TestNotesButton";
 import { useTestAppearance } from "@/lib/test-appearance";
 import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
 import { ListeningQuestionAnalysisPanel } from "./result/_components/ListeningQuestionAnalysisPanel";
@@ -3649,6 +3650,7 @@ function ListeningTestClient({
             >
               <Menu className="size-4" />
             </Button>
+            <TestNotesButton storageKey={`listening:${test.id}:notes`} className="shrink-0 sm:h-9 sm:w-9" />
             {reviewMode ? null : (
               <Button
                 className={cn(

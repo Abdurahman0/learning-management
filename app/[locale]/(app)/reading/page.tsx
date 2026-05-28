@@ -18,10 +18,12 @@ type DifficultyFilter = "all" | Difficulty;
 type PracticeSource = "custom" | "real" | "cambridge";
 type SourceFilter = "all" | PracticeSource;
 type SortFilter = "newest" | "az";
+type ReadingKindFilter = "full" | "passages";
 
 type ReadingGuestTest = {
   id: string;
   title: string;
+  testFormat: "full" | "part" | "both";
   isPremium: boolean;
   durationMinutes: number;
   totalQuestions: number;
@@ -33,6 +35,10 @@ type ReadingGuestTest = {
     difficulty: Difficulty;
   }>;
 };
+
+function isPassageTest(test: ReadingGuestTest) {
+  return test.testFormat === "part" || test.passages.length === 1 || test.totalQuestions < 40 || test.durationMinutes <= 25;
+}
 
 function sortReadingTests(tests: ReadingGuestTest[], sort: SortFilter) {
   const copy = [...tests];
@@ -64,9 +70,17 @@ function mapPracticeSource(value: unknown): PracticeSource {
   return "custom";
 }
 
+function mapTestFormat(value: unknown): ReadingGuestTest["testFormat"] {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "PART_TEST") return "part";
+  if (normalized === "BOTH") return "both";
+  return "full";
+}
+
 function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
   const testDifficulty = mapDifficulty(item.difficulty_level || item.difficulty_display);
   const practiceSource = mapPracticeSource(item.practice_source);
+  const explicitFormat = mapTestFormat(item.test_format);
   const passages =
     item.reading_passages.length > 0
       ? item.reading_passages.map((passage, index) => ({
@@ -83,6 +97,7 @@ function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
   return {
     id: item.id,
     title: item.title || "Reading Test",
+    testFormat: explicitFormat === "full" && passages.length === 1 ? "part" : explicitFormat,
     isPremium: item.is_premium,
     durationMinutes: Math.max(1, Math.ceil((item.time_limit_seconds ?? 3600) / 60)),
     totalQuestions: item.total_questions || passages.reduce((sum, passage) => sum + passage.questionsCount, 0),
@@ -145,6 +160,7 @@ export default function ReadingPage() {
   const [difficulty, setDifficulty] = useState<DifficultyFilter>("all");
   const [source, setSource] = useState<SourceFilter>("all");
   const [sort, setSort] = useState<SortFilter>("newest");
+  const [kind, setKind] = useState<ReadingKindFilter>("full");
 
   useEffect(() => {
     let active = true;
@@ -169,13 +185,6 @@ export default function ReadingPage() {
       active = false;
     };
   }, [isGuest]);
-
-  // Premium filtering is temporarily disabled (tab is visible but non-interactive).
-  useEffect(() => {
-    if (tab === "premium") {
-      setTab("all");
-    }
-  }, [tab]);
 
   const filteredTests = useMemo(() => {
     let tests = [...apiTests];
@@ -202,6 +211,9 @@ export default function ReadingPage() {
     return sortReadingTests(tests, sort);
   }, [apiTests, difficulty, search, sort, tab, source]);
 
+  const fullTests = useMemo(() => filteredTests.filter((test) => !isPassageTest(test)), [filteredTests]);
+  const passageTests = useMemo(() => filteredTests.filter(isPassageTest), [filteredTests]);
+
   return (
     <div>
       <div className="mx-auto w-full max-w-245 pb-8 pt-4 lg:pt-0">
@@ -214,7 +226,9 @@ export default function ReadingPage() {
           <div className="mt-4">
             <ReadingFilters
               tab={tab}
-              onTabChange={setTab}
+              onTabChange={(nextTab) => setTab(nextTab === "premium" ? "all" : nextTab)}
+              kind={kind}
+              onKindChange={setKind}
               source={source}
               onSourceChange={setSource}
               search={search}
@@ -226,10 +240,33 @@ export default function ReadingPage() {
             />
           </div>
 
-          <div className="mt-4 space-y-3.5">
-            {filteredTests.map((test) => (
-              <ReadingTestCard key={test.id} test={test} />
-            ))}
+          <div className="mt-4 space-y-6">
+            {kind === "full" ? (
+              <section className="space-y-3.5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold text-foreground">{t("reading.fullTestsTitle")}</h2>
+                <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{fullTests.length}</span>
+              </div>
+              {fullTests.length ? (
+                fullTests.map((test) => <ReadingTestCard key={test.id} test={test} />)
+              ) : (
+                <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("reading.noFullTests")}</p>
+              )}
+              </section>
+            ) : (
+              <section className="space-y-3.5">
+
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold text-foreground">{t("reading.passagesTitle")}</h2>
+                <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{passageTests.length}</span>
+              </div>
+              {passageTests.length ? (
+                passageTests.map((test) => <ReadingTestCard key={test.id} test={test} />)
+              ) : (
+                <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("reading.noPassages")}</p>
+              )}
+              </section>
+            )}
           </div>
 
           {isGuest ? (

@@ -70,7 +70,7 @@ export function buildRanges(text: string, highlights: SourceHighlight[]): TextRa
       picked.kind === "answer"
         ? uniqueSorted(
             active
-              .filter((item) => item.kind === "answer" && item.start === start)
+              .filter((item) => item.kind === "answer" && item.start < end && item.end > start)
               .map((item) => item.questionNumber)
               .filter((num): num is number => typeof num === "number")
           )
@@ -90,8 +90,7 @@ export function buildRanges(text: string, highlights: SourceHighlight[]): TextRa
       prev.end === nextRange.start &&
       prev.kind === nextRange.kind &&
       (prev.kind !== "user" || prev.highlightId === nextRange.highlightId) &&
-      !prev.answerQuestionNumbers?.length &&
-      !nextRange.answerQuestionNumbers?.length;
+      JSON.stringify(prev.answerQuestionNumbers ?? []) === JSON.stringify(nextRange.answerQuestionNumbers ?? []);
 
     if (canMerge) {
       prev.end = nextRange.end;

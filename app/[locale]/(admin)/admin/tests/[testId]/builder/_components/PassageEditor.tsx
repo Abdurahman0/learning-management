@@ -37,10 +37,9 @@ type PassageEditorProps = {
 };
 
 function textToParagraphs(text: string) {
-  return text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const normalized = text.replace(/\r\n/g, "\n");
+  const paragraphs = normalized.split(/\n{2,}/).filter((paragraph) => paragraph.length > 0);
+  return paragraphs.length ? paragraphs : [""];
 }
 
 function applyBoldToText(value: string, start: number, end: number) {
@@ -160,10 +159,10 @@ export function PassageEditor({
             {selectedPassageId ? <p className="text-xs text-muted-foreground">{t("slotDeterminesNumbering")}</p> : null}
 
             {selectedPassageId && !hasAnyVariantSets ? <p className="text-xs text-muted-foreground">{t("noVariantSets")}</p> : null}
-            {selectedPassageId && hasAnyVariantSets && !variantSets.length ? (
+            {selectedPassageId && requiredQuestionCount > 0 && hasAnyVariantSets && !variantSets.length ? (
               <p className="text-xs text-amber-300">{t("noCompatibleVariants", {count: requiredQuestionCount})}</p>
             ) : null}
-            {selectedPassageId && hasAnyVariantSets ? (
+            {selectedPassageId && requiredQuestionCount > 0 && hasAnyVariantSets ? (
               <p className="text-xs text-muted-foreground">{t("thisSlotRequires", {count: requiredQuestionCount})}</p>
             ) : null}
 
