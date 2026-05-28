@@ -388,7 +388,9 @@ function findParagraphMatches(paragraph: string, spans: HighlightItem[]): Paragr
   const filtered: ParagraphMatch[] = [];
   let cursor = -1;
   for (const match of raw) {
-    if (match.start < cursor) continue;
+    const previous = filtered[filtered.length - 1];
+    const isSameEvidenceRange = previous && previous.start === match.start && previous.end === match.end;
+    if (match.start < cursor && !isSameEvidenceRange) continue;
     filtered.push(match);
     cursor = match.end;
   }

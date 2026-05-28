@@ -282,68 +282,103 @@
   }
 
   .test-appearance-root[data-test-size="small"] .test-scaleable :where(.text-xs) {
-    font-size: 0.7rem;
-    line-height: 1rem;
+    font-size: 0.68rem;
+    line-height: 0.95rem;
   }
 
   .test-appearance-root[data-test-size="small"] .test-scaleable :where(.text-sm) {
-    font-size: 0.82rem;
-    line-height: 1.2rem;
+    font-size: 0.78rem;
+    line-height: 1.12rem;
   }
 
   .test-appearance-root[data-test-size="small"] .test-scaleable :where(.text-base) {
-    font-size: 0.93rem;
-    line-height: 1.35rem;
+    font-size: 0.88rem;
+    line-height: 1.28rem;
   }
 
   .test-appearance-root[data-test-size="small"] .test-scaleable :where(.text-lg) {
-    font-size: 1rem;
-    line-height: 1.4rem;
+    font-size: 0.98rem;
+    line-height: 1.35rem;
   }
 
   .test-appearance-root[data-test-size="small"] .test-scaleable .test-body-copy {
-    font-size: 0.88rem;
-    line-height: 1.45rem;
+    font-size: 0.84rem;
+    line-height: 1.38rem;
   }
 
-  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-xs) {
-    font-size: 0.82rem;
-    line-height: 1.15rem;
+  .test-appearance-root[data-test-size="medium"] .test-scaleable :where(.text-xs) {
+    font-size: 0.78rem;
+    line-height: 1.1rem;
   }
 
-  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-sm) {
-    font-size: 1rem;
-    line-height: 1.45rem;
+  .test-appearance-root[data-test-size="medium"] .test-scaleable :where(.text-sm) {
+    font-size: 0.95rem;
+    line-height: 1.4rem;
   }
 
-  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-base) {
-    font-size: 1.08rem;
-    line-height: 1.55rem;
+  .test-appearance-root[data-test-size="medium"] .test-scaleable :where(.text-base) {
+    font-size: 1.05rem;
+    line-height: 1.58rem;
   }
 
-  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-lg) {
-    font-size: 1.2rem;
-    line-height: 1.7rem;
+  .test-appearance-root[data-test-size="medium"] .test-scaleable :where(.text-lg) {
+    font-size: 1.14rem;
+    line-height: 1.72rem;
   }
 
-  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-xl) {
-    font-size: 1.38rem;
+  .test-appearance-root[data-test-size="medium"] .test-scaleable :where(.text-xl) {
+    font-size: 1.28rem;
     line-height: 1.85rem;
   }
 
-  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-2xl) {
-    font-size: 1.58rem;
+  .test-appearance-root[data-test-size="medium"] .test-scaleable :where(.text-2xl) {
+    font-size: 1.48rem;
     line-height: 2rem;
   }
 
+  .test-appearance-root[data-test-size="medium"] .test-scaleable .test-body-copy {
+    font-size: 1.05rem;
+    line-height: 1.86rem;
+  }
+
+  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-xs) {
+    font-size: 0.9rem;
+    line-height: 1.3rem;
+  }
+
+  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-sm) {
+    font-size: 1.12rem;
+    line-height: 1.65rem;
+  }
+
+  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-base) {
+    font-size: 1.24rem;
+    line-height: 1.85rem;
+  }
+
+  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-lg) {
+    font-size: 1.38rem;
+    line-height: 2.05rem;
+  }
+
+  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-xl) {
+    font-size: 1.58rem;
+    line-height: 2.15rem;
+  }
+
+  .test-appearance-root[data-test-size="large"] .test-scaleable :where(.text-2xl) {
+    font-size: 1.82rem;
+    line-height: 2.35rem;
+  }
+
   .test-appearance-root[data-test-size="large"] .test-scaleable .test-body-copy {
-    font-size: 1.08rem;
-    line-height: 1.88rem;
+    font-size: 1.22rem;
+    line-height: 2.08rem;
   }
 
   .test-appearance-root .test-scaleable .test-body-copy {
-    font-size: 0.96rem;
-    line-height: 1.7rem;
+    font-size: 1.05rem;
+    line-height: 1.86rem;
   }
 
   .reading-real-mode-content {
