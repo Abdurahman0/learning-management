@@ -1034,6 +1034,8 @@
       },
       "reading": "Reading Accuracy",
       "listening": "Listening Accuracy",
+      "readingTarget": "Reading Target Band",
+      "listeningTarget": "Listening Target Band",
       "streakRule": "Streak rule: complete at least one test today to gain +1; no test today applies -1 (min 0)."
     },
     "scoreProgress": {

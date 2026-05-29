@@ -40,6 +40,8 @@ type DashboardUserSummary = {
   testsTaken: number;
   readingAccuracy: number;
   listeningAccuracy: number;
+  targetReadingBand: number;
+  targetListeningBand: number;
   streakDays: number;
   streakIncreasedToday: boolean;
   bandsAway: number;
@@ -144,6 +146,8 @@ function buildDashboardViewModel(payload: StudentDashboardResponse): DashboardVi
       testsTaken: payload.summary.testsTaken,
       readingAccuracy: payload.summary.readingAccuracy,
       listeningAccuracy: payload.summary.listeningAccuracy,
+      targetReadingBand: safeGoalBand || 9,
+      targetListeningBand: safeGoalBand || 9,
       streakDays: payload.summary.streakDays,
       streakIncreasedToday: payload.summary.streakIncreasedToday,
       bandsAway: payload.summary.bandsAway
@@ -198,6 +202,8 @@ function createEmptyDashboardViewModel(): DashboardViewModel {
       testsTaken: 0,
       readingAccuracy: 0,
       listeningAccuracy: 0,
+      targetReadingBand: 9,
+      targetListeningBand: 9,
       streakDays: 0,
       streakIncreasedToday: false,
       bandsAway: 0
@@ -229,6 +235,7 @@ export function DashboardClient() {
   const [onboardingStatus, setOnboardingStatus] = useState<"none" | "pending" | "skipped" | "completed">("none");
   const [onboardingExamDate, setOnboardingExamDate] = useState<string | null>(null);
   const [profileExamDate, setProfileExamDate] = useState<string | null>(null);
+  const [profileTargets, setProfileTargets] = useState<{reading: number; listening: number}>({reading: 9, listening: 9});
   const [gettingStartedProgressChecked, setGettingStartedProgressChecked] = useState(false);
 
   useEffect(() => {
@@ -250,6 +257,10 @@ export function DashboardClient() {
       .getProfile()
       .then((profile) => {
         if (!active) return;
+        setProfileTargets({
+          reading: profile.target_reading_band ?? profile.target_band ?? 9,
+          listening: profile.target_listening_band ?? profile.target_band ?? 9
+        });
         if (!profile.exam_datetime) {
           setProfileExamDate(null);
           return;
@@ -267,6 +278,7 @@ export function DashboardClient() {
         // Dashboard should still work if the profile endpoint is unavailable.
         if (!active) return;
         setProfileExamDate(null);
+        setProfileTargets({reading: 9, listening: 9});
       });
 
     return () => {
@@ -356,6 +368,11 @@ export function DashboardClient() {
   };
 
   const examDate = onboardingExamDate ?? profileExamDate;
+  const dashboardSummary = {
+    ...dashboardData.userSummary,
+    targetReadingBand: profileTargets.reading,
+    targetListeningBand: profileTargets.listening
+  };
 
   const completedSurvey = onboardingStatus === "completed";
   const triedListening = dashboardData.recentHistory.some((row) => row.module === "listening");
@@ -455,7 +472,7 @@ export function DashboardClient() {
 
       <div className="mt-5">
         <DashboardKpis
-          summary={dashboardData.userSummary}
+          summary={dashboardSummary}
           onCurrentBandClick={() => document.getElementById("skills-snapshot")?.scrollIntoView({behavior: "smooth", block: "start"})}
           examDate={examDate}
           // Intentional: only the dedicated "Edit setup" button should open onboarding.

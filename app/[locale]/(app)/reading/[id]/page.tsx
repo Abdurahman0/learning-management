@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,12 +23,17 @@ import { formatAnswerForDisplay } from "@/lib/answer-display";
 import {
   clearLatestAttemptProgress,
   createAttemptId,
+  createAttemptTabId,
+  claimAttemptTab,
+  isAttemptTabOwner,
   loadAttemptProgress,
   loadLatestAttemptId,
   saveAttemptProgress,
   saveAttemptResult,
+  releaseAttemptTab,
   type AttemptMode,
 } from "@/lib/test-attempt-storage";
+import { authApi } from "@/lib/api/auth";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { HighlightableText } from "@/components/test/HighlightableText";
 import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
@@ -59,7 +63,6 @@ import { enqueueGuestPendingAttempt } from "@/lib/guest-attempt-sync";
 
 const DEFAULT_SPLIT = 50;
 const HEADING_DND_MIME = "application/x-reading-heading";
-const MATCHING_INFO_DND_MIME = "application/x-reading-matching-info";
 const SUMMARY_WORD_BANK_DND_MIME = "application/x-reading-summary-word-bank";
 const TFNG_OPTIONS: ["TRUE", "FALSE", "NOT GIVEN"] = ["TRUE", "FALSE", "NOT GIVEN"];
 const YNNG_OPTIONS: ["YES", "NO", "NOT GIVEN"] = ["YES", "NO", "NOT GIVEN"];
@@ -174,16 +177,35 @@ function parseMatchingHeadingsFromInstruction(instruction?: string | null) {
   return map;
 }
 
-function parseMatchingHeadingOption(rawOption: string) {
-  const cleaned = rawOption.replace(/\*\*/g, "").replace(/\*/g, "").trim();
+function toRomanHeadingKey(index: number) {
+  const romanKeys = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii", "xiii", "xiv", "xv"];
+  return romanKeys[index] ?? String(index + 1);
+}
+
+function normalizeHeadingDisplayText(value: string) {
+  return stripInlineBoldMarkup(value).replace(/\s+/g, " ").trim();
+}
+
+function parseMatchingHeadingOption(rawOption: string, index = -1) {
+  const cleaned = normalizeHeadingDisplayText(rawOption);
   if (!cleaned) return { key: "", label: "" };
-  const match = cleaned.match(/^([ivxlcdm]+)\s+(.+)$/i);
-  if (!match) {
-    return { key: cleaned.toLowerCase(), label: "" };
+
+  const explicitMatch = cleaned.match(/^([ivxlcdm]+)(?:[\)\].:\-]|\s+)+(.+)$/i);
+  if (explicitMatch) {
+    return {
+      key: explicitMatch[1].toLowerCase(),
+      label: normalizeHeadingDisplayText(explicitMatch[2]),
+    };
   }
+
+  const keyOnlyMatch = cleaned.match(/^([ivxlcdm]+)$/i);
+  if (keyOnlyMatch) {
+    return { key: keyOnlyMatch[1].toLowerCase(), label: "" };
+  }
+
   return {
-    key: match[1].toLowerCase(),
-    label: match[2].trim(),
+    key: index >= 0 ? toRomanHeadingKey(index) : cleaned.toLowerCase(),
+    label: cleaned,
   };
 }
 
@@ -256,6 +278,7 @@ function MatchingHeadingsBank({
       <p className="mt-1 text-xs text-muted-foreground">{hintText}</p>
       <div className="mt-3 space-y-1.5">
         {options.map((option) => {
+          const labelText = normalizeHeadingDisplayText(option.label || option.value);
           const isSelected = selectedOption === option.value;
           const isDragging = draggingOption === option.value;
           return (
@@ -273,7 +296,7 @@ function MatchingHeadingsBank({
               }}
               onDragEnd={onDragEndOption}
               className={cn(
-                "flex w-full items-start gap-2 rounded-md border px-2.5 py-2 text-left text-sm transition-colors",
+                "flex w-full items-start gap-3 rounded-md border px-2.5 py-2 text-left text-sm transition-colors",
                 isSelected
                   ? "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300"
                   : "border-border/70 bg-background/70 text-foreground/90 hover:border-blue-300/60",
@@ -281,8 +304,12 @@ function MatchingHeadingsBank({
                 disabled && "cursor-not-allowed opacity-70"
               )}
             >
-              <span className="mt-0.5 w-9 shrink-0 font-semibold text-muted-foreground">{option.value}</span>
-              <span className="min-w-0 flex-1 text-foreground/95">{option.label}</span>
+              <span className="mt-0.5 w-8 shrink-0 whitespace-nowrap font-semibold text-muted-foreground">
+                {option.value}
+              </span>
+              <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug text-foreground/95">
+                {labelText}
+              </span>
             </button>
           );
         })}
@@ -293,62 +320,47 @@ function MatchingHeadingsBank({
 
 type MatchingInfoBankProps = {
   options: string[];
-  selectedOption: string | null;
-  draggingOption: string | null;
-  disabled: boolean;
-  onSelectOption: (option: string) => void;
-  onDragStartOption: (event: ReactDragEvent<HTMLButtonElement>, option: string) => void;
-  onDragEndOption: () => void;
   hintText: string;
+  instructionText?: string;
 };
 
 function MatchingInfoBank({
   options,
-  selectedOption,
-  draggingOption,
-  disabled,
-  onSelectOption,
-  onDragStartOption,
-  onDragEndOption,
   hintText,
+  instructionText,
 }: MatchingInfoBankProps) {
   if (!options.length) return null;
+  const parsedOptions = options.map((option, index) => parseMatchingInfoOption(option, index));
 
   return (
-    <div className="rounded-xl border border-border/70 bg-card/80 p-3">
-      <p className="text-sm font-semibold text-foreground">Matching options</p>
-      <p className="mt-1 text-xs text-muted-foreground">{hintText}</p>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {options.map((option) => {
-          const isSelected = selectedOption === option;
-          const isDragging = draggingOption === option;
-          return (
-            <button
-              key={option}
-              type="button"
-              draggable={!disabled}
-              onClick={() => {
-                if (disabled) return;
-                onSelectOption(option);
-              }}
-              onDragStart={(event) => {
-                if (disabled) return;
-                onDragStartOption(event, option);
-              }}
-              onDragEnd={onDragEndOption}
-              className={cn(
-                "inline-flex items-center rounded-md border px-2.5 py-1.5 text-sm transition-colors",
-                isSelected
-                  ? "border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300"
-                  : "border-border/70 bg-background/70 text-foreground/90 hover:border-blue-300/60",
-                isDragging && "opacity-70",
-                disabled && "cursor-not-allowed opacity-70"
-              )}
+    <div className="test-panel space-y-5 rounded-xl border border-border/80 bg-card/85 px-4 py-4 shadow-sm dark:bg-card/65">
+      {instructionText?.trim() ? (
+        <div className="wrap-break-word text-base leading-relaxed text-foreground">
+          <FormattedInstructionText text={instructionText} />
+        </div>
+      ) : (
+        <p className="text-base italic leading-relaxed text-foreground">
+          <span className="mr-2 font-bold not-italic">NB</span>
+          {hintText}
+        </p>
+      )}
+      <div className="space-y-2">
+        <p className="text-lg font-bold text-foreground">List of Options</p>
+        <div className="space-y-1.5">
+          {parsedOptions.map((option) => (
+            <div
+              key={option.value}
+              className="grid w-full grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-3 rounded-lg border border-transparent px-3 py-2 text-left text-base leading-relaxed text-foreground"
             >
-              {option}
-            </button>
-          );
-        })}
+              <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-border bg-background text-sm font-bold text-foreground shadow-sm dark:bg-background/50">
+                {option.key}
+              </span>
+              <span className="min-w-0">
+                {option.label || option.value}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -475,6 +487,42 @@ function parseOptionChoice(option: string, index: number) {
     key,
     text: trimmed,
     label: trimmed ? `${key}. ${trimmed}` : key,
+  };
+}
+
+function parseMatchingInfoOption(option: string, index: number) {
+  const trimmed = option.trim();
+  const prefixed = trimmed.match(/^\s*([A-Z])[\)\].:\-]\s*(.+)$/i);
+  if (prefixed) {
+    return {
+      value: option,
+      key: prefixed[1].toUpperCase(),
+      label: prefixed[2].trim(),
+    };
+  }
+
+  const paragraph = trimmed.match(/^\s*paragraph\s+([A-Z])(?:\s*[\)\].:\-]\s*(.+))?$/i);
+  if (paragraph) {
+    return {
+      value: option,
+      key: paragraph[1].toUpperCase(),
+      label: paragraph[2]?.trim() ?? "",
+    };
+  }
+
+  const keyOnly = trimmed.match(/^\s*([A-Z])\s*$/i);
+  if (keyOnly) {
+    return {
+      value: option,
+      key: keyOnly[1].toUpperCase(),
+      label: "",
+    };
+  }
+
+  return {
+    value: option,
+    key: toAlphabetKey(index),
+    label: trimmed,
   };
 }
 
@@ -1243,6 +1291,12 @@ function hasAttemptQuestionData(attempt: StudentAttemptDetail) {
   );
 }
 
+function buildReadingAttemptContentSignature(test: ReadingFullTest) {
+  return test.questions
+    .map((question) => `${question.number}:${question.id}:${question.type}`)
+    .join("|");
+}
+
 export default function ReadingTestPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -1264,6 +1318,34 @@ export default function ReadingTestPage() {
   const [backendAttemptId, setBackendAttemptId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(shouldLoadFromBackend);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [currentUserKey, setCurrentUserKey] = useState<string | null>(isGuest ? "guest" : null);
+
+  useEffect(() => {
+    if (isGuest) {
+      setCurrentUserKey("guest");
+      return;
+    }
+
+    let active = true;
+
+    const loadCurrentUser = async () => {
+      try {
+        const response = await authApi.me();
+        if (!active) return;
+        const userId = typeof response.data?.id === "string" ? response.data.id.trim() : "";
+        setCurrentUserKey(userId ? `user:${userId}` : "user:unknown");
+      } catch {
+        if (!active) return;
+        setCurrentUserKey("user:unknown");
+      }
+    };
+
+    void loadCurrentUser();
+
+    return () => {
+      active = false;
+    };
+  }, [isGuest]);
 
   useEffect(() => {
     if (!shouldLoadFromBackend || !testId) return;
@@ -1480,6 +1562,7 @@ export default function ReadingTestPage() {
       restartRequested={restartRequested}
       requestedMode={requestedMode}
       isGuest={isGuest}
+      currentUserKey={currentUserKey}
     />
   );
 }
@@ -1490,6 +1573,7 @@ type ReadingTestClientProps = {
   restartRequested?: boolean;
   requestedMode?: AttemptMode | null;
   isGuest?: boolean;
+  currentUserKey?: string | null;
 };
 
 function ReadingTestClient({
@@ -1497,7 +1581,8 @@ function ReadingTestClient({
   backendAttemptId: initialBackendAttemptId = null,
   restartRequested = false,
   requestedMode = null,
-  isGuest = false
+  isGuest = false,
+  currentUserKey = null
 }: ReadingTestClientProps) {
   const searchParams = useSearchParams();
   const t = useTranslations("readingTest");
@@ -1525,8 +1610,6 @@ function ReadingTestClient({
   const [mobilePanel, setMobilePanel] = useState<"passage" | "questions">("passage");
   const [selectedHeadingOption, setSelectedHeadingOption] = useState<string | null>(null);
   const [draggingHeadingOption, setDraggingHeadingOption] = useState<string | null>(null);
-  const [selectedMatchingInfoOption, setSelectedMatchingInfoOption] = useState<string | null>(null);
-  const [draggingMatchingInfoOption, setDraggingMatchingInfoOption] = useState<string | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(test.durationMinutes * 60);
   const [timerRunning, setTimerRunning] = useState(false);
   const [attemptMode, setAttemptMode] = useState<AttemptMode | null>(null);
@@ -1540,6 +1623,8 @@ function ReadingTestClient({
   const [isSubmittingResult, setIsSubmittingResult] = useState(false);
   const [backendReviewData, setBackendReviewData] = useState<AdaptedReadingBackendReview | null>(null);
   const [backendAttemptId, setBackendAttemptId] = useState<string | null>(initialBackendAttemptId);
+  const attemptTabIdRef = useRef(createAttemptTabId());
+  const attemptContentSignature = useMemo(() => buildReadingAttemptContentSignature(test), [test]);
   const splitStorageKey = "readingSplitPct";
   const [splitPct, setSplitPct] = useState(() => {
     if (typeof window === "undefined") return DEFAULT_SPLIT;
@@ -1615,8 +1700,6 @@ function ReadingTestClient({
     setMobilePanel("passage");
     setSelectedHeadingOption(null);
     setDraggingHeadingOption(null);
-    setSelectedMatchingInfoOption(null);
-    setDraggingMatchingInfoOption(null);
     setRemainingSeconds(test.durationMinutes * 60);
     setTimerRunning(nextMode === "real");
     setHighlights([]);
@@ -1639,6 +1722,9 @@ function ReadingTestClient({
 
   useEffect(() => {
     if (initDoneRef.current) {
+      return;
+    }
+    if (!isGuest && !currentUserKey) {
       return;
     }
     initDoneRef.current = true;
@@ -1675,16 +1761,23 @@ function ReadingTestClient({
     const saved = latestId ? loadAttemptProgress("reading", test.id, latestId) : null;
     const expectedBackendAttemptId = toStringSafe(initialBackendAttemptId).trim();
     const savedBackendAttemptId = toStringSafe(saved?.backendAttemptId).trim();
+    const expectedOwnerKey = isGuest ? "guest" : currentUserKey;
+    const savedOwnerKey = toStringSafe(saved?.ownerKey).trim();
+    const savedContentSignature = toStringSafe(saved?.contentSignature).trim();
     const canRestoreSaved =
       Boolean(saved)
       && (isGuest
         ? !savedBackendAttemptId
         : expectedBackendAttemptId
           ? savedBackendAttemptId === expectedBackendAttemptId
-          : !savedBackendAttemptId);
+          : !savedBackendAttemptId)
+      && Boolean(expectedOwnerKey)
+      && savedOwnerKey === expectedOwnerKey
+      && savedContentSignature === attemptContentSignature;
 
     if (saved && !canRestoreSaved) {
       clearLatestAttemptProgress("reading", test.id);
+      releaseAttemptTab("reading", test.id, saved.attemptId, saved.tabId ?? attemptTabIdRef.current);
     }
 
     if (saved && canRestoreSaved) {
@@ -1711,7 +1804,17 @@ function ReadingTestClient({
       realModeAutoFinishedRef.current = false;
     }, 0);
     return () => window.clearTimeout(initTimer);
-  }, [initialBackendAttemptId, isGuest, requestedMode, restartRequested, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.id]);
+  }, [attemptContentSignature, currentUserKey, initialBackendAttemptId, isGuest, requestedMode, restartRequested, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.id]);
+
+  useEffect(() => {
+    if (!attemptId || reviewDeepLinkActive) return;
+    const tabId = attemptTabIdRef.current;
+    claimAttemptTab("reading", test.id, attemptId, tabId);
+
+    return () => {
+      releaseAttemptTab("reading", test.id, attemptId, tabId);
+    };
+  }, [attemptId, reviewDeepLinkActive, test.id]);
 
   useEffect(() => {
     if (reviewDeepLinkActive) {
@@ -1934,9 +2037,13 @@ function ReadingTestClient({
   useEffect(() => {
     if (reviewDeepLinkActive) return;
     if (!attemptId || !attemptMode) return;
+    if (!isAttemptTabOwner("reading", test.id, attemptId, attemptTabIdRef.current)) return;
     saveAttemptProgress({
       attemptId,
       backendAttemptId: backendAttemptId ?? undefined,
+      ownerKey: isGuest ? "guest" : currentUserKey ?? undefined,
+      contentSignature: attemptContentSignature,
+      tabId: attemptTabIdRef.current,
       module: "reading",
       testId: test.id,
       mode: attemptMode,
@@ -1946,7 +2053,7 @@ function ReadingTestClient({
       timeRemainingSec: remainingSeconds,
       timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
     });
-  }, [answers, attemptId, attemptMode, backendAttemptId, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
+  }, [answers, attemptContentSignature, attemptId, attemptMode, backendAttemptId, currentUserKey, isGuest, marked, remainingSeconds, reviewDeepLinkActive, startedAt, test.durationMinutes, test.id, timerRunning]);
 
   useEffect(() => {
     if (!reviewDeepLinkActive || !reviewDeepLinkAttemptId) return;
@@ -1987,6 +2094,7 @@ function ReadingTestClient({
 
       const runSave = async () => {
         if (!backendAttemptId || reviewMode) return;
+        if (attemptId && !isAttemptTabOwner("reading", test.id, attemptId, attemptTabIdRef.current)) return;
 
         const runtimeSubmitCandidatesByNumber = collectRuntimeSubmitCandidatesByNumber(test.questions);
         const activeEntries = includeAnswers
@@ -2060,7 +2168,7 @@ function ReadingTestClient({
 
       return run.catch(() => undefined);
     },
-    [answers, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, test.questions]
+    [answers, attemptId, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, test.id, test.questions]
   );
 
   useEffect(() => {
@@ -2337,11 +2445,6 @@ function ReadingTestClient({
     const normalized = optionValue.trim();
     if (!normalized) return;
     setAnswers((prev) => ({ ...prev, [questionId]: normalized }));
-    setSelectedMatchingInfoOption(null);
-  }, []);
-
-  const clearMatchingInfo = useCallback((questionId: string) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: "" }));
   }, []);
 
   const handlePassageChange = (value: string) => {
@@ -2407,6 +2510,7 @@ function ReadingTestClient({
 
   const finishTest = useCallback(async () => {
     if (!attemptId || isSubmittingResult) return;
+    if (!isAttemptTabOwner("reading", test.id, attemptId, attemptTabIdRef.current)) return;
     setIsSubmittingResult(true);
 
     const finishedAt = Date.now();
@@ -2415,6 +2519,13 @@ function ReadingTestClient({
 
     try {
       if (backendAttemptId) {
+        await saveAttemptToBackend({
+          strict: true,
+          includeAnswers: true,
+          context: "finish",
+          finishedAtMs: finishedAt
+        });
+
         const buildSubmitAnswers = (
           submitCandidatesByNumber: Map<number, string[]>,
           allowedAttemptScopedIds?: Set<string>
@@ -2452,6 +2563,9 @@ function ReadingTestClient({
       saveAttemptResult({
         attemptId,
         backendAttemptId: backendAttemptId ?? undefined,
+        ownerKey: isGuest ? "guest" : currentUserKey ?? undefined,
+        contentSignature: attemptContentSignature,
+        tabId: attemptTabIdRef.current,
         module: "reading",
         testId: test.id,
         mode: attemptMode ?? "practice",
@@ -2523,14 +2637,17 @@ function ReadingTestClient({
     }
   }, [
     answers,
+    attemptContentSignature,
     attemptId,
     attemptMode,
     backendAttemptId,
+    currentUserKey,
     isGuest,
     isSubmittingResult,
     marked,
     remainingSeconds,
     resolveTimeUsedSeconds,
+    saveAttemptToBackend,
     startedAt,
     test.durationMinutes,
     test.id,
@@ -2992,17 +3109,20 @@ function ReadingTestClient({
                   const headingAnswer = typeof headingAnswerValue === "string" ? headingAnswerValue : "";
                   const headingOptions = headingQuestion
                     ? headingQuestion.headingOptions
-                        .map((option) => parseMatchingHeadingOption(option))
+                        .map((option, index) => parseMatchingHeadingOption(option, index))
                         .filter((option) => Boolean(option.key))
                     : [];
                   const headingOptionLabelByKey = new Map<string, string>();
                   const headingInstructionLabels = parseMatchingHeadingsFromInstruction(headingQuestion?.groupInstruction);
                   headingOptions.forEach((option) => {
                     const labelFromInstruction = headingInstructionLabels.get(option.key);
-                    headingOptionLabelByKey.set(option.key, labelFromInstruction ?? option.label ?? option.key);
+                    headingOptionLabelByKey.set(
+                      option.key,
+                      normalizeHeadingDisplayText(labelFromInstruction ?? option.label ?? option.key)
+                    );
                   });
                   const headingAnswerKey = headingAnswer ? parseMatchingHeadingOption(headingAnswer).key || headingAnswer : "";
-                  const headingAnswerLabel = headingAnswerKey ? headingOptionLabelByKey.get(headingAnswerKey) ?? "" : "";
+                  const headingAnswerLabel = headingAnswerKey ? normalizeHeadingDisplayText(headingOptionLabelByKey.get(headingAnswerKey) ?? "") : "";
                   const headingAnswerDisplay = headingAnswerKey
                     ? headingAnswerLabel && headingAnswerLabel !== headingAnswerKey
                       ? `${headingAnswerKey} - ${headingAnswerLabel}`
@@ -3146,7 +3266,7 @@ function ReadingTestClient({
                   );
                   const matchingHeadingGroupOptionsRaw = matchingHeadingGroupQuestions
                     .flatMap((question) => question.headingOptions)
-                    .map((option) => parseMatchingHeadingOption(option))
+                    .map((option, index) => parseMatchingHeadingOption(option, index))
                     .filter((option) => Boolean(option.key))
                     .filter((option, index, source) => source.findIndex((item) => item.key === option.key) === index);
                   const matchingHeadingDescriptions = parseMatchingHeadingsFromInstruction(group.instruction);
@@ -3169,7 +3289,7 @@ function ReadingTestClient({
                     <section key={group.title} className="space-y-4">
                       <div>
                         <h3 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{group.title}</h3>
-                        {group.instruction ? (
+                        {group.instruction && !matchingInfoGroupOptions.length ? (
                           <p className="test-muted-copy mt-1 wrap-break-word text-sm text-muted-foreground">
                             <FormattedInstructionText text={group.instruction} />
                           </p>
@@ -3204,25 +3324,12 @@ function ReadingTestClient({
                       {matchingInfoGroupOptions.length ? (
                         <MatchingInfoBank
                           options={matchingInfoGroupOptions}
-                          selectedOption={selectedMatchingInfoOption}
-                          draggingOption={draggingMatchingInfoOption}
-                          disabled={reviewMode}
+                          instructionText={group.instruction}
                           hintText={
                             t.has("dragMatchingInfoHint")
                               ? t("dragMatchingInfoHint")
-                              : "Drag an option and drop it onto a matching-information answer box. On mobile, tap an option then tap a box."
+                              : "You may use any letter more than once."
                           }
-                          onSelectOption={(optionValue) =>
-                            setSelectedMatchingInfoOption((prev) => (prev === optionValue ? null : optionValue))
-                          }
-                          onDragStartOption={(event, optionValue) => {
-                            event.dataTransfer.effectAllowed = "move";
-                            event.dataTransfer.setData(MATCHING_INFO_DND_MIME, optionValue);
-                            event.dataTransfer.setData("text/plain", optionValue);
-                            setDraggingMatchingInfoOption(optionValue);
-                            setSelectedMatchingInfoOption(optionValue);
-                          }}
-                          onDragEndOption={() => setDraggingMatchingInfoOption(null)}
                         />
                       ) : null}
 
@@ -3271,11 +3378,16 @@ function ReadingTestClient({
                           const isSummary = question.type === "summaryCompletion";
                           const isTable = question.type === "tableCompletion";
                           const isListSelection = question.type === "listSelection";
-                          const isSharedQuestionBlock = isSummary || isTable || isListSelection;
+                          const isMatchingInfo = question.type === "matchingInfo";
+                          const isMatchingInfoSharedBlock = isMatchingInfo && matchingInfoGroupQuestions.length > 0;
+                          const isSharedQuestionBlock = isSummary || isTable || isListSelection || isMatchingInfoSharedBlock;
                           const listSelectionQuestions = isListSelection
                             ? visibleGroupQuestions.filter((item): item is Extract<ReadingQuestion, {type: "listSelection"}> => item.type === "listSelection")
                             : [];
                           if (isListSelection && listSelectionQuestions[0]?.id !== question.id) {
+                            return null;
+                          }
+                          if (isMatchingInfo && matchingInfoGroupQuestions[0]?.id !== question.id) {
                             return null;
                           }
                           const sharedBlockKey = isSummary
@@ -3287,7 +3399,9 @@ function ReadingTestClient({
                                     options: question.listOptions,
                                     numbers: listSelectionQuestions.map((item) => item.number)
                                   })}`
-                                : "";
+                                : isMatchingInfoSharedBlock
+                                  ? `matching-info:${matchingInfoGroupQuestions.map((item) => item.id).join(",")}`
+                                  : "";
                           const isDuplicateSharedBlock = Boolean(sharedBlockKey) && renderedSharedBlocksInGroup.has(sharedBlockKey);
                           if (isDuplicateSharedBlock) {
                             return null;
@@ -3295,17 +3409,32 @@ function ReadingTestClient({
                           if (sharedBlockKey) {
                             renderedSharedBlocksInGroup.add(sharedBlockKey);
                           }
+                          const matchingInfoRawOptions = isMatchingInfoSharedBlock ? matchingInfoGroupOptions : [];
+                          const matchingInfoParsedOptions = matchingInfoRawOptions.map((option, optionIndex) =>
+                            parseMatchingInfoOption(option, optionIndex)
+                          );
+                          const matchingInfoBlockActive = isMatchingInfoSharedBlock
+                            && matchingInfoGroupQuestions.some((item) => item.number === activeQuestionNumber);
+                          const articleActive = active || matchingInfoBlockActive;
+                          const hasSharedShell = isSharedQuestionBlock;
 
                           return (
                             <article
                               key={question.id}
                               className={cn(
-                                "test-panel scroll-mt-24 rounded-xl border p-4 transition-all duration-200",
-                                "hover:border-border hover:bg-accent/20",
-                                active
-                                  ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/40"
-                                  : "border-border/80 bg-card/90",
-                                isMarked && "border-l-4 border-l-amber-400 bg-amber-50/40 dark:bg-amber-500/10"
+                                "scroll-mt-24 transition-all duration-200",
+                                hasSharedShell
+                                  ? "test-panel rounded-xl border p-4 hover:border-border hover:bg-accent/20"
+                                  : "px-1 py-2",
+                                hasSharedShell
+                                  ? (articleActive
+                                      ? "border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/40"
+                                      : "border-border/80 bg-card/90")
+                                  : (articleActive
+                                      ? "rounded-lg bg-blue-500/5"
+                                      : "bg-transparent"),
+                                hasSharedShell && isMarked && "border-l-4 border-l-amber-400 bg-amber-50/40 dark:bg-amber-500/10",
+                                !hasSharedShell && isMarked && !reviewMode && "rounded-lg bg-amber-50/30 dark:bg-amber-500/10"
                               )}
                               onClick={() => setActiveQuestionNumber(question.number)}
                               ref={(el) => {
@@ -3315,9 +3444,9 @@ function ReadingTestClient({
                                 }
                                 questionRefs.current.set(question.number, el);
                                 // Shared blocks render once but carry multiple questions.
-                                if (question.type === "summaryCompletion" || question.type === "tableCompletion" || question.type === "listSelection") {
+                                if (question.type === "summaryCompletion" || question.type === "tableCompletion" || question.type === "listSelection" || question.type === "matchingInfo") {
                                   visibleGroupQuestions.forEach((q) => {
-                                    if (q.type === "summaryCompletion" || q.type === "tableCompletion" || q.type === "listSelection") {
+                                    if (q.type === "summaryCompletion" || q.type === "tableCompletion" || q.type === "listSelection" || q.type === "matchingInfo") {
                                       questionRefs.current.set(q.number, el);
                                     }
                                   });
@@ -3635,78 +3764,184 @@ function ReadingTestClient({
                                 );
                               })() : null}
 
-                              {question.type === "matchingInfo" ? (
-                                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                                  <div
-                                    role="button"
-                                    tabIndex={reviewMode ? -1 : 0}
-                                    aria-label={`Question ${question.number} matching information drop zone`}
-                                    onClick={() => {
-                                      setActiveQuestionNumber(question.number);
-                                      if (reviewMode || !selectedMatchingInfoOption) return;
-                                      if (!question.paragraphOptions.includes(selectedMatchingInfoOption)) return;
-                                      assignMatchingInfo(question.id, selectedMatchingInfoOption);
-                                    }}
-                                    onKeyDown={(event) => {
-                                      if (reviewMode || !selectedMatchingInfoOption) return;
-                                      if (event.key !== "Enter" && event.key !== " ") return;
-                                      event.preventDefault();
-                                      if (!question.paragraphOptions.includes(selectedMatchingInfoOption)) return;
-                                      assignMatchingInfo(question.id, selectedMatchingInfoOption);
-                                    }}
-                                    onDragOver={(event) => {
-                                      if (reviewMode) return;
-                                      event.preventDefault();
-                                      event.dataTransfer.dropEffect = "move";
-                                    }}
-                                    onDrop={(event) => {
-                                      if (reviewMode) return;
-                                      event.preventDefault();
-                                      setActiveQuestionNumber(question.number);
-                                      const raw =
-                                        event.dataTransfer.getData(MATCHING_INFO_DND_MIME)
-                                        || event.dataTransfer.getData("text/plain");
-                                      const dropped = raw.trim();
-                                      if (!dropped || !question.paragraphOptions.includes(dropped)) return;
-                                      assignMatchingInfo(question.id, dropped);
-                                    }}
-                                    className={cn(
-                                      "min-w-32 rounded-md border-2 border-dashed px-2.5 py-1.5 text-xs transition-colors",
-                                      typeof value === "string" && value.trim()
-                                        ? "border-blue-400/80 bg-blue-50/50 text-foreground dark:bg-blue-900/20"
-                                        : "border-border/80 bg-background/80 text-muted-foreground",
-                                      !reviewMode && "cursor-pointer hover:border-blue-300/70"
-                                    )}
-                                  >
-                                    {typeof value === "string" && value.trim()
-                                      ? value
-                                      : (t.has("selectParagraph") ? t("selectParagraph") : "Select paragraph")}
-                                  </div>
-                                  {typeof value === "string" && value.trim() && !reviewMode ? (
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => clearMatchingInfo(question.id)}
-                                      className="h-6 rounded-md px-2 text-[11px]"
-                                    >
-                                      {t.has("clearSelection") ? t("clearSelection") : "Clear"}
-                                    </Button>
-                                  ) : null}
-                                  <Select
-                                    value={typeof value === "string" ? value : ""}
-                                    disabled={reviewMode}
-                                    onValueChange={(nextValue) => assignMatchingInfo(question.id, nextValue)}
-                                  >
-                                    <SelectTrigger className="test-input-surface max-w-55 bg-background/70 dark:bg-muted/30" aria-label={`Question ${question.number}`}>
-                                      <SelectValue placeholder={t("selectParagraph")} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {question.paragraphOptions.map((option) => (
-                                        <SelectItem key={option} value={option}>{option}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                              {isMatchingInfoSharedBlock ? (
+                                <div className="test-panel overflow-x-auto rounded-xl border border-border/80 bg-card/85 shadow-sm dark:bg-card/60">
+                                  <table className="min-w-full border-collapse text-[15px] sm:text-base">
+                                    <thead>
+                                      <tr className="bg-muted/50 dark:bg-muted/25">
+                                        <th className="min-w-96 border-b border-r border-border/80 px-3 py-4 text-left font-semibold text-foreground" aria-label="Question" />
+                                        {matchingInfoParsedOptions.map((option) => (
+                                          <th
+                                            key={`${question.id}-matching-info-head-${option.value}`}
+                                            className="w-12 border-b border-r border-border/80 px-2 py-4 text-center text-base font-bold text-foreground last:border-r-0 sm:w-14"
+                                          >
+                                            {option.key}
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {matchingInfoGroupQuestions.map((targetQuestion) => {
+                                        const targetValue = displayedAnswers[targetQuestion.id];
+                                        const selectedKey = resolveChoiceKeyFromRawValue(
+                                          typeof targetValue === "string" ? targetValue : "",
+                                          matchingInfoParsedOptions,
+                                          matchingInfoRawOptions
+                                        );
+                                        const targetActive = activeQuestionNumber === targetQuestion.number;
+                                        const targetMarked = marked.has(targetQuestion.id);
+                                        const targetResult =
+                                          gradingByNumber.get(targetQuestion.number) ?? grading.byQuestion[targetQuestion.id];
+                                        const targetAnswered = isAnswered(targetValue);
+                                        const targetReviewedQuestion =
+                                          reviewQuestionById.get(targetQuestion.id)
+                                          ?? reviewQuestionByNumber.get(targetQuestion.number)
+                                          ?? targetQuestion;
+                                        const targetReviewedCorrectAnswer = formatAnswerForDisplay(targetReviewedQuestion.correctAnswer);
+                                        const targetReviewedExplanation = targetReviewedQuestion.explanation?.trim()
+                                          ? targetReviewedQuestion.explanation
+                                          : (t.has("notAvailable") ? t("notAvailable") : "Not available");
+
+                                        return (
+                                          <tr
+                                            key={`${question.id}-matching-info-row-${targetQuestion.id}`}
+                                            className={cn(
+                                              "align-top transition-colors",
+                                              targetActive && "bg-blue-50/60 dark:bg-blue-950/20",
+                                              targetMarked && "bg-amber-50/45 dark:bg-amber-500/10"
+                                            )}
+                                            onClick={() => setActiveQuestionNumber(targetQuestion.number)}
+                                          >
+                                            <td className="border-b border-r border-border/80 bg-background/55 px-3 py-3 leading-relaxed text-foreground dark:bg-background/20">
+                                              <div className="flex min-w-0 items-start gap-3">
+                                                <span className={cn(
+                                                  "inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border px-2 text-base font-bold leading-none shadow-sm",
+                                                  targetActive
+                                                    ? "border-blue-400 bg-blue-500 text-white"
+                                                    : "border-border bg-background text-foreground dark:bg-card/80"
+                                                )}>
+                                                  {targetQuestion.number}
+                                                </span>
+                                                <div className="min-w-0 flex-1 space-y-2">
+                                                  <div className="wrap-break-word">
+                                                    <HighlightableText
+                                                      text={targetQuestion.prompt}
+                                                      userHighlights={getQuestionLocalHighlights(targetQuestion.id, 0, targetQuestion.prompt.length)}
+                                                      notesStorageKey={`reading:${test.id}:notes`}
+                                                      noteScopeKey={`${targetQuestion.id}:prompt`}
+                                                      markLabel={t.has("markText") ? t("markText") : "Mark"}
+                                                      unmarkLabel={t.has("unmarkText") ? t("unmarkText") : "Unmark"}
+                                                      onToggle={({ start, end, color, action }) =>
+                                                        toggleHighlight({
+                                                          scope: "question",
+                                                          questionId: targetQuestion.id,
+                                                          start,
+                                                          end,
+                                                          color,
+                                                          action,
+                                                        })
+                                                      }
+                                                    />
+                                                  </div>
+                                                  {reviewMode && reviewAnswersVisible ? (
+                                                    <p className="text-xs text-muted-foreground">
+                                                      {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
+                                                      <span className="font-medium text-foreground">
+                                                        {targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
+                                                      </span>
+                                                    </p>
+                                                  ) : null}
+                                                  {expandedExplanations.has(targetQuestion.id) ? (
+                                                    <div className="rounded-md border border-border/70 bg-muted/25 p-2 text-xs text-foreground/90">
+                                                      {targetReviewedExplanation}
+                                                    </div>
+                                                  ) : null}
+                                                </div>
+                                                {targetMarked && !reviewMode ? (
+                                                  <Bookmark className="mt-1 size-4 shrink-0 text-amber-500" aria-label="Marked" />
+                                                ) : null}
+                                                {reviewMode ? (
+                                                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                                                    <Button
+                                                      type="button"
+                                                      size="sm"
+                                                      variant="ghost"
+                                                      onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        openExplanation(targetQuestion);
+                                                      }}
+                                                      className="h-6 rounded-md px-2 text-[10px]"
+                                                    >
+                                                      {expandedExplanations.has(targetQuestion.id)
+                                                        ? (t.has("hideExplanation") ? t("hideExplanation") : "Hide explanation")
+                                                        : (t.has("explain") ? t("explain") : "Explain")}
+                                                    </Button>
+                                                    <Button
+                                                      type="button"
+                                                      size="sm"
+                                                      variant="outline"
+                                                      onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        jumpToEvidenceFromReview(targetQuestion.id);
+                                                      }}
+                                                      className="h-6 rounded-md border-border/70 px-2 text-[10px]"
+                                                    >
+                                                      {t.has("jumpToEvidence") ? t("jumpToEvidence") : "Jump to evidence"}
+                                                    </Button>
+                                                    <span
+                                                      className={cn(
+                                                        "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold leading-none",
+                                                        !targetAnswered && "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300",
+                                                        targetAnswered && targetResult?.isCorrect && "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200",
+                                                        targetAnswered && !targetResult?.isCorrect && "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200"
+                                                      )}
+                                                    >
+                                                      {!targetAnswered ? (
+                                                        <CircleDashed className="size-3.5" aria-hidden="true" />
+                                                      ) : targetResult?.isCorrect ? (
+                                                        <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                                                      ) : (
+                                                        <XCircle className="size-3.5" aria-hidden="true" />
+                                                      )}
+                                                      {!targetAnswered ? "Skipped" : targetResult?.isCorrect ? "Correct" : "Incorrect"}
+                                                    </span>
+                                                  </div>
+                                                ) : null}
+                                              </div>
+                                            </td>
+                                            {matchingInfoParsedOptions.map((option) => (
+                                              <td
+                                                key={`${targetQuestion.id}-matching-info-cell-${option.value}`}
+                                                className={cn(
+                                                  "border-b border-r border-border/80 bg-background/55 px-2 py-3 text-center align-middle last:border-r-0 dark:bg-background/20",
+                                                  !reviewMode && "cursor-pointer hover:bg-blue-500/10"
+                                                )}
+                                                onClick={(event) => {
+                                                  event.stopPropagation();
+                                                  setActiveQuestionNumber(targetQuestion.number);
+                                                  if (!reviewMode) {
+                                                    assignMatchingInfo(targetQuestion.id, option.value);
+                                                  }
+                                                }}
+                                              >
+                                                <input
+                                                  type="radio"
+                                                  name={targetQuestion.id}
+                                                  value={option.value}
+                                                  checked={selectedKey === option.key}
+                                                  disabled={reviewMode}
+                                                  onChange={() => assignMatchingInfo(targetQuestion.id, option.value)}
+                                                  onFocus={() => setActiveQuestionNumber(targetQuestion.number)}
+                                                  aria-label={`Question ${targetQuestion.number}, ${option.key}`}
+                                                  className="size-5 accent-blue-600"
+                                                />
+                                              </td>
+                                            ))}
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
                                 </div>
                               ) : null}
 

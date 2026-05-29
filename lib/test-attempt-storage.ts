@@ -4,6 +4,9 @@ export type AttemptMode = "real" | "practice";
 export type PersistedAttempt = {
   attemptId: string;
   backendAttemptId?: string;
+  ownerKey?: string;
+  contentSignature?: string;
+  tabId?: string;
   module: TestModule;
   testId: string;
   mode?: AttemptMode;
@@ -18,6 +21,8 @@ export type PersistedAttempt = {
 const ATTEMPT_PREFIX = "englishlabs:attempt";
 const RESULT_PREFIX = "englishlabs:result";
 const LATEST_PREFIX = "englishlabs:latest-attempt";
+const TAB_PREFIX = "englishlabs:active-attempt-tab";
+const TAB_STORAGE_KEY = "englishlabs:tab-id";
 
 function buildKey(prefix: string, module: TestModule, testId: string, attemptId: string) {
   return `${prefix}:${module}:${testId}:${attemptId}`;
@@ -25,6 +30,75 @@ function buildKey(prefix: string, module: TestModule, testId: string, attemptId:
 
 export function createAttemptId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function createAttemptTabId() {
+  if (typeof window === "undefined") {
+    return createAttemptId();
+  }
+
+  try {
+    const existing = window.sessionStorage.getItem(TAB_STORAGE_KEY)?.trim();
+    if (existing) {
+      return existing;
+    }
+
+    const tabId = `tab-${createAttemptId()}`;
+    window.sessionStorage.setItem(TAB_STORAGE_KEY, tabId);
+    return tabId;
+  } catch {
+    return `tab-${createAttemptId()}`;
+  }
+}
+
+function buildTabKey(module: TestModule, testId: string) {
+  return `${TAB_PREFIX}:${module}:${testId}`;
+}
+
+export function claimAttemptTab(module: TestModule, testId: string, attemptId: string, tabId = createAttemptTabId()) {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem(
+    buildTabKey(module, testId),
+    JSON.stringify({
+      attemptId,
+      tabId,
+      updatedAt: Date.now()
+    })
+  );
+}
+
+export function isAttemptTabOwner(module: TestModule, testId: string, attemptId: string, tabId = createAttemptTabId()) {
+  if (typeof window === "undefined") return true;
+
+  try {
+    const raw = window.localStorage.getItem(buildTabKey(module, testId));
+    if (!raw) {
+      return true;
+    }
+
+    const parsed = JSON.parse(raw) as {attemptId?: string; tabId?: string} | null;
+    return parsed?.attemptId === attemptId && parsed?.tabId === tabId;
+  } catch {
+    return false;
+  }
+}
+
+export function releaseAttemptTab(module: TestModule, testId: string, attemptId: string, tabId = createAttemptTabId()) {
+  if (typeof window === "undefined") return;
+
+  try {
+    const key = buildTabKey(module, testId);
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return;
+
+    const parsed = JSON.parse(raw) as {attemptId?: string; tabId?: string} | null;
+    if (parsed?.attemptId === attemptId && parsed?.tabId === tabId) {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Ignore storage corruption.
+  }
 }
 
 export function saveAttemptProgress(payload: PersistedAttempt) {

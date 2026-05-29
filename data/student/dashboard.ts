@@ -11,6 +11,8 @@ export type DashboardUserSummary = {
   testsTaken: number;
   readingAccuracy: number;
   listeningAccuracy: number;
+  targetReadingBand: number;
+  targetListeningBand: number;
   streakDays: number;
   streakIncreasedToday: boolean;
   bandsAway: number;
@@ -92,6 +94,8 @@ export const DASHBOARD_DATA = {
     testsTaken: STUDENT_TEST_HISTORY.length,
     readingAccuracy: metrics.readingAccuracy,
     listeningAccuracy: metrics.listeningAccuracy,
+    targetReadingBand: STUDENT_PROFILE.targetBand,
+    targetListeningBand: STUDENT_PROFILE.targetBand,
     streakDays: streak.currentStreakDays,
     streakIncreasedToday: streak.completedTestToday,
     bandsAway: round(Math.max(0, STUDENT_PROFILE.targetBand - metrics.currentBand))

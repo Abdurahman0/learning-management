@@ -53,7 +53,20 @@ import {
 } from "@/components/ui/sheet";
 import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
-import { clearLatestAttemptProgress, createAttemptId, loadAttemptProgress, loadLatestAttemptId, saveAttemptProgress, saveAttemptResult, type AttemptMode } from "@/lib/test-attempt-storage";
+import {
+  clearLatestAttemptProgress,
+  createAttemptId,
+  createAttemptTabId,
+  claimAttemptTab,
+  isAttemptTabOwner,
+  loadAttemptProgress,
+  loadLatestAttemptId,
+  saveAttemptProgress,
+  saveAttemptResult,
+  releaseAttemptTab,
+  type AttemptMode
+} from "@/lib/test-attempt-storage";
+import { authApi } from "@/lib/api/auth";
 import { getListeningAnswerMeta } from "@/data/listening-answer-keys";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { flattenListeningQuestions } from "@/lib/listening-questions";
@@ -195,6 +208,26 @@ type ListeningSubmitQuestionMeta = {
   candidateIds: string[];
   questionType: string;
 };
+
+function buildListeningAttemptContentSignature(
+  sections: ListeningSectionFull[],
+  submitMetaByNumber: Map<number, ListeningSubmitQuestionMeta>
+) {
+  const metaEntries = [...submitMetaByNumber.entries()];
+  if (metaEntries.length) {
+    return metaEntries
+      .sort(([left], [right]) => left - right)
+      .map(([number, meta]) => `${number}:${meta.questionId}:${meta.questionType}`)
+      .join("|");
+  }
+
+  return sections
+    .flatMap((section) =>
+      section.blocks.flatMap((block) => getQuestionNumbersFromBlock(block).map((number) => `${number}`))
+    )
+    .sort((left, right) => Number(left) - Number(right))
+    .join("|");
+}
 
 function resolveSubmitQuestionId(question: StudentAttemptQuestion) {
   const attemptQuestionId = toStringSafe(question.attempt_question_id).trim();
@@ -1033,6 +1066,34 @@ export default function ListeningTestPage() {
   const [backendLoadError, setBackendLoadError] = useState<string | null>(null);
   const [initialBackendAttemptId, setInitialBackendAttemptId] = useState<string | null>(null);
   const [initialSubmitMetaByNumber, setInitialSubmitMetaByNumber] = useState<Map<number, ListeningSubmitQuestionMeta>>(new Map());
+  const [currentUserKey, setCurrentUserKey] = useState<string | null>(isGuest ? "guest" : null);
+
+  useEffect(() => {
+    if (isGuest) {
+      setCurrentUserKey("guest");
+      return;
+    }
+
+    let active = true;
+
+    const loadCurrentUser = async () => {
+      try {
+        const response = await authApi.me();
+        if (!active) return;
+        const userId = typeof response.data?.id === "string" ? response.data.id.trim() : "";
+        setCurrentUserKey(userId ? `user:${userId}` : "user:unknown");
+      } catch {
+        if (!active) return;
+        setCurrentUserKey("user:unknown");
+      }
+    };
+
+    void loadCurrentUser();
+
+    return () => {
+      active = false;
+    };
+  }, [isGuest]);
 
   useEffect(() => {
     let active = true;
@@ -1228,6 +1289,7 @@ export default function ListeningTestPage() {
       initialBackendAttemptId={initialBackendAttemptId}
       initialSubmitMetaByNumber={initialSubmitMetaByNumber}
       isGuest={isGuest}
+      currentUserKey={currentUserKey}
     />
   );
 }
@@ -1238,12 +1300,14 @@ function ListeningTestClient({
   initialBackendAttemptId = null,
   initialSubmitMetaByNumber = new Map(),
   isGuest = false,
+  currentUserKey = null,
 }: {
   testId: string;
   requestedMode?: AttemptMode | null;
   initialBackendAttemptId?: string | null;
   initialSubmitMetaByNumber?: Map<number, ListeningSubmitQuestionMeta>;
   isGuest?: boolean;
+  currentUserKey?: string | null;
 }) {
   const searchParams = useSearchParams();
   const t = useTranslations("listeningTest");
@@ -1296,6 +1360,11 @@ function ListeningTestClient({
   const [attemptId, setAttemptId] = useState("");
   const [backendAttemptId, setBackendAttemptId] = useState<string | null>(initialBackendAttemptId);
   const [submitMetaByNumber, setSubmitMetaByNumber] = useState<Map<number, ListeningSubmitQuestionMeta>>(() => new Map(initialSubmitMetaByNumber));
+  const attemptTabIdRef = useRef(createAttemptTabId());
+  const attemptContentSignature = useMemo(
+    () => buildListeningAttemptContentSignature(normalizedSections, submitMetaByNumber),
+    [normalizedSections, submitMetaByNumber]
+  );
   const [startedAt, setStartedAt] = useState(0);
   const [finishOpen, setFinishOpen] = useState(false);
   const [reviewMode, setReviewMode] = useState(reviewDeepLinkActive);
@@ -1441,6 +1510,9 @@ function ListeningTestClient({
     if (initDoneRef.current) {
       return;
     }
+    if (!isGuest && !currentUserKey) {
+      return;
+    }
     initDoneRef.current = true;
 
     if (reviewDeepLinkActive && reviewDeepLinkAttemptId) {
@@ -1493,16 +1565,23 @@ function ListeningTestClient({
     const saved = latestId ? loadAttemptProgress("listening", test.id, latestId) : null;
     const expectedBackendAttemptId = toStringSafe(initialBackendAttemptId).trim();
     const savedBackendAttemptId = toStringSafe(saved?.backendAttemptId).trim();
+    const expectedOwnerKey = isGuest ? "guest" : currentUserKey;
+    const savedOwnerKey = toStringSafe(saved?.ownerKey).trim();
+    const savedContentSignature = toStringSafe(saved?.contentSignature).trim();
     const canRestoreSaved =
       Boolean(saved)
       && (isGuest
         ? !savedBackendAttemptId
         : expectedBackendAttemptId
           ? savedBackendAttemptId === expectedBackendAttemptId
-          : !savedBackendAttemptId);
+          : !savedBackendAttemptId)
+      && Boolean(expectedOwnerKey)
+      && savedOwnerKey === expectedOwnerKey
+      && savedContentSignature === attemptContentSignature;
 
     if (saved && !canRestoreSaved) {
       clearLatestAttemptProgress("listening", test.id);
+      releaseAttemptTab("listening", test.id, saved.attemptId, saved.tabId ?? attemptTabIdRef.current);
     }
 
     if (saved && canRestoreSaved) {
@@ -1546,7 +1625,17 @@ function ListeningTestClient({
       realModeAutoFinishedRef.current = false;
     }, 0);
     return () => window.clearTimeout(initTimer);
-  }, [initialBackendAttemptId, isGuest, requestedMode, restartRequested, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.durationMinutes, test.id]);
+  }, [attemptContentSignature, currentUserKey, initialBackendAttemptId, isGuest, requestedMode, restartRequested, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.durationMinutes, test.id]);
+
+  useEffect(() => {
+    if (!attemptId || reviewDeepLinkActive) return;
+    const tabId = attemptTabIdRef.current;
+    claimAttemptTab("listening", test.id, attemptId, tabId);
+
+    return () => {
+      releaseAttemptTab("listening", test.id, attemptId, tabId);
+    };
+  }, [attemptId, reviewDeepLinkActive, test.id]);
 
   useEffect(() => {
     if (reviewDeepLinkActive) {
@@ -1813,12 +1902,16 @@ function ListeningTestClient({
   useEffect(() => {
     if (reviewDeepLinkActive) return;
     if (!attemptId || !attemptMode) return;
+    if (!isAttemptTabOwner("listening", test.id, attemptId, attemptTabIdRef.current)) return;
     const persistedAnswers = Object.fromEntries(
       Object.entries(answers).map(([number, value]) => [`${test.id}-q${number}`, value])
     );
     saveAttemptProgress({
       attemptId,
       backendAttemptId: backendAttemptId ?? undefined,
+      ownerKey: isGuest ? "guest" : currentUserKey ?? undefined,
+      contentSignature: attemptContentSignature,
+      tabId: attemptTabIdRef.current,
       module: "listening",
       testId: test.id,
       mode: attemptMode,
@@ -1828,7 +1921,7 @@ function ListeningTestClient({
       timeRemainingSec: remainingSeconds,
       timerUsed: timerRunning || remainingSeconds !== test.durationMinutes * 60,
     });
-  }, [answers, attemptId, attemptMode, backendAttemptId, marked, remainingSeconds, startedAt, test.durationMinutes, test.id, timerRunning]);
+  }, [answers, attemptContentSignature, attemptId, attemptMode, backendAttemptId, currentUserKey, isGuest, marked, remainingSeconds, reviewDeepLinkActive, startedAt, test.durationMinutes, test.id, timerRunning]);
 
   useEffect(() => {
     if (!reviewDeepLinkActive || !reviewDeepLinkAttemptId) return;
@@ -2392,11 +2485,13 @@ function ListeningTestClient({
   }, [remainingSeconds, startedAt, test.durationMinutes, timerRunning]);
 
   const saveListeningAttemptToBackend = useCallback(
-    (options?: { includeAnswers?: boolean; finishedAtMs?: number }) => {
+    (options?: { includeAnswers?: boolean; finishedAtMs?: number; strict?: boolean }) => {
       const includeAnswers = options?.includeAnswers ?? true;
+      const strict = Boolean(options?.strict);
 
       const runSave = async () => {
         if (!backendAttemptId || reviewMode || submitMetaByNumber.size === 0) return;
+        if (attemptId && !isAttemptTabOwner("listening", test.id, attemptId, attemptTabIdRef.current)) return;
 
         const payloadAnswers = includeAnswers
           ? buildListeningBackendAnswerPayload({
@@ -2433,17 +2528,22 @@ function ListeningTestClient({
               time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
               answers: retryPayloadAnswers
             });
-          } catch {
-            // Autosave must not interrupt the test UI.
+          } catch (retryError) {
+            if (strict) {
+              throw retryError;
+            }
           }
         }
       };
 
       const run = backendSaveChainRef.current.then(runSave, runSave);
       backendSaveChainRef.current = run.catch(() => undefined);
+      if (strict) {
+        return run;
+      }
       return run.catch(() => undefined);
     },
-    [answers, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, submitMetaByNumber]
+    [answers, attemptId, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, submitMetaByNumber, test.id]
   );
 
   useEffect(() => {
@@ -2464,6 +2564,7 @@ function ListeningTestClient({
 
   const finishTest = useCallback(async () => {
     if (!attemptId || isSubmittingResult) return;
+    if (!isAttemptTabOwner("listening", test.id, attemptId, attemptTabIdRef.current)) return;
     setIsSubmittingResult(true);
     try {
       const finishedAt = Date.now();
@@ -2499,8 +2600,18 @@ function ListeningTestClient({
               submitMetaByNumber: metaByNumber,
               includeUnanswered: true
             });
+          const buildSaveAnswers = (metaByNumber: Map<number, ListeningSubmitQuestionMeta>) =>
+            buildListeningBackendAnswerPayload({
+              answers,
+              marked,
+              submitMetaByNumber: metaByNumber
+            }).filter((item) => item.answer !== null || item.is_flagged);
 
           try {
+            await studentAttemptsService.save(submitAttemptId, {
+              time_used_seconds: timeUsedSeconds,
+              answers: buildSaveAnswers(submitMetaForRequest)
+            });
             await studentAttemptsService.submit(submitAttemptId, {
               time_used_seconds: timeUsedSeconds,
               answers: buildSubmitAnswers(submitMetaForRequest)
@@ -2514,6 +2625,10 @@ function ListeningTestClient({
             const freshSnapshot = await studentAttemptsService.getById(submitAttemptId);
             const freshMetaByNumber = collectListeningSubmitMetaByNumber(freshSnapshot);
             setSubmitMetaByNumber(freshMetaByNumber);
+            await studentAttemptsService.save(submitAttemptId, {
+              time_used_seconds: timeUsedSeconds,
+              answers: buildSaveAnswers(freshMetaByNumber)
+            });
             await studentAttemptsService.submit(submitAttemptId, {
               time_used_seconds: timeUsedSeconds,
               answers: buildSubmitAnswers(freshMetaByNumber)
@@ -2529,6 +2644,9 @@ function ListeningTestClient({
       saveAttemptResult({
         attemptId,
         backendAttemptId: submitAttemptId ?? backendAttemptId ?? undefined,
+        ownerKey: isGuest ? "guest" : currentUserKey ?? undefined,
+        contentSignature: attemptContentSignature,
+        tabId: attemptTabIdRef.current,
         module: "listening",
         testId: test.id,
         mode: attemptMode ?? "practice",
@@ -2621,9 +2739,11 @@ function ListeningTestClient({
     }
   }, [
     answers,
+    attemptContentSignature,
     attemptId,
     attemptMode,
     backendAttemptId,
+    currentUserKey,
     isGuest,
     isSubmittingResult,
     marked,
@@ -2874,8 +2994,10 @@ function ListeningTestClient({
           className={cn(
             grouped
               ? "min-w-0 scroll-mt-24 px-1 py-3 first:pt-1"
-              : "test-panel min-w-0 rounded-lg border border-border bg-card p-4 scroll-mt-24 overflow-hidden",
+              : "min-w-0 scroll-mt-24 overflow-hidden px-1 py-2 transition-all duration-200",
             markedQuestionClass(question.questionNumber),
+            !grouped && activeQuestionNumber === question.questionNumber && "rounded-lg bg-blue-500/5",
+            !grouped && marked.has(question.questionNumber) && !reviewMode && "rounded-lg bg-amber-50/30 dark:bg-amber-500/10",
           )}
           onClick={() => setActiveQuestionNumber(question.questionNumber)}
         >

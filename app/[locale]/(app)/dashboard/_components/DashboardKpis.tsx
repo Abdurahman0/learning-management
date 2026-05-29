@@ -59,8 +59,8 @@ export function DashboardKpis({summary, onCurrentBandClick, examDate, onExamCoun
   const items = [
     {label: t("kpis.currentBand"), value: summary.currentBand, decimals: 1, icon: TrendingUp, bubble: "bg-blue-500/15 text-blue-300", onClick: onCurrentBandClick},
     {label: t("kpis.testsTaken"), value: summary.testsTaken, icon: GraduationCap, bubble: "bg-violet-500/15 text-violet-300"},
-    {label: t("kpis.reading"), value: summary.readingAccuracy, suffix: "%", icon: BookOpenText, bubble: "bg-emerald-500/15 text-emerald-300"},
-    {label: t("kpis.listening"), value: summary.listeningAccuracy, suffix: "%", icon: Headphones, bubble: "bg-cyan-500/15 text-cyan-300"},
+    {label: t("kpis.readingTarget"), value: summary.targetReadingBand, decimals: 1, icon: BookOpenText, bubble: "bg-emerald-500/15 text-emerald-300"},
+    {label: t("kpis.listeningTarget"), value: summary.targetListeningBand, decimals: 1, icon: Headphones, bubble: "bg-cyan-500/15 text-cyan-300"},
     {label: t("kpis.studyStreak"), value: summary.streakDays, suffix: ` ${t("days")}`, icon: Flame, bubble: "bg-orange-500/15 text-orange-300"},
     {label: examCountdownLabel, textValue: examCountdownValue, icon: CalendarDays, bubble: "bg-fuchsia-500/15 text-fuchsia-300", onClick: onExamCountdownClick}
   ];

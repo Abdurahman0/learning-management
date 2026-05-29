@@ -1034,6 +1034,8 @@
       },
       "reading": "Reading aniqligi",
       "listening": "Listening aniqligi",
+      "readingTarget": "Reading maqsad bandi",
+      "listeningTarget": "Listening maqsad bandi",
       "streakRule": "Streak qoidasi: bugun kamida bitta test bajarilsa +1, test bajarilmasa -1 (minimum 0)."
     },
     "scoreProgress": {

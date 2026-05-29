@@ -86,7 +86,7 @@ function parseTranscriptLines(transcriptText: string): TranscriptLine[] {
   return out;
 }
 
-function renderHighlightedText(text: string, needle: string) {
+function renderHighlightedText(text: string, needle: string, questionNumbers: number[] = []) {
   const normalizedNeedle = normalizeForSearch(needle);
   if (!normalizedNeedle) return { node: text, hit: false };
 
@@ -105,6 +105,14 @@ function renderHighlightedText(text: string, needle: string) {
       node: (
         <mark className="rounded-sm bg-emerald-200/70 px-0.5 text-foreground dark:bg-emerald-500/20">
           {text}
+          {questionNumbers.map((questionNumber) => (
+            <span
+              key={`full-line-${questionNumber}`}
+              className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full border border-emerald-300 bg-emerald-100 px-1 text-[10px] font-semibold leading-none text-emerald-800 align-text-top dark:border-emerald-300/50 dark:bg-emerald-500/35 dark:text-emerald-50"
+            >
+              {questionNumber}
+            </span>
+          ))}
         </mark>
       ),
       hit: true,
@@ -120,6 +128,14 @@ function renderHighlightedText(text: string, needle: string) {
         {before}
         <mark className="rounded-sm bg-emerald-200/70 px-0.5 text-foreground dark:bg-emerald-500/20">
           {match}
+          {questionNumbers.map((questionNumber) => (
+            <span
+              key={`match-${questionNumber}`}
+              className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full border border-emerald-300 bg-emerald-100 px-1 text-[10px] font-semibold leading-none text-emerald-800 align-text-top dark:border-emerald-300/50 dark:bg-emerald-500/35 dark:text-emerald-50"
+            >
+              {questionNumber}
+            </span>
+          ))}
         </mark>
         {after}
       </>
@@ -140,6 +156,14 @@ export function ListeningTranscriptReviewPanel({
   const activeSection = sections.find((section) => section.sectionId === activeSectionId) ?? sections[0];
   const transcriptRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    if (!highlightedQuestionId) return;
+    window.setTimeout(() => {
+      const node = document.getElementById(`transcript-hit-${highlightedQuestionId}`);
+      node?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  }, [highlightedQuestionId, activeSection?.sectionId]);
+
   if (!activeSection) return null;
 
   const transcriptLines = parseTranscriptLines(activeSection.transcriptText ?? "");
@@ -147,14 +171,6 @@ export function ListeningTranscriptReviewPanel({
     .filter((item) => normalizeForSearch(item.quote))
     // Prefer longer quotes first so we hit the most specific match per line.
     .sort((a, b) => b.quote.length - a.quote.length);
-
-  useEffect(() => {
-    if (!highlightedQuestionId) return;
-    window.setTimeout(() => {
-      const node = document.getElementById(`transcript-hit-${highlightedQuestionId}`);
-      node?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 50);
-  }, [highlightedQuestionId, activeSection.sectionId]);
 
   return (
     <Card
@@ -173,26 +189,37 @@ export function ListeningTranscriptReviewPanel({
             {(() => {
               const anchorsAssigned = new Set<string>();
               return transcriptLines.map((line, index) => {
-                let matchedEvidence: ListeningTranscriptEvidence | null = null;
+                let matchedEvidenceItems: ListeningTranscriptEvidence[] = [];
                 let highlighted: { node: ReactNode; hit: boolean } = { node: line.text, hit: false };
 
                 for (const evidence of evidenceItems) {
                   const attempt = renderHighlightedText(line.text, evidence.quote);
                   if (attempt.hit) {
-                    matchedEvidence = evidence;
-                    highlighted = attempt;
+                    const normalizedQuote = normalizeForSearch(evidence.quote);
+                    matchedEvidenceItems = evidenceItems.filter(
+                      (item) => normalizeForSearch(item.quote) === normalizedQuote && renderHighlightedText(line.text, item.quote).hit
+                    );
+                    highlighted = renderHighlightedText(
+                      line.text,
+                      evidence.quote,
+                      [...new Set(matchedEvidenceItems.map((item) => item.questionNumber))].sort((a, b) => a - b)
+                    );
                     break;
                   }
                 }
 
-                const matchedQuestionId = matchedEvidence?.questionId ?? null;
+                const matchedQuestionIds = matchedEvidenceItems.map((item) => item.questionId);
+                const anchorQuestionId =
+                  highlightedQuestionId && matchedQuestionIds.includes(highlightedQuestionId)
+                    ? highlightedQuestionId
+                    : matchedQuestionIds.find((questionId) => !anchorsAssigned.has(questionId)) ?? null;
                 const anchorId =
-                  matchedQuestionId && !anchorsAssigned.has(matchedQuestionId)
-                    ? `transcript-hit-${matchedQuestionId}`
+                  anchorQuestionId && !anchorsAssigned.has(anchorQuestionId)
+                    ? `transcript-hit-${anchorQuestionId}`
                     : undefined;
 
-                if (matchedQuestionId && anchorId) {
-                  anchorsAssigned.add(matchedQuestionId);
+                if (anchorQuestionId && anchorId) {
+                  anchorsAssigned.add(anchorQuestionId);
                 }
 
                 return (
@@ -201,8 +228,8 @@ export function ListeningTranscriptReviewPanel({
                     id={anchorId}
                     className={cn(
                       "grid grid-cols-[88px_minmax(0,1fr)] gap-3",
-                      matchedQuestionId &&
-                        highlightedQuestionId === matchedQuestionId &&
+                      highlightedQuestionId &&
+                        matchedQuestionIds.includes(highlightedQuestionId) &&
                         "rounded-lg bg-emerald-500/10 px-2 py-1 ring-2 ring-emerald-400/50 ring-offset-1 ring-offset-background"
                     )}
                   >
