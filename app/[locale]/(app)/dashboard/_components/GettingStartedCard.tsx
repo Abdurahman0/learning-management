@@ -64,7 +64,7 @@ export function GettingStartedCard({isVisible, completedSurvey, triedListening, 
         label: t("tasks.progress"),
         icon: LineChart,
         bubble: "border-violet-400/45 text-violet-300 bg-violet-500/10",
-        onClick: checkedProgress ? undefined : () => router.push(`/${locale}/analytics`)
+        onClick: undefined
       }
     ];
 

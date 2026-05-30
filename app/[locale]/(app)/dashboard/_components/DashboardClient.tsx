@@ -553,7 +553,7 @@ export function DashboardClient() {
         <Card className="overflow-hidden rounded-2xl border-border/70 bg-card/70">
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>{t("recentHistory.title")}</CardTitle>
-            <Button variant="link" className="h-auto p-0" onClick={() => router.push(`/${locale}/analytics#history`)}>
+            <Button variant="link" className="h-auto p-0" onClick={() => router.push(`/${locale}/dashboard#history`)}>
               {t("recentHistory.viewAll")}
             </Button>
           </CardHeader>

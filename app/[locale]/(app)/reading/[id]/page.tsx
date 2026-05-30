@@ -3279,6 +3279,7 @@ function ReadingTestClient({
                     .map((option) => option.trim())
                     .filter(Boolean)
                     .filter((option, index, source) => source.indexOf(option) === index);
+                  const showMatchingInfoBank = matchingInfoGroupOptions.some((option) => !/^[A-Z]$/.test(option));
 
                   if (!visibleGroupQuestions.length && !matchingHeadingGroupQuestions.length) {
                     return null;
@@ -3321,7 +3322,7 @@ function ReadingTestClient({
                         />
                       ) : null}
 
-                      {matchingInfoGroupOptions.length ? (
+                      {showMatchingInfoBank && matchingInfoGroupOptions.length ? (
                         <MatchingInfoBank
                           options={matchingInfoGroupOptions}
                           instructionText={group.instruction}

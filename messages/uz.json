@@ -1023,6 +1023,9 @@
       "testsTaken": "Tests Taken",
       "avgScore": "Avg Score",
       "studyStreak": "Study Streak",
+      "examDate": "Imtihon sanasi",
+      "targetBand": "Maqsad band",
+      "targetBandHelp": "Reading va Listening maqsadlaringiz o'rtachasi",
       "examCountdown": {
         "label": "Imtihongacha",
         "labelWithDate": "Imtihon ({date})",

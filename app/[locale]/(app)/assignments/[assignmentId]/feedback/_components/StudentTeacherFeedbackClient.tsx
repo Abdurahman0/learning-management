@@ -82,7 +82,7 @@ export function StudentTeacherFeedbackClient({assignmentId}: StudentTeacherFeedb
   };
 
   const handleViewAnalytics = () => {
-    router.push(`/${locale}/analytics?source=teacher-feedback&assignment=${assignmentId}`);
+    router.push(`/${locale}/dashboard`);
   };
 
   const runAction = (action: StudentTeacherFeedbackAction) => {

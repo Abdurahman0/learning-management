@@ -209,7 +209,7 @@ export function StudentAssignmentsClient() {
   };
 
   const handleMyProgress = () => {
-    router.push(`/${locale}/analytics?source=assignments`);
+    router.push(`/${locale}/dashboard`);
   };
 
   const handleViewDetails = (id: string) => {

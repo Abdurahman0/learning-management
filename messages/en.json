@@ -1023,6 +1023,9 @@
       "testsTaken": "Tests Taken",
       "avgScore": "Avg Score",
       "studyStreak": "Study Streak",
+      "examDate": "Exam Date",
+      "targetBand": "Target Band",
+      "targetBandHelp": "Average of your Reading and Listening targets",
       "examCountdown": {
         "label": "Exam countdown",
         "labelWithDate": "Exam in ({date})",

@@ -143,7 +143,7 @@ export function StudentReviewCenterClient() {
   };
 
   const handleOpenAnalytics = () => {
-    router.push(`/${locale}/analytics?source=review-center`);
+    router.push(`/${locale}/dashboard`);
   };
 
   const handleNextStepAction = (action: "navigate" | "toast", href: string | undefined, noticeKey: string) => {

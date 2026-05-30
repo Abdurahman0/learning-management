@@ -92,7 +92,7 @@ export function StudentOneToOneSessionsClient() {
 
   const handleSessionAction = (session: StudentOneToOneSession) => {
     if (session.status === "completed") {
-      router.push(`/${locale}/analytics`);
+      router.push(`/${locale}/dashboard`);
       return;
     }
 

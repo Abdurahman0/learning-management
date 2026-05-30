@@ -3,7 +3,7 @@
 import {useEffect, useState, type ReactNode} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
-import {BarChart3, BookOpen, ChevronDown, CircleUserRound, Headphones, Home, Lock, Menu, Mic, PenLine, TriangleAlert} from "lucide-react";
+import {BookOpen, ChevronDown, CircleUserRound, Headphones, Home, Lock, Menu, Mic, PenLine, TriangleAlert} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import ReactCountryFlag from "react-country-flag";
 
@@ -38,7 +38,7 @@ type MobileTestNavItem = {
 };
 
 function isBackendOnlySupportedStudentPath(pathWithoutLocale: string) {
-  const allowedPrefixes = ["/dashboard", "/reading", "/listening", "/analytics", "/mistake-analysis", "/settings", "/onboarding"];
+  const allowedPrefixes = ["/dashboard", "/reading", "/listening", "/mistake-analysis", "/settings", "/onboarding"];
   const blockedPrefixes = ["/messages", "/assignments", "/study-bank", "/vocabulary", "/review-center", "/sessions", "/result"];
 
   if (blockedPrefixes.some((prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`))) {
@@ -71,7 +71,7 @@ export function GuestShell({children}: GuestShellProps) {
   const dashboardHref = role === "admin" ? `/${locale}/admin` : role === "teacher" ? `/${locale}/teacher` : `/${locale}/dashboard`;
   const topLevelRoutes = isGuest
     ? "(reading|listening|settings)"
-    : "(dashboard|reading|listening|analytics|mistake-analysis|settings)";
+    : "(dashboard|reading|listening|mistake-analysis|settings)";
   const isMobileHeaderVisible = new RegExp(`^${baseRoute}/${topLevelRoutes}/?$`).test(pathname);
   const pathWithoutLocale = pathname.replace(/^\/(uz|en)(?=\/|$)/, "") || "/";
   const hideSidebar = /^\/(reading|listening)\/[^/]+(?:\/result)?\/?$/.test(pathWithoutLocale)
@@ -115,7 +115,6 @@ export function GuestShell({children}: GuestShellProps) {
 
   const mobileSecondaryItems: MobileNavItem[] = isStudent
     ? [
-        {key: "analytics", label: t("sidebar.analytics"), href: `/${locale}/analytics`, icon: BarChart3},
         {key: "mistakeAnalysis", label: t("sidebar.mistakeAnalysis"), href: `/${locale}/mistake-analysis`, icon: TriangleAlert}
       ]
     : [];

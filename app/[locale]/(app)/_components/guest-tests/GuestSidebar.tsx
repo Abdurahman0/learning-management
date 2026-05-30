@@ -3,7 +3,7 @@
 import {useEffect, useMemo, useState} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
-import {BarChart3, BookOpen, ChevronDown, Headphones, Home, Lock, Mic, PenLine, TriangleAlert} from "lucide-react";
+import {BookOpen, ChevronDown, Headphones, Home, Lock, Mic, PenLine, TriangleAlert} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
@@ -103,12 +103,6 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
 
   const secondaryNavItems: NavItem[] = isStudent
     ? [
-        {
-          key: "analytics",
-          label: t("sidebar.analytics"),
-          href: `/${locale}/analytics`,
-          icon: BarChart3
-        },
         {
           key: "mistakeAnalysis",
           label: t("sidebar.mistakeAnalysis"),
