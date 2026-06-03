@@ -17,8 +17,12 @@ function isBoldToken(token: string) {
   return token.startsWith("**") && token.endsWith("**") && token.length >= 4;
 }
 
+function normalizeLineBullets(text: string) {
+  return text.replace(/^(\s*)[-–—]\s+/gm, "$1• ");
+}
+
 export function FormattedInstructionText({text, className}: FormattedInstructionTextProps) {
-  const tokens = splitWithBoldMarkers(text);
+  const tokens = splitWithBoldMarkers(normalizeLineBullets(text));
 
   return (
     <span className={cn("whitespace-pre-wrap", className)}>
@@ -33,4 +37,3 @@ export function FormattedInstructionText({text, className}: FormattedInstruction
     </span>
   );
 }
-

@@ -123,9 +123,8 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
     {
       key: "listening",
       label: t("sidebar.listening"),
-      href: listeningHref,
       icon: Headphones,
-      disabled: false
+      disabled: true
     },
     {
       key: "writing",
@@ -141,7 +140,7 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
     }
   ];
 
-  const testsActive = pathname.startsWith(readingHref) || pathname.startsWith(listeningHref);
+  const testsActive = pathname.startsWith(readingHref);
   const [testsOpen, setTestsOpen] = useState(testsActive);
   const [testsHovered, setTestsHovered] = useState(false);
   const testsExpanded = testsActive || testsOpen || testsHovered;

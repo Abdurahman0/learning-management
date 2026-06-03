@@ -249,6 +249,10 @@ function stripInlineBoldMarkup(value: string) {
   return value.replace(/\*\*([^*]+)\*\*/g, "$1").trim();
 }
 
+function normalizeTemplateDisplayText(value: string) {
+  return value.replace(/^(\s*)[-–—]\s+/gm, "$1• ");
+}
+
 type MatchingHeadingsBankProps = {
   options: Array<{ value: string; label: string }>;
   selectedOption: string | null;
@@ -1308,6 +1312,7 @@ export default function ReadingTestPage() {
   const testId = typeof params?.id === "string" ? params.id : "";
   const restartRequested = searchParams.get("restart") === "1";
   const modeParam = searchParams.get("mode");
+  const scopedPassageId = searchParams.get("passageId")?.trim() ?? "";
   const requestedMode: AttemptMode | null =
     modeParam === "real" || modeParam === "practice" ? modeParam : null;
   const reviewRequested = searchParams.get("review") === "1";
@@ -1452,10 +1457,15 @@ export default function ReadingTestPage() {
           if (!active) return;
           finalAttemptId = reviewAttemptId;
         } else {
-          const attempt = await studentAttemptsService.create({
-            practice_test: testId,
-            mode: requestedMode === "real" ? "REAL" : "PRACTICE"
-          });
+          const attempt = scopedPassageId
+            ? await studentAttemptsService.createScoped({
+                passage_id: scopedPassageId,
+                mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+              })
+            : await studentAttemptsService.create({
+                practice_test: testId,
+                mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+              });
           if (!active) return;
 
           const hydratedAttempt =
@@ -1479,10 +1489,15 @@ export default function ReadingTestPage() {
               });
               if (!active) return;
 
-              const freshAttempt = await studentAttemptsService.create({
-                practice_test: testId,
-                mode: requestedMode === "real" ? "REAL" : "PRACTICE"
-              });
+              const freshAttempt = scopedPassageId
+                ? await studentAttemptsService.createScoped({
+                    passage_id: scopedPassageId,
+                    mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+                  })
+                : await studentAttemptsService.create({
+                    practice_test: testId,
+                    mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+                  });
               if (!active) return;
               finalAttempt = hasAttemptQuestionData(freshAttempt)
                 ? freshAttempt
@@ -1525,7 +1540,7 @@ export default function ReadingTestPage() {
     return () => {
       active = false;
     };
-  }, [isGuest, requestedMode, restartRequested, reviewAttemptId, shouldLoadFromBackend, t, testId]);
+  }, [isGuest, requestedMode, restartRequested, reviewAttemptId, scopedPassageId, shouldLoadFromBackend, t, testId]);
 
   if (isLoading) {
     return (
@@ -3982,7 +3997,7 @@ function ReadingTestClient({
                                                       return part ? (
                                                         <InlineBoldText
                                                           key={`${question.id}-cell-text-${rowIndex}-${cellIndex}-${partIndex}`}
-                                                          text={part}
+                                                          text={normalizeTemplateDisplayText(part)}
                                                         />
                                                       ) : null;
                                                     }
@@ -4299,7 +4314,7 @@ function ReadingTestClient({
                                         return part ? (
                                           <HighlightableText
                                             key={partIndex}
-                                            text={part}
+                                            text={normalizeTemplateDisplayText(part)}
                                             enableMarkdownBold
                                             userHighlights={getQuestionLocalHighlights(summaryHighlightKey, partStart, part.length)}
                                             notesStorageKey={`reading:${test.id}:notes`}

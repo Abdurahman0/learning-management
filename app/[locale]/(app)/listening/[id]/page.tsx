@@ -1055,6 +1055,7 @@ export default function ListeningTestPage() {
 
   const testId = typeof params?.id === "string" ? params.id : "";
   const modeParam = searchParams.get("mode");
+  const scopedPartId = searchParams.get("partId")?.trim() ?? "";
   const requestedMode: AttemptMode | null =
     modeParam === "real" || modeParam === "practice" ? modeParam : null;
   const reviewRequested = searchParams.get("review") === "1";
@@ -1167,10 +1168,15 @@ export default function ListeningTestPage() {
           finalAttempt = await studentAttemptsService.getById(reviewAttemptId);
           finalAttemptId = reviewAttemptId;
         } else if (!isGuest) {
-          const createdAttempt = await studentAttemptsService.create({
-            practice_test: matched.id,
-            mode: requestedMode === "real" ? "REAL" : "PRACTICE"
-          });
+          const createdAttempt = scopedPartId
+            ? await studentAttemptsService.createScoped({
+                part_id: scopedPartId,
+                mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+              })
+            : await studentAttemptsService.create({
+                practice_test: matched.id,
+                mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+              });
           finalAttempt = createdAttempt.listening_parts?.length
             ? createdAttempt
             : await studentAttemptsService.getById(String(createdAttempt.id));
@@ -1186,10 +1192,15 @@ export default function ListeningTestPage() {
                 time_used_seconds: 0,
                 answers: []
               });
-              const refreshedAttempt = await studentAttemptsService.create({
-                practice_test: matched.id,
-                mode: requestedMode === "real" ? "REAL" : "PRACTICE"
-              });
+              const refreshedAttempt = scopedPartId
+                ? await studentAttemptsService.createScoped({
+                    part_id: scopedPartId,
+                    mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+                  })
+                : await studentAttemptsService.create({
+                    practice_test: matched.id,
+                    mode: requestedMode === "real" ? "REAL" : "PRACTICE"
+                  });
               finalAttempt = refreshedAttempt.listening_parts?.length
                 ? refreshedAttempt
                 : await studentAttemptsService.getById(String(refreshedAttempt.id));
@@ -1254,7 +1265,7 @@ export default function ListeningTestPage() {
     return () => {
       active = false;
     };
-  }, [isGuest, requestedMode, testId, reviewAttemptId, t]);
+  }, [isGuest, requestedMode, scopedPartId, testId, reviewAttemptId, t]);
 
   const test = getListeningTestById(resolvedTestId);
 

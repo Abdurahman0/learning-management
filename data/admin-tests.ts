@@ -45,6 +45,9 @@ export type AdminTest = {
   module: TestModule;
   testFormat?: "full" | "part" | "both";
   book: string;
+  displayOrder?: number | null;
+  groupId?: string | null;
+  groupName?: string | null;
   questions: number;
   difficulty: TestDifficulty;
   status: TestStatus;

@@ -14,6 +14,7 @@ import {gradeTest, type GradeableQuestion} from "@/lib/grading";
 import {loadAttemptResult} from "@/lib/test-attempt-storage";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
+import {DashboardFeedbackButton} from "../../../../dashboard/_components/DashboardFeedbackButton";
 import type {
   MistakeReasonCategory,
   MistakeReasonDetail,
@@ -504,6 +505,12 @@ export function ReadingSummaryPageClient() {
         aiAnalysisNotice={aiAnalysisNotice}
         onAiAnalysisClick={handleAiAnalysisClick}
       />
+
+      <div className="flex justify-end">
+        <DashboardFeedbackButton
+          onNotice={(notice) => setActionNotice(`${notice.title}: ${notice.description}`)}
+        />
+      </div>
 
       {/* Attempt metadata card is temporarily hidden. */}
       {/*

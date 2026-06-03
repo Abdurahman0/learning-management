@@ -6,6 +6,7 @@ import type {
   AdminPaginatedResponse,
   PracticeTestCreatePayload,
   PracticeTestDetailRecord,
+  PracticeTestGroupRecord,
   PracticeTestPatchPayload,
   PracticeTestRecord
 } from "./types";
@@ -196,6 +197,62 @@ export const practiceTestsService = {
         onUploadProgress: options?.onUploadProgress
       });
       return response.data;
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async reorder(orderedIds: Array<number | string>) {
+    try {
+      const response = await adminHttpClient.post<PracticeTestRecord[]>("/practice-tests/reorder/", {
+        ordered_ids: orderedIds
+      });
+      return Array.isArray(response.data) ? response.data : [];
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  }
+};
+
+export const practiceTestGroupsService = {
+  async list(params?: AdminListQuery & {is_active?: boolean}) {
+    try {
+      const response = await adminHttpClient.get<AdminPaginatedResponse<PracticeTestGroupRecord> | PracticeTestGroupRecord[]>(
+        "/practice-test-groups/",
+        {
+          params: {
+            ...toListQuery(params),
+            ...(typeof params?.is_active === "boolean" ? {is_active: params.is_active} : {})
+          }
+        }
+      );
+      return normalizeListResponse(response.data);
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async create(payload: {name: string; description?: string; is_active?: boolean}) {
+    try {
+      const response = await adminHttpClient.post<PracticeTestGroupRecord>("/practice-test-groups/", payload);
+      return response.data;
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async patch(groupId: number | string, payload: Partial<{name: string; description: string; is_active: boolean}>) {
+    try {
+      const response = await adminHttpClient.patch<PracticeTestGroupRecord>(`/practice-test-groups/${groupId}/`, payload);
+      return response.data;
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async remove(groupId: number | string) {
+    try {
+      await adminHttpClient.delete(`/practice-test-groups/${groupId}/`);
     } catch (error) {
       throw toAdminApiError(error);
     }

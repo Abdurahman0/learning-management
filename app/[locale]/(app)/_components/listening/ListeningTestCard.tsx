@@ -21,6 +21,13 @@ export function ListeningTestCard({test}: ListeningTestCardProps) {
   const locale = useLocale();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const scopedSection = test.testFormat === "part" && test.sections.length === 1 ? test.sections[0] : null;
+  const practiceHref = scopedSection?.id
+    ? `/${locale}/listening/${test.id}?mode=practice&partId=${encodeURIComponent(scopedSection.id)}`
+    : `/${locale}/listening/${test.id}?mode=practice`;
+  const realHref = scopedSection?.id
+    ? `/${locale}/listening/${test.id}?mode=real&partId=${encodeURIComponent(scopedSection.id)}`
+    : `/${locale}/listening/${test.id}?mode=real`;
 
   return (
     <Card className={cn("max-w-full overflow-hidden border-border bg-card py-0 shadow-sm", test.isPremium && "opacity-85", isOpen && !test.isPremium && "border-blue-600")}>
@@ -73,16 +80,39 @@ export function ListeningTestCard({test}: ListeningTestCardProps) {
 
         {isOpen && (
           <div className="max-w-full border-t border-border px-4 py-4">
-            <div className="grid min-w-0 max-w-full grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5 md:grid-cols-4">
-              {test.sections.map((section) => (
-                <div key={`${test.id}-${section.label}`} className="min-w-0 rounded-lg border border-border bg-background px-2.5 py-2 text-center">
-                  <p className="truncate break-words text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">{section.label}</p>
-                  <p className="mt-1 truncate break-words text-xs text-muted-foreground">{section.questions} {t("meta.questions")}</p>
-                </div>
-              ))}
-            </div>
+            {!scopedSection ? (
+              <div className="grid min-w-0 max-w-full grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5 md:grid-cols-4">
+                {test.sections.map((section) => (
+                  <div key={`${test.id}-${section.id ?? section.label}`} className="min-w-0 rounded-lg border border-border bg-background px-2.5 py-2 text-center">
+                    <p className="truncate break-words text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">{section.label}</p>
+                    <p className="mt-1 truncate break-words text-xs text-muted-foreground">{section.questions} {t("meta.questions")}</p>
+                    {!test.isPremium && section.id ? (
+                      <div className="mt-2 grid grid-cols-2 gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 rounded-lg text-xs"
+                          onClick={() => router.push(`/${locale}/listening/${test.id}?mode=practice&partId=${encodeURIComponent(section.id ?? "")}`)}
+                        >
+                          Practice
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 rounded-lg bg-blue-600 text-xs hover:bg-blue-600/90"
+                          onClick={() => router.push(`/${locale}/listening/${test.id}?mode=real&partId=${encodeURIComponent(section.id ?? "")}`)}
+                        >
+                          Real
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
-            <div className="mt-3.5">
+            <div className={cn(!scopedSection && "mt-3.5")}>
               {test.isPremium ? (
                 <Button
                   type="button"
@@ -97,14 +127,14 @@ export function ListeningTestCard({test}: ListeningTestCardProps) {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => router.push(`/${locale}/listening/${test.id}?mode=practice`)}
+                    onClick={() => router.push(practiceHref)}
                     className="h-10 w-full rounded-xl text-sm font-semibold"
                   >
                     Practice
                   </Button>
                   <Button
                     type="button"
-                    onClick={() => router.push(`/${locale}/listening/${test.id}?mode=real`)}
+                    onClick={() => router.push(realHref)}
                     className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90"
                   >
                     Real

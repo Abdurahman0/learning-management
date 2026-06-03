@@ -14,6 +14,7 @@ import { loadAttemptResult } from "@/lib/test-attempt-storage";
 import { getListeningTestById } from "@/data/listening-tests-full";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
+import {DashboardFeedbackButton} from "../../../dashboard/_components/DashboardFeedbackButton";
 import type {
   MistakeReasonCategory,
   MistakeReasonDetail,
@@ -409,6 +410,12 @@ export default function ListeningResultPage() {
         aiAnalysisNotice={aiAnalysisNotice}
         onAiAnalysisClick={scrollToAiInsights}
       />
+
+      <div className="flex justify-end">
+        <DashboardFeedbackButton
+          onNotice={(notice) => setActionNotice(`${notice.title}: ${notice.description}`)}
+        />
+      </div>
 
       <ListeningSectionPerformance items={backendReview.sectionPerformance} />
       <ListeningTypePerformance items={backendReview.typePerformance} />

@@ -48,6 +48,19 @@ export type PracticeTestRecord = {
   is_active: boolean;
   listening_parts_count: number;
   reading_passages_count: number;
+  display_order?: number | null;
+  group_id?: AdminEntityId | null;
+  group_name?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type PracticeTestGroupRecord = {
+  id: AdminEntityId;
+  name: string;
+  description: string;
+  is_active: boolean;
+  test_count: number;
   created_at?: string;
   updated_at?: string;
 };
@@ -153,6 +166,8 @@ export type PracticeTestCreatePayload = {
   difficulty_level: string;
   practice_source?: string | null;
   active_for_registered_users?: boolean;
+  display_order?: number | null;
+  group?: AdminEntityId | null;
   test_format: string;
   total_questions: number;
   time_limit_seconds: number | null;

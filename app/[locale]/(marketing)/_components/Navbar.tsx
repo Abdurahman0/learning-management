@@ -46,8 +46,7 @@ const practiceItems: PracticeItem[] = [
     key: "listening",
     descriptionKey: "listeningDescription",
     icon: Headphones,
-    href: "/listening",
-    enabled: true
+    enabled: false
   },
   {
     key: "writing",
@@ -350,13 +349,13 @@ export function Navbar() {
           >
             {t("nav.reading")}
           </Link>
-          <Link
-            href={localeHref("/listening")}
-            onClick={() => setIsMobileOpen(false)}
-            className="rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted/60"
-          >
-            {t("nav.listening")}
-          </Link>
+          <p className="flex cursor-not-allowed items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground">
+            <span>{t("nav.listening")}</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">
+              <Lock className="size-3" aria-hidden="true" />
+              {t("nav.comingSoon")}
+            </span>
+          </p>
           <p className="cursor-not-allowed rounded-xl px-3 py-2 text-sm font-medium text-muted-foreground">
             {t("nav.writing")} ({t("nav.comingSoon")})
           </p>

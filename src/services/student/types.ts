@@ -8,6 +8,7 @@ export type StudentListQuery = {
   module?: "READING" | "LISTENING" | "WRITING" | "SPEAKING" | string;
   reason?: "wrong" | "saved" | "weak_area" | "flagged" | string;
   dateRange?: "last_7_days" | "last_30_days" | "last_3_months" | "last_6_months" | "last_year" | string;
+  group_id?: string;
 };
 
 export type StudentPaginatedResponse<T> = {
@@ -75,6 +76,9 @@ export type StudentTestRecord = {
   difficulty_display: string;
   practice_source?: string | null;
   active_for_registered_users?: boolean;
+  display_order?: number | null;
+  group_id?: string | null;
+  group_name?: string | null;
   total_questions: number;
   time_limit_seconds: number | null;
   is_premium: boolean;
@@ -138,6 +142,9 @@ export type StudentAttemptDetail = {
   id: string;
   practice_test: string;
   practice_test_title: string;
+  scoped_reading_passage_id?: string | null;
+  scoped_listening_part_id?: string | null;
+  scoped_title?: string | null;
   test_type: string;
   mode: StudentAttemptMode | string;
   status: string;
@@ -173,6 +180,12 @@ export type StudentAttemptSavePayload = {
 
 export type StudentAttemptCreatePayload = {
   practice_test: string;
+  mode: StudentAttemptMode;
+};
+
+export type StudentScopedAttemptCreatePayload = {
+  passage_id?: string;
+  part_id?: string;
   mode: StudentAttemptMode;
 };
 

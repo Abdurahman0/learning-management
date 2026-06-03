@@ -1,6 +1,7 @@
 "use client";
 
-import {ChevronDown, ChevronLeft, ChevronRight} from "lucide-react";
+import {ChevronDown, ChevronLeft, ChevronRight, GripVertical} from "lucide-react";
+import type {DragEvent} from "react";
 import {useTranslations} from "next-intl";
 import {Fragment} from "react";
 
@@ -15,13 +16,19 @@ import {TestExpandedRow} from "./TestExpandedRow";
 
 type TestsTableProps = {
   tests: AdminTest[];
+  groups?: Array<{id: string; name: string}>;
   expandedTestIds: Set<string>;
   onToggleExpand: (testId: string) => void;
   onEdit: (testId: string) => void;
   onPreview: (testId: string) => void;
   onActivate: (testId: string) => void;
   onDelete: (testId: string) => void;
+  onAssignGroup?: (testId: string, groupId: string) => void;
   onEditPassage: (testId: string, passageId: string) => void;
+  onReorder?: (draggedId: string, targetId: string) => void;
+  draggingTestId?: string | null;
+  onDragStart?: (testId: string) => void;
+  onDragEnd?: () => void;
   page: number;
   pageSize: number;
   totalItems: number;
@@ -71,13 +78,19 @@ function getVisiblePages(page: number, totalPages: number) {
 
 export function TestsTable({
   tests,
+  groups = [],
   expandedTestIds,
   onToggleExpand,
   onEdit,
   onPreview,
   onActivate,
   onDelete,
+  onAssignGroup,
   onEditPassage,
+  onReorder,
+  draggingTestId,
+  onDragStart,
+  onDragEnd,
   page,
   pageSize,
   totalItems,
@@ -120,9 +133,36 @@ export function TestsTable({
 
                   return (
                     <Fragment key={test.id}>
-                      <TableRow className="h-[84px] cursor-pointer" onClick={() => onToggleExpand(test.id)}>
+                      <TableRow
+                        className={`h-[84px] cursor-pointer transition-colors ${draggingTestId === test.id ? "bg-blue-500/10 opacity-70" : ""}`}
+                        draggable={Boolean(onReorder)}
+                        onDragStart={(event: DragEvent<HTMLTableRowElement>) => {
+                          event.dataTransfer.effectAllowed = "move";
+                          event.dataTransfer.setData("application/x-admin-test-id", test.id);
+                          onDragStart?.(test.id);
+                        }}
+                        onDragOver={(event) => {
+                          if (!onReorder) return;
+                          event.preventDefault();
+                          event.dataTransfer.dropEffect = "move";
+                        }}
+                        onDrop={(event) => {
+                          if (!onReorder) return;
+                          event.preventDefault();
+                          const draggedId = event.dataTransfer.getData("application/x-admin-test-id");
+                          if (draggedId && draggedId !== test.id) {
+                            onReorder(draggedId, test.id);
+                          }
+                          onDragEnd?.();
+                        }}
+                        onDragEnd={onDragEnd}
+                        onClick={() => onToggleExpand(test.id)}
+                      >
                         <TableCell className="py-4">
                           <div className="flex items-center gap-3">
+                            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-background/55 text-muted-foreground">
+                              <GripVertical className="size-4" />
+                            </span>
                             <Button
                               variant="ghost"
                               size="icon-xs"
@@ -135,7 +175,12 @@ export function TestsTable({
                             >
                               <ChevronDown className={`size-4 transition-transform ${expanded ? "rotate-0" : "-rotate-90"}`} />
                             </Button>
-                            <p className="max-w-[280px] text-lg leading-[1.35] font-semibold tracking-tight">{test.name}</p>
+                            <div>
+                              <p className="max-w-[280px] text-lg leading-[1.35] font-semibold tracking-tight">{test.name}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                #{test.displayOrder ?? "-"}{test.groupName ? ` · ${test.groupName}` : ""}
+                              </p>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="py-4 text-base">{t(`modules.${test.module}`)}</TableCell>
@@ -158,7 +203,15 @@ export function TestsTable({
                             event.stopPropagation();
                           }}
                         >
-                          <TestActionsMenu test={test} onEdit={onEdit} onPreview={onPreview} onActivate={onActivate} onDelete={onDelete} />
+                          <TestActionsMenu
+                            test={test}
+                            groups={groups}
+                            onEdit={onEdit}
+                            onPreview={onPreview}
+                            onActivate={onActivate}
+                            onDelete={onDelete}
+                            onAssignGroup={onAssignGroup}
+                          />
                         </TableCell>
                       </TableRow>
 

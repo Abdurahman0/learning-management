@@ -4,6 +4,9 @@ export type PracticeSource = "custom" | "real" | "cambridge";
 export type ReadingGuestTest = {
   id: string;
   title: string;
+  groupId?: string | null;
+  groupName?: string | null;
+  displayOrder?: number | null;
   testFormat?: "full" | "part" | "both";
   isPremium: boolean;
   durationMinutes: number;
@@ -11,6 +14,7 @@ export type ReadingGuestTest = {
   difficulty: Difficulty;
   practiceSource: PracticeSource;
   passages: Array<{
+    id?: string;
     title: string;
     questionsCount: number;
     difficulty: Difficulty;
@@ -22,6 +26,9 @@ export type ListeningDifficulty = Difficulty;
 export type ListeningTestItem = {
   id: string;
   title: string;
+  groupId?: string | null;
+  groupName?: string | null;
+  displayOrder?: number | null;
   testFormat?: "full" | "part" | "both";
   isPremium: boolean;
   difficulty: ListeningDifficulty;
@@ -31,6 +38,8 @@ export type ListeningTestItem = {
   totalQuestions: number;
   sectionsCount?: number;
   sections: Array<{
+    id?: string;
+    title?: string;
     label: string;
     questions: number;
   }>;

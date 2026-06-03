@@ -206,7 +206,7 @@
       "easy": "Oson",
       "medium": "O'rta",
       "hard": "Qiyin",
-      "sortNewest": "Eng yangi",
+      "sortNewest": "Custom tartib",
       "sortPopular": "Ommabop",
       "sortHighest": "A-Z"
     },
@@ -1235,6 +1235,19 @@
     "toolbar": {
       "importCambridge": "Cambridge testini import qilish"
     },
+    "groups": {
+      "title": "Practice test guruhlari",
+      "description": "Cambridge IELTS 8 kabi to'plamlar yarating va testlarni ularga biriktiring.",
+      "empty": "Hali guruh yo'q.",
+      "namePlaceholder": "Guruh nomi",
+      "descriptionPlaceholder": "Qisqa izoh",
+      "create": "Guruh yaratish",
+      "assignTitle": "Testlarni guruhlarga biriktirish",
+      "noGroup": "Guruhsiz"
+    },
+    "ordering": {
+      "saving": "Test tartibi saqlanmoqda..."
+    },
     "filters": {
       "moduleLabel": "Modul",
       "difficultyLabel": "Daraja",
@@ -1281,7 +1294,7 @@
         "draft": "Qoralama"
       },
       "sort": {
-        "newest": "Eng yangi avval",
+        "newest": "Custom tartib",
         "oldest": "Eng eski avval",
         "alphabetical": "Alifbo bo'yicha"
       }
@@ -1324,6 +1337,7 @@
         "edit": "Testni tahrirlash",
         "preview": "Testni ko'rish",
         "activate": "Testni faollashtirish",
+        "assignGroup": "Guruhga o'tkazish",
         "delete": "Testni o'chirish"
       }
     },

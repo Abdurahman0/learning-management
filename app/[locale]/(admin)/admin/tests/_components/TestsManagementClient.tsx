@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
-import {CheckCircle2, Plus, Search, Upload} from "lucide-react";
+import {CheckCircle2, FolderPlus, Plus, Save, Search, Upload} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {useRouter} from "next/navigation";
 
@@ -22,8 +22,8 @@ import {
   type TestModule,
   type TestSort
 } from "@/data/admin-tests";
-import {practiceTestsService} from "@/src/services/admin/practiceTests.service";
-import type {PracticeTestDetailRecord, PracticeTestRecord} from "@/src/services/admin/types";
+import {practiceTestGroupsService, practiceTestsService} from "@/src/services/admin/practiceTests.service";
+import type {PracticeTestDetailRecord, PracticeTestGroupRecord, PracticeTestRecord} from "@/src/services/admin/types";
 
 import {AdminProfileMenu} from "../../_components/AdminProfileMenu";
 import {AdminSidebar, AdminSidebarMobileNav} from "../../_components/AdminSidebar";
@@ -123,6 +123,9 @@ function mapPracticeTestToAdminTest(item: PracticeTestRecord): AdminTest {
     module: testModule,
     testFormat,
     book: "Custom Practice",
+    displayOrder: typeof item.display_order === "number" ? item.display_order : null,
+    groupId: item.group_id == null ? null : String(item.group_id),
+    groupName: item.group_name ?? null,
     questions: Number(item.total_questions ?? 0),
     difficulty: mapDifficulty(item.difficulty_level),
     status: mapStatus(Boolean(item.is_active)),
@@ -160,6 +163,11 @@ export function TestsManagementClient() {
   const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("all");
   const [sortBy, setSortBy] = useState<TestSort>("newest");
   const [questionTypesByTestId, setQuestionTypesByTestId] = useState<Record<string, string[]>>({});
+  const [groups, setGroups] = useState<PracticeTestGroupRecord[]>([]);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupDescription, setNewGroupDescription] = useState("");
+  const [draggingTestId, setDraggingTestId] = useState<string | null>(null);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [page, setPage] = useState(1);
   const [expandedTestIds, setExpandedTestIds] = useState<Set<string>>(() => new Set());
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -174,7 +182,12 @@ export function TestsManagementClient() {
       try {
         const response = await practiceTestsService.list({page: 1, pageSize: 200});
         if (!active) return;
-        setTests(response.results.map(mapPracticeTestToAdminTest));
+        setTests(response.results.map(mapPracticeTestToAdminTest).sort((a, b) => {
+          const left = typeof a.displayOrder === "number" ? a.displayOrder : Number.MAX_SAFE_INTEGER;
+          const right = typeof b.displayOrder === "number" ? b.displayOrder : Number.MAX_SAFE_INTEGER;
+          if (left !== right) return left - right;
+          return a.name.localeCompare(b.name);
+        }));
       } catch {
         if (!active) return;
         setTests([]);
@@ -182,6 +195,27 @@ export function TestsManagementClient() {
     };
 
     void loadTests();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadGroups = async () => {
+      try {
+        const response = await practiceTestGroupsService.list({pageSize: 100});
+        if (!active) return;
+        setGroups(response.results);
+      } catch {
+        if (!active) return;
+        setGroups([]);
+      }
+    };
+
+    void loadGroups();
 
     return () => {
       active = false;
@@ -270,7 +304,10 @@ export function TestsManagementClient() {
 
     copy.sort((left, right) => {
       if (sortBy === "newest") {
-        return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+        const leftOrder = typeof left.displayOrder === "number" ? left.displayOrder : Number.MAX_SAFE_INTEGER;
+        const rightOrder = typeof right.displayOrder === "number" ? right.displayOrder : Number.MAX_SAFE_INTEGER;
+        if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+        return left.name.localeCompare(right.name);
       }
 
       if (sortBy === "oldest") {
@@ -420,6 +457,78 @@ export function TestsManagementClient() {
       );
     } catch {
       // Keep UI stable when API activation fails.
+    }
+  };
+
+  const handleCreateGroup = async () => {
+    const name = newGroupName.trim();
+    if (!name) return;
+
+    try {
+      const created = await practiceTestGroupsService.create({
+        name,
+        description: newGroupDescription.trim()
+      });
+      setGroups((current) => [...current, created]);
+      setNewGroupName("");
+      setNewGroupDescription("");
+    } catch {
+      // Keep UI stable when group creation fails.
+    }
+  };
+
+  const handleAssignGroup = async (testId: string, groupId: string) => {
+    const normalizedGroupId = groupId === "none" ? null : groupId;
+    const group = normalizedGroupId ? groups.find((item) => String(item.id) === normalizedGroupId) : null;
+    try {
+      await practiceTestsService.patch(testId, {group: normalizedGroupId});
+      setTests((current) =>
+        current.map((item) =>
+          item.id === testId
+            ? {
+                ...item,
+                groupId: normalizedGroupId,
+                groupName: group?.name ?? null
+              }
+            : item
+        )
+      );
+    } catch {
+      // Keep previous value if backend rejects assignment.
+    }
+  };
+
+  const handleReorder = async (draggedId: string, targetId: string) => {
+    const draggedIndex = sortedTests.findIndex((item) => item.id === draggedId);
+    const targetIndex = sortedTests.findIndex((item) => item.id === targetId);
+    if (draggedIndex < 0 || targetIndex < 0 || draggedIndex === targetIndex) return;
+
+    const reorderedVisible = [...sortedTests];
+    const [dragged] = reorderedVisible.splice(draggedIndex, 1);
+    reorderedVisible.splice(targetIndex, 0, dragged);
+
+    const visibleIds = new Set(reorderedVisible.map((item) => item.id));
+    const nextTests = [
+      ...reorderedVisible,
+      ...tests.filter((item) => !visibleIds.has(item.id))
+    ].map((item, index) => ({
+      ...item,
+      displayOrder: index + 1
+    }));
+
+    setTests(nextTests);
+    setIsSavingOrder(true);
+    try {
+      const response = await practiceTestsService.reorder(nextTests.map((item) => item.id));
+      const mapped = response.map(mapPracticeTestToAdminTest);
+      if (mapped.length) {
+        setTests(mapped);
+      }
+    } catch {
+      // Keep optimistic order; next page load will reconcile with backend if save failed.
+    } finally {
+      setIsSavingOrder(false);
+      setDraggingTestId(null);
     }
   };
 
@@ -593,21 +702,106 @@ export function TestsManagementClient() {
               </Button>
             </div>
 
+            <div className="grid gap-3 rounded-3xl border border-border/70 bg-card/70 p-4 lg:grid-cols-[1.2fr_1fr]">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex size-9 items-center justify-center rounded-xl bg-blue-500/12 text-blue-400">
+                    <FolderPlus className="size-4" />
+                  </span>
+                  <div>
+                    <h2 className="text-sm font-semibold">{t("groups.title")}</h2>
+                    <p className="text-xs text-muted-foreground">{t("groups.description")}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {groups.length ? (
+                    groups.map((group) => (
+                      <span key={String(group.id)} className="rounded-full border border-border/70 bg-background/55 px-3 py-1 text-xs font-medium">
+                        {group.name} · {group.test_count}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-muted-foreground">{t("groups.empty")}</span>
+                  )}
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                <Input
+                  value={newGroupName}
+                  onChange={(event) => setNewGroupName(event.target.value)}
+                  placeholder={t("groups.namePlaceholder")}
+                  className="h-10 rounded-xl border-border/70 bg-background/45"
+                />
+                <Input
+                  value={newGroupDescription}
+                  onChange={(event) => setNewGroupDescription(event.target.value)}
+                  placeholder={t("groups.descriptionPlaceholder")}
+                  className="h-10 rounded-xl border-border/70 bg-background/45"
+                />
+                <Button type="button" className="h-10 rounded-xl" onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
+                  <Plus className="size-4" />
+                  {t("groups.create")}
+                </Button>
+              </div>
+            </div>
+
+            {isSavingOrder ? (
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300">
+                <Save className="size-3.5" />
+                {t("ordering.saving")}
+              </div>
+            ) : null}
+
             <TestsTable
               tests={paginatedTests}
+              groups={groups.map((group) => ({id: String(group.id), name: group.name}))}
               expandedTestIds={expandedTestIds}
               onToggleExpand={handleToggleExpand}
               onEdit={handleEditTest}
               onPreview={handlePreviewTest}
               onActivate={handleActivate}
               onDelete={handleDelete}
+              onAssignGroup={handleAssignGroup}
               onEditPassage={handleEditPassage}
+              onReorder={handleReorder}
+              draggingTestId={draggingTestId}
+              onDragStart={setDraggingTestId}
+              onDragEnd={() => setDraggingTestId(null)}
               page={safePage}
               pageSize={PAGE_SIZE}
               totalItems={sortedTests.length}
               totalPages={totalPages}
               onPageChange={(nextPage) => setPage(Math.min(Math.max(1, nextPage), totalPages))}
             />
+
+            {paginatedTests.length ? (
+              <div className="rounded-3xl border border-border/70 bg-card/70 p-4">
+                <h2 className="text-sm font-semibold">{t("groups.assignTitle")}</h2>
+                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {paginatedTests.map((test) => (
+                    <div key={test.id} className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-background/45 p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{test.name}</p>
+                        <p className="text-xs text-muted-foreground">{test.groupName ?? t("groups.noGroup")}</p>
+                      </div>
+                      <Select value={test.groupId ?? "none"} onValueChange={(value) => handleAssignGroup(test.id, value)}>
+                        <SelectTrigger className="h-9 w-42 rounded-xl border-border/70 bg-card/70 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{t("groups.noGroup")}</SelectItem>
+                          {groups.map((group) => (
+                            <SelectItem key={String(group.id)} value={String(group.id)}>
+                              {group.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </main>
         </div>
       </div>

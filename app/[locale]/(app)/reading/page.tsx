@@ -2,9 +2,12 @@
 
 import {useEffect, useMemo, useState} from "react";
 import {useTranslations} from "next-intl";
+import {ChevronDown} from "lucide-react";
 
 import {studentTestsService} from "@/src/services/student/tests.service";
 import type {StudentTestRecord} from "@/src/services/student/types";
+import {Card, CardContent} from "@/components/ui/card";
+import {cn} from "@/lib/utils";
 
 import {useAppSessionRole} from "../_components/session/AppSessionContext";
 import {GuestCallout} from "../_components/listening/GuestCallout";
@@ -21,8 +24,12 @@ type SortFilter = "newest" | "az";
 type ReadingKindFilter = "full" | "passages";
 
 type ReadingGuestTest = {
+  listKey?: string;
   id: string;
   title: string;
+  groupId?: string | null;
+  groupName?: string | null;
+  displayOrder?: number | null;
   testFormat: "full" | "part" | "both";
   isPremium: boolean;
   durationMinutes: number;
@@ -30,6 +37,7 @@ type ReadingGuestTest = {
   difficulty: Difficulty;
   practiceSource: PracticeSource;
   passages: Array<{
+    id?: string;
     title: string;
     questionsCount: number;
     difficulty: Difficulty;
@@ -40,14 +48,110 @@ function isPassageTest(test: ReadingGuestTest) {
   return test.testFormat === "part" || test.passages.length === 1 || test.totalQuestions < 40 || test.durationMinutes <= 25;
 }
 
+function toPassagePracticeCards(tests: ReadingGuestTest[]) {
+  return tests.flatMap((test) => {
+    if (isPassageTest(test)) {
+      return [{...test, listKey: test.listKey ?? `${test.id}:passage`}];
+    }
+
+    return test.passages.map((passage, index) => ({
+      ...test,
+      listKey: `${test.id}:passage:${passage.id ?? index}`,
+      title: passage.title || `Passage ${index + 1}`,
+      testFormat: "part" as const,
+      durationMinutes: Math.max(1, Math.ceil(test.durationMinutes / Math.max(test.passages.length, 1))),
+      totalQuestions: passage.questionsCount,
+      passages: [passage]
+    }));
+  });
+}
+
+type ReadingListRow =
+  | {type: "test"; test: ReadingGuestTest}
+  | {type: "group"; id: string; name: string; tests: ReadingGuestTest[]};
+
+function buildReadingListRows(tests: ReadingGuestTest[]): ReadingListRow[] {
+  const rows: ReadingListRow[] = [];
+  const groups = new Map<string, Extract<ReadingListRow, {type: "group"}>>();
+
+  tests.forEach((test) => {
+    const groupId = test.groupId?.trim();
+    const groupName = test.groupName?.trim();
+
+    if (!groupId || !groupName) {
+      rows.push({type: "test", test});
+      return;
+    }
+
+    let group = groups.get(groupId);
+    if (!group) {
+      group = {type: "group", id: groupId, name: groupName, tests: []};
+      groups.set(groupId, group);
+      rows.push(group);
+    }
+
+    group.tests.push(test);
+  });
+
+  return rows;
+}
+
+function ReadingCardsList({tests}: {tests: ReadingGuestTest[]}) {
+  return (
+    <div className="space-y-3.5">
+      {buildReadingListRows(tests).map((row) => {
+        if (row.type === "test") {
+          return <ReadingTestCard key={row.test.listKey ?? row.test.id} test={row.test} />;
+        }
+
+        return <ReadingGroupCard key={`group-${row.id}`} group={row} />;
+      })}
+    </div>
+  );
+}
+
+function ReadingGroupCard({group}: {group: Extract<ReadingListRow, {type: "group"}>}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Card className={cn("border-border bg-card py-0 shadow-sm", isOpen && "border-blue-600")}>
+      <CardContent className="p-0">
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="flex w-full items-center justify-between gap-2 px-4 py-3.5 text-left"
+        >
+          <div className="min-w-0">
+            <span className="inline-flex h-6 items-center rounded-md bg-blue-100 px-2.5 text-[11px] font-semibold tracking-wide text-blue-700 uppercase dark:bg-blue-500/20 dark:text-blue-300">
+              Group
+            </span>
+            <h3 className="mt-2 truncate text-sm font-semibold text-foreground md:text-lg">{group.name}</h3>
+            <p className="mt-1.5 text-sm text-muted-foreground">{group.tests.length} tests</p>
+          </div>
+          <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
+        </button>
+
+        {isOpen ? (
+          <div className="space-y-3 border-t border-border px-4 py-4">
+            {group.tests.map((test) => (
+              <ReadingTestCard key={test.listKey ?? test.id} test={test} />
+            ))}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 function sortReadingTests(tests: ReadingGuestTest[], sort: SortFilter) {
   const copy = [...tests];
 
   copy.sort((a, b) => {
     if (sort === "newest") {
-      const aNum = Number(a.id.replace(/\D/g, ""));
-      const bNum = Number(b.id.replace(/\D/g, ""));
-      return bNum - aNum;
+      const aOrder = typeof a.displayOrder === "number" ? a.displayOrder : Number.MAX_SAFE_INTEGER;
+      const bOrder = typeof b.displayOrder === "number" ? b.displayOrder : Number.MAX_SAFE_INTEGER;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return a.title.localeCompare(b.title);
     }
 
     return a.title.localeCompare(b.title);
@@ -84,6 +188,7 @@ function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
   const passages =
     item.reading_passages.length > 0
       ? item.reading_passages.map((passage, index) => ({
+          id: passage.id,
           title: passage.title || `Passage ${index + 1}`,
           questionsCount: Number(passage.max_questions || 0),
           difficulty: testDifficulty
@@ -97,6 +202,9 @@ function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
   return {
     id: item.id,
     title: item.title || "Reading Test",
+    groupId: item.group_id ?? null,
+    groupName: item.group_name ?? null,
+    displayOrder: item.display_order ?? null,
     testFormat: explicitFormat === "full" && passages.length === 1 ? "part" : explicitFormat,
     isPremium: item.is_premium,
     durationMinutes: Math.max(1, Math.ceil((item.time_limit_seconds ?? 3600) / 60)),
@@ -104,6 +212,14 @@ function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
     difficulty: testDifficulty,
     practiceSource,
     passages
+  };
+}
+
+function mapStudentReadingTestWithOrderFallback(item: StudentTestRecord, index: number): ReadingGuestTest {
+  const mapped = mapStudentReadingTest(item);
+  return {
+    ...mapped,
+    displayOrder: typeof mapped.displayOrder === "number" ? mapped.displayOrder : index + 1
   };
 }
 
@@ -120,7 +236,7 @@ function asArray<T = unknown>(value: unknown): T[] {
 
 async function fetchPublicReadingTests() {
   const collected: StudentTestRecord[] = [];
-  let nextPath = "/api/public/tests/reading?page_size=100";
+  let nextPath = "/api/public/tests/reading?page_size=100&ordering=display_order";
 
   while (nextPath) {
     const response = await fetch(nextPath, {cache: "no-store"});
@@ -161,18 +277,19 @@ export default function ReadingPage() {
   const [source, setSource] = useState<SourceFilter>("all");
   const [sort, setSort] = useState<SortFilter>("newest");
   const [kind, setKind] = useState<ReadingKindFilter>("full");
+  const [groupId, setGroupId] = useState<string>("all");
 
   useEffect(() => {
     let active = true;
 
     const loadTests = async () => {
       try {
-        const results = isGuest
-          ? await fetchPublicReadingTests()
-          : (await studentTestsService.listReadingAllPages({pageSize: 100})).results;
+          const results = isGuest
+            ? await fetchPublicReadingTests()
+          : (await studentTestsService.listReadingAllPages({pageSize: 100, ordering: "display_order"})).results;
         if (!active) return;
         const visible = isGuest ? results.filter((item) => !item.active_for_registered_users) : results;
-        setApiTests(visible.map(mapStudentReadingTest));
+        setApiTests(visible.map(mapStudentReadingTestWithOrderFallback));
       } catch {
         if (!active) return;
         setApiTests([]);
@@ -203,16 +320,28 @@ export default function ReadingPage() {
       tests = tests.filter((test) => test.practiceSource === source);
     }
 
+    if (groupId !== "all") {
+      tests = tests.filter((test) => test.groupId === groupId);
+    }
+
     const searchValue = search.trim().toLowerCase();
     if (searchValue) {
       tests = tests.filter((test) => test.title.toLowerCase().includes(searchValue));
     }
 
     return sortReadingTests(tests, sort);
-  }, [apiTests, difficulty, search, sort, tab, source]);
+  }, [apiTests, difficulty, groupId, search, sort, tab, source]);
+
+  const groups = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const test of apiTests) {
+      if (test.groupId && test.groupName) map.set(test.groupId, test.groupName);
+    }
+    return [...map.entries()].map(([id, name]) => ({id, name}));
+  }, [apiTests]);
 
   const fullTests = useMemo(() => filteredTests.filter((test) => !isPassageTest(test)), [filteredTests]);
-  const passageTests = useMemo(() => filteredTests.filter(isPassageTest), [filteredTests]);
+  const passageTests = useMemo(() => toPassagePracticeCards(filteredTests), [filteredTests]);
 
   return (
     <div>
@@ -240,6 +369,28 @@ export default function ReadingPage() {
             />
           </div>
 
+          {groups.length ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setGroupId("all")}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${groupId === "all" ? "border-blue-500 bg-blue-500 text-white" : "border-border bg-card text-muted-foreground hover:text-foreground"}`}
+              >
+                All groups
+              </button>
+              {groups.map((group) => (
+                <button
+                  key={group.id}
+                  type="button"
+                  onClick={() => setGroupId(group.id)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${groupId === group.id ? "border-blue-500 bg-blue-500 text-white" : "border-border bg-card text-muted-foreground hover:text-foreground"}`}
+                >
+                  {group.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           <div className="mt-4 space-y-6">
             {kind === "full" ? (
               <section className="space-y-3.5">
@@ -248,7 +399,7 @@ export default function ReadingPage() {
                 <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{fullTests.length}</span>
               </div>
               {fullTests.length ? (
-                fullTests.map((test) => <ReadingTestCard key={test.id} test={test} />)
+                <ReadingCardsList tests={fullTests} />
               ) : (
                 <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("reading.noFullTests")}</p>
               )}
@@ -261,7 +412,7 @@ export default function ReadingPage() {
                 <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{passageTests.length}</span>
               </div>
               {passageTests.length ? (
-                passageTests.map((test) => <ReadingTestCard key={test.id} test={test} />)
+                <ReadingCardsList tests={passageTests} />
               ) : (
                 <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("reading.noPassages")}</p>
               )}

@@ -31,6 +31,10 @@ function tokenizeInlineBold(text: string): BoldToken[] {
   return tokens;
 }
 
+function normalizeLeadingBullet(text: string) {
+  return text.replace(/^(\s*)[-–—]\s+/, "$1• ");
+}
+
 export function InlineBoldText({
   text,
   className,
@@ -38,7 +42,8 @@ export function InlineBoldText({
   text: string;
   className?: string;
 }) {
-  const tokens = useMemo(() => tokenizeInlineBold(text), [text]);
+  const normalizedText = useMemo(() => normalizeLeadingBullet(text), [text]);
+  const tokens = useMemo(() => tokenizeInlineBold(normalizedText), [normalizedText]);
 
   return (
     <span className={cn(className)}>
@@ -54,4 +59,3 @@ export function InlineBoldText({
     </span>
   );
 }
-

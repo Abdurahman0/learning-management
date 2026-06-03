@@ -4,7 +4,7 @@ import {useMemo} from "react";
 import type React from "react";
 import {useRouter} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
-import {BookOpenText, Check, ChevronRight, ClipboardList, Headphones, LineChart} from "lucide-react";
+import {BookOpenText, Check, ChevronRight, ClipboardList, Headphones, LineChart, Lock} from "lucide-react";
 
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {cn} from "@/lib/utils";
@@ -33,6 +33,7 @@ export function GettingStartedCard({isVisible, completedSurvey, triedListening, 
       icon: React.ComponentType<{className?: string}>;
       bubble: string;
       onClick?: () => void;
+      locked?: boolean;
     }> = [
       {
         id: "survey",
@@ -48,7 +49,8 @@ export function GettingStartedCard({isVisible, completedSurvey, triedListening, 
         label: t("tasks.listening"),
         icon: Headphones,
         bubble: "border-blue-400/45 text-blue-300 bg-blue-500/10",
-        onClick: triedListening ? undefined : () => router.push(`/${locale}/listening`)
+        locked: true,
+        onClick: undefined
       },
       {
         id: "reading",
@@ -122,7 +124,9 @@ export function GettingStartedCard({isVisible, completedSurvey, triedListening, 
                   <span className="truncate text-sm font-medium text-foreground">{task.label}</span>
                 </div>
 
-                {task.onClick ? (
+                {task.locked ? (
+                  <Lock className="size-4 shrink-0 text-muted-foreground" />
+                ) : task.onClick ? (
                   <ChevronRight className="size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-foreground" />
                 ) : (
                   <span className="text-xs text-muted-foreground">{t("done")}</span>

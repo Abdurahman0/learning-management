@@ -21,6 +21,13 @@ export function ReadingTestCard({test}: ReadingTestCardProps) {
   const locale = useLocale();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const scopedPassage = test.testFormat === "part" && test.passages.length === 1 ? test.passages[0] : null;
+  const practiceHref = scopedPassage?.id
+    ? `/${locale}/reading/${test.id}?mode=practice&passageId=${encodeURIComponent(scopedPassage.id)}`
+    : `/${locale}/reading/${test.id}?mode=practice`;
+  const realHref = scopedPassage?.id
+    ? `/${locale}/reading/${test.id}?mode=real&passageId=${encodeURIComponent(scopedPassage.id)}`
+    : `/${locale}/reading/${test.id}?mode=real`;
 
   return (
     <Card className={cn("border-border bg-card py-0 shadow-sm", test.isPremium && "opacity-85", isOpen && !test.isPremium && "border-blue-600")}>
@@ -73,20 +80,43 @@ export function ReadingTestCard({test}: ReadingTestCardProps) {
 
         {isOpen && (
           <div className="border-t border-border px-4 py-4">
-            <div className="grid gap-2.5 sm:grid-cols-3">
-              {test.passages.map((passage, index) => (
-                <div key={passage.title} className="rounded-lg border border-border bg-background px-3 py-2.5">
-                  <p className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">{t("card.passage")} {index + 1}</p>
-                  <p className="mt-1.5 text-sm font-medium text-foreground">{passage.title}</p>
-                  <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span>{passage.questionsCount} {t("meta.questions")}</span>
-                    <span>|</span>
-                    <DifficultySignal difficulty={passage.difficulty} />
-                    <span>{t(`filters.${passage.difficulty}`)}</span>
-                  </p>
-                </div>
-              ))}
-            </div>
+            {!scopedPassage ? (
+              <div className="grid gap-2.5 sm:grid-cols-3">
+                {test.passages.map((passage, index) => (
+                  <div key={`${passage.id ?? passage.title}-${index}`} className="rounded-lg border border-border bg-background px-3 py-2.5">
+                    <p className="text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">{t("card.passage")} {index + 1}</p>
+                    <p className="mt-1.5 text-sm font-medium text-foreground">{passage.title}</p>
+                    <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span>{passage.questionsCount} {t("meta.questions")}</span>
+                      <span>|</span>
+                      <DifficultySignal difficulty={passage.difficulty} />
+                      <span>{t(`filters.${passage.difficulty}`)}</span>
+                    </p>
+                    {!test.isPremium && passage.id ? (
+                      <div className="mt-2 grid grid-cols-2 gap-1.5">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 rounded-lg text-xs"
+                          onClick={() => router.push(`/${locale}/reading/${test.id}?mode=practice&passageId=${encodeURIComponent(passage.id ?? "")}`)}
+                        >
+                          Practice
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 rounded-lg bg-blue-600 text-xs hover:bg-blue-600/90"
+                          onClick={() => router.push(`/${locale}/reading/${test.id}?mode=real&passageId=${encodeURIComponent(passage.id ?? "")}`)}
+                        >
+                          Real
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
             <div className="mt-3.5">
               {test.isPremium ? (
@@ -99,14 +129,14 @@ export function ReadingTestCard({test}: ReadingTestCardProps) {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => router.push(`/${locale}/reading/${test.id}?mode=practice`)}
+                    onClick={() => router.push(practiceHref)}
                     className="h-10 w-full rounded-xl text-sm font-semibold"
                   >
                     Practice
                   </Button>
                   <Button
                     type="button"
-                    onClick={() => router.push(`/${locale}/reading/${test.id}?mode=real`)}
+                    onClick={() => router.push(realHref)}
                     className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90"
                   >
                     Real

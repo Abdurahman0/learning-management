@@ -25,8 +25,8 @@
   },
   "hero": {
     "badge": "Updated for 2026 Exam",
-    "title": "Train like the real exam - Improve like a pro",
-    "titleAccent": "Practise->Analyze->Improve->Repeat",
+    "title": "Train like in the real exam - Improve like a pro",
+    "titleAccent": "Practise -> Analyze -> Improve -> Repeat",
     "flow": {
       "practice": "Practise",
       "analyze": "Analyze",
@@ -206,7 +206,7 @@
       "easy": "Easy",
       "medium": "Medium",
       "hard": "Hard",
-      "sortNewest": "Newest",
+      "sortNewest": "Custom order",
       "sortPopular": "Popular",
       "sortHighest": "A-Z"
     },
@@ -1235,6 +1235,19 @@
     "toolbar": {
       "importCambridge": "Import Cambridge Test"
     },
+    "groups": {
+      "title": "Practice test groups",
+      "description": "Create collections like Cambridge IELTS 8 and assign tests to them.",
+      "empty": "No groups yet.",
+      "namePlaceholder": "Group name",
+      "descriptionPlaceholder": "Short description",
+      "create": "Create group",
+      "assignTitle": "Assign tests to groups",
+      "noGroup": "No group"
+    },
+    "ordering": {
+      "saving": "Saving test order..."
+    },
     "filters": {
       "moduleLabel": "Module",
       "difficultyLabel": "Difficulty",
@@ -1281,7 +1294,7 @@
         "draft": "Draft"
       },
       "sort": {
-        "newest": "Newest First",
+        "newest": "Custom Order",
         "oldest": "Oldest First",
         "alphabetical": "Alphabetical"
       }
@@ -1324,6 +1337,7 @@
         "edit": "Edit test",
         "preview": "Preview test",
         "activate": "Activate test",
+        "assignGroup": "Move to group",
         "delete": "Delete test"
       }
     },

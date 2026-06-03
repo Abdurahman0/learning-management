@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {ArrowRight, Play} from "lucide-react";
+import {ArrowRight, Lock, Play} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {Badge} from "@/components/ui/badge";
@@ -22,17 +22,18 @@ export function Hero() {
             </Badge>
 
             <h1 className="max-w-2xl text-4xl leading-[1.05] font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-[62px]">
-              {t("hero.title")}{" "}
-              <span className="inline-flex flex-wrap items-center gap-2 text-blue-600 sm:gap-3">
-                <span>{t("hero.flow.practice")}</span>
-                <span className="text-[0.72em] text-blue-500" aria-hidden="true">→</span>
-                <span>{t("hero.flow.analyze")}</span>
-                <span className="text-[0.72em] text-blue-500" aria-hidden="true">→</span>
-                <span>{t("hero.flow.improve")}</span>
-                <span className="text-[0.72em] text-blue-500" aria-hidden="true">→</span>
-                <span>{t("hero.flow.repeat")}</span>
-              </span>
+              {t("hero.title")}
             </h1>
+
+            <div className="mt-4 inline-flex max-w-2xl flex-wrap items-center gap-2 text-lg font-semibold tracking-tight text-blue-600 sm:gap-3 sm:text-xl lg:text-2xl">
+              <span>{t("hero.flow.practice")}</span>
+              <span className="text-[0.72em] text-blue-500" aria-hidden="true">-&gt;</span>
+              <span>{t("hero.flow.analyze")}</span>
+              <span className="text-[0.72em] text-blue-500" aria-hidden="true">-&gt;</span>
+              <span>{t("hero.flow.improve")}</span>
+              <span className="text-[0.72em] text-blue-500" aria-hidden="true">-&gt;</span>
+              <span>{t("hero.flow.repeat")}</span>
+            </div>
 
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">{t("hero.description")}</p>
 
@@ -44,12 +45,13 @@ export function Hero() {
                 </Link>
               </Button>
               <Button
-                asChild
                 size="lg"
                 variant="outline"
-                className="rounded-lg border-border bg-card px-6 text-foreground hover:bg-muted/50"
+                disabled
+                className="cursor-not-allowed rounded-lg border-border bg-card px-6 text-muted-foreground"
               >
-                <Link href={`/${locale}/listening`}>{t("hero.startListening")}</Link>
+                <Lock className="size-4" aria-hidden="true" />
+                {t("hero.startListening")}
               </Button>
             </div>
 

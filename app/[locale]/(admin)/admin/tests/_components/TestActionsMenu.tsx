@@ -1,6 +1,6 @@
 "use client";
 
-import {CheckCircle2, EllipsisVertical, Eye, FilePenLine, Trash2} from "lucide-react";
+import {CheckCircle2, EllipsisVertical, Eye, FilePenLine, FolderInput, Trash2} from "lucide-react";
 import {useTranslations} from "next-intl";
 import {useState} from "react";
 
@@ -9,10 +9,20 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import type {AdminTest} from "@/data/admin-tests";
+
+type TestGroupOption = {
+  id: string;
+  name: string;
+};
 
 type TestActionsMenuProps = {
   test: AdminTest;
@@ -20,9 +30,11 @@ type TestActionsMenuProps = {
   onPreview: (testId: string) => void;
   onActivate: (testId: string) => void;
   onDelete: (testId: string) => void;
+  groups?: TestGroupOption[];
+  onAssignGroup?: (testId: string, groupId: string) => void;
 };
 
-export function TestActionsMenu({test, onEdit, onPreview, onActivate, onDelete}: TestActionsMenuProps) {
+export function TestActionsMenu({test, onEdit, onPreview, onActivate, onDelete, groups = [], onAssignGroup}: TestActionsMenuProps) {
   const t = useTranslations("adminTests");
   const [open, setOpen] = useState(false);
 
@@ -60,6 +72,30 @@ export function TestActionsMenu({test, onEdit, onPreview, onActivate, onDelete}:
             <CheckCircle2 className="size-4" />
             {t("table.actions.activate")}
           </DropdownMenuItem>
+        ) : null}
+        {onAssignGroup ? (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <FolderInput className="mr-2 size-4" />
+              {t("table.actions.assignGroup")}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-56">
+              <DropdownMenuRadioGroup
+                value={test.groupId ?? "none"}
+                onValueChange={(value) => {
+                  onAssignGroup(test.id, value);
+                  setOpen(false);
+                }}
+              >
+                <DropdownMenuRadioItem value="none">{t("groups.noGroup")}</DropdownMenuRadioItem>
+                {groups.map((group) => (
+                  <DropdownMenuRadioItem key={group.id} value={group.id}>
+                    <span className="truncate">{group.name}</span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
         ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuItem

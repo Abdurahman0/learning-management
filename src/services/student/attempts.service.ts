@@ -7,6 +7,7 @@ import type {
   StudentAttemptQuestionGroup,
   StudentAttemptReadingPassage,
   StudentAttemptReviewResponse,
+  StudentScopedAttemptCreatePayload,
   StudentAttemptSavePayload,
   StudentAttemptSaveResponse
 } from "./types";
@@ -151,6 +152,9 @@ function normalizeAttemptDetail(data: unknown): StudentAttemptDetail {
     id: toStringSafe(record?.id),
     practice_test: toStringSafe(record?.practice_test),
     practice_test_title: toStringSafe(record?.practice_test_title),
+    scoped_reading_passage_id: typeof record?.scoped_reading_passage_id === "string" ? record.scoped_reading_passage_id : null,
+    scoped_listening_part_id: typeof record?.scoped_listening_part_id === "string" ? record.scoped_listening_part_id : null,
+    scoped_title: typeof record?.scoped_title === "string" ? record.scoped_title : null,
     test_type: toStringSafe(record?.test_type),
     mode: toStringSafe(record?.mode),
     status: toStringSafe(record?.status),
@@ -282,6 +286,15 @@ export const studentAttemptsService = {
   async create(payload: StudentAttemptCreatePayload) {
     try {
       const response = await studentHttpClient.post("/attempts/", payload);
+      return normalizeAttemptDetail(response.data);
+    } catch (error) {
+      throw toStudentApiError(error);
+    }
+  },
+
+  async createScoped(payload: StudentScopedAttemptCreatePayload) {
+    try {
+      const response = await studentHttpClient.post("/passage-attempts/", payload);
       return normalizeAttemptDetail(response.data);
     } catch (error) {
       throw toStudentApiError(error);

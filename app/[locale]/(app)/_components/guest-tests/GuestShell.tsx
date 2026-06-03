@@ -38,17 +38,16 @@ type MobileTestNavItem = {
 };
 
 function isBackendOnlySupportedStudentPath(pathWithoutLocale: string) {
-  const allowedPrefixes = ["/dashboard", "/reading", "/listening", "/mistake-analysis", "/settings", "/onboarding"];
+  const allowedPrefixes = ["/dashboard", "/reading", "/mistake-analysis", "/settings", "/onboarding"];
   const blockedPrefixes = ["/messages", "/assignments", "/study-bank", "/vocabulary", "/review-center", "/sessions", "/result"];
 
   if (blockedPrefixes.some((prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`))) {
     return false;
   }
 
-  const isListeningResultOrReview = /^\/listening\/[^/]+\/(?:result|review)(?:\/)?$/.test(pathWithoutLocale);
   const isReadingResultOrReview = /^\/reading\/[^/]+\/(?:result|review)(?:\/)?$/.test(pathWithoutLocale);
 
-  if (isListeningResultOrReview || isReadingResultOrReview) {
+  if (isReadingResultOrReview) {
     return true;
   }
 
@@ -70,8 +69,8 @@ export function GuestShell({children}: GuestShellProps) {
   const baseRoute = `/${locale}`;
   const dashboardHref = role === "admin" ? `/${locale}/admin` : role === "teacher" ? `/${locale}/teacher` : `/${locale}/dashboard`;
   const topLevelRoutes = isGuest
-    ? "(reading|listening|settings)"
-    : "(dashboard|reading|listening|mistake-analysis|settings)";
+    ? "(reading|settings)"
+    : "(dashboard|reading|mistake-analysis|settings)";
   const isMobileHeaderVisible = new RegExp(`^${baseRoute}/${topLevelRoutes}/?$`).test(pathname);
   const pathWithoutLocale = pathname.replace(/^\/(uz|en)(?=\/|$)/, "") || "/";
   const hideSidebar = /^\/(reading|listening)\/[^/]+(?:\/result)?\/?$/.test(pathWithoutLocale)
@@ -79,6 +78,13 @@ export function GuestShell({children}: GuestShellProps) {
     || /^\/result\/[^/]+\/?$/.test(pathWithoutLocale)
     || /^\/onboarding\/?$/.test(pathWithoutLocale);
   const isBackendOnlySupported = isBackendOnlySupportedStudentPath(pathWithoutLocale);
+
+  useEffect(() => {
+    if (!isGuest && !isStudent) return;
+    if (!(pathWithoutLocale === "/listening" || pathWithoutLocale.startsWith("/listening/"))) return;
+
+    router.replace(`/${locale}/reading`);
+  }, [isGuest, isStudent, locale, pathWithoutLocale, router]);
 
   useEffect(() => {
     if (!isStudent) return;
@@ -101,8 +107,7 @@ export function GuestShell({children}: GuestShellProps) {
     // Only force-focus new users on safe top-level pages (avoid interrupting tests/results).
     const isSafeLanding =
       pathWithoutLocale === "/dashboard" ||
-      pathWithoutLocale === "/reading" ||
-      pathWithoutLocale === "/listening";
+      pathWithoutLocale === "/reading";
 
     if (!isSafeLanding) return;
 
@@ -121,12 +126,12 @@ export function GuestShell({children}: GuestShellProps) {
 
   const mobileTestItems: MobileTestNavItem[] = [
     {key: "reading", label: t("sidebar.reading"), href: `/${locale}/reading`, icon: BookOpen, disabled: false},
-    {key: "listening", label: t("sidebar.listening"), href: `/${locale}/listening`, icon: Headphones, disabled: false},
+    {key: "listening", label: t("sidebar.listening"), icon: Headphones, disabled: true},
     {key: "writing", label: t("sidebar.writingSoon"), icon: PenLine, disabled: true},
     {key: "speaking", label: t("sidebar.speakingSoon"), icon: Mic, disabled: true}
   ];
 
-  const testsRouteActive = pathname.startsWith(`/${locale}/reading`) || pathname.startsWith(`/${locale}/listening`);
+  const testsRouteActive = pathname.startsWith(`/${locale}/reading`);
   const [mobileTestsOpen, setMobileTestsOpen] = useState(testsRouteActive);
   const mobileTestsExpanded = testsRouteActive || mobileTestsOpen;
 

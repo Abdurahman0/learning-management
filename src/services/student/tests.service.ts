@@ -25,6 +25,9 @@ function normalizeTestRecord(item: StudentTestRecord): StudentTestRecord {
     difficulty_display: String(item.difficulty_display ?? ""),
     practice_source: item.practice_source ?? null,
     active_for_registered_users: Boolean((item as StudentTestRecord & {active_for_registered_users?: unknown}).active_for_registered_users),
+    display_order: typeof item.display_order === "number" ? item.display_order : null,
+    group_id: typeof item.group_id === "string" ? item.group_id : item.group_id == null ? null : String(item.group_id),
+    group_name: typeof item.group_name === "string" ? item.group_name : null,
     total_questions: Number(item.total_questions ?? 0),
     time_limit_seconds: typeof item.time_limit_seconds === "number" ? item.time_limit_seconds : null,
     is_premium: Boolean(item.is_premium),
@@ -121,5 +124,21 @@ export const studentTestsService = {
   },
   listReadingAllPages(params?: StudentListQuery) {
     return fetchAllPages("/tests/reading/", params);
+  },
+  async listReadingPassages(testId: string) {
+    try {
+      const response = await studentHttpClient.get(`/tests/${encodeURIComponent(testId)}/passages/`);
+      return toArray<StudentTestRecord["reading_passages"][number]>(response.data);
+    } catch (error) {
+      throw toStudentApiError(error);
+    }
+  },
+  async listListeningParts(testId: string) {
+    try {
+      const response = await studentHttpClient.get(`/tests/${encodeURIComponent(testId)}/parts/`);
+      return toArray<StudentTestRecord["listening_parts"][number]>(response.data);
+    } catch (error) {
+      throw toStudentApiError(error);
+    }
   }
 };
