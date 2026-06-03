@@ -298,6 +298,7 @@ export default function ListeningPage() {
   const [sort, setSort] = useState<SortFilter>("newest");
   const [kind, setKind] = useState<ListeningKindFilter>("full");
   const [groupId, setGroupId] = useState<string>("all");
+  const showGroupFilters = source !== "real";
 
   useEffect(() => {
     let active = true;
@@ -323,6 +324,12 @@ export default function ListeningPage() {
     };
   }, [isGuest]);
 
+  useEffect(() => {
+    if (!showGroupFilters && groupId !== "all") {
+      setGroupId("all");
+    }
+  }, [groupId, showGroupFilters]);
+
   const filteredTests = useMemo(() => {
     let tests = [...apiTests];
 
@@ -340,7 +347,7 @@ export default function ListeningPage() {
       tests = tests.filter((test) => test.practiceSource === source);
     }
 
-    if (groupId !== "all") {
+    if (showGroupFilters && groupId !== "all") {
       tests = tests.filter((test) => test.groupId === groupId);
     }
 
@@ -350,7 +357,7 @@ export default function ListeningPage() {
     }
 
     return sortListeningTests(tests, sort);
-  }, [apiTests, difficulty, groupId, search, sort, tab, source]);
+  }, [apiTests, difficulty, groupId, search, showGroupFilters, sort, tab, source]);
 
   const groups = useMemo(() => {
     const map = new Map<string, string>();
@@ -389,7 +396,7 @@ export default function ListeningPage() {
             />
           </div>
 
-          {groups.length ? (
+          {showGroupFilters && groups.length ? (
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"

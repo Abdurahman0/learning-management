@@ -96,25 +96,50 @@ function buildReadingListRows(tests: ReadingGuestTest[]): ReadingListRow[] {
   return rows;
 }
 
-function ReadingCardsList({tests}: {tests: ReadingGuestTest[]}) {
+function ReadingCardsList({
+  tests,
+  layout = "stack",
+  allowGroups = true
+}: {
+  tests: ReadingGuestTest[];
+  layout?: "stack" | "grid";
+  allowGroups?: boolean;
+}) {
+  const isGrid = layout === "grid";
+  const rows = allowGroups
+    ? buildReadingListRows(tests)
+    : tests.map<ReadingListRow>((test) => ({type: "test", test}));
+
   return (
-    <div className="space-y-3.5">
-      {buildReadingListRows(tests).map((row) => {
+    <div className={isGrid ? "grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-4" : "space-y-3.5"}>
+      {rows.map((row) => {
         if (row.type === "test") {
           return <ReadingTestCard key={row.test.listKey ?? row.test.id} test={row.test} />;
         }
 
-        return <ReadingGroupCard key={`group-${row.id}`} group={row} />;
+        return (
+          <ReadingGroupCard
+            key={`group-${row.id}`}
+            group={row}
+            className={isGrid ? "md:col-span-2 xl:col-span-4" : undefined}
+          />
+        );
       })}
     </div>
   );
 }
 
-function ReadingGroupCard({group}: {group: Extract<ReadingListRow, {type: "group"}>}) {
+function ReadingGroupCard({
+  group,
+  className
+}: {
+  group: Extract<ReadingListRow, {type: "group"}>;
+  className?: string;
+}) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <Card className={cn("border-border bg-card py-0 shadow-sm", isOpen && "border-blue-600")}>
+    <Card className={cn("border-border bg-card py-0 shadow-sm", isOpen && "border-blue-600", className)}>
       <CardContent className="p-0">
         <button
           type="button"
@@ -278,6 +303,7 @@ export default function ReadingPage() {
   const [sort, setSort] = useState<SortFilter>("newest");
   const [kind, setKind] = useState<ReadingKindFilter>("full");
   const [groupId, setGroupId] = useState<string>("all");
+  const showGroupFilters = source !== "real";
 
   useEffect(() => {
     let active = true;
@@ -303,6 +329,12 @@ export default function ReadingPage() {
     };
   }, [isGuest]);
 
+  useEffect(() => {
+    if (!showGroupFilters && groupId !== "all") {
+      setGroupId("all");
+    }
+  }, [groupId, showGroupFilters]);
+
   const filteredTests = useMemo(() => {
     let tests = [...apiTests];
 
@@ -320,7 +352,7 @@ export default function ReadingPage() {
       tests = tests.filter((test) => test.practiceSource === source);
     }
 
-    if (groupId !== "all") {
+    if (showGroupFilters && groupId !== "all") {
       tests = tests.filter((test) => test.groupId === groupId);
     }
 
@@ -330,7 +362,7 @@ export default function ReadingPage() {
     }
 
     return sortReadingTests(tests, sort);
-  }, [apiTests, difficulty, groupId, search, sort, tab, source]);
+  }, [apiTests, difficulty, groupId, search, showGroupFilters, sort, tab, source]);
 
   const groups = useMemo(() => {
     const map = new Map<string, string>();
@@ -369,7 +401,7 @@ export default function ReadingPage() {
             />
           </div>
 
-          {groups.length ? (
+          {showGroupFilters && groups.length ? (
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -412,7 +444,7 @@ export default function ReadingPage() {
                 <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{passageTests.length}</span>
               </div>
               {passageTests.length ? (
-                <ReadingCardsList tests={passageTests} />
+                <ReadingCardsList tests={passageTests} layout="grid" allowGroups={false} />
               ) : (
                 <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("reading.noPassages")}</p>
               )}
