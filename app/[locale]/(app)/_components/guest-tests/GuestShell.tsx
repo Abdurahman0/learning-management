@@ -37,6 +37,14 @@ type MobileTestNavItem = {
   href?: string;
 };
 
+const LOCKED_PRACTICE_PREFIXES = ["/listening", "/writing", "/speaking"] as const;
+
+function isLockedPracticePath(pathWithoutLocale: string) {
+  return LOCKED_PRACTICE_PREFIXES.some((prefix) => (
+    pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`)
+  ));
+}
+
 function isBackendOnlySupportedStudentPath(pathWithoutLocale: string) {
   const allowedPrefixes = ["/dashboard", "/reading", "/mistake-analysis", "/settings", "/onboarding"];
   const blockedPrefixes = ["/messages", "/assignments", "/study-bank", "/vocabulary", "/review-center", "/sessions", "/result"];
@@ -78,13 +86,14 @@ export function GuestShell({children}: GuestShellProps) {
     || /^\/result\/[^/]+\/?$/.test(pathWithoutLocale)
     || /^\/onboarding\/?$/.test(pathWithoutLocale);
   const isBackendOnlySupported = isBackendOnlySupportedStudentPath(pathWithoutLocale);
+  const isLockedPracticeRoute = isLockedPracticePath(pathWithoutLocale);
 
   useEffect(() => {
     if (!isGuest && !isStudent) return;
-    if (!(pathWithoutLocale === "/listening" || pathWithoutLocale.startsWith("/listening/"))) return;
+    if (!isLockedPracticeRoute) return;
 
     router.replace(`/${locale}/reading`);
-  }, [isGuest, isStudent, locale, pathWithoutLocale, router]);
+  }, [isGuest, isStudent, isLockedPracticeRoute, locale, router]);
 
   useEffect(() => {
     if (!isStudent) return;
@@ -149,7 +158,7 @@ export function GuestShell({children}: GuestShellProps) {
       <div className="flex">
         {hideSidebar ? null : <GuestSidebar usedTests={usedTests} totalTests={totalTests} role={role} />}
         <main className="min-h-screen min-w-0 flex-1 px-4 py-4 sm:px-5 lg:px-10 lg:py-8">
-          {!isBackendOnlySupported ? (
+          {!isBackendOnlySupported && !isLockedPracticeRoute ? (
             <div className="mx-auto w-full max-w-245 pt-4">
               <Card className="border-border/70 bg-card/90">
                 <CardHeader>
