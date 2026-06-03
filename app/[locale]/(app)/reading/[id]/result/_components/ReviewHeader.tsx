@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type {ReactNode} from "react";
 import { ArrowLeft, RotateCcw, Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -29,6 +30,7 @@ type ReviewHeaderProps = {
   aiAnalysisLabel?: string;
   aiAnalysisNotice?: string | null;
   onAiAnalysisClick?: () => void;
+  feedbackAction?: ReactNode;
 };
 
 export function ReviewHeader({
@@ -51,6 +53,7 @@ export function ReviewHeader({
   aiAnalysisLabel,
   aiAnalysisNotice = null,
   onAiAnalysisClick,
+  feedbackAction,
 }: ReviewHeaderProps) {
   const locale = useLocale();
   const t = useTranslations("readingResult");
@@ -123,21 +126,26 @@ export function ReviewHeader({
               </Button>
             </div>
 
-            {showAiAnalysisButton ? (
+            {showAiAnalysisButton || feedbackAction ? (
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end sm:shrink-0">
                 {aiAnalysisNotice ? (
                   <p className="max-w-sm rounded-xl border border-amber-300/70 bg-amber-100/80 px-3 py-2 text-xs font-medium text-amber-800 shadow-sm dark:border-amber-500/35 dark:bg-amber-500/10 dark:text-amber-100">
                     {aiAnalysisNotice}
                   </p>
                 ) : null}
-                <Button
-                  type="button"
-                  onClick={onAiAnalysisClick}
-                  className="h-10 rounded-xl border-0 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-500 hover:via-cyan-500 hover:to-emerald-400 hover:text-white dark:shadow-blue-950/40"
-                >
-                  <Sparkles className="size-4" />
-                  {aiAnalysisLabel ?? (t.has("aiAnalysis") ? t("aiAnalysis") : "AI analysis")}
-                </Button>
+                <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+                  {feedbackAction}
+                  {showAiAnalysisButton ? (
+                    <Button
+                      type="button"
+                      onClick={onAiAnalysisClick}
+                      className="h-10 rounded-xl border-0 bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:from-blue-500 hover:via-cyan-500 hover:to-emerald-400 hover:text-white dark:shadow-blue-950/40"
+                    >
+                      <Sparkles className="size-4" />
+                      {aiAnalysisLabel ?? (t.has("aiAnalysis") ? t("aiAnalysis") : "AI analysis")}
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </div>

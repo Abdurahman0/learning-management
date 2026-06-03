@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useState} from "react";
-import {Loader2, MessageSquareText, X} from "lucide-react";
+import {Loader2, MessageSquareText, SendHorizontal, X} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Button} from "@/components/ui/button";
@@ -103,19 +103,36 @@ export function DashboardFeedbackButton({className, onNotice}: DashboardFeedback
       </Button>
 
       {open ? (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true">
-          <Card className="w-full max-w-xl overflow-hidden rounded-3xl border-border/70 bg-card shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 px-4 py-6 backdrop-blur-md animate-in fade-in duration-150"
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeModal();
+            }
+          }}
+        >
+          <Card
+            className="w-full max-w-2xl overflow-hidden rounded-[2rem] border-slate-200/80 bg-white shadow-[0_30px_90px_-45px_rgba(15,23,42,0.65)] animate-in zoom-in-95 duration-200 dark:border-border/70 dark:bg-card dark:shadow-black/40"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <CardContent className="p-0">
-              <div className="border-b border-border/70 bg-linear-to-br from-blue-600/12 via-cyan-500/8 to-background px-5 py-5 sm:px-6">
+              <div className="relative overflow-hidden border-b border-slate-200/80 bg-linear-to-br from-blue-50 via-cyan-50/70 to-white px-5 py-5 dark:border-border/70 dark:from-blue-950/35 dark:via-cyan-950/15 dark:to-card sm:px-6">
+                <div className="pointer-events-none absolute -top-16 -right-12 size-40 rounded-full bg-blue-400/20 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-20 left-10 size-44 rounded-full bg-cyan-400/20 blur-3xl" />
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold tracking-[0.18em] text-blue-600 uppercase dark:text-blue-300">{t("eyebrow")}</p>
-                    <h2 className="mt-2 text-xl font-semibold tracking-tight text-foreground">{t("title")}</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/80 px-3 py-1 text-xs font-semibold tracking-[0.14em] text-blue-700 uppercase shadow-sm dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
+                      <MessageSquareText className="size-3.5" aria-hidden="true" />
+                      {t("eyebrow")}
+                    </span>
+                    <h2 className="mt-4 text-2xl font-semibold tracking-tight text-slate-950 dark:text-foreground">{t("title")}</h2>
+                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600 dark:text-muted-foreground">{t("description")}</p>
                   </div>
                   <button
                     type="button"
-                    className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/70 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-60"
+                    className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-slate-500 shadow-sm transition-colors hover:bg-white hover:text-slate-950 disabled:pointer-events-none disabled:opacity-60 dark:border-border/70 dark:bg-background/70 dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-foreground"
                     onClick={closeModal}
                     disabled={isSubmitting}
                     aria-label={t("close")}
@@ -127,7 +144,7 @@ export function DashboardFeedbackButton({className, onNotice}: DashboardFeedback
 
               <div className="space-y-4 px-5 py-5 sm:px-6">
                 <label className="block">
-                  <span className="text-sm font-semibold text-foreground">{t("label")}</span>
+                  <span className="text-sm font-semibold text-slate-900 dark:text-foreground">{t("label")}</span>
                   <textarea
                     value={message}
                     onChange={(event) => {
@@ -136,7 +153,7 @@ export function DashboardFeedbackButton({className, onNotice}: DashboardFeedback
                     }}
                     maxLength={MAX_FEEDBACK_LENGTH}
                     placeholder={t("placeholder")}
-                    className="mt-2 min-h-36 w-full resize-y rounded-2xl border border-border/70 bg-background px-4 py-3 text-sm leading-relaxed text-foreground outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-500/15"
+                    className="mt-2 min-h-40 w-full resize-y rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm leading-relaxed text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-4 focus:ring-blue-500/15 dark:border-border/70 dark:bg-background/70 dark:text-foreground dark:placeholder:text-muted-foreground dark:focus:bg-background"
                   />
                 </label>
 
@@ -146,11 +163,11 @@ export function DashboardFeedbackButton({className, onNotice}: DashboardFeedback
                 </div>
 
                 <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                  <Button type="button" variant="outline" className="rounded-xl" onClick={closeModal} disabled={isSubmitting}>
+                  <Button type="button" variant="outline" className="h-10 rounded-xl border-slate-200 bg-white hover:bg-slate-50 dark:border-border/70 dark:bg-background/35" onClick={closeModal} disabled={isSubmitting}>
                     {t("cancel")}
                   </Button>
-                  <Button type="button" className="rounded-xl bg-blue-600 text-white hover:bg-blue-600/90" onClick={() => void handleSubmit()} disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <MessageSquareText className="size-4" aria-hidden="true" />}
+                  <Button type="button" className="h-10 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 px-5 font-semibold text-white shadow-lg shadow-blue-500/20 hover:from-blue-500 hover:to-cyan-400" onClick={() => void handleSubmit()} disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <SendHorizontal className="size-4" aria-hidden="true" />}
                     {isSubmitting ? t("submitting") : t("submit")}
                   </Button>
                 </div>

@@ -409,13 +409,13 @@ export default function ListeningResultPage() {
         showAiAnalysisButton
         aiAnalysisNotice={aiAnalysisNotice}
         onAiAnalysisClick={scrollToAiInsights}
+        feedbackAction={
+          <DashboardFeedbackButton
+            className="h-10 rounded-xl border-blue-200 bg-white/90 px-4 font-semibold text-blue-700 shadow-sm shadow-blue-100/60 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100 dark:shadow-none dark:hover:bg-blue-500/15"
+            onNotice={(notice) => setActionNotice(`${notice.title}: ${notice.description}`)}
+          />
+        }
       />
-
-      <div className="flex justify-end">
-        <DashboardFeedbackButton
-          onNotice={(notice) => setActionNotice(`${notice.title}: ${notice.description}`)}
-        />
-      </div>
 
       <ListeningSectionPerformance items={backendReview.sectionPerformance} />
       <ListeningTypePerformance items={backendReview.typePerformance} />

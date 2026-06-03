@@ -92,27 +92,6 @@ export function ReadingTestCard({test}: ReadingTestCardProps) {
                       <DifficultySignal difficulty={passage.difficulty} />
                       <span>{t(`filters.${passage.difficulty}`)}</span>
                     </p>
-                    {!test.isPremium && passage.id ? (
-                      <div className="mt-2 grid grid-cols-2 gap-1.5">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 rounded-lg text-xs"
-                          onClick={() => router.push(`/${locale}/reading/${test.id}?mode=practice&passageId=${encodeURIComponent(passage.id ?? "")}`)}
-                        >
-                          Practice
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="h-8 rounded-lg bg-blue-600 text-xs hover:bg-blue-600/90"
-                          onClick={() => router.push(`/${locale}/reading/${test.id}?mode=real&passageId=${encodeURIComponent(passage.id ?? "")}`)}
-                        >
-                          Real
-                        </Button>
-                      </div>
-                    ) : null}
                   </div>
                 ))}
               </div>
