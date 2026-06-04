@@ -22,6 +22,7 @@ type PracticeSource = "custom" | "real" | "cambridge";
 type SourceFilter = "all" | PracticeSource;
 type SortFilter = "newest" | "az";
 type ReadingKindFilter = "full" | "passages";
+const PASSAGE_PRACTICE_DURATION_MINUTES = 20;
 
 type ReadingGuestTest = {
   listKey?: string;
@@ -59,7 +60,7 @@ function toPassagePracticeCards(tests: ReadingGuestTest[]) {
       listKey: `${test.id}:passage:${passage.id ?? index}`,
       title: passage.title || `Passage ${index + 1}`,
       testFormat: "part" as const,
-      durationMinutes: Math.max(1, Math.ceil(test.durationMinutes / Math.max(test.passages.length, 1))),
+      durationMinutes: PASSAGE_PRACTICE_DURATION_MINUTES,
       totalQuestions: passage.questionsCount,
       passages: [passage]
     }));
@@ -232,7 +233,10 @@ function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
     displayOrder: item.display_order ?? null,
     testFormat: explicitFormat === "full" && passages.length === 1 ? "part" : explicitFormat,
     isPremium: item.is_premium,
-    durationMinutes: Math.max(1, Math.ceil((item.time_limit_seconds ?? 3600) / 60)),
+    durationMinutes:
+      (explicitFormat === "full" && passages.length === 1 ? "part" : explicitFormat) === "part"
+        ? PASSAGE_PRACTICE_DURATION_MINUTES
+        : Math.max(1, Math.ceil((item.time_limit_seconds ?? 3600) / 60)),
     totalQuestions: item.total_questions || passages.reduce((sum, passage) => sum + passage.questionsCount, 0),
     difficulty: testDifficulty,
     practiceSource,

@@ -66,6 +66,7 @@ const HEADING_DND_MIME = "application/x-reading-heading";
 const SUMMARY_WORD_BANK_DND_MIME = "application/x-reading-summary-word-bank";
 const TFNG_OPTIONS: ["TRUE", "FALSE", "NOT GIVEN"] = ["TRUE", "FALSE", "NOT GIVEN"];
 const YNNG_OPTIONS: ["YES", "NO", "NOT GIVEN"] = ["YES", "NO", "NOT GIVEN"];
+const PASSAGE_PRACTICE_DURATION_MINUTES = 20;
 
 type AnswerValue = string | string[];
 type MatchingHeadingsQuestion = Extract<ReadingQuestion, { type: "matchingHeadings" }>;
@@ -1056,7 +1057,12 @@ function toReadingBackendAnswerPayload(entries: BackendAttemptAnswerEntry[]) {
     );
 }
 
-function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord, attempt: StudentAttemptDetail): ReadingFullTest {
+function mapBackendAttemptToReadingTest(
+  testId: string,
+  meta: StudentTestRecord,
+  attempt: StudentAttemptDetail,
+  scopedPassageId?: string
+): ReadingFullTest {
   const passages: ReadingFullTest["passages"] = attempt.reading_passages.map((passage, index) => ({
     id: (`p${index + 1}` as ReadingFullTest["passages"][number]["id"]),
     title: toStringSafe(passage.title, `Passage ${index + 1}`),
@@ -1278,11 +1284,14 @@ function mapBackendAttemptToReadingTest(testId: string, meta: StudentTestRecord,
   questions.sort((left, right) => left.number - right.number);
 
   const durationSeconds = attempt.time_limit_seconds ?? meta.time_limit_seconds ?? 3600;
+  const durationMinutes = scopedPassageId
+    ? PASSAGE_PRACTICE_DURATION_MINUTES
+    : Math.max(1, Math.ceil(toNumberSafe(durationSeconds, 3600) / 60));
 
   return {
     id: toStringSafe(meta.id, testId),
     title: toStringSafe(meta.title, toStringSafe(attempt.practice_test_title, "Reading Test")),
-    durationMinutes: Math.max(1, Math.ceil(toNumberSafe(durationSeconds, 3600) / 60)),
+    durationMinutes,
     totalQuestions: toNumberSafe(attempt.total_questions, questions.length),
     passages,
     questions
@@ -1427,7 +1436,7 @@ export default function ReadingTestPage() {
             return;
           }
           const attemptPayload = await attemptResponse.json().catch(() => null);
-          const mappedTest = mapBackendAttemptToReadingTest(testId, matched, attemptPayload as StudentAttemptDetail);
+          const mappedTest = mapBackendAttemptToReadingTest(testId, matched, attemptPayload as StudentAttemptDetail, scopedPassageId);
           if (!mappedTest.questions.length) {
             throw new Error("No questions returned for this reading test.");
           }
@@ -1510,7 +1519,7 @@ export default function ReadingTestPage() {
           }
         }
 
-        const mappedTest = mapBackendAttemptToReadingTest(testId, matched, finalAttempt);
+        const mappedTest = mapBackendAttemptToReadingTest(testId, matched, finalAttempt, scopedPassageId);
         if (!mappedTest.questions.length) {
           throw new Error("No questions returned for this reading attempt.");
         }
@@ -2817,13 +2826,6 @@ function ReadingTestClient({
       event.preventDefault();
     };
 
-    const onSelectStart = (event: Event) => {
-      if (isEditableTarget(event.target)) {
-        return;
-      }
-      event.preventDefault();
-    };
-
     const onContextMenu = (event: MouseEvent) => {
       if (isEditableTarget(event.target)) {
         return;
@@ -2841,12 +2843,10 @@ function ReadingTestClient({
     };
 
     document.addEventListener("copy", onCopy);
-    document.addEventListener("selectstart", onSelectStart);
     document.addEventListener("contextmenu", onContextMenu);
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("copy", onCopy);
-      document.removeEventListener("selectstart", onSelectStart);
       document.removeEventListener("contextmenu", onContextMenu);
       document.removeEventListener("keydown", onKeyDown);
     };

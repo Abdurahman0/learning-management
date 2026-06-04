@@ -381,11 +381,7 @@
     line-height: 1.86rem;
   }
 
-  .reading-real-mode-content {
-    user-select: none;
-    -webkit-user-select: none;
-  }
-
+  .reading-real-mode-content,
   .reading-real-mode-content input,
   .reading-real-mode-content textarea,
   .reading-real-mode-content [contenteditable="true"] {
