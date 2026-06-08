@@ -83,6 +83,11 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useLeaveConfirm } from "@/lib/use-leave-confirm";
 import { BrandIcon } from "@/components/brand/BrandIcon";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
+import { studentMarathonService } from "@/src/services/student/marathon.service";
+import {
+  adaptMarathonListeningAttemptToDetail,
+  adaptMarathonListeningReviewResponse,
+} from "@/src/services/student/marathon-runner-adapters";
 import { studentTestsService } from "@/src/services/student/tests.service";
 import { StudentApiError } from "@/src/services/student/types";
 import type { StudentAttemptDetail, StudentAttemptQuestion, StudentAttemptQuestionGroup, StudentAttemptListeningPart, StudentTestRecord } from "@/src/services/student/types";
@@ -408,6 +413,21 @@ function buildListeningBackendAnswerPayload(params: {
         is_flagged: boolean;
       } => item !== null
     );
+}
+
+function toMarathonListeningSaveAnswers(
+  payload: Array<{
+    question_id: string;
+    attempt_question_id: string;
+    answer: {answer: string} | {answers: string[]} | null;
+    is_flagged: boolean;
+  }>
+) {
+  return payload.map((item) => ({
+    question_id: item.question_id,
+    answer: item.answer,
+    is_flagged: item.is_flagged,
+  }));
 }
 
 function extractOptionTexts(value: unknown) {
@@ -1056,6 +1076,9 @@ export default function ListeningTestPage() {
   const testId = typeof params?.id === "string" ? params.id : "";
   const modeParam = searchParams.get("mode");
   const scopedPartId = searchParams.get("partId")?.trim() ?? "";
+  const marathonIdParam = searchParams.get("marathonId")?.trim() ?? "";
+  const marathonDayNumber = Number(searchParams.get("dayNumber")?.trim() ?? "");
+  const isMarathonContext = UUID_PATTERN.test(marathonIdParam) && Number.isInteger(marathonDayNumber) && marathonDayNumber > 0;
   const requestedMode: AttemptMode | null =
     modeParam === "real" || modeParam === "practice" ? modeParam : null;
   const reviewRequested = searchParams.get("review") === "1";
@@ -1127,6 +1150,30 @@ export default function ListeningTestPage() {
       setBackendLoadError(null);
 
       try {
+        if (isMarathonContext) {
+          if (isGuest) {
+            throw new Error("Marathon content requires an enrolled student session.");
+          }
+
+          const marathonAttempt = reviewAttemptId
+            ? await studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, reviewAttemptId)
+            : await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, { part_id: testId });
+          const adapted = adaptMarathonListeningAttemptToDetail(marathonAttempt, testId);
+          if (!adapted) {
+            throw new Error("Failed to load marathon listening content.");
+          }
+
+          const nextSubmitMetaByNumber = collectListeningSubmitMetaByNumber(adapted.attempt);
+          const mapped = mapListeningAttemptToRuntimeTest(adapted.meta, adapted.attempt);
+          saveRuntimeListeningTest(mapped);
+
+          if (!active) return;
+          setResolvedTestId(mapped.id);
+          setInitialBackendAttemptId(marathonAttempt.id);
+          setInitialSubmitMetaByNumber(nextSubmitMetaByNumber);
+          return;
+        }
+
         const listed = isGuest
           ? await (async () => {
               const collected: StudentTestRecord[] = [];
@@ -1265,7 +1312,7 @@ export default function ListeningTestPage() {
     return () => {
       active = false;
     };
-  }, [isGuest, requestedMode, scopedPartId, testId, reviewAttemptId, t]);
+  }, [isGuest, isMarathonContext, marathonDayNumber, marathonIdParam, requestedMode, scopedPartId, testId, reviewAttemptId, t]);
 
   const test = getListeningTestById(resolvedTestId);
 
@@ -1329,6 +1376,24 @@ function ListeningTestClient({
   const reviewDeepLinkAttemptIdRaw = searchParams.get("attempt")?.trim() ?? "";
   const reviewDeepLinkActive = searchParams.get("review") === "1" && UUID_PATTERN.test(reviewDeepLinkAttemptIdRaw);
   const reviewDeepLinkAttemptId = reviewDeepLinkActive ? reviewDeepLinkAttemptIdRaw : null;
+  const marathonIdParam = searchParams.get("marathonId")?.trim() ?? "";
+  const marathonDayNumber = Number(searchParams.get("dayNumber")?.trim() ?? "");
+  const isMarathonContext = UUID_PATTERN.test(marathonIdParam) && Number.isInteger(marathonDayNumber) && marathonDayNumber > 0;
+  const returnToParam = searchParams.get("returnTo")?.trim() ?? "";
+  const returnLabelParam = searchParams.get("returnLabel")?.trim() ?? "";
+  const returnQuerySuffix = useMemo(() => {
+    const params = new URLSearchParams();
+    if (returnToParam.startsWith("/")) {
+      params.set("returnTo", returnToParam);
+      if (returnLabelParam) params.set("returnLabel", returnLabelParam);
+    }
+    if (isMarathonContext) {
+      params.set("marathonId", marathonIdParam);
+      params.set("dayNumber", String(marathonDayNumber));
+    }
+    const serialized = params.toString();
+    return serialized ? `&${serialized}` : "";
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, returnLabelParam, returnToParam]);
   const test = getListeningTestById(testId)!;
   const normalizedSections = useMemo(() => normalizeListeningSectionsForRender(test.sections), [test.sections]);
   const restartRequested = searchParams.get("restart") === "1";
@@ -1940,8 +2005,21 @@ function ListeningTestClient({
 
     const loadReview = async () => {
       try {
-        const reviewResponse = await studentAttemptsService.review(reviewDeepLinkAttemptId);
+        const reviewResponse = isMarathonContext
+          ? await (async () => {
+              const [attemptResponse, resultResponse] = await Promise.all([
+                studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, reviewDeepLinkAttemptId),
+                studentMarathonService.reviewAttempt(marathonIdParam, marathonDayNumber, reviewDeepLinkAttemptId),
+              ]);
+              return adaptMarathonListeningReviewResponse({
+                attempt: attemptResponse,
+                result: resultResponse,
+                routeId: test.id,
+              });
+            })()
+          : await studentAttemptsService.review(reviewDeepLinkAttemptId);
         if (!active) return;
+        if (!reviewResponse) return;
         setBackendReviewData(adaptListeningBackendReview(reviewResponse));
       } catch {
         // If review fails, keep fallback review UI (no explanations/evidence).
@@ -1953,7 +2031,7 @@ function ListeningTestClient({
     return () => {
       active = false;
     };
-  }, [reviewDeepLinkActive, reviewDeepLinkAttemptId]);
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.id]);
 
   useEffect(() => {
     const compactMedia = window.matchMedia("(max-width: 1024px)");
@@ -2513,10 +2591,17 @@ function ListeningTestClient({
           : [];
 
         try {
-          await studentAttemptsService.save(backendAttemptId, {
-            time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
-            answers: payloadAnswers
-          });
+          if (isMarathonContext) {
+            await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, backendAttemptId, {
+              time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+              answers: toMarathonListeningSaveAnswers(payloadAnswers),
+            });
+          } else {
+            await studentAttemptsService.save(backendAttemptId, {
+              time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+              answers: payloadAnswers
+            });
+          }
           return;
         } catch (error) {
           const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
@@ -2525,7 +2610,15 @@ function ListeningTestClient({
           }
 
           try {
-            const snapshot = await studentAttemptsService.getById(backendAttemptId);
+            const snapshot = await (isMarathonContext
+              ? (() => {
+                  const response = studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, backendAttemptId);
+                  return response.then((attemptResponse) => adaptMarathonListeningAttemptToDetail(attemptResponse, test.id)?.attempt ?? null);
+                })()
+              : studentAttemptsService.getById(backendAttemptId));
+            if (!snapshot) {
+              throw error;
+            }
             const freshMetaByNumber = collectListeningSubmitMetaByNumber(snapshot);
             setSubmitMetaByNumber(freshMetaByNumber);
             const retryPayloadAnswers = includeAnswers
@@ -2535,10 +2628,17 @@ function ListeningTestClient({
                   submitMetaByNumber: freshMetaByNumber
                 }).filter((item) => item.answer !== null || item.is_flagged)
               : [];
-            await studentAttemptsService.save(backendAttemptId, {
-              time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
-              answers: retryPayloadAnswers
-            });
+            if (isMarathonContext) {
+              await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, backendAttemptId, {
+                time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+                answers: toMarathonListeningSaveAnswers(retryPayloadAnswers),
+              });
+            } else {
+              await studentAttemptsService.save(backendAttemptId, {
+                time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+                answers: retryPayloadAnswers
+              });
+            }
           } catch (retryError) {
             if (strict) {
               throw retryError;
@@ -2554,7 +2654,7 @@ function ListeningTestClient({
       }
       return run.catch(() => undefined);
     },
-    [answers, attemptId, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, submitMetaByNumber, test.id]
+    [answers, attemptId, backendAttemptId, isMarathonContext, marked, marathonDayNumber, marathonIdParam, resolveTimeUsedSeconds, reviewMode, submitMetaByNumber, test.id]
   );
 
   useEffect(() => {
@@ -2587,7 +2687,7 @@ function ListeningTestClient({
 
       let submitAttemptId = backendAttemptId;
       let submitMetaForRequest = submitMetaByNumber;
-      if (!isGuest && !submitAttemptId && UUID_PATTERN.test(test.id)) {
+      if (!isGuest && !submitAttemptId && UUID_PATTERN.test(test.id) && !isMarathonContext) {
         try {
           const createdAttempt = await studentAttemptsService.create({
             practice_test: test.id,
@@ -2619,15 +2719,28 @@ function ListeningTestClient({
             }).filter((item) => item.answer !== null || item.is_flagged);
 
           try {
-            await studentAttemptsService.save(submitAttemptId, {
-              time_used_seconds: timeUsedSeconds,
-              answers: buildSaveAnswers(submitMetaForRequest)
-            });
-            await studentAttemptsService.submit(submitAttemptId, {
-              time_used_seconds: timeUsedSeconds,
-              answers: buildSubmitAnswers(submitMetaForRequest)
-            });
+            if (isMarathonContext) {
+              await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, submitAttemptId, {
+                time_used_seconds: timeUsedSeconds,
+                answers: toMarathonListeningSaveAnswers(buildSaveAnswers(submitMetaForRequest)),
+              });
+              await studentMarathonService.submitAttempt(marathonIdParam, marathonDayNumber, submitAttemptId, {
+                time_used_seconds: timeUsedSeconds,
+              });
+            } else {
+              await studentAttemptsService.save(submitAttemptId, {
+                time_used_seconds: timeUsedSeconds,
+                answers: buildSaveAnswers(submitMetaForRequest)
+              });
+              await studentAttemptsService.submit(submitAttemptId, {
+                time_used_seconds: timeUsedSeconds,
+                answers: buildSubmitAnswers(submitMetaForRequest)
+              });
+            }
           } catch (error) {
+            if (isMarathonContext) {
+              throw error;
+            }
             const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
             if (!failedQuestionIds.size) {
               throw error;
@@ -2732,15 +2845,19 @@ function ListeningTestClient({
       setAudioPlaying(false);
 
       const resultAttemptId = submitAttemptId ?? backendAttemptId;
-      if (resultAttemptId) {
-        router.push(`/${locale}/listening/${test.id}/result?attempt=${resultAttemptId}`);
-        return;
-      }
+        if (resultAttemptId) {
+          if (isMarathonContext) {
+            router.push(`/${locale}/listening/${test.id}?review=1&attempt=${resultAttemptId}${returnQuerySuffix}`);
+            return;
+          }
+          router.push(`/${locale}/listening/${test.id}/result?attempt=${resultAttemptId}${returnQuerySuffix}`);
+          return;
+        }
 
-      if (isGuest) {
-        router.push(`/${locale}/listening/${test.id}/result?attempt=${attemptId}`);
-        return;
-      }
+        if (isGuest) {
+          router.push(`/${locale}/listening/${test.id}/result?attempt=${attemptId}${returnQuerySuffix}`);
+          return;
+        }
 
       // Fallback: if backend attempt is missing, keep the in-test review mode.
       setReviewMobilePanel("transcript");
@@ -2756,7 +2873,10 @@ function ListeningTestClient({
     backendAttemptId,
     currentUserKey,
     isGuest,
+    isMarathonContext,
     isSubmittingResult,
+    marathonDayNumber,
+    marathonIdParam,
     marked,
     remainingSeconds,
     resolveTimeUsedSeconds,
@@ -4546,8 +4666,14 @@ function ListeningTestClient({
       {reviewMode ? (
         <div className="fixed bottom-16 right-4 z-50 sm:bottom-20 sm:right-5">
           <Button asChild className="h-12 rounded-2xl bg-blue-600 px-6 text-base font-semibold text-white shadow-lg hover:bg-blue-600/90">
-            <Link href={`/${locale}/listening/${test.id}/result?attempt=${backendAttemptId ?? attemptId}`}>
-              Analyze
+            <Link
+              href={
+                isMarathonContext
+                  ? (returnToParam.startsWith("/") ? returnToParam : `/${locale}/marathons/${marathonIdParam}/days/${marathonDayNumber}`)
+                  : `/${locale}/listening/${test.id}/result?attempt=${backendAttemptId ?? attemptId}${returnQuerySuffix}`
+              }
+            >
+              {isMarathonContext ? (returnLabelParam || "Back to marathon day") : "Analyze"}
             </Link>
           </Button>
         </div>

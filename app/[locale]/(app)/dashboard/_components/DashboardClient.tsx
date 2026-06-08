@@ -3,7 +3,7 @@
 import {useEffect, useState} from "react";
 import Link from "next/link";
 import {useRouter} from "next/navigation";
-import {Brain, Sparkles} from "lucide-react";
+import {Brain, Map, Sparkles} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {ContinueCard} from "./ContinueCard";
@@ -393,6 +393,12 @@ export function DashboardClient() {
         </div>
 
         <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+          <Button asChild variant="outline" className="h-11 rounded-xl border-border/70 bg-background/40 px-4 hover:bg-muted/40">
+            <Link href={`/${locale}/marathons`}>
+              <Map className="size-4" />
+              {t("marathon.button")}
+            </Link>
+          </Button>
           <Button
             variant="outline"
             className="h-11 rounded-xl border-border/70 bg-background/40 px-4 hover:bg-muted/40"

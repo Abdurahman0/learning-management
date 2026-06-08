@@ -133,9 +133,131 @@
     }
   }
 
+  @keyframes landing-reveal-up {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 28px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes landing-reveal-left {
+    from {
+      opacity: 0;
+      transform: translate3d(-32px, 0, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes landing-reveal-right {
+    from {
+      opacity: 0;
+      transform: translate3d(32px, 0, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes landing-reveal-scale {
+    from {
+      opacity: 0;
+      transform: scale(0.965);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes landing-cta-glow {
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 0 rgba(59, 130, 246, 0.22),
+        0 10px 24px rgba(37, 99, 235, 0.22);
+      filter: saturate(1);
+    }
+    50% {
+      box-shadow:
+        0 0 0 8px rgba(59, 130, 246, 0),
+        0 16px 38px rgba(37, 99, 235, 0.34);
+      filter: saturate(1.08);
+    }
+  }
+
   .reviews-track {
     animation: reviews-scroll 42s linear infinite;
     will-change: transform;
+  }
+
+  .landing-reveal-section [data-reveal-item] {
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+
+  .landing-reveal-section.is-visible[data-reveal-variant="up"] [data-reveal-item] {
+    animation: landing-reveal-up 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .landing-reveal-section.is-visible[data-reveal-variant="left"] [data-reveal-item] {
+    animation: landing-reveal-left 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .landing-reveal-section.is-visible[data-reveal-variant="right"] [data-reveal-item] {
+    animation: landing-reveal-right 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .landing-reveal-section.is-visible[data-reveal-variant="scale"] [data-reveal-item] {
+    animation: landing-reveal-scale 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .landing-reveal-section.is-visible [data-reveal-item]:nth-child(1) {
+    animation-delay: calc(var(--landing-reveal-delay, 0ms) + 0ms);
+  }
+
+  .landing-reveal-section.is-visible [data-reveal-item]:nth-child(2) {
+    animation-delay: calc(var(--landing-reveal-delay, 0ms) + 90ms);
+  }
+
+  .landing-reveal-section.is-visible [data-reveal-item]:nth-child(3) {
+    animation-delay: calc(var(--landing-reveal-delay, 0ms) + 180ms);
+  }
+
+  .landing-reveal-section.is-visible [data-reveal-item]:nth-child(4) {
+    animation-delay: calc(var(--landing-reveal-delay, 0ms) + 270ms);
+  }
+
+  .landing-reveal-section.is-visible [data-reveal-item]:nth-child(5) {
+    animation-delay: calc(var(--landing-reveal-delay, 0ms) + 360ms);
+  }
+
+  .landing-reveal-section.is-visible [data-reveal-item]:nth-child(6) {
+    animation-delay: calc(var(--landing-reveal-delay, 0ms) + 450ms);
+  }
+
+  .landing-reading-cta {
+    position: relative;
+    isolation: isolate;
+    overflow: visible;
+  }
+
+  .landing-reading-cta::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(96, 165, 250, 0.46), rgba(37, 99, 235, 0.12));
+    filter: blur(12px);
+    opacity: 0.72;
   }
 
   /* Score progress chart: animated line draw + area fade.
@@ -176,6 +298,10 @@
   @media (hover: hover) and (pointer: fine) {
     .reviews-marquee:hover .reviews-track {
       animation-play-state: paused;
+    }
+
+    .landing-reading-cta:hover {
+      transform: translateY(-1px);
     }
   }
 
@@ -233,6 +359,15 @@
   @media (max-width: 767px) {
     .reviews-track {
       animation-duration: 60s;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .landing-reading-cta {
+      animation: landing-cta-glow 2.8s ease-in-out infinite;
+      transition:
+        transform 220ms ease,
+        box-shadow 220ms ease;
     }
   }
 
@@ -427,5 +562,15 @@
   .reviews-track {
     animation: none;
     transform: translateX(0);
+  }
+
+  .landing-reveal-section [data-reveal-item] {
+    opacity: 1;
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .landing-reading-cta {
+    animation: none;
   }
 }

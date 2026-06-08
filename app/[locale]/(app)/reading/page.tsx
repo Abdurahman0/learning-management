@@ -33,6 +33,7 @@ type ReadingGuestTest = {
   displayOrder?: number | null;
   testFormat: "full" | "part" | "both";
   isPremium: boolean;
+  lastAccuracyPercent?: number | null;
   durationMinutes: number;
   totalQuestions: number;
   difficulty: Difficulty;
@@ -233,6 +234,10 @@ function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
     displayOrder: item.display_order ?? null,
     testFormat: explicitFormat === "full" && passages.length === 1 ? "part" : explicitFormat,
     isPremium: item.is_premium,
+    lastAccuracyPercent:
+      typeof item.user_attempt_status?.last_attempt_accuracy_percent === "number"
+        ? item.user_attempt_status.last_attempt_accuracy_percent
+        : null,
     durationMinutes:
       (explicitFormat === "full" && passages.length === 1 ? "part" : explicitFormat) === "part"
         ? PASSAGE_PRACTICE_DURATION_MINUTES

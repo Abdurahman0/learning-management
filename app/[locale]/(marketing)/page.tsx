@@ -8,6 +8,7 @@ import { FinalCTA } from "./_components/FinalCTA";
 import { Hero } from "./_components/Hero";
 import { HowItWorks } from "./_components/HowItWorks";
 import { ReviewsSection } from "./_components/ReviewsSection";
+import { ScrollReveal } from "./_components/ScrollReveal";
 
 export default async function MarketingLandingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -27,12 +28,24 @@ export default async function MarketingLandingPage({ params }: { params: Promise
 
   return (
     <main>
-      <Hero />
-      <HowItWorks />
-      <FeaturesSection />
-      <ReviewsSection />
-      <Comparison />
-      <FinalCTA />
+      <ScrollReveal variant="up">
+        <Hero />
+      </ScrollReveal>
+      <ScrollReveal variant="left" delayMs={40}>
+        <HowItWorks />
+      </ScrollReveal>
+      <ScrollReveal variant="right" delayMs={60}>
+        <FeaturesSection />
+      </ScrollReveal>
+      <ScrollReveal variant="scale" delayMs={80}>
+        <ReviewsSection />
+      </ScrollReveal>
+      <ScrollReveal variant="left" delayMs={100}>
+        <Comparison />
+      </ScrollReveal>
+      <ScrollReveal variant="up" delayMs={120}>
+        <FinalCTA />
+      </ScrollReveal>
     </main>
   );
 }

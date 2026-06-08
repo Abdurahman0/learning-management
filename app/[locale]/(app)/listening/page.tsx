@@ -32,6 +32,7 @@ type ListeningTestItem = {
   displayOrder?: number | null;
   testFormat: "full" | "part" | "both";
   isPremium: boolean;
+  lastAccuracyPercent?: number | null;
   difficulty: ListeningDifficulty;
   practiceSource: PracticeSource;
   durationMins: number;
@@ -227,6 +228,10 @@ function mapStudentListeningTest(item: StudentTestRecord): ListeningTestItem {
     displayOrder: item.display_order ?? null,
     testFormat: resolvedFormat,
     isPremium: item.is_premium,
+    lastAccuracyPercent:
+      typeof item.user_attempt_status?.last_attempt_accuracy_percent === "number"
+        ? item.user_attempt_status.last_attempt_accuracy_percent
+        : null,
     difficulty,
     practiceSource,
     durationMins: Math.max(1, Math.ceil((item.time_limit_seconds ?? 1800) / 60)),

@@ -1,6 +1,7 @@
 export type AdminNavKey =
   | "dashboard"
   | "tests"
+  | "marathons"
   | "contentBank"
   | "users"
   | "analytics"
@@ -26,6 +27,7 @@ export type AdminProfileEntity = {
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {key: "dashboard", segment: ""},
   {key: "tests", segment: "tests"},
+  {key: "marathons", segment: "marathons"},
   {key: "contentBank", segment: "content-bank"},
   {key: "users", segment: "users"},
   {key: "analytics", segment: "analytics"},

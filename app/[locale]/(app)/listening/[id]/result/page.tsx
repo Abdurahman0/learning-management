@@ -80,6 +80,10 @@ export default function ListeningResultPage() {
   const tResults = useTranslations("testResults");
   const testId = typeof params?.id === "string" ? params.id : "";
   const attemptId = searchParams.get("attempt")?.trim() ?? "";
+  const returnToParam = searchParams.get("returnTo")?.trim() ?? "";
+  const returnLabelParam = searchParams.get("returnLabel")?.trim() ?? "";
+  const returnHref = returnToParam.startsWith("/") ? returnToParam : `/${locale}/dashboard`;
+  const returnLabel = returnToParam.startsWith("/") ? (returnLabelParam || "Back to marathon day") : undefined;
   const resolvedBackendAttemptId = isUuid(attemptId) ? attemptId : "";
   const localAttemptId = !resolvedBackendAttemptId && attemptId ? attemptId : "";
   const localResult = useMemo(() => {
@@ -389,6 +393,9 @@ export default function ListeningResultPage() {
   const minutes = Math.floor(timeUsedSeconds / 60).toString().padStart(2, "0");
   const seconds = (timeUsedSeconds % 60).toString().padStart(2, "0");
   const testTitle = reviewPayload?.test_title || "Listening Test";
+  const reviewHref = resolvedBackendAttemptId
+    ? `/${locale}/listening/${testId}?review=1&attempt=${resolvedBackendAttemptId}${returnToParam.startsWith("/") ? `&returnTo=${encodeURIComponent(returnToParam)}${returnLabelParam ? `&returnLabel=${encodeURIComponent(returnLabelParam)}` : ""}` : ""}`
+    : "#review-main";
 
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
@@ -404,11 +411,13 @@ export default function ListeningResultPage() {
         timerUsed={Boolean(reviewPayload?.time_used_seconds)}
         minutes={minutes}
         seconds={seconds}
-        reviewHref={`/${locale}/listening/${testId}?review=1&attempt=${resolvedBackendAttemptId}`}
+        reviewHref={reviewHref}
         reviewVariant="analysis"
         showAiAnalysisButton
         aiAnalysisNotice={aiAnalysisNotice}
         onAiAnalysisClick={scrollToAiInsights}
+        backHref={returnHref}
+        backLabel={returnLabel}
         feedbackAction={
           <DashboardFeedbackButton
             className="h-10 rounded-xl border-blue-200 bg-white/90 px-4 font-semibold text-blue-700 shadow-sm shadow-blue-100/60 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100 dark:shadow-none dark:hover:bg-blue-500/15"

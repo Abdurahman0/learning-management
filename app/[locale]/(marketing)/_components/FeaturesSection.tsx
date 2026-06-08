@@ -42,7 +42,7 @@ export function FeaturesSection() {
   return (
     <section id="features" className="scroll-mt-24 bg-muted/30 py-16 sm:py-20">
       <Container>
-        <div className="mx-auto max-w-3xl text-center">
+        <div data-reveal-item className="mx-auto max-w-3xl text-center">
           <Badge
             variant="secondary"
             className="mb-4 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700"
@@ -60,6 +60,7 @@ export function FeaturesSection() {
             return (
               <Card
                 key={feature.key}
+                data-reveal-item
                 className={`border-border py-0 shadow-sm transition duration-300 ${
                   isComingSoon
                     ? "relative overflow-hidden rounded-2xl bg-linear-to-b from-card to-muted/40 ring-1 ring-border/50 dark:to-muted/20 cursor-default hover:scale-100"
@@ -119,7 +120,7 @@ export function FeaturesSection() {
           })}
         </div>
 
-        <Card className="mt-6 border-dashed border-border bg-muted/30 py-0 shadow-sm">
+        <Card data-reveal-item className="mt-6 border-dashed border-border bg-muted/30 py-0 shadow-sm">
           <CardContent className="flex flex-col items-start gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground sm:text-base">{t("features.bottomNote")}</p>
             <Badge variant="outline" className="rounded-full border-border bg-muted text-muted-foreground">
@@ -131,4 +132,3 @@ export function FeaturesSection() {
     </section>
   );
 }
-

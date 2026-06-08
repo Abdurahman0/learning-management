@@ -24,6 +24,7 @@ function normalizeProfile(data: unknown): StudentProfileResponse {
     id: toStringSafe(record?.id),
     full_name: toStringSafe(record?.full_name ?? record?.name),
     email: toStringSafe(record?.email),
+    phone_number: typeof record?.phone_number === "string" && record.phone_number.trim() ? record.phone_number.trim() : null,
     target_band: toNumberOrNull(record?.target_band ?? record?.targetBand),
     exam_datetime: typeof record?.exam_datetime === "string" ? record.exam_datetime : null,
     target_listening_band: toNumberOrNull(record?.target_listening_band),

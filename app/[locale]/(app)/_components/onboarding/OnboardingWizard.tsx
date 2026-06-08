@@ -7,6 +7,7 @@ import {useRouter, useSearchParams} from "next/navigation";
 
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
+import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
@@ -81,6 +82,18 @@ function buildExamDateTimeIso(dateIso?: string, timeIso?: string) {
 
   // Interpret as local time and send ISO-8601 in UTC.
   return new Date(y, m - 1, d, safeH, safeM, 0).toISOString();
+}
+
+function normalizeUzbekPhoneNumber(value?: string) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const normalized = `+${raw.replace(/[^\d]/g, "")}`;
+  return normalized === "+" ? null : normalized;
+}
+
+function isValidUzbekPhoneNumber(value?: string) {
+  const normalized = normalizeUzbekPhoneNumber(value);
+  return normalized == null || /^\+998\d{9}$/.test(normalized);
 }
 
 function getTomorrowIso() {
@@ -357,6 +370,7 @@ export function OnboardingWizard() {
           ...prev,
           examDate: clampExamDateToTomorrow(nextExamDate) ?? clampExamDateToTomorrow(prev.examDate),
           examTime: nextExamTime ?? prev.examTime,
+          phoneNumber: profile.phone_number ?? prev.phoneNumber,
           targets: {
             listening: profile.target_listening_band ?? prev.targets.listening ?? DEFAULT_TARGETS.listening,
             reading: profile.target_reading_band ?? prev.targets.reading ?? DEFAULT_TARGETS.reading,
@@ -397,6 +411,38 @@ export function OnboardingWizard() {
 
   const selectModule = (key: "strongest" | "weakest", value: OnboardingModule) => {
     setAnswers((prev) => ({...prev, [key]: value}));
+  };
+
+  const submitAnswers = async () => {
+    const normalizedPhoneNumber = normalizeUzbekPhoneNumber(answers.phoneNumber);
+    if (!isValidUzbekPhoneNumber(answers.phoneNumber)) {
+      setApiError(t("errors.phoneNumber"));
+      return;
+    }
+
+    const payload = {
+      phone_number: normalizedPhoneNumber,
+      exam_datetime: buildExamDateTimeIso(answers.examDate, answers.examTime),
+      target_listening_band: toBandString(answers.targets.listening ?? DEFAULT_TARGETS.listening),
+      target_reading_band: toBandString(answers.targets.reading ?? DEFAULT_TARGETS.reading),
+      target_writing_band: toBandString(answers.targets.writing ?? DEFAULT_TARGETS.writing),
+      target_speaking_band: toBandString(answers.targets.speaking ?? DEFAULT_TARGETS.speaking),
+      strongest_section: toBackendSection(answers.strongest),
+      weakest_section: toBackendSection(answers.weakest),
+      study_hours_available: typeof answers.hoursPerDay === "number" ? Math.round(answers.hoursPerDay) : null
+    } as const;
+
+    try {
+      await studentProfileService.updateProfile(payload);
+      closeAndPersist("completed");
+    } catch (error) {
+      if (error instanceof StudentApiError) {
+        const phoneNumberError = error.fieldErrors.phone_number?.[0];
+        setApiError(phoneNumberError ?? error.message);
+        return;
+      }
+      setApiError(t("errors.profileSave"));
+    }
   };
 
   return (
@@ -490,6 +536,20 @@ export function OnboardingWizard() {
 
               {activeStep.key === "examDate" ? (
                 <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>{t("fields.phoneNumber.label")}</Label>
+                    <Input
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      value={answers.phoneNumber ?? ""}
+                      onChange={(event) => setAnswers((prev) => ({...prev, phoneNumber: event.target.value}))}
+                      placeholder={t("fields.phoneNumber.placeholder")}
+                      className="h-11 rounded-xl border-border/70 bg-background/60"
+                    />
+                    <p className="text-xs text-muted-foreground">{t("fields.phoneNumber.help")}</p>
+                  </div>
+
                   <div className="space-y-2">
                     <Label>{t("fields.examDate.label")}</Label>
                     <HandmadeDatePicker
@@ -686,22 +746,7 @@ export function OnboardingWizard() {
                       setIsSaving(true);
                       setApiError(null);
                       try {
-                        const payload = {
-                          exam_datetime: buildExamDateTimeIso(answers.examDate, answers.examTime),
-                          target_listening_band: toBandString(answers.targets.listening ?? DEFAULT_TARGETS.listening),
-                          target_reading_band: toBandString(answers.targets.reading ?? DEFAULT_TARGETS.reading),
-                          target_writing_band: toBandString(answers.targets.writing ?? DEFAULT_TARGETS.writing),
-                          target_speaking_band: toBandString(answers.targets.speaking ?? DEFAULT_TARGETS.speaking),
-                          strongest_section: toBackendSection(answers.strongest),
-                          weakest_section: toBackendSection(answers.weakest),
-                          study_hours_available: typeof answers.hoursPerDay === "number" ? Math.round(answers.hoursPerDay) : null
-                        } as const;
-
-                        await studentProfileService.updateProfile(payload);
-                        closeAndPersist("completed");
-                      } catch (error) {
-                        const message = error instanceof StudentApiError ? error.message : t("errors.profileSave");
-                        setApiError(message);
+                        await submitAnswers();
                       } finally {
                         setIsSaving(false);
                       }
@@ -838,6 +883,20 @@ export function OnboardingWizard() {
 
               {activeStep.key === "examDate" ? (
                 <div className="space-y-2">
+                  <div className="space-y-2">
+                    <Label>{t("fields.phoneNumber.label")}</Label>
+                    <Input
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      value={answers.phoneNumber ?? ""}
+                      onChange={(event) => setAnswers((prev) => ({...prev, phoneNumber: event.target.value}))}
+                      placeholder={t("fields.phoneNumber.placeholder")}
+                      className="h-11 rounded-xl border-border/70 bg-background/60"
+                    />
+                    <p className="text-xs text-muted-foreground">{t("fields.phoneNumber.help")}</p>
+                  </div>
+
                   <Label>{t("fields.examDate.label")}</Label>
                   <HandmadeDatePicker
                     value={answers.examDate}
@@ -1034,22 +1093,7 @@ export function OnboardingWizard() {
                     setIsSaving(true);
                     setApiError(null);
                     try {
-                      const payload = {
-                        exam_datetime: buildExamDateTimeIso(answers.examDate, answers.examTime),
-                        target_listening_band: toBandString(answers.targets.listening ?? DEFAULT_TARGETS.listening),
-                        target_reading_band: toBandString(answers.targets.reading ?? DEFAULT_TARGETS.reading),
-                        target_writing_band: toBandString(answers.targets.writing ?? DEFAULT_TARGETS.writing),
-                        target_speaking_band: toBandString(answers.targets.speaking ?? DEFAULT_TARGETS.speaking),
-                        strongest_section: toBackendSection(answers.strongest),
-                        weakest_section: toBackendSection(answers.weakest),
-                        study_hours_available: typeof answers.hoursPerDay === "number" ? Math.round(answers.hoursPerDay) : null
-                      } as const;
-
-                      await studentProfileService.updateProfile(payload);
-                      closeAndPersist("completed");
-                    } catch (error) {
-                      const message = error instanceof StudentApiError ? error.message : t("errors.profileSave");
-                      setApiError(message);
+                      await submitAnswers();
                     } finally {
                       setIsSaving(false);
                     }

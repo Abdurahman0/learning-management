@@ -9,6 +9,7 @@ export type ReadingGuestTest = {
   displayOrder?: number | null;
   testFormat?: "full" | "part" | "both";
   isPremium: boolean;
+  lastAccuracyPercent?: number | null;
   durationMinutes: number;
   totalQuestions: number;
   difficulty: Difficulty;
@@ -31,6 +32,7 @@ export type ListeningTestItem = {
   displayOrder?: number | null;
   testFormat?: "full" | "part" | "both";
   isPremium: boolean;
+  lastAccuracyPercent?: number | null;
   difficulty: ListeningDifficulty;
   practiceSource: PracticeSource;
   durationMins: number;

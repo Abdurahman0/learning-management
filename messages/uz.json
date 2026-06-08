@@ -213,6 +213,7 @@
     "card": {
       "free": "BEPUL",
       "premium": "PREMIUM",
+      "lastAccuracy": "Oxirgi aniqlik",
       "locked": "Qulflangan",
       "startReadingFull": "To'liq Reading testini boshlash",
       "startListening": "Listening testini boshlash",
@@ -228,6 +229,7 @@
     },
     "sidebar": {
       "dashboard": "Dashboard",
+      "marathon": "Marafon",
       "assignments": "Assignments",
       "messages": "Xabarlar",
       "aiCoach": "AI Coach",
@@ -547,7 +549,8 @@
       },
       "errors": {
         "profileLoad": "Profilni hozircha yuklab bo'lmadi. Baribir davom etib, keyin saqlashingiz mumkin.",
-        "profileSave": "Ma'lumotlarni saqlab bo'lmadi. Qayta urinib ko'ring."
+        "profileSave": "Ma'lumotlarni saqlab bo'lmadi. Qayta urinib ko'ring.",
+        "phoneNumber": "Telefon raqam +998 XX-XXX-XX-XX formatida bo'lishi kerak"
       },
       "datePicker": {
         "prevMonth": "Oldingi oy",
@@ -597,6 +600,11 @@
         }
       },
       "fields": {
+        "phoneNumber": {
+          "label": "Telefon raqam",
+          "placeholder": "+998 90-123-45-67",
+          "help": "Ixtiyoriy. So'rovnoma profilingiz to'liq bo'lishi uchun O'zbekiston raqamingizni kiriting."
+        },
         "examDate": {
           "label": "IELTS imtihon sanasi",
           "placeholder": "Sanani tanlang",
@@ -1067,6 +1075,9 @@
       "title": "AI Recommendations",
       "startTutorial": "Start AI Tutorial"
     },
+    "marathon": {
+      "button": "Marafon"
+    },
     "recentHistory": {
       "title": "Recent Test History",
       "viewAll": "View All History",
@@ -1144,7 +1155,8 @@
         "achievements": "Yutuqlar",
         "reports": "Hisobotlar",
         "settings": "Sozlamalar",
-        "feedback": "Fikrlar"
+        "feedback": "Fikrlar",
+        "marathons": "Marathons"
       }
     },
     "topbar": {
@@ -4811,6 +4823,122 @@
       }
     }
   },
+  "marathon": {
+    "backToDashboard": "Dashboardga qaytish",
+    "eyebrow": "IELTS Marafon",
+    "errors": {
+      "load": "Marafon ma'lumotlarini yuklab bo'lmadi.",
+      "enroll": "Bu marafonga qo'shib bo'lmadi.",
+      "leaderboard": "Reytingni yuklab bo'lmadi.",
+      "note": "Eslatmani saqlab bo'lmadi.",
+      "complete": "Kun holatini yangilab bo'lmadi.",
+      "attempt": "Urinish preview holatini yuklab bo'lmadi."
+    },
+    "stats": {
+      "available": "Mavjud marafonlar",
+      "active": "Faol yo'llar",
+      "targetBand": "O'rtacha target band"
+    },
+    "browse": {
+      "heroTag": "Yo'naltirilgan IELTS tayyorgarligi",
+      "title": "Tartibli marafon yo'li bilan barqaror progress qiling.",
+      "description": "Kunma-kun tuzilgan IELTS rejasini alohida workspace ichida yuring: aniq progress, kundalik vazifalar, eslatmalar va reyting bir joyda.",
+      "resume": "Yo'lni davom ettirish",
+      "explore": "Marafonlarni ko'rish",
+      "library": "Kutubxonani ko'rish",
+      "enrolledSection": "Faol marafonlaringiz",
+      "emptyEnrolled": "Siz hali birorta marafonga qo'shilmagansiz. Boshlash uchun pastdagi kutubxonadan birini tanlang.",
+      "libraryLabel": "Marafon kutubxonasi",
+      "libraryTitle": "Keyingi marafoningizni tanlang",
+      "availableNow": "Hozir mavjud",
+      "premium": "Premium",
+      "noDescription": "Tartibli IELTS amaliyot marafoni.",
+      "enrolledHint": "Siz bu marafonga allaqachon qo'shilgansiz.",
+      "metrics": {
+        "days": "Kunlar",
+        "focus": "Yo'nalish",
+        "band": "Target band",
+        "streak": "Streak"
+      }
+    },
+    "detail": {
+      "enroll": "Marafonga qo'shilish",
+      "enrolling": "Qo'shilmoqda...",
+      "enrolled": "Marafonga muvaffaqiyatli qo'shildingiz.",
+      "continueDay": "{day}-kunga o'tish",
+      "targetBand": "Target band",
+      "totalDays": "Jami kunlar",
+      "streak": "Streak",
+      "daysCompleted": "Tugallangan kunlar",
+      "progress": "Sizning progress",
+      "progressLabel": "{total} kundan {completed} tasi tugallangan",
+      "howItWorksLabel": "Qanday ishlaydi",
+      "howItWorks": {
+        "oneTitle": "Yo'l bo'yicha yuring",
+        "oneText": "Har bir kun ketma-ket ochiladi, shuning uchun studentlar tartibsiz sakramaydi va belgilangan progress bo'yicha yuradi.",
+        "twoTitle": "Kunlik vazifalarni bajaring",
+        "twoText": "Har bir kun shu bosqichga bog'langan reading passages, listening parts, notes va tashqi resurslarni o'z ichiga olishi mumkin.",
+        "threeTitle": "Reyting va intizomni kuzating",
+        "threeText": "Progress, streak, tugallangan kunlar va reyting o'rni backend ma'lumotlari asosida yangilanadi."
+      },
+      "tabs": {
+        "journey": "Yo'l",
+        "leaderboard": "Reyting"
+      },
+      "pathLabel": "Marafon yo'li",
+      "pathTitle": "Sizning marafon marshrutingiz",
+      "currentDayLabel": "Joriy kun {day}",
+      "dayLabel": "{day}-kun",
+      "dayDefaultTitle": "{day}-kun",
+      "bonusDay": "Bonus kun",
+      "completed": "Tugallangan",
+      "refreshDay": "Kunni yangilash",
+      "completing": "Yangilanmoqda...",
+      "markComplete": "Kunni tugallangan deb belgilash",
+      "estimatedTime": "Taxminiy vaqt",
+      "readingPassages": "Reading passage",
+      "listeningParts": "Listening part",
+      "contentLabel": "Kun overview",
+      "tasksLabel": "Vazifalar",
+      "tasksTitle": "Kunlik topshiriqlar",
+      "readingPassageCard": "{questions} ta savol",
+      "listeningPartCard": "{questions} ta savol",
+      "reviewAttempt": "Urinishni ko'rish",
+      "continueAttempt": "Urinishni davom ettirish",
+      "startAttempt": "Urinishni boshlash",
+      "noTasks": "Bu kunga hali reading yoki listening topshiriqlari biriktirilmagan.",
+      "resourcesLabel": "Resurslar",
+      "notesLabel": "Shaxsiy eslatmalar",
+      "notesTitle": "Kun bo'yicha eslatmangiz",
+      "notesPlaceholder": "Bu kun bo'yicha qisqa eslatma yozing. Maydondan chiqqaningizda akkauntingizga saqlanadi.",
+      "saving": "Saqlanmoqda...",
+      "noteSaved": "Eslatma saqlandi.",
+      "notEnrolledTitle": "Yo'lni ochish uchun bu marafonga qo'shiling",
+      "notEnrolledText": "Kunlar, eslatmalar, topshiriqlar va reyting faqat qo'shilgandan keyin ochiladi.",
+      "leaderboardLabel": "Haftalik reyting",
+      "leaderboardTitle": "Reyting jadvali",
+      "finished": "Tugallangan",
+      "active": "Faol",
+      "score": "Ball",
+      "correct": "To'g'ri",
+      "incorrect": "Noto'g'ri",
+      "skipped": "Tashlab ketilgan",
+      "questionLabel": "{number}-savol",
+      "noLeaderboard": "Hozircha reyting yozuvlari yo'q.",
+      "attemptStarted": "Urinish boshlandi.",
+      "attemptLoaded": "Urinish yuklandi.",
+      "attemptPreviewLabel": "Urinish preview",
+      "attemptPreviewTitle": "Urinish holati",
+      "attemptPreviewText": "Urinish yaratilgan va to'g'ri bog'langan. Full question runner shu holatdan backend ownershipni yo'qotmasdan ochilishi mumkin.",
+      "reviewPreviewLabel": "Review preview",
+      "reviewPreviewTitle": "Oxirgi review holati",
+      "status": "Holat",
+      "answered": "Javob berilgan",
+      "timeUsed": "Sarflangan vaqt",
+      "band": "Band",
+      "close": "Yopish"
+    }
+  },
   "adminNotifications": {
     "bellLabel": "Bildirishnomalar",
     "eyebrow": "Admin bildirishnomalari",
@@ -4844,6 +4972,317 @@
       "allRead": {
         "title": "Hammasi tayyor",
         "description": "Barcha bildirishnomalar o?qilgan deb belgilandi."
+      }
+    }
+  },
+  "adminMarathons": {
+    "title": "Marathons",
+    "loading": "Loading marathon data...",
+    "searchPlaceholder": "Search marathons, descriptions or series...",
+    "empty": "No marathons match the current filters.",
+    "actions": {
+      "newSeries": "New series",
+      "newMarathon": "New marathon",
+      "open": "Open",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving...",
+      "back": "Back to marathons",
+      "saveDay": "Save day",
+      "add": "Add",
+      "assign": "Assign",
+      "remove": "Remove",
+      "createPassage": "Create passage",
+      "createPart": "Create part"
+    },
+    "stats": {
+      "total": "Total marathons",
+      "totalHelper": "All marathon records in the admin system.",
+      "visible": "Visible marathons",
+      "visibleHelper": "Student-facing marathons that can be discovered right now.",
+      "enrollments": "Total enrollments",
+      "enrollmentsHelper": "Combined enrolled students across all marathons."
+    },
+    "filters": {
+      "visibility": "Visibility",
+      "premium": "Access",
+      "allVisibility": "All visibility",
+      "visible": "Visible",
+      "hidden": "Hidden",
+      "allPremium": "All access",
+      "premiumOnly": "Premium only",
+      "freeOnly": "Free access"
+    },
+    "list": {
+      "title": "Marathon library",
+      "description": "Create marathons, manage access, and open a dedicated workspace for day content, passages, parts, enrollments, and rankings.",
+      "noDescription": "No description provided yet."
+    },
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "days": "Days",
+      "band": "Target band",
+      "difficulty": "Difficulty",
+      "category": "Category",
+      "streakGoal": "Streak goal",
+      "maxEnrollments": "Max enrollments",
+      "series": "Series",
+      "externalLink": "External link",
+      "externalLinkTitle": "External link title",
+      "visible": "Visible to students",
+      "visibleHint": "Hidden marathons stay out of the student browse flow.",
+      "premium": "Premium access only",
+      "premiumHint": "Only premium students can enroll when this is enabled.",
+      "created": "Created"
+    },
+    "options": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced",
+      "mixed": "Mixed",
+      "reading": "Reading focus",
+      "listening": "Listening focus"
+    },
+    "sheet": {
+      "createTitle": "Create marathon",
+      "createDescription": "Set the marathon shell first. The system will generate day records automatically based on the total day count.",
+      "editTitle": "Edit marathon",
+      "editDescription": "Update the core metadata and student access rules for this marathon."
+    },
+    "delete": {
+      "title": "Delete marathon?",
+      "description": "This will permanently remove \"{title}\" and its related admin-managed content."
+    },
+    "series": {
+      "title": "Series",
+      "description": "Use series to group related marathons into one track.",
+      "badge": "series",
+      "noDescription": "No description",
+      "active": "Active",
+      "inactive": "Inactive",
+      "empty": "No series created yet.",
+      "none": "No series",
+      "fields": {
+        "name": "Series name",
+        "description": "Series description",
+        "active": "Active",
+        "activeHint": "Inactive series stay selectable only after you enable them again."
+      }
+    },
+    "seriesSheet": {
+      "title": "Create series",
+      "description": "Series keep related marathons under one grouped path.",
+      "editTitle": "Edit series",
+      "editDescription": "Update the series label and availability for future marathon assignment."
+    },
+    "seriesDelete": {
+      "title": "Delete series?",
+      "description": "This will permanently remove \"{title}\"."
+    },
+    "detail": {
+      "title": "Marathon details",
+      "enrollments": "Enrollments",
+      "dayPickerTitle": "Days",
+      "dayPickerDescription": "Open any day to manage its study content, resources, passages, parts, and tracking data.",
+      "dayLabel": "Day {day}",
+      "items": "items",
+      "editorTitle": "Edit Day {day}",
+      "editorDescription": "Update the plain-text lesson, timing, difficulty, and bonus-day state for this step.",
+      "none": "None",
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard",
+      "estimatedMinutes": "Estimated minutes",
+      "bonusDay": "Bonus day",
+      "bonusHint": "Bonus days do not block finishing the marathon.",
+      "content": "Day content",
+      "resourcesTab": "Resources",
+      "readingTab": "Reading",
+      "listeningTab": "Listening",
+      "enrollmentsTab": "Enrollments",
+      "leaderboardTab": "Leaderboard",
+      "resourcesTitle": "External resources",
+      "resourcesDescription": "Attach external study links that students can open from this day.",
+      "linkTitlePlaceholder": "Resource title",
+      "linkUrlPlaceholder": "https://example.com",
+      "resourcesEmpty": "No external resources are attached to this day yet.",
+      "readingLibraryTitle": "Reading passage library",
+      "readingLibraryDescription": "Create marathon-scoped reading passages and assign them to the selected day.",
+      "topic": "Topic",
+      "passageText": "Passage text",
+      "assignPassage": "Assign passage to this day",
+      "questions": "questions",
+      "noPassages": "No reading passages are assigned to this day.",
+      "assignedPassagesTitle": "Shu kunga biriktirilgan",
+      "libraryPassagesTitle": "Ushbu marafondagi barcha reading passage'lar",
+      "libraryPassagesEmpty": "No marathon reading passages created yet.",
+      "listeningLibraryTitle": "Listening part library",
+      "listeningLibraryDescription": "Create marathon-scoped listening parts and assign them to the selected day.",
+      "partNumber": "Part number",
+      "transcript": "Transcript text",
+      "audioFile": "Audio file",
+      "assignPart": "Assign listening part to this day",
+      "audioReady": "Audio ready",
+      "noParts": "No listening parts are assigned to this day.",
+      "assignedPartsTitle": "Shu kunga biriktirilgan",
+      "libraryPartsTitle": "Ushbu marafondagi barcha listening part'lar",
+      "libraryPartsEmpty": "No marathon listening parts created yet.",
+      "buildQuestions": "Build questions",
+      "createPassageAndOpenBuilder": "Passage yaratib builder'ni ochish",
+      "createPartAndOpenBuilder": "Part yaratib builder'ni ochish",
+      "enrollmentsTitle": "Student enrollments",
+      "enrollmentsDescription": "Backend progress is the source of truth. This table shows current student state directly from the API.",
+      "noEnrollments": "No students are enrolled in this marathon yet.",
+      "leaderboardTitle": "Leaderboard",
+      "leaderboardDescription": "Ranking is returned from the backend and reflects current score and streak state.",
+      "noLeaderboard": "No leaderboard entries are available yet.",
+      "score": "Score",
+      "deleteLinkTitle": "Delete resource?",
+      "deleteLinkDescription": "This link will be removed from the selected day.",
+      "deletePassageTitle": "Delete passage?",
+      "deletePassageDescription": "This passage and its marathon question groups will be removed.",
+      "deletePartTitle": "Delete listening part?",
+      "deletePartDescription": "This listening part and its marathon question groups will be removed."
+    },
+    "table": {
+      "student": "Student",
+      "status": "Status",
+      "progress": "Progress",
+      "streak": "Streak",
+      "lastActivity": "Last activity",
+      "daysCompleted": "Days completed"
+    },
+    "notices": {
+      "loadFailed": {
+        "title": "Could not load marathons",
+        "description": "The admin marathon endpoints did not return usable data."
+      },
+      "created": {
+        "title": "Marathon created",
+        "description": "The new marathon is now available in the admin list."
+      },
+      "saved": {
+        "title": "Marathon updated",
+        "description": "Marathon changes were saved successfully."
+      },
+      "saveFailed": {
+        "title": "Could not save marathon",
+        "description": "Please check the form and try again."
+      },
+      "deleted": {
+        "title": "Marathon deleted",
+        "description": "The marathon was removed successfully."
+      },
+      "deleteFailed": {
+        "title": "Could not delete marathon",
+        "description": "The backend rejected the delete request."
+      },
+      "seriesCreated": {
+        "title": "Series created",
+        "description": "The new series can now be attached to marathons."
+      },
+      "seriesUpdated": {
+        "title": "Series updated",
+        "description": "Series changes were saved successfully."
+      },
+      "seriesDeleted": {
+        "title": "Series deleted",
+        "description": "The series was removed successfully."
+      },
+      "seriesFailed": {
+        "title": "Could not create series",
+        "description": "Please retry after checking the values."
+      },
+      "seriesDeleteFailed": {
+        "title": "Could not delete series",
+        "description": "The backend rejected the series delete request."
+      },
+      "daySaved": {
+        "title": "Day saved",
+        "description": "The selected day content was updated."
+      },
+      "dayFailed": {
+        "title": "Could not save day",
+        "description": "Please retry after checking the day fields."
+      },
+      "linkSaved": {
+        "title": "Resource added",
+        "description": "The external link is now attached to this day."
+      },
+      "linkUpdated": {
+        "title": "Resource updated",
+        "description": "The external link was updated successfully."
+      },
+      "linkFailed": {
+        "title": "Could not add resource",
+        "description": "Please check the title and URL and try again."
+      },
+      "linkDeleted": {
+        "title": "Resource removed",
+        "description": "The external link was removed from this day."
+      },
+      "linkDeleteFailed": {
+        "title": "Could not remove resource",
+        "description": "The backend rejected the delete request."
+      },
+      "passageSaved": {
+        "title": "Passage created",
+        "description": "The marathon passage is ready to be assigned."
+      },
+      "passageUpdated": {
+        "title": "Passage updated",
+        "description": "The marathon passage was updated successfully."
+      },
+      "passageDeleted": {
+        "title": "Passage deleted",
+        "description": "The marathon passage was removed successfully."
+      },
+      "passageFailed": {
+        "title": "Could not create passage",
+        "description": "Please check the passage fields and try again."
+      },
+      "passageDeleteFailed": {
+        "title": "Could not delete passage",
+        "description": "The backend rejected the passage delete request."
+      },
+      "passageAssigned": {
+        "title": "Passage assigned",
+        "description": "The passage is now attached to the selected day."
+      },
+      "passageAssignFailed": {
+        "title": "Could not update passage assignment",
+        "description": "Please retry after refreshing the day data."
+      },
+      "partSaved": {
+        "title": "Listening part created",
+        "description": "The listening part is ready to be assigned."
+      },
+      "partUpdated": {
+        "title": "Listening part updated",
+        "description": "The listening part was updated successfully."
+      },
+      "partDeleted": {
+        "title": "Listening part deleted",
+        "description": "The listening part was removed successfully."
+      },
+      "partFailed": {
+        "title": "Could not create listening part",
+        "description": "Please check the listening fields and try again."
+      },
+      "partDeleteFailed": {
+        "title": "Could not delete listening part",
+        "description": "The backend rejected the listening delete request."
+      },
+      "partAssigned": {
+        "title": "Listening part assigned",
+        "description": "The listening part is now attached to the selected day."
+      },
+      "partAssignFailed": {
+        "title": "Could not update listening assignment",
+        "description": "Please retry after refreshing the day data."
       }
     }
   }

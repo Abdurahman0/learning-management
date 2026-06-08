@@ -11,6 +11,7 @@ import {
   CreditCard,
   Database,
   FileText,
+  Flame,
   LayoutDashboard,
   Menu,
   MessageSquareText,
@@ -29,6 +30,7 @@ import {cn} from "@/lib/utils";
 const navIcons: Record<AdminNavKey, LucideIcon> = {
   dashboard: LayoutDashboard,
   tests: ClipboardList,
+  marathons: Flame,
   contentBank: Database,
   users: Users,
   analytics: BarChart3,

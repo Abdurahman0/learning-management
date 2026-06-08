@@ -72,6 +72,11 @@ export function ListeningTestCard({test}: ListeningTestCardProps) {
                 <DifficultySignal difficulty={test.difficulty} />
                 <span className="truncate">{t(`filters.${test.difficulty}`)}</span>
               </span>
+              {typeof test.lastAccuracyPercent === "number" ? (
+                <span className="inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
+                  <span className="truncate">{t("card.lastAccuracy")}: {Math.round(test.lastAccuracyPercent)}%</span>
+                </span>
+              ) : null}
             </div>
           </div>
 

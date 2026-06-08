@@ -72,6 +72,11 @@ export function ReadingTestCard({test}: ReadingTestCardProps) {
                 <DifficultySignal difficulty={test.difficulty} />
                 {t(`filters.${test.difficulty}`)}
               </span>
+              {typeof test.lastAccuracyPercent === "number" ? (
+                <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
+                  {t("card.lastAccuracy")}: {Math.round(test.lastAccuracyPercent)}%
+                </span>
+              ) : null}
             </div>
           </div>
 

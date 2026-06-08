@@ -52,6 +52,11 @@ import { useTestAppearance } from "@/lib/test-appearance";
 import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
 import { adaptReadingBackendReview, type AdaptedReadingBackendReview } from "./result/_components/backendReviewAdapters";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
+import { studentMarathonService } from "@/src/services/student/marathon.service";
+import {
+  adaptMarathonReadingAttemptToDetail,
+  adaptMarathonReadingReviewResponse,
+} from "@/src/services/student/marathon-runner-adapters";
 import { studentTestsService } from "@/src/services/student/tests.service";
 import { StudentApiError } from "@/src/services/student/types";
 import type { StudentAttemptDetail, StudentAttemptQuestion, StudentAttemptQuestionGroup, StudentAttemptReadingPassage, StudentTestRecord } from "@/src/services/student/types";
@@ -1057,6 +1062,21 @@ function toReadingBackendAnswerPayload(entries: BackendAttemptAnswerEntry[]) {
     );
 }
 
+function toMarathonSaveAnswers(
+  payload: Array<{
+    question_id: string;
+    attempt_question_id: string;
+    answer: {answer: string} | {answers: string[]} | null;
+    is_flagged: boolean;
+  }>
+) {
+  return payload.map((item) => ({
+    question_id: item.question_id,
+    answer: item.answer,
+    is_flagged: item.is_flagged,
+  }));
+}
+
 function mapBackendAttemptToReadingTest(
   testId: string,
   meta: StudentTestRecord,
@@ -1322,6 +1342,9 @@ export default function ReadingTestPage() {
   const restartRequested = searchParams.get("restart") === "1";
   const modeParam = searchParams.get("mode");
   const scopedPassageId = searchParams.get("passageId")?.trim() ?? "";
+  const marathonIdParam = searchParams.get("marathonId")?.trim() ?? "";
+  const marathonDayNumber = Number(searchParams.get("dayNumber")?.trim() ?? "");
+  const isMarathonContext = UUID_PATTERN.test(marathonIdParam) && Number.isInteger(marathonDayNumber) && marathonDayNumber > 0;
   const requestedMode: AttemptMode | null =
     modeParam === "real" || modeParam === "practice" ? modeParam : null;
   const reviewRequested = searchParams.get("review") === "1";
@@ -1370,6 +1393,32 @@ export default function ReadingTestPage() {
       setIsLoading(true);
       setLoadError(null);
       try {
+        if (isMarathonContext) {
+          if (isGuest) {
+            throw new Error("Marathon content requires an enrolled student session.");
+          }
+
+          const marathonAttempt = reviewAttemptId
+            ? await studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, reviewAttemptId)
+            : await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, { passage_id: testId });
+          if (!active) return;
+
+          const adapted = adaptMarathonReadingAttemptToDetail(marathonAttempt, testId);
+          if (!adapted) {
+            throw new Error("Failed to load marathon reading content.");
+          }
+
+          const mappedTest = mapBackendAttemptToReadingTest(testId, adapted.meta, adapted.attempt, adapted.attempt.scoped_reading_passage_id ?? undefined);
+          if (!mappedTest.questions.length) {
+            throw new Error("No questions returned for this marathon reading attempt.");
+          }
+
+          setBackendAttemptId(marathonAttempt.id);
+          saveRuntimeReadingTest(mappedTest);
+          setTest(mappedTest);
+          return;
+        }
+
         if (isGuest) {
           const cached = getReadingTestById(testId);
           if (cached) {
@@ -1549,7 +1598,7 @@ export default function ReadingTestPage() {
     return () => {
       active = false;
     };
-  }, [isGuest, requestedMode, restartRequested, reviewAttemptId, scopedPassageId, shouldLoadFromBackend, t, testId]);
+  }, [isGuest, isMarathonContext, marathonDayNumber, marathonIdParam, requestedMode, restartRequested, reviewAttemptId, scopedPassageId, shouldLoadFromBackend, t, testId]);
 
   if (isLoading) {
     return (
@@ -1617,6 +1666,24 @@ function ReadingTestClient({
   const reviewDeepLinkAttemptIdRaw = searchParams.get("attempt")?.trim() ?? "";
   const reviewDeepLinkActive = searchParams.get("review") === "1" && UUID_PATTERN.test(reviewDeepLinkAttemptIdRaw);
   const reviewDeepLinkAttemptId = reviewDeepLinkActive ? reviewDeepLinkAttemptIdRaw : null;
+  const marathonIdParam = searchParams.get("marathonId")?.trim() ?? "";
+  const marathonDayNumber = Number(searchParams.get("dayNumber")?.trim() ?? "");
+  const isMarathonContext = UUID_PATTERN.test(marathonIdParam) && Number.isInteger(marathonDayNumber) && marathonDayNumber > 0;
+  const returnToParam = searchParams.get("returnTo")?.trim() ?? "";
+  const returnLabelParam = searchParams.get("returnLabel")?.trim() ?? "";
+  const returnQuerySuffix = useMemo(() => {
+    const params = new URLSearchParams();
+    if (returnToParam.startsWith("/")) {
+      params.set("returnTo", returnToParam);
+      if (returnLabelParam) params.set("returnLabel", returnLabelParam);
+    }
+    if (isMarathonContext) {
+      params.set("marathonId", marathonIdParam);
+      params.set("dayNumber", String(marathonDayNumber));
+    }
+    const serialized = params.toString();
+    return serialized ? `&${serialized}` : "";
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, returnLabelParam, returnToParam]);
   type RealModeInterruptionReason = "fullscreen" | "visibility";
   const [attemptId, setAttemptId] = useState<string>("");
   const [startedAt, setStartedAt] = useState<number>(0);
@@ -2085,8 +2152,21 @@ function ReadingTestClient({
 
     const loadReview = async () => {
       try {
-        const reviewResponse = await studentAttemptsService.review(reviewDeepLinkAttemptId);
+        const reviewResponse = isMarathonContext
+          ? await (async () => {
+              const [attemptResponse, resultResponse] = await Promise.all([
+                studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, reviewDeepLinkAttemptId),
+                studentMarathonService.reviewAttempt(marathonIdParam, marathonDayNumber, reviewDeepLinkAttemptId),
+              ]);
+              return adaptMarathonReadingReviewResponse({
+                attempt: attemptResponse,
+                result: resultResponse,
+                routeId: test.id,
+              });
+            })()
+          : await studentAttemptsService.review(reviewDeepLinkAttemptId);
         if (!active) return;
+        if (!reviewResponse) return;
         setBackendReviewData(adaptReadingBackendReview(reviewResponse));
       } catch {
         // Keep review mode fallback UI (no explanations/evidence) on failure.
@@ -2098,7 +2178,7 @@ function ReadingTestClient({
     return () => {
       active = false;
     };
-  }, [reviewDeepLinkActive, reviewDeepLinkAttemptId]);
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, reviewDeepLinkActive, reviewDeepLinkAttemptId, test.id]);
 
   const resolveTimeUsedSeconds = useCallback(
     (finishedAtMs?: number) => {
@@ -2146,7 +2226,14 @@ function ReadingTestClient({
         };
 
         try {
-          await studentAttemptsService.save(backendAttemptId, savePayload);
+          if (isMarathonContext) {
+            await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, backendAttemptId, {
+              time_used_seconds: savePayload.time_used_seconds,
+              answers: toMarathonSaveAnswers(savePayload.answers),
+            });
+          } else {
+            await studentAttemptsService.save(backendAttemptId, savePayload);
+          }
           return;
         } catch (error) {
           const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
@@ -2155,7 +2242,15 @@ function ReadingTestClient({
           }
 
           try {
-            const freshSnapshot = await studentAttemptsService.getById(backendAttemptId);
+            const freshSnapshot = await (isMarathonContext
+              ? (() => {
+                  const response = studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, backendAttemptId);
+                  return response.then((attemptResponse) => adaptMarathonReadingAttemptToDetail(attemptResponse, test.id)?.attempt ?? null);
+                })()
+              : studentAttemptsService.getById(backendAttemptId));
+            if (!freshSnapshot) {
+              throw error;
+            }
             const freshByNumber = collectAttemptSubmitCandidatesByNumber(freshSnapshot);
             const freshAllowedAttemptScopedIds = collectAttemptScopedIdPool(freshSnapshot);
             const retryEntries = includeAnswers
@@ -2170,10 +2265,17 @@ function ReadingTestClient({
             const retryPayloadAnswers = toReadingBackendAnswerPayload(retryEntries)
               .filter((item) => item.answer !== null || item.is_flagged);
 
-            await studentAttemptsService.save(backendAttemptId, {
-              time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
-              answers: retryPayloadAnswers
-            });
+            if (isMarathonContext) {
+              await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, backendAttemptId, {
+                time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+                answers: toMarathonSaveAnswers(retryPayloadAnswers),
+              });
+            } else {
+              await studentAttemptsService.save(backendAttemptId, {
+                time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+                answers: retryPayloadAnswers
+              });
+            }
             return;
           } catch (retryError) {
             if (strict) {
@@ -2192,7 +2294,7 @@ function ReadingTestClient({
 
       return run.catch(() => undefined);
     },
-    [answers, attemptId, backendAttemptId, marked, resolveTimeUsedSeconds, reviewMode, test.id, test.questions]
+    [answers, attemptId, backendAttemptId, isMarathonContext, marked, marathonDayNumber, marathonIdParam, resolveTimeUsedSeconds, reviewMode, test.id, test.questions]
   );
 
   useEffect(() => {
@@ -2218,16 +2320,23 @@ function ReadingTestClient({
 
     const createFreshAttemptAfterRestart = async () => {
       try {
-        const createdAttempt = await studentAttemptsService.create({
-          practice_test: test.id,
-          mode: attemptMode === "real" ? "REAL" : "PRACTICE"
-        });
+        let hydratedAttempt: StudentAttemptDetail | null = null;
+        if (isMarathonContext) {
+          const createdAttempt = await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, { passage_id: test.id });
+          hydratedAttempt = adaptMarathonReadingAttemptToDetail(createdAttempt, test.id)?.attempt ?? null;
+        } else {
+          const createdAttempt = await studentAttemptsService.create({
+            practice_test: test.id,
+            mode: attemptMode === "real" ? "REAL" : "PRACTICE"
+          });
+          hydratedAttempt = hasAttemptQuestionData(createdAttempt)
+            ? createdAttempt
+            : await studentAttemptsService.getById(String(createdAttempt.id));
+        }
         if (!active) return;
-
-        const hydratedAttempt = hasAttemptQuestionData(createdAttempt)
-          ? createdAttempt
-          : await studentAttemptsService.getById(String(createdAttempt.id));
-        if (!active) return;
+        if (!hydratedAttempt) {
+          throw new Error("Failed to restart marathon reading attempt.");
+        }
 
         setBackendAttemptId(String(hydratedAttempt.id));
         initialBackendSaveAttemptRef.current = null;
@@ -2242,7 +2351,7 @@ function ReadingTestClient({
     return () => {
       active = false;
     };
-  }, [attemptMode, isGuest, reviewMode, test.id]);
+  }, [attemptMode, isGuest, isMarathonContext, marathonDayNumber, marathonIdParam, reviewMode, test.id]);
 
   useEffect(() => {
     setBackendReviewData(null);
@@ -2563,11 +2672,20 @@ function ReadingTestClient({
         }));
 
         try {
-          await studentAttemptsService.submit(backendAttemptId, {
-            time_used_seconds: timeUsedSeconds,
-            answers: buildSubmitAnswers(collectRuntimeSubmitCandidatesByNumber(test.questions))
-          });
+          if (isMarathonContext) {
+            await studentMarathonService.submitAttempt(marathonIdParam, marathonDayNumber, backendAttemptId, {
+              time_used_seconds: timeUsedSeconds,
+            });
+          } else {
+            await studentAttemptsService.submit(backendAttemptId, {
+              time_used_seconds: timeUsedSeconds,
+              answers: buildSubmitAnswers(collectRuntimeSubmitCandidatesByNumber(test.questions))
+            });
+          }
         } catch (error) {
+          if (isMarathonContext) {
+            throw error;
+          }
           const failedQuestionIds = extractValidationAnswerQuestionIdFailures(error);
           if (!failedQuestionIds.size) {
             throw error;
@@ -2642,12 +2760,16 @@ function ReadingTestClient({
       setTimerRunning(false);
 
       if (backendAttemptId) {
-        router.push(`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId}`);
+        if (isMarathonContext) {
+          router.push(`/${locale}/reading/${test.id}?review=1&attempt=${backendAttemptId}${returnQuerySuffix}`);
+          return;
+        }
+        router.push(`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId}${returnQuerySuffix}`);
         return;
       }
 
       if (isGuest) {
-        router.push(`/${locale}/reading/${test.id}/result?attempt=${attemptId}`);
+        router.push(`/${locale}/reading/${test.id}/result?attempt=${attemptId}${returnQuerySuffix}`);
         return;
       }
 
@@ -2667,7 +2789,10 @@ function ReadingTestClient({
     backendAttemptId,
     currentUserKey,
     isGuest,
+    isMarathonContext,
     isSubmittingResult,
+    marathonDayNumber,
+    marathonIdParam,
     marked,
     remainingSeconds,
     resolveTimeUsedSeconds,
@@ -3305,10 +3430,10 @@ function ReadingTestClient({
                     <section key={group.title} className="space-y-4">
                       <div>
                         <h3 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{group.title}</h3>
-                        {group.instruction && !matchingInfoGroupOptions.length ? (
-                          <p className="test-muted-copy mt-1 wrap-break-word text-sm text-muted-foreground">
+                        {group.instruction ? (
+                          <div className="mt-1 wrap-break-word text-sm leading-relaxed text-foreground/85">
                             <FormattedInstructionText text={group.instruction} />
-                          </p>
+                          </div>
                         ) : null}
                       </div>
 
@@ -3543,10 +3668,20 @@ function ReadingTestClient({
                               </div>
 
                                 {reviewMode && reviewAnswersVisible && !isSharedQuestionBlock ? (
-                                  <p className="test-muted-copy mb-3 text-xs text-muted-foreground">
-                                    {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
-                                    {reviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
-                                  </p>
+                                  <div className="mb-3 space-y-1 text-xs">
+                                    <p className="test-muted-copy text-muted-foreground">
+                                      {(t.has("yourAnswer") ? t("yourAnswer") : "Your answer")}:{" "}
+                                      <span className="font-semibold text-foreground">
+                                        {formatAnswerForDisplay(value) || (t.has("noAnswer") ? t("noAnswer") : "No answer")}
+                                      </span>
+                                    </p>
+                                    <p className="test-muted-copy text-muted-foreground">
+                                      {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
+                                      <span className="font-semibold text-emerald-700 dark:text-emerald-200">
+                                        {reviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
+                                      </span>
+                                    </p>
+                                  </div>
                                 ) : null}
 
                               {question.type === "tfng" ? (
@@ -3860,12 +3995,20 @@ function ReadingTestClient({
                                                     />
                                                   </div>
                                                   {reviewMode && reviewAnswersVisible ? (
-                                                    <p className="text-xs text-muted-foreground">
-                                                      {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
-                                                      <span className="font-medium text-foreground">
-                                                        {targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
-                                                      </span>
-                                                    </p>
+                                                    <div className="space-y-1 text-xs text-muted-foreground">
+                                                      <p>
+                                                        {(t.has("yourAnswer") ? t("yourAnswer") : "Your answer")}:{" "}
+                                                        <span className="font-medium text-foreground">
+                                                          {formatAnswerForDisplay(targetValue) || (t.has("noAnswer") ? t("noAnswer") : "No answer")}
+                                                        </span>
+                                                      </p>
+                                                      <p>
+                                                        {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:{" "}
+                                                        <span className="font-medium text-emerald-700 dark:text-emerald-200">
+                                                          {targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
+                                                        </span>
+                                                      </p>
+                                                    </div>
                                                   ) : null}
                                                   {expandedExplanations.has(targetQuestion.id) ? (
                                                     <div className="rounded-md border border-border/70 bg-muted/25 p-2 text-xs text-foreground/90">
@@ -4265,11 +4408,23 @@ function ReadingTestClient({
                                                   style={{ verticalAlign: "baseline" }}
                                                 />
                                                 {reviewMode && reviewAnswersVisible ? (
-                                                  <span className="ml-1 inline-block rounded-md border border-border/70 bg-background/65 px-2 py-1 text-xs text-muted-foreground">
-                                                    <strong className="font-bold text-foreground">Answer:</strong>{" "}
-                                                    <strong className="font-bold text-emerald-700 dark:text-emerald-200">
-                                                      {targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
-                                                    </strong>
+                                                  <span className="ml-1 inline-flex flex-col rounded-md border border-border/70 bg-background/65 px-2 py-1 text-xs text-muted-foreground">
+                                                    <span>
+                                                      <strong className="font-bold text-foreground">
+                                                        {(t.has("yourAnswer") ? t("yourAnswer") : "Your answer")}:
+                                                      </strong>{" "}
+                                                      <strong className="font-bold text-foreground">
+                                                        {formatAnswerForDisplay(questionValue) || (t.has("noAnswer") ? t("noAnswer") : "No answer")}
+                                                      </strong>
+                                                    </span>
+                                                    <span>
+                                                      <strong className="font-bold text-foreground">
+                                                        {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:
+                                                      </strong>{" "}
+                                                      <strong className="font-bold text-emerald-700 dark:text-emerald-200">
+                                                        {targetReviewedCorrectAnswer || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
+                                                      </strong>
+                                                    </span>
                                                   </span>
                                                 ) : null}
                                                 {reviewMode ? (
@@ -4564,8 +4719,14 @@ function ReadingTestClient({
       {reviewMode ? (
         <div className="fixed bottom-16 right-4 z-50 sm:bottom-20 sm:right-5">
           <Button asChild className="h-12 rounded-2xl bg-blue-600 px-6 text-base font-semibold text-white shadow-lg hover:bg-blue-600/90">
-            <Link href={`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId ?? attemptId}`}>
-              Analyze
+            <Link
+              href={
+                isMarathonContext
+                  ? (returnToParam.startsWith("/") ? returnToParam : `/${locale}/marathons/${marathonIdParam}/days/${marathonDayNumber}`)
+                  : `/${locale}/reading/${test.id}/result?attempt=${backendAttemptId ?? attemptId}${returnQuerySuffix}`
+              }
+            >
+              {isMarathonContext ? (returnLabelParam || "Back to marathon day") : "Analyze"}
             </Link>
           </Button>
         </div>

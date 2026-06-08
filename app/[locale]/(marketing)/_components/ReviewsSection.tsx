@@ -88,7 +88,7 @@ export function ReviewsSection() {
   return (
     <section id="reviews" className="scroll-mt-24 bg-muted/30 py-16 sm:py-20">
       <Container>
-        <div className="mx-auto max-w-3xl text-center">
+        <div data-reveal-item className="mx-auto max-w-3xl text-center">
           <Badge className="mb-4 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100">
             {t("reviews.badge")}
           </Badge>
@@ -98,7 +98,7 @@ export function ReviewsSection() {
 
         {reviews.length > 0 ? (
           shouldUseMarquee ? (
-            <div className="reviews-marquee mt-10 overflow-hidden">
+            <div data-reveal-item className="reviews-marquee mt-10 overflow-hidden">
               <div className="reviews-track flex w-max">
                 {[0, 1].map((copyIndex) => (
                   <ul key={copyIndex} className="flex shrink-0 gap-4 pr-4 sm:gap-5 sm:pr-5" aria-hidden={copyIndex === 1}>
@@ -108,17 +108,17 @@ export function ReviewsSection() {
               </div>
             </div>
           ) : (
-            <ul className="mt-10 flex flex-wrap justify-center gap-4 sm:gap-5">
+            <ul data-reveal-item className="mt-10 flex flex-wrap justify-center gap-4 sm:gap-5">
               {reviews.map((review) => renderReviewCard(review))}
             </ul>
           )
         ) : (
-          <div className="mx-auto mt-10 max-w-2xl rounded-2xl border border-dashed border-border/80 bg-card/70 p-6 text-center text-sm text-muted-foreground">
+          <div data-reveal-item className="mx-auto mt-10 max-w-2xl rounded-2xl border border-dashed border-border/80 bg-card/70 p-6 text-center text-sm text-muted-foreground">
             {t("reviews.empty.noFeedback")}
           </div>
         )}
 
-        <div className="mt-8 flex justify-center sm:mt-10">
+        <div data-reveal-item className="mt-8 flex justify-center sm:mt-10">
           <Button asChild variant="outline" className="rounded-lg border-border bg-background px-6">
             <Link href={`/${locale}/reviews`}>{t("reviews.actions.moreReviews")}</Link>
           </Button>

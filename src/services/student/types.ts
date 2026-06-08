@@ -63,6 +63,22 @@ export type StudentUserAttemptStatus = Record<string, unknown> & {
   current_attempt_id?: string | number;
   active_attempt_id?: string | number;
   last_attempt_id?: string | number;
+  accuracy?: string | number;
+  accuracy_percent?: number | string;
+  accuracyPercent?: number | string;
+  last_attempt_accuracy_percent?: number | string | null;
+  last_accuracy_percent?: number | string | null;
+  lastAccuracyPercent?: number | string | null;
+  score_percent?: number | string | null;
+  scorePercent?: number | string | null;
+  correct_count?: number | string | null;
+  correctCount?: number | string | null;
+  last_correct_count?: number | string | null;
+  lastCorrectCount?: number | string | null;
+  total_questions?: number | string | null;
+  totalQuestions?: number | string | null;
+  last_total_questions?: number | string | null;
+  lastTotalQuestions?: number | string | null;
 };
 
 export type StudentTestRecord = {
@@ -347,6 +363,7 @@ export type StudentProfileResponse = {
   id: string;
   full_name: string;
   email: string;
+  phone_number?: string | null;
   target_band: number | null;
   exam_datetime?: string | null;
   target_listening_band?: number | null;
@@ -366,6 +383,7 @@ export type StudentProfileResponse = {
 };
 
 export type StudentProfileUpdatePayload = {
+  phone_number?: string | null;
   exam_datetime?: string | null;
   target_band?: number | string | null;
   target_listening_band?: number | string | null;

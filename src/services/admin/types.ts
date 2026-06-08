@@ -242,6 +242,196 @@ export type QuestionPayload = {
   is_active?: boolean;
 };
 
+export type AdminMarathonDifficulty = "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | string;
+export type AdminMarathonCategory = "READING_FOCUS" | "LISTENING_FOCUS" | "MIXED" | string;
+export type AdminMarathonEnrollmentStatus = "ENROLLED" | "ACTIVE" | "COMPLETED" | "ABANDONED" | string;
+
+export type AdminMarathonSeriesRecord = {
+  id: AdminEntityId;
+  name: string;
+  description: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AdminMarathonRecord = {
+  id: AdminEntityId;
+  title: string;
+  description: string;
+  marathon_days: number;
+  total_days?: number;
+  difficulty: AdminMarathonDifficulty;
+  difficulty_display?: string;
+  category: AdminMarathonCategory;
+  category_display?: string;
+  target_band: string | null;
+  streak_goal_days: number;
+  is_visible: boolean;
+  for_premium_users: boolean;
+  max_enrollments: number | null;
+  external_link: string;
+  external_link_title: string;
+  series: AdminEntityId | null;
+  series_name?: string | null;
+  enrollments_count?: number | null;
+  created_by?: AdminEntityId | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AdminMarathonDayRecord = {
+  id: AdminEntityId;
+  day_number: number;
+  title: string;
+  content?: string;
+  difficulty: "EASY" | "MEDIUM" | "HARD" | string | null;
+  estimated_minutes: number | null;
+  is_bonus_day: boolean;
+  is_completable?: boolean;
+  external_links_count?: number;
+  reading_passages_count?: number;
+  listening_parts_count?: number;
+};
+
+export type AdminMarathonExternalLinkRecord = {
+  id: AdminEntityId;
+  title: string;
+  url: string;
+  order: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AdminMarathonReadingPassageRecord = {
+  id: AdminEntityId;
+  title: string;
+  passage_text: string;
+  difficulty_level: string;
+  topic?: string | null;
+  estimated_time_minutes: number | null;
+  max_questions: number;
+  time_limit_seconds: number | null;
+  is_active: boolean;
+  source?: string | null;
+  question_groups_count?: number | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AdminMarathonListeningPartRecord = {
+  id: AdminEntityId;
+  title: string;
+  part_number?: string | null;
+  transcript_text: string;
+  difficulty_level: string;
+  estimated_time_minutes: number | null;
+  max_questions: number;
+  time_limit_seconds: number | null;
+  audio_file_url?: string | null;
+  audio_url?: string | null;
+  is_active: boolean;
+  source?: string | null;
+  question_groups_count?: number | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AdminMarathonDayDetailRecord = AdminMarathonDayRecord & {
+  external_links: AdminMarathonExternalLinkRecord[];
+  reading_passages: AdminMarathonReadingPassageRecord[];
+  listening_parts: AdminMarathonListeningPartRecord[];
+};
+
+export type AdminMarathonEnrollmentRecord = {
+  id: AdminEntityId;
+  student: AdminEntityId | null;
+  student_full_name: string;
+  student_email: string;
+  status: AdminMarathonEnrollmentStatus;
+  enrolled_at: string | null;
+  last_activity_at: string | null;
+  completed_at: string | null;
+  is_finished_marathon: boolean;
+  current_streak: number;
+  longest_streak: number;
+  days_missed: number;
+  total_score: string | null;
+  total_time_seconds: number;
+  current_day_number: number;
+  days_completed: number;
+  progress_percentage: number;
+};
+
+export type AdminMarathonLeaderboardEntry = {
+  rank: number;
+  student_full_name: string;
+  total_score: string | null;
+  current_streak: number;
+  is_finished_marathon: boolean;
+  days_completed: number;
+};
+
+export type AdminMarathonPayload = {
+  title: string;
+  description?: string;
+  marathon_days: number;
+  difficulty: AdminMarathonDifficulty;
+  category: AdminMarathonCategory;
+  target_band?: string | null;
+  streak_goal_days?: number;
+  is_visible?: boolean;
+  for_premium_users?: boolean;
+  max_enrollments?: number | null;
+  external_link?: string;
+  external_link_title?: string;
+  series?: AdminEntityId | null;
+};
+
+export type AdminMarathonSeriesPayload = {
+  name: string;
+  description?: string;
+  is_active?: boolean;
+};
+
+export type AdminMarathonDayPayload = {
+  title?: string;
+  content?: string;
+  difficulty?: "EASY" | "MEDIUM" | "HARD" | string | null;
+  estimated_minutes?: number | null;
+  is_bonus_day?: boolean;
+};
+
+export type AdminMarathonExternalLinkPayload = {
+  title: string;
+  url: string;
+  order?: number;
+};
+
+export type AdminMarathonReadingPassagePayload = {
+  title: string;
+  passage_text: string;
+  difficulty_level: string;
+  topic?: string;
+  estimated_time_minutes?: number | null;
+  max_questions: number;
+  time_limit_seconds?: number | null;
+  is_active?: boolean;
+};
+
+export type AdminMarathonListeningPartPayload = {
+  part_number?: string;
+  title: string;
+  transcript_text: string;
+  difficulty_level: string;
+  estimated_time_minutes?: number | null;
+  max_questions: number;
+  time_limit_seconds?: number | null;
+  is_active?: boolean;
+  audio_file?: File | null;
+  remove_audio?: boolean;
+};
+
 export type MistakeReasonModule = "READING" | "LISTENING" | "BOTH";
 export type MistakeReasonCategory = "fully_incorrect" | "blank_answer" | "misspelled";
 

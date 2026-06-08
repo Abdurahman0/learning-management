@@ -912,13 +912,10 @@ function toTextAnswers(question: BuilderQuestion) {
 }
 
 function ensureAlternativeAnswers(answer: string, alternatives: string[]) {
-  const cleaned = [...new Set(alternatives.map((item) => item.trim()).filter(Boolean))];
-  if (cleaned.length > 0) {
-    return cleaned;
-  }
-
   const normalizedAnswer = answer.trim();
-  return normalizedAnswer ? [normalizedAnswer] : [];
+  const cleaned = [...new Set(alternatives.map((item) => item.trim()).filter(Boolean))]
+    .filter((item) => item.toLowerCase() !== normalizedAnswer.toLowerCase());
+  return cleaned;
 }
 
 function isQuestionReadyForSync(question: BuilderQuestion) {
@@ -1240,9 +1237,12 @@ function mapApiQuestionToBuilderQuestion(
     || builderQuestion.type === "note_completion"
     || builderQuestion.type === "short_answer"
   ) {
-    const values = [answer.answer, ...answer.answers, ...answer.alternatives].filter(Boolean);
+    const primary = answer.answer.trim();
+    const alternatives = [...new Set([...answer.answers, ...answer.alternatives].map((value) => value.trim()).filter(Boolean))]
+      .filter((value) => value.toLowerCase() !== primary.toLowerCase());
+    const values = [primary, ...alternatives].filter(Boolean);
     builderQuestion.correctAnswer = values.length > 1 ? values : values[0] ?? "";
-    builderQuestion.acceptableAnswers = answer.alternatives;
+    builderQuestion.acceptableAnswers = alternatives;
     return builderQuestion;
   }
 

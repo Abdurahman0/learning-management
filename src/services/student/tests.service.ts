@@ -12,6 +12,37 @@ function toArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+function toFiniteNumber(value: unknown) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function pickFiniteNumber(source: Record<string, unknown> | null, keys: string[]) {
+  if (!source) return null;
+  for (const key of keys) {
+    const parsed = toFiniteNumber(source[key]);
+    if (parsed != null) return parsed;
+  }
+  return null;
+}
+
+function normalizeAttemptStatus(value: unknown) {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const lastAttemptAccuracyPercent = pickFiniteNumber(record, [
+    "last_attempt_accuracy_percent"
+  ]);
+
+  return {
+    ...record,
+    last_attempt_accuracy_percent:
+      lastAttemptAccuracyPercent != null
+        ? Math.max(0, Math.min(100, lastAttemptAccuracyPercent))
+        : null
+  };
+}
+
 function normalizeTestRecord(item: StudentTestRecord): StudentTestRecord {
   return {
     ...item,
@@ -33,7 +64,7 @@ function normalizeTestRecord(item: StudentTestRecord): StudentTestRecord {
     is_premium: Boolean(item.is_premium),
     reading_passages: toArray<StudentTestRecord["reading_passages"][number]>(item.reading_passages),
     listening_parts: toArray<StudentTestRecord["listening_parts"][number]>(item.listening_parts),
-    user_attempt_status: item.user_attempt_status ?? null
+    user_attempt_status: normalizeAttemptStatus(item.user_attempt_status)
   };
 }
 

@@ -14,7 +14,7 @@ export function HowItWorks() {
   return (
     <section className="bg-muted/30 py-16 sm:py-20">
       <Container>
-        <div className="mx-auto max-w-3xl text-center">
+        <div data-reveal-item className="mx-auto max-w-3xl text-center">
           <h2 className="text-3xl font-bold text-foreground">{t("how.title")}</h2>
           <div className="mx-auto mt-3 h-1 w-14 rounded-full bg-blue-600" />
         </div>
@@ -26,6 +26,7 @@ export function HowItWorks() {
             return (
               <Card
                 key={stepKey}
+                data-reveal-item
                 className="hover:scale-103 transition duration-300 border-border bg-card py-0 shadow-sm"
               >
                 <CardContent className="px-6 py-8 text-center">
@@ -47,4 +48,3 @@ export function HowItWorks() {
     </section>
   );
 }
-

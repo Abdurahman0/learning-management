@@ -11,7 +11,7 @@ export function FinalCTA() {
   return (
     <section className="py-16 sm:py-20">
       <Container>
-        <Card className="overflow-hidden border-border bg-linear-to-r from-slate-950 via-slate-900 to-blue-950 py-0 text-white shadow-xl">
+        <Card data-reveal-item className="overflow-hidden border-border bg-linear-to-r from-slate-950 via-slate-900 to-blue-950 py-0 text-white shadow-xl">
           <CardContent className="px-6 py-14 text-center sm:px-10">
             <h2 className="text-3xl font-bold sm:text-5xl">{t("finalCta.title")}</h2>
             <p className="mx-auto mt-4 max-w-2xl text-slate-200 sm:text-lg">{t("finalCta.subtitle")}</p>

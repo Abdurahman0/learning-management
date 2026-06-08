@@ -3,7 +3,7 @@
 import {useEffect, useState, type ReactNode} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
-import {BookOpen, ChevronDown, CircleUserRound, Headphones, Home, Lock, Menu, Mic, PenLine, TriangleAlert} from "lucide-react";
+import {BookOpen, ChevronDown, CircleUserRound, Headphones, Home, Lock, Map, Menu, Mic, PenLine, TriangleAlert} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import ReactCountryFlag from "react-country-flag";
 
@@ -46,7 +46,7 @@ function isLockedPracticePath(pathWithoutLocale: string) {
 }
 
 function isBackendOnlySupportedStudentPath(pathWithoutLocale: string) {
-  const allowedPrefixes = ["/dashboard", "/reading", "/mistake-analysis", "/settings", "/onboarding"];
+  const allowedPrefixes = ["/dashboard", "/reading", "/mistake-analysis", "/settings", "/onboarding", "/marathons"];
   const blockedPrefixes = ["/messages", "/assignments", "/study-bank", "/vocabulary", "/review-center", "/sessions", "/result"];
 
   if (blockedPrefixes.some((prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`))) {
@@ -81,10 +81,12 @@ export function GuestShell({children}: GuestShellProps) {
     : "(dashboard|reading|mistake-analysis|settings)";
   const isMobileHeaderVisible = new RegExp(`^${baseRoute}/${topLevelRoutes}/?$`).test(pathname);
   const pathWithoutLocale = pathname.replace(/^\/(uz|en)(?=\/|$)/, "") || "/";
+  const isMarathonRoute = /^\/marathons(?:\/.*)?$/.test(pathWithoutLocale);
   const hideSidebar = /^\/(reading|listening)\/[^/]+(?:\/result)?\/?$/.test(pathWithoutLocale)
     || /^\/(reading|listening)\/test\/[^/]+\/?$/.test(pathWithoutLocale)
     || /^\/result\/[^/]+\/?$/.test(pathWithoutLocale)
-    || /^\/onboarding\/?$/.test(pathWithoutLocale);
+    || /^\/onboarding\/?$/.test(pathWithoutLocale)
+    || isMarathonRoute;
   const isBackendOnlySupported = isBackendOnlySupportedStudentPath(pathWithoutLocale);
   const isLockedPracticeRoute = isLockedPracticePath(pathWithoutLocale);
 
@@ -124,7 +126,10 @@ export function GuestShell({children}: GuestShellProps) {
   }, [isStudent, locale, pathWithoutLocale, router]);
 
   const mobilePrimaryItems: MobileNavItem[] = !isGuest
-    ? [{key: "dashboard", label: t("sidebar.dashboard"), href: dashboardHref, icon: Home}]
+    ? [
+        {key: "dashboard", label: t("sidebar.dashboard"), href: dashboardHref, icon: Home},
+        {key: "marathons", label: t("sidebar.marathon"), href: `/${locale}/marathons`, icon: Map}
+      ]
     : [];
 
   const mobileSecondaryItems: MobileNavItem[] = isStudent
@@ -157,7 +162,7 @@ export function GuestShell({children}: GuestShellProps) {
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex">
         {hideSidebar ? null : <GuestSidebar usedTests={usedTests} totalTests={totalTests} role={role} />}
-        <main className="min-h-screen min-w-0 flex-1 px-4 py-4 sm:px-5 lg:px-10 lg:py-8">
+        <main className={cn("min-h-screen min-w-0 flex-1 px-4 py-4 sm:px-5 lg:px-10 lg:py-8", isMarathonRoute && "px-0 py-0 sm:px-0 lg:px-0 lg:py-0")}>
           {!isBackendOnlySupported && !isLockedPracticeRoute ? (
             <div className="mx-auto w-full max-w-245 pt-4">
               <Card className="border-border/70 bg-card/90">

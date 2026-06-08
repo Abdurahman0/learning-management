@@ -3,7 +3,7 @@
 import {useEffect, useMemo, useState} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
-import {BookOpen, ChevronDown, Headphones, Home, Lock, Mic, PenLine, TriangleAlert} from "lucide-react";
+import {BookOpen, ChevronDown, Headphones, Home, Lock, Map, Mic, PenLine, TriangleAlert} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
@@ -92,13 +92,19 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
 
   const primaryNavItems: NavItem[] = !isGuest
     ? [
-        {
-          key: "dashboard",
-          label: t("sidebar.dashboard"),
-          href: dashboardHref,
-          icon: Home
-        }
-      ]
+      {
+        key: "dashboard",
+        label: t("sidebar.dashboard"),
+        href: dashboardHref,
+        icon: Home
+      },
+      {
+        key: "marathon",
+        label: t("sidebar.marathon"),
+        href: `/${locale}/marathons`,
+        icon: Map
+      }
+    ]
     : [];
 
   const secondaryNavItems: NavItem[] = isStudent
