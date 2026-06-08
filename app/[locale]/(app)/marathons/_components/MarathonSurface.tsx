@@ -84,7 +84,7 @@ export function MarathonSurface({
       <div className="pointer-events-none fixed inset-0 opacity-35 [background-image:radial-gradient(rgba(148,163,184,0.18)_1px,transparent_1px)] [background-size:20px_20px] dark:opacity-25" />
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.10),transparent_20%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_16%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_20%),radial-gradient(circle_at_top_right,rgba(16,185,129,0.10),transparent_16%),radial-gradient(circle_at_bottom,rgba(15,23,42,0.35),transparent_40%)]" />
 
-      <div className="relative mx-auto flex min-h-screen w-full max-w-[1540px] lg:px-0">
+      <div className="relative flex min-h-screen w-full">
         <aside className="sticky top-0 hidden h-screen w-76 shrink-0 flex-col border-r border-border bg-card/70 px-5 py-6 backdrop-blur-sm lg:flex">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -119,20 +119,20 @@ export function MarathonSurface({
               <Map className="size-4" />
               Marathon
             </Link>
-            <Link
-              href={showLeaderboardNav ? leaderboardHref : `/${locale}/marathons`}
-              className={cn(
-                "flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-base font-medium transition-colors",
-                showLeaderboardNav
-                  ? leaderboardActive
+            {showLeaderboardNav ? (
+              <Link
+                href={leaderboardHref}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-base font-medium transition-colors",
+                  leaderboardActive
                     ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
                     : "text-foreground hover:bg-muted"
-                  : "pointer-events-none text-muted-foreground/60"
-              )}
-            >
-              <Flame className="size-4" />
-              Leaderboard
-            </Link>
+                )}
+              >
+                <Flame className="size-4" />
+                Leaderboard
+              </Link>
+            ) : null}
           </nav>
 
           {sidebarContent ? (

@@ -72,7 +72,8 @@ function secondsToLabel(value: number) {
 }
 
 function buildJourneyDays(detail: StudentMarathonDetail, days: StudentMarathonDaySummary[]) {
-  const total = detail.total_days || detail.marathon_days || 0;
+  const highestReturnedDayNumber = days.reduce((max, day) => Math.max(max, day.day_number), 0);
+  const total = Math.max(detail.total_days || 0, detail.marathon_days || 0, highestReturnedDayNumber);
   const currentDayNumber = detail.enrollment?.current_day_number ?? 0;
   const byNumber = new Map(days.map((day) => [day.day_number, day]));
 
