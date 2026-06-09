@@ -331,29 +331,21 @@ function MatchingHeadingsBank({
 type MatchingInfoBankProps = {
   options: string[];
   hintText: string;
-  instructionText?: string;
 };
 
 function MatchingInfoBank({
   options,
   hintText,
-  instructionText,
 }: MatchingInfoBankProps) {
   if (!options.length) return null;
   const parsedOptions = options.map((option, index) => parseMatchingInfoOption(option, index));
 
   return (
     <div className="test-panel space-y-5 rounded-xl border border-border/80 bg-card/85 px-4 py-4 shadow-sm dark:bg-card/65">
-      {instructionText?.trim() ? (
-        <div className="wrap-break-word text-base leading-relaxed text-foreground">
-          <FormattedInstructionText text={instructionText} />
-        </div>
-      ) : (
-        <p className="text-base italic leading-relaxed text-foreground">
-          <span className="mr-2 font-bold not-italic">NB</span>
-          {hintText}
-        </p>
-      )}
+      <p className="text-base italic leading-relaxed text-foreground">
+        <span className="mr-2 font-bold not-italic">NB</span>
+        {hintText}
+      </p>
       <div className="space-y-2">
         <p className="text-lg font-bold text-foreground">List of Options</p>
         <div className="space-y-1.5">
@@ -3404,8 +3396,7 @@ function ReadingTestClient({
                   const matchingInfoGroupQuestions = visibleGroupQuestions.filter(
                     (question): question is MatchingInfoQuestion => question.type === "matchingInfo"
                   );
-                  const matchingHeadingGroupOptionsRaw = matchingHeadingGroupQuestions
-                    .flatMap((question) => question.headingOptions)
+                  const matchingHeadingGroupOptionsRaw = (matchingHeadingGroupQuestions[0]?.headingOptions ?? [])
                     .map((option, index) => parseMatchingHeadingOption(option, index))
                     .filter((option) => Boolean(option.key))
                     .filter((option, index, source) => source.findIndex((item) => item.key === option.key) === index);
@@ -3465,7 +3456,6 @@ function ReadingTestClient({
                       {showMatchingInfoBank && matchingInfoGroupOptions.length ? (
                         <MatchingInfoBank
                           options={matchingInfoGroupOptions}
-                          instructionText={group.instruction}
                           hintText={
                             t.has("dragMatchingInfoHint")
                               ? t("dragMatchingInfoHint")
