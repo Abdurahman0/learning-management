@@ -63,11 +63,37 @@ function extractContentRoot(
 
 function normalizeAttemptQuestion(value: unknown): StudentAttemptQuestion {
   const record = asRecord(value);
+  const nestedQuestion = asRecord(record?.question);
+  const rawId = toStringSafe(record?.id);
+  const primitiveQuestionRef =
+    typeof record?.question === "string" || typeof record?.question === "number"
+      ? toStringSafe(record.question)
+      : "";
+  const canonicalQuestionId =
+    toStringSafe(record?.question_id)
+    || toStringSafe(nestedQuestion?.question_id)
+    || toStringSafe(nestedQuestion?.id)
+    || toStringSafe(nestedQuestion?.uuid)
+    || primitiveQuestionRef
+    || rawId;
+  const attemptQuestionId =
+    toStringSafe(record?.attempt_question_id)
+    || toStringSafe(record?.attempt_question)
+    || toStringSafe(record?.question_answer_id)
+    || toStringSafe(record?.question_answer);
+  const candidateQuestionIds = [
+    canonicalQuestionId,
+    ...asArray<string>(record?.candidate_question_ids).map((item) => toStringSafe(item)).filter(Boolean),
+    attemptQuestionId,
+    rawId,
+  ].filter((item, index, source) => Boolean(item) && source.indexOf(item) === index);
+
   return {
-    id: toStringSafe(record?.id),
-    question_id: toStringSafe(record?.question_id) || null,
-    attempt_question_id: toStringSafe(record?.attempt_question_id || record?.id) || null,
-    candidate_question_ids: asArray<string>(record?.candidate_question_ids).map((item) => toStringSafe(item)).filter(Boolean),
+    id: canonicalQuestionId,
+    question_id: canonicalQuestionId || null,
+    // Marathon save accepts canonical question_id only; keep attempt IDs as candidates, not as the primary submit key.
+    attempt_question_id: null,
+    candidate_question_ids: candidateQuestionIds,
     question_number: toNumberSafe(record?.question_number),
     question_text: toStringSafe(record?.question_text) || null,
     options_json: record?.options_json ?? null,
