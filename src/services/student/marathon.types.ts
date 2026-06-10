@@ -137,6 +137,11 @@ export type StudentMarathonAttemptSavePayload = {
   }>;
 };
 
+export type StudentMarathonAttemptSubmitPayload = {
+  time_used_seconds?: number;
+  answers?: StudentMarathonAttemptSavePayload["answers"];
+};
+
 export type StudentMarathonAttemptSaveResponse = {
   answered: number;
   total: number;

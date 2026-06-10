@@ -2726,6 +2726,7 @@ function ListeningTestClient({
               });
               await studentMarathonService.submitAttempt(marathonIdParam, marathonDayNumber, submitAttemptId, {
                 time_used_seconds: timeUsedSeconds,
+                answers: toMarathonListeningSaveAnswers(buildSubmitAnswers(submitMetaForRequest)),
               });
             } else {
               await studentAttemptsService.save(submitAttemptId, {

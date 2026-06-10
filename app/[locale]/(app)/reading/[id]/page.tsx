@@ -2667,6 +2667,7 @@ function ReadingTestClient({
           if (isMarathonContext) {
             await studentMarathonService.submitAttempt(marathonIdParam, marathonDayNumber, backendAttemptId, {
               time_used_seconds: timeUsedSeconds,
+              answers: toMarathonSaveAnswers(buildSubmitAnswers(collectRuntimeSubmitCandidatesByNumber(test.questions))),
             });
           } else {
             await studentAttemptsService.submit(backendAttemptId, {

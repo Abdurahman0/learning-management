@@ -7,6 +7,7 @@ import type {
   StudentMarathonAttemptResultAnswer,
   StudentMarathonAttemptSavePayload,
   StudentMarathonAttemptSaveResponse,
+  StudentMarathonAttemptSubmitPayload,
   StudentMarathonDayCompleteResponse,
   StudentMarathonDayContentItem,
   StudentMarathonDayDetail,
@@ -427,7 +428,7 @@ export const studentMarathonService = {
     }
   },
 
-  async submitAttempt(marathonId: string, dayNumber: number, attemptId: string, payload?: {time_used_seconds?: number}) {
+  async submitAttempt(marathonId: string, dayNumber: number, attemptId: string, payload?: StudentMarathonAttemptSubmitPayload) {
     try {
       const response = await studentHttpClient.post(`/marathons/${marathonId}/days/${dayNumber}/attempts/${attemptId}/submit/`, payload ?? {});
       return normalizeAttemptResult(response.data);

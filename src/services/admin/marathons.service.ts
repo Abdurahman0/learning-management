@@ -5,7 +5,6 @@ import {maybeCompressAudioFileForUpload} from "@/lib/audio-compression";
 import {directAdminMultipartRequest, shouldBypassProxyUpload} from "./directAdminClient";
 import {adminHttpClient, toAdminApiError, toListQuery} from "./httpClient";
 import type {
-  AdminApiError,
   AdminEntityId,
   AdminListQuery,
   AdminMarathonDayDetailRecord,
@@ -57,10 +56,6 @@ function appendListeningFormData(formData: FormData, payload: Partial<AdminMarat
   if (typeof payload.is_active === "boolean") formData.append("is_active", String(payload.is_active));
   if (payload.audio_file instanceof File) formData.append("audio_file", payload.audio_file);
   if (payload.remove_audio) formData.append("remove_audio", "true");
-}
-
-function isNotFoundError(error: unknown): boolean {
-  return Boolean(error && typeof error === "object" && "status" in error && (error as AdminApiError).status === 404);
 }
 
 export const adminMarathonSeriesService = {
@@ -212,45 +207,23 @@ export const adminMarathonsService = {
     }
   },
 
-  async listReadingPassages(marathonId: AdminEntityId, params?: AdminListQuery) {
+  async listReadingPassages(_marathonId: AdminEntityId, params?: AdminListQuery) {
     try {
       const response = await adminHttpClient.get<AdminPaginatedResponse<AdminMarathonReadingPassageRecord> | AdminMarathonReadingPassageRecord[]>(
         "/marathon-reading-passages/",
-        {params: {...toListQuery(params), marathon: marathonId}}
+        {params: toListQuery(params)}
       );
       return normalizeListResponse(response.data);
     } catch (error) {
-      if (isNotFoundError(error)) {
-        try {
-          const response = await adminHttpClient.get<AdminPaginatedResponse<AdminMarathonReadingPassageRecord> | AdminMarathonReadingPassageRecord[]>(
-            `/marathons/${marathonId}/reading-passages/`,
-            {params: toListQuery(params)}
-          );
-          return normalizeListResponse(response.data);
-        } catch (fallbackError) {
-          throw toAdminApiError(fallbackError);
-        }
-      }
       throw toAdminApiError(error);
     }
   },
 
-  async createReadingPassage(marathonId: AdminEntityId, payload: AdminMarathonReadingPassagePayload) {
+  async createReadingPassage(_marathonId: AdminEntityId, payload: AdminMarathonReadingPassagePayload) {
     try {
-      const response = await adminHttpClient.post<AdminMarathonReadingPassageRecord>("/marathon-reading-passages/", {
-        ...payload,
-        marathon: marathonId
-      });
+      const response = await adminHttpClient.post<AdminMarathonReadingPassageRecord>("/marathon-reading-passages/", payload);
       return response.data;
     } catch (error) {
-      if (isNotFoundError(error)) {
-        try {
-          const response = await adminHttpClient.post<AdminMarathonReadingPassageRecord>(`/marathons/${marathonId}/reading-passages/`, payload);
-          return response.data;
-        } catch (fallbackError) {
-          throw toAdminApiError(fallbackError);
-        }
-      }
       throw toAdminApiError(error);
     }
   },
@@ -298,31 +271,20 @@ export const adminMarathonsService = {
     }
   },
 
-  async listListeningParts(marathonId: AdminEntityId, params?: AdminListQuery) {
+  async listListeningParts(_marathonId: AdminEntityId, params?: AdminListQuery) {
     try {
       const response = await adminHttpClient.get<AdminPaginatedResponse<AdminMarathonListeningPartRecord> | AdminMarathonListeningPartRecord[]>(
         "/marathon-listening-parts/",
-        {params: {...toListQuery(params), marathon: marathonId}}
+        {params: toListQuery(params)}
       );
       return normalizeListResponse(response.data);
     } catch (error) {
-      if (isNotFoundError(error)) {
-        try {
-          const response = await adminHttpClient.get<AdminPaginatedResponse<AdminMarathonListeningPartRecord> | AdminMarathonListeningPartRecord[]>(
-            `/marathons/${marathonId}/listening-parts/`,
-            {params: toListQuery(params)}
-          );
-          return normalizeListResponse(response.data);
-        } catch (fallbackError) {
-          throw toAdminApiError(fallbackError);
-        }
-      }
       throw toAdminApiError(error);
     }
   },
 
   async createListeningPart(
-    marathonId: AdminEntityId,
+    _marathonId: AdminEntityId,
     payload: AdminMarathonListeningPartPayload,
     options?: {onUploadProgress?: (progress: AxiosProgressEvent) => void}
   ) {
@@ -344,7 +306,6 @@ export const adminMarathonsService = {
     try {
       const formData = new FormData();
       appendListeningFormData(formData, normalizedPayload);
-      formData.append("marathon", String(marathonId));
 
       if (isLargeAudio) {
         return await directAdminMultipartRequest<AdminMarathonListeningPartRecord>({
@@ -360,28 +321,6 @@ export const adminMarathonsService = {
       });
       return response.data;
     } catch (error) {
-      if (isNotFoundError(error)) {
-        try {
-          const fallbackFormData = new FormData();
-          appendListeningFormData(fallbackFormData, normalizedPayload);
-
-          if (isLargeAudio) {
-            return await directAdminMultipartRequest<AdminMarathonListeningPartRecord>({
-              path: `/marathons/${marathonId}/listening-parts/`,
-              method: "POST",
-              body: fallbackFormData,
-              onUploadProgress: options?.onUploadProgress
-            });
-          }
-
-          const response = await adminHttpClient.post<AdminMarathonListeningPartRecord>(`/marathons/${marathonId}/listening-parts/`, fallbackFormData, {
-            onUploadProgress: options?.onUploadProgress
-          });
-          return response.data;
-        } catch (fallbackError) {
-          throw toAdminApiError(fallbackError);
-        }
-      }
       throw toAdminApiError(error);
     }
   },
