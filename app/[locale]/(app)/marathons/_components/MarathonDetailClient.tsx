@@ -31,6 +31,49 @@ import type {
   StudentMarathonLeaderboardEntry,
   StudentMarathonListeningDayItem
 } from "@/src/services/student/marathon.types";
+
+function normalizeHttpUrl(value: string | null | undefined) {
+  if (!value) return null;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function getYoutubeVideoId(url: URL | null) {
+  if (!url) return null;
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+
+  if (host === "youtube.com" || host === "m.youtube.com") {
+    if (url.pathname === "/watch") {
+      const videoId = url.searchParams.get("v")?.trim() ?? "";
+      return videoId || null;
+    }
+    if (url.pathname.startsWith("/embed/")) {
+      const videoId = url.pathname.split("/")[2]?.trim() ?? "";
+      return videoId || null;
+    }
+    if (url.pathname.startsWith("/shorts/")) {
+      const videoId = url.pathname.split("/")[2]?.trim() ?? "";
+      return videoId || null;
+    }
+  }
+
+  if (host === "youtu.be") {
+    const videoId = url.pathname.replace(/^\/+/, "").trim();
+    return videoId || null;
+  }
+
+  return null;
+}
+
+function buildYoutubeEmbedUrl(videoId: string | null) {
+  if (!videoId || !/^[A-Za-z0-9_-]{6,}$/.test(videoId)) return null;
+  return `https://www.youtube-nocookie.com/embed/${videoId}`;
+}
 import {StudentApiError} from "@/src/services/student/types";
 
 type MarathonDetailClientProps = {
@@ -54,10 +97,9 @@ const JOURNEY_RIGHT_X = 136;
 const JOURNEY_RENDER_WIDTH = 220;
 const JOURNEY_NODE_CENTER_Y = 48;
 const JOURNEY_NODE_RADIUS = 28;
-const JOURNEY_NODE_X_SHIFT = 26;
-const JOURNEY_NODE_Y_SHIFT = -38;
-const JOURNEY_TITLE_Y_SHIFT = -32;
-const JOURNEY_TITLE_X_SHIFT = 14;
+const JOURNEY_NODE_X_SHIFT = 14;
+const JOURNEY_MARKER_CIRCLE_CENTER_OFFSET = 100;
+const JOURNEY_FINISH_Y_OFFSET = 92;
 
 function getJourneyAnchorY(index: number) {
   return index * JOURNEY_ROW_HEIGHT + JOURNEY_NODE_CENTER_Y;
@@ -128,7 +170,7 @@ function buildWavePath(totalRows: number) {
       const controlInY = nextCenterY - 34;
       path += ` C ${JOURNEY_CENTER_X} ${controlOutY} ${JOURNEY_CENTER_X} ${controlInY} ${nextX} ${nextCenterY}`;
     } else {
-      path += ` C ${JOURNEY_CENTER_X} ${centerY + 36} ${JOURNEY_CENTER_X} ${centerY + 64} ${JOURNEY_CENTER_X} ${centerY + 86}`;
+      path += ` C ${JOURNEY_CENTER_X} ${centerY + 36} ${JOURNEY_CENTER_X} ${centerY + 72} ${JOURNEY_CENTER_X} ${centerY + JOURNEY_FINISH_Y_OFFSET}`;
     }
   }
 
@@ -142,7 +184,7 @@ function getRouteTerminalLabel(totalRows: number) {
     startX: JOURNEY_CENTER_X,
     startY: 18,
     endX: JOURNEY_CENTER_X,
-    endY: lastAnchorY + 92
+    endY: lastAnchorY + JOURNEY_FINISH_Y_OFFSET
   };
 }
 
@@ -421,6 +463,10 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
   const enrollment = detail?.enrollment ?? null;
   const journeyDays = detail ? buildJourneyDays(detail, days) : [];
   const currentDayNumber = enrollment?.current_day_number ?? 0;
+  const marathonExternalUrl = useMemo(() => normalizeHttpUrl(detail?.external_link), [detail?.external_link]);
+  const marathonYoutubeVideoId = useMemo(() => getYoutubeVideoId(marathonExternalUrl), [marathonExternalUrl]);
+  const marathonYoutubeEmbedUrl = useMemo(() => buildYoutubeEmbedUrl(marathonYoutubeVideoId), [marathonYoutubeVideoId]);
+  const marathonExternalTitle = detail?.external_link_title?.trim() || "Marathon resource";
 
   const journeySvgHeight = useMemo(
     () => Math.max(260, journeyDays.length * JOURNEY_ROW_HEIGHT + 144),
@@ -457,7 +503,71 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
 
       <div className="mx-auto max-w-5xl space-y-6">
         {enrollment ? (
-          <section id="journey">
+          <section id="journey" className="space-y-5">
+            {marathonExternalUrl ? (
+              marathonYoutubeEmbedUrl ? (
+                <Card className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/94 shadow-[0_18px_60px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/7 dark:shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+                  <CardContent className="p-0">
+                    <div className="border-b border-slate-200/80 px-4 py-3 dark:border-white/10 sm:px-6 sm:py-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
+                        Marathon intro
+                      </p>
+                      <div className="mt-2 flex items-center gap-2.5 sm:gap-3">
+                        <span className="inline-flex size-9 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 ring-1 ring-rose-100 dark:bg-rose-500/12 dark:text-rose-300 dark:ring-rose-400/15 sm:size-11">
+                          <PlayCircle className="size-4 sm:size-5" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="line-clamp-1 text-sm font-semibold text-slate-950 dark:text-white sm:text-base">{marathonExternalTitle}</p>
+                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+                            Watch this before starting the route.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-slate-950/95">
+                      <div className="aspect-[16/10] w-full sm:aspect-video">
+                        <iframe
+                          src={marathonYoutubeEmbedUrl}
+                          title={marathonExternalTitle}
+                          className="h-full w-full border-0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          referrerPolicy="strict-origin-when-cross-origin"
+                          allowFullScreen
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="rounded-[28px] border border-slate-200 bg-white/94 shadow-[0_18px_60px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/7 dark:shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
+                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 ring-1 ring-sky-100 dark:bg-sky-500/12 dark:text-sky-300 dark:ring-sky-400/15 sm:size-11">
+                          <BookOpen className="size-4 sm:size-5" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
+                            Marathon resource
+                          </p>
+                          <p className="mt-1 line-clamp-1 text-sm font-semibold text-slate-950 dark:text-white sm:text-base">{marathonExternalTitle}</p>
+                          <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+                            {marathonExternalUrl.toString()}
+                          </p>
+                        </div>
+                      </div>
+                      <a href={marathonExternalUrl.toString()} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                        <Button type="button" className="h-9 rounded-full px-4 text-sm sm:h-10 sm:px-5">
+                          Open resource
+                          <ExternalLink className="size-4" />
+                        </Button>
+                      </a>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            ) : null}
+
             <Card className="overflow-hidden rounded-[34px] border border-slate-200 bg-white/94 shadow-[0_24px_80px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/7 dark:shadow-[0_24px_80px_rgba(0,0,0,0.26)]">
               <CardContent className="p-0">
                 <div className="relative px-4 py-8 sm:px-8">
@@ -507,7 +617,7 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
                     />
                   </svg>
 
-                  <div className="relative space-y-4 pb-[180px]">
+                  <div className="relative pb-4">
                     {journeyDays.map((day, index) => {
                       const state = getDayState(day, currentDayNumber);
                       const isSelected = selectedDayNumber === day.day_number;
@@ -517,27 +627,25 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
                       const isLeftAnchor = index % 2 === 0;
                       const anchorX = isLeftAnchor ? JOURNEY_LEFT_X : JOURNEY_RIGHT_X;
                       const anchorOffsetPx = (anchorX / JOURNEY_SVG_WIDTH) * JOURNEY_RENDER_WIDTH - JOURNEY_RENDER_WIDTH / 2;
-                      const nodeOffsetPx = anchorOffsetPx;
+                      const nodeOffsetPx = anchorOffsetPx + JOURNEY_NODE_X_SHIFT;
                       return (
                         <div key={day.id} className="relative">
-                          <div className="relative min-h-[132px] w-full">
+                          <div className="relative w-full" style={{minHeight: `${JOURNEY_ROW_HEIGHT}px`}}>
                             <div
-                              className="absolute w-[156px]"
+                              className="absolute flex w-[156px] flex-col items-center"
                               style={{
-                                  left: `calc(50% + ${nodeOffsetPx}px)`,
-                                  top: "0px",
-                                  transform: "translateX(-50%)"
-                                }}
+                                left: `calc(50% + ${nodeOffsetPx}px)`,
+                                top: `${JOURNEY_NODE_CENTER_Y}px`,
+                                transform: `translate(-50%, -${JOURNEY_MARKER_CIRCLE_CENTER_OFFSET}px)`
+                              }}
                             >
                               <p
-                                className="mx-auto max-w-[156px] text-center text-sm font-semibold leading-5 text-slate-950 dark:text-white line-clamp-2"
-                                style={{transform: `translate(${JOURNEY_TITLE_X_SHIFT}px, ${JOURNEY_TITLE_Y_SHIFT}px)`}}
+                                className="flex h-10 max-w-[156px] items-end justify-center text-center text-sm font-semibold leading-5 text-slate-950 dark:text-white line-clamp-2"
                               >
                                 {title}
                               </p>
                               <div
-                                className="mx-auto mt-2 flex w-14 flex-col items-center"
-                                style={{transform: `translate(${JOURNEY_NODE_X_SHIFT}px, ${JOURNEY_NODE_Y_SHIFT}px)`}}
+                                className="mt-2 flex w-14 flex-col items-center"
                               >
                                 <button
                                   type="button"
@@ -585,7 +693,7 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
                             >
                               <div
                                 className="pointer-events-auto w-full max-w-[390px] rounded-[28px] border border-sky-200 bg-white px-5 py-5 text-center shadow-[0_24px_50px_rgba(59,130,246,0.10)] dark:border-cyan-300/20 dark:bg-[#0b1424]"
-                                style={{marginLeft: `calc(50% + ${nodeOffsetPx + JOURNEY_NODE_X_SHIFT}px - 195px)`}}
+                                style={{marginLeft: `calc(50% + ${nodeOffsetPx}px - 195px)`}}
                               >
                                 <h4 className="text-xl font-semibold text-slate-950 dark:text-white">{selectedDay.title || `Day ${selectedDay.day_number}`}</h4>
                                 <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
