@@ -289,33 +289,56 @@ function buildReviewAnswerMaps(answers: StudentMarathonAttemptResultAnswer[]) {
   return { byQuestionId, byNumber };
 }
 
+function collectReviewQuestionIds(record: Record<string, unknown> | null) {
+  const nestedQuestion = asRecord(record?.question);
+  const primitiveQuestionRef =
+    typeof record?.question === "string" || typeof record?.question === "number"
+      ? toStringSafe(record.question)
+      : "";
+  return [
+    toStringSafe(record?.question_id),
+    toStringSafe(record?.id),
+    primitiveQuestionRef,
+    toStringSafe(nestedQuestion?.question_id),
+    toStringSafe(nestedQuestion?.id),
+    toStringSafe(nestedQuestion?.uuid),
+  ].filter((item, index, source) => Boolean(item) && source.indexOf(item) === index);
+}
+
 function normalizeReviewQuestion(
   value: unknown,
   answerMaps: ReturnType<typeof buildReviewAnswerMaps>,
 ): StudentAttemptReviewQuestion {
   const record = asRecord(value);
-  const fallbackNumber = toNumberSafe(record?.question_number);
-  const fallbackId = toStringSafe(record?.id);
-  const answer =
-    answerMaps.byQuestionId.get(fallbackId)
-    ?? answerMaps.byQuestionId.get(toStringSafe(record?.question_id))
-    ?? answerMaps.byNumber.get(fallbackNumber)
-    ?? null;
+  const nestedQuestion = asRecord(record?.question);
+  const fallbackNumber = toNumberSafe(record?.question_number ?? nestedQuestion?.question_number);
+  const candidateIds = collectReviewQuestionIds(record);
+  const fallbackId = candidateIds[0] ?? "";
+  const answer = candidateIds.reduce<StudentMarathonAttemptResultAnswer | null>(
+    (matched, id) => matched ?? answerMaps.byQuestionId.get(id) ?? null,
+    null,
+  ) ?? answerMaps.byNumber.get(fallbackNumber) ?? null;
 
   return {
     id: fallbackId,
     question_number: fallbackNumber,
-    question_text: toStringSafe(record?.question_text) || null,
-    question_type: toStringSafe(record?.question_type),
-    question_type_display: toStringSafe(record?.question_type_display) || null,
-    options_json: record?.options_json ?? null,
-    correct_answer_json: answer?.correct_answer_json ?? null,
+    question_text: toStringSafe(record?.question_text ?? nestedQuestion?.question_text) || null,
+    question_type: toStringSafe(record?.question_type ?? nestedQuestion?.question_type),
+    question_type_display: toStringSafe(record?.question_type_display ?? nestedQuestion?.question_type_display) || null,
+    options_json: record?.options_json ?? nestedQuestion?.options_json ?? null,
+    correct_answer_json: answer?.correct_answer_json ?? record?.correct_answer_json ?? nestedQuestion?.correct_answer_json ?? null,
     student_answer: answer?.student_answer_json ?? null,
     is_correct: answer?.is_correct ?? false,
     is_skipped: answer?.is_skipped ?? false,
     is_flagged: answer?.is_flagged ?? false,
-    explanation: answer?.explanation ?? null,
-    answer_evidence_json: answer?.answer_evidence_json ?? null,
+    explanation: answer?.explanation ?? (toStringSafe(record?.explanation ?? nestedQuestion?.explanation) || null),
+    answer_evidence_json:
+      answer?.answer_evidence_json
+      ?? record?.answer_evidence_json
+      ?? record?.answer_evidence
+      ?? nestedQuestion?.answer_evidence_json
+      ?? nestedQuestion?.answer_evidence
+      ?? null,
   };
 }
 

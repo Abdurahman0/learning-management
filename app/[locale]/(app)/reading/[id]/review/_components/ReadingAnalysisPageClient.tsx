@@ -9,6 +9,8 @@ import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
 import {gradeTest, type GradeableQuestion} from "@/lib/grading";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
+import {studentMarathonService} from "@/src/services/student/marathon.service";
+import {adaptMarathonReadingReviewResponse} from "@/src/services/student/marathon-runner-adapters";
 import {ReviewPassagePanel} from "../../result/_components/ReviewPassagePanel";
 import {ReviewQuestionsPanel} from "../../result/_components/ReviewQuestionsPanel";
 import {adaptReadingBackendReview, type AdaptedReadingBackendReview} from "../../result/_components/backendReviewAdapters";
@@ -45,6 +47,24 @@ export function ReadingAnalysisPageClient() {
   const testId = typeof params?.id === "string" ? params.id : "";
   const attemptId = searchParams.get("attempt")?.trim() ?? "";
   const resolvedBackendAttemptId = isUuid(attemptId) ? attemptId : "";
+  const marathonIdParam = searchParams.get("marathonId")?.trim() ?? "";
+  const marathonDayNumber = Number(searchParams.get("dayNumber")?.trim() ?? "");
+  const isMarathonContext = isUuid(marathonIdParam) && Number.isInteger(marathonDayNumber) && marathonDayNumber > 0;
+  const resultQuerySuffix = useMemo(() => {
+    const query = new URLSearchParams();
+    if (isMarathonContext) {
+      query.set("marathonId", marathonIdParam);
+      query.set("dayNumber", String(marathonDayNumber));
+    }
+    const returnTo = searchParams.get("returnTo")?.trim() ?? "";
+    const returnLabel = searchParams.get("returnLabel")?.trim() ?? "";
+    if (returnTo.startsWith("/")) {
+      query.set("returnTo", returnTo);
+      if (returnLabel) query.set("returnLabel", returnLabel);
+    }
+    const serialized = query.toString();
+    return serialized ? `&${serialized}` : "";
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, searchParams]);
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [activePassageId, setActivePassageId] = useState<"p1" | "p2" | "p3">("p1");
@@ -66,8 +86,24 @@ export function ReadingAnalysisPageClient() {
     const loadBackendReview = async () => {
       setIsLoading(true);
       try {
-        const response = await studentAttemptsService.review(resolvedBackendAttemptId);
+        const response = isMarathonContext
+          ? await (async () => {
+              const [attemptResponse, resultResponse] = await Promise.all([
+                studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, resolvedBackendAttemptId),
+                studentMarathonService.reviewAttempt(marathonIdParam, marathonDayNumber, resolvedBackendAttemptId),
+              ]);
+              return adaptMarathonReadingReviewResponse({
+                attempt: attemptResponse,
+                result: resultResponse,
+                routeId: testId,
+              });
+            })()
+          : await studentAttemptsService.review(resolvedBackendAttemptId);
         if (!active) return;
+        if (!response) {
+          setBackendReview(null);
+          return;
+        }
         setBackendReview(adaptReadingBackendReview(response));
       } catch {
         if (!active) return;
@@ -84,7 +120,7 @@ export function ReadingAnalysisPageClient() {
     return () => {
       active = false;
     };
-  }, [resolvedBackendAttemptId]);
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, resolvedBackendAttemptId, testId]);
 
   const gradingQuestions = useMemo(() => backendReview?.questions ?? [], [backendReview]);
   const gradingAnswers = useMemo(
@@ -188,7 +224,7 @@ export function ReadingAnalysisPageClient() {
             </p>
           </div>
           <Button asChild className="h-9 rounded-xl px-4">
-            <Link href={`/${locale}/reading/${testId}/result?attempt=${resolvedBackendAttemptId}`}>{t("resultsButton")}</Link>
+            <Link href={`/${locale}/reading/${testId}/result?attempt=${resolvedBackendAttemptId}${resultQuerySuffix}`}>{t("resultsButton")}</Link>
           </Button>
         </div>
       </Card>

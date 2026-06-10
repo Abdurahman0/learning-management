@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
+import { studentMarathonService } from "@/src/services/student/marathon.service";
+import { adaptMarathonListeningReviewResponse } from "@/src/services/student/marathon-runner-adapters";
 import type { StudentAttemptReviewResponse } from "@/src/services/student/types";
 import { cn } from "@/lib/utils";
 import { ListeningQuestionAnalysisPanel } from "../result/_components/ListeningQuestionAnalysisPanel";
@@ -60,6 +62,24 @@ export default function ListeningReviewPage() {
   const testId = typeof params?.id === "string" ? params.id : "";
   const attemptId = searchParams.get("attempt")?.trim() ?? "";
   const resolvedBackendAttemptId = isUuid(attemptId) ? attemptId : "";
+  const marathonIdParam = searchParams.get("marathonId")?.trim() ?? "";
+  const marathonDayNumber = Number(searchParams.get("dayNumber")?.trim() ?? "");
+  const isMarathonContext = isUuid(marathonIdParam) && Number.isInteger(marathonDayNumber) && marathonDayNumber > 0;
+  const resultQuerySuffix = useMemo(() => {
+    const query = new URLSearchParams();
+    if (isMarathonContext) {
+      query.set("marathonId", marathonIdParam);
+      query.set("dayNumber", String(marathonDayNumber));
+    }
+    const returnTo = searchParams.get("returnTo")?.trim() ?? "";
+    const returnLabel = searchParams.get("returnLabel")?.trim() ?? "";
+    if (returnTo.startsWith("/")) {
+      query.set("returnTo", returnTo);
+      if (returnLabel) query.set("returnLabel", returnLabel);
+    }
+    const serialized = query.toString();
+    return serialized ? `&${serialized}` : "";
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, searchParams]);
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [activeSectionId, setActiveSectionId] = useState("s1");
@@ -82,8 +102,25 @@ export default function ListeningReviewPage() {
     const loadBackendReview = async () => {
       setIsLoading(true);
       try {
-        const response = await studentAttemptsService.review(resolvedBackendAttemptId);
+        const response = isMarathonContext
+          ? await (async () => {
+              const [attemptResponse, resultResponse] = await Promise.all([
+                studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, resolvedBackendAttemptId),
+                studentMarathonService.reviewAttempt(marathonIdParam, marathonDayNumber, resolvedBackendAttemptId),
+              ]);
+              return adaptMarathonListeningReviewResponse({
+                attempt: attemptResponse,
+                result: resultResponse,
+                routeId: testId,
+              });
+            })()
+          : await studentAttemptsService.review(resolvedBackendAttemptId);
         if (!active) return;
+        if (!response) {
+          setReviewPayload(null);
+          setBackendReview(null);
+          return;
+        }
         setReviewPayload(response);
         setBackendReview(adaptListeningBackendReview(response));
       } catch {
@@ -102,7 +139,7 @@ export default function ListeningReviewPage() {
     return () => {
       active = false;
     };
-  }, [resolvedBackendAttemptId]);
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, resolvedBackendAttemptId, testId]);
 
   const gradeableQuestions = useMemo<GradeableQuestion[]>(() => {
     return (backendReview?.questions ?? []).map((question) => {
@@ -144,6 +181,16 @@ export default function ListeningReviewPage() {
       })),
     }));
   }, [backendReview, grading, t]);
+  const resolvedActiveSectionId = reviewSections.some((section) => section.sectionId === activeSectionId)
+    ? activeSectionId
+    : (reviewSections[0]?.sectionId ?? "s1");
+  const reviewStartQuestionId = useMemo(
+    () =>
+      (backendReview?.questions ?? [])
+        .filter((question) => question.sectionId === resolvedActiveSectionId)
+        .sort((left, right) => left.number - right.number)[0]?.id ?? null,
+    [backendReview?.questions, resolvedActiveSectionId]
+  );
 
   const answerMetaByQuestionId = useMemo(() => {
     return (backendReview?.answerMeta ?? []).reduce<Record<string, ListeningBackendAnswerMeta>>(
@@ -218,17 +265,6 @@ export default function ListeningReviewPage() {
     );
   }
 
-  const resolvedActiveSectionId = reviewSections.some((section) => section.sectionId === activeSectionId)
-    ? activeSectionId
-    : (reviewSections[0]?.sectionId ?? "s1");
-  const reviewStartQuestionId = useMemo(
-    () =>
-      (backendReview?.questions ?? [])
-        .filter((question) => question.sectionId === resolvedActiveSectionId)
-        .sort((left, right) => left.number - right.number)[0]?.id ?? null,
-    [backendReview?.questions, resolvedActiveSectionId]
-  );
-
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
       <Card className="rounded-3xl border-slate-200/85 bg-white/95 p-4 shadow-sm shadow-slate-200/50 dark:border-border/75 dark:bg-card/75 dark:shadow-none sm:p-5">
@@ -243,7 +279,7 @@ export default function ListeningReviewPage() {
             </p>
           </div>
           <Button asChild className="h-9 rounded-xl px-4">
-            <Link href={`/${locale}/listening/${testId}/result?attempt=${resolvedBackendAttemptId}`}>{t("resultsButton")}</Link>
+            <Link href={`/${locale}/listening/${testId}/result?attempt=${resolvedBackendAttemptId}${resultQuerySuffix}`}>{t("resultsButton")}</Link>
           </Button>
         </div>
       </Card>

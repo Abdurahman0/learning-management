@@ -13,6 +13,8 @@ import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { loadAttemptResult } from "@/lib/test-attempt-storage";
 import { getListeningTestById } from "@/data/listening-tests-full";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
+import { studentMarathonService } from "@/src/services/student/marathon.service";
+import { adaptMarathonListeningReviewResponse } from "@/src/services/student/marathon-runner-adapters";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
 import {DashboardFeedbackButton} from "../../../dashboard/_components/DashboardFeedbackButton";
 import type {
@@ -82,9 +84,25 @@ export default function ListeningResultPage() {
   const attemptId = searchParams.get("attempt")?.trim() ?? "";
   const returnToParam = searchParams.get("returnTo")?.trim() ?? "";
   const returnLabelParam = searchParams.get("returnLabel")?.trim() ?? "";
+  const marathonIdParam = searchParams.get("marathonId")?.trim() ?? "";
+  const marathonDayNumber = Number(searchParams.get("dayNumber")?.trim() ?? "");
+  const isMarathonContext = isUuid(marathonIdParam) && Number.isInteger(marathonDayNumber) && marathonDayNumber > 0;
   const returnHref = returnToParam.startsWith("/") ? returnToParam : `/${locale}/dashboard`;
   const returnLabel = returnToParam.startsWith("/") ? (returnLabelParam || "Back to marathon day") : undefined;
   const resolvedBackendAttemptId = isUuid(attemptId) ? attemptId : "";
+  const reviewQuerySuffix = useMemo(() => {
+    const query = new URLSearchParams();
+    if (returnToParam.startsWith("/")) {
+      query.set("returnTo", returnToParam);
+      if (returnLabelParam) query.set("returnLabel", returnLabelParam);
+    }
+    if (isMarathonContext) {
+      query.set("marathonId", marathonIdParam);
+      query.set("dayNumber", String(marathonDayNumber));
+    }
+    const serialized = query.toString();
+    return serialized ? `&${serialized}` : "";
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, returnLabelParam, returnToParam]);
   const localAttemptId = !resolvedBackendAttemptId && attemptId ? attemptId : "";
   const localResult = useMemo(() => {
     if (!localAttemptId) return null;
@@ -120,8 +138,25 @@ export default function ListeningResultPage() {
     const loadBackendReview = async () => {
       setIsLoading(true);
       try {
-        const response = await studentAttemptsService.review(resolvedBackendAttemptId);
+        const response = isMarathonContext
+          ? await (async () => {
+              const [attemptResponse, resultResponse] = await Promise.all([
+                studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, resolvedBackendAttemptId),
+                studentMarathonService.reviewAttempt(marathonIdParam, marathonDayNumber, resolvedBackendAttemptId),
+              ]);
+              return adaptMarathonListeningReviewResponse({
+                attempt: attemptResponse,
+                result: resultResponse,
+                routeId: testId,
+              });
+            })()
+          : await studentAttemptsService.review(resolvedBackendAttemptId);
         if (!active) return;
+        if (!response) {
+          setReviewPayload(null);
+          setBackendReview(null);
+          return;
+        }
         setReviewPayload(response);
         setBackendReview(adaptListeningBackendReview(response));
       } catch {
@@ -140,7 +175,7 @@ export default function ListeningResultPage() {
     return () => {
       active = false;
     };
-  }, [resolvedBackendAttemptId]);
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, resolvedBackendAttemptId, testId]);
 
   useEffect(() => {
     let active = true;
@@ -394,7 +429,7 @@ export default function ListeningResultPage() {
   const seconds = (timeUsedSeconds % 60).toString().padStart(2, "0");
   const testTitle = reviewPayload?.test_title || "Listening Test";
   const reviewHref = resolvedBackendAttemptId
-    ? `/${locale}/listening/${testId}?review=1&attempt=${resolvedBackendAttemptId}${returnToParam.startsWith("/") ? `&returnTo=${encodeURIComponent(returnToParam)}${returnLabelParam ? `&returnLabel=${encodeURIComponent(returnLabelParam)}` : ""}` : ""}`
+    ? `/${locale}/listening/${testId}?review=1&attempt=${resolvedBackendAttemptId}${reviewQuerySuffix}`
     : "#review-main";
 
   return (

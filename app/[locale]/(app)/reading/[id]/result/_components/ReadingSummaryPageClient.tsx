@@ -13,6 +13,8 @@ import {PostTestMistakeReasonsPanel} from "@/components/mistake-reasons/PostTest
 import {gradeTest, type GradeableQuestion} from "@/lib/grading";
 import {loadAttemptResult} from "@/lib/test-attempt-storage";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
+import {studentMarathonService} from "@/src/services/student/marathon.service";
+import {adaptMarathonReadingReviewResponse} from "@/src/services/student/marathon-runner-adapters";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
 import {DashboardFeedbackButton} from "../../../../dashboard/_components/DashboardFeedbackButton";
 import type {
@@ -84,9 +86,25 @@ export function ReadingSummaryPageClient() {
   const attemptId = searchParams.get("attempt")?.trim() ?? "";
   const returnToParam = searchParams.get("returnTo")?.trim() ?? "";
   const returnLabelParam = searchParams.get("returnLabel")?.trim() ?? "";
+  const marathonIdParam = searchParams.get("marathonId")?.trim() ?? "";
+  const marathonDayNumber = Number(searchParams.get("dayNumber")?.trim() ?? "");
+  const isMarathonContext = isUuid(marathonIdParam) && Number.isInteger(marathonDayNumber) && marathonDayNumber > 0;
   const returnHref = returnToParam.startsWith("/") ? returnToParam : `/${locale}/dashboard`;
   const returnLabel = returnToParam.startsWith("/") ? (returnLabelParam || "Back to marathon day") : undefined;
   const resolvedBackendAttemptId = isUuid(attemptId) ? attemptId : "";
+  const reviewQuerySuffix = useMemo(() => {
+    const query = new URLSearchParams();
+    if (returnToParam.startsWith("/")) {
+      query.set("returnTo", returnToParam);
+      if (returnLabelParam) query.set("returnLabel", returnLabelParam);
+    }
+    if (isMarathonContext) {
+      query.set("marathonId", marathonIdParam);
+      query.set("dayNumber", String(marathonDayNumber));
+    }
+    const serialized = query.toString();
+    return serialized ? `&${serialized}` : "";
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, returnLabelParam, returnToParam]);
   const localAttemptId = !resolvedBackendAttemptId && attemptId ? attemptId : "";
   const localResult = useMemo(() => {
     if (!localAttemptId) return null;
@@ -124,11 +142,32 @@ export function ReadingSummaryPageClient() {
     const loadBackendReview = async () => {
       setIsLoading(true);
       try {
-        const [reviewResponse, attemptResponse] = await Promise.all([
-          studentAttemptsService.review(resolvedBackendAttemptId),
-          studentAttemptsService.getById(resolvedBackendAttemptId)
-        ]);
+        const [reviewResponse, attemptResponse] = isMarathonContext
+          ? await (async () => {
+              const [marathonAttempt, marathonResult] = await Promise.all([
+                studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, resolvedBackendAttemptId),
+                studentMarathonService.reviewAttempt(marathonIdParam, marathonDayNumber, resolvedBackendAttemptId),
+              ]);
+              return [
+                adaptMarathonReadingReviewResponse({
+                  attempt: marathonAttempt,
+                  result: marathonResult,
+                  routeId: testId,
+                }),
+                null,
+              ] as const;
+            })()
+          : await Promise.all([
+              studentAttemptsService.review(resolvedBackendAttemptId),
+              studentAttemptsService.getById(resolvedBackendAttemptId)
+            ]);
         if (!active) return;
+        if (!reviewResponse) {
+          setReviewPayload(null);
+          setAttemptDetail(null);
+          setBackendReview(null);
+          return;
+        }
         setReviewPayload(reviewResponse);
         setAttemptDetail(attemptResponse);
         setBackendReview(adaptReadingBackendReview(reviewResponse));
@@ -149,7 +188,7 @@ export function ReadingSummaryPageClient() {
     return () => {
       active = false;
     };
-  }, [resolvedBackendAttemptId]);
+  }, [isMarathonContext, marathonDayNumber, marathonIdParam, resolvedBackendAttemptId, testId]);
 
   useEffect(() => {
     let active = true;
@@ -489,7 +528,7 @@ export function ReadingSummaryPageClient() {
     weakestPassage
   };
   const reviewHref = resolvedBackendAttemptId
-    ? `/${locale}/reading/${testId}?review=1&attempt=${resolvedBackendAttemptId}${returnToParam.startsWith("/") ? `&returnTo=${encodeURIComponent(returnToParam)}${returnLabelParam ? `&returnLabel=${encodeURIComponent(returnLabelParam)}` : ""}` : ""}`
+    ? `/${locale}/reading/${testId}?review=1&attempt=${resolvedBackendAttemptId}${reviewQuerySuffix}`
     : "#review-main";
 
   return (

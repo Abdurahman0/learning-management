@@ -244,19 +244,34 @@ function normalizeAttemptSaveResponse(value: unknown): StudentMarathonAttemptSav
 
 function normalizeAttemptResultAnswer(value: unknown): StudentMarathonAttemptResultAnswer {
   const record = asRecord(value);
+  const nestedQuestion = asRecord(record?.question);
+  const questionId =
+    toStringSafe(record?.question)
+    || toStringSafe(record?.question_id)
+    || toStringSafe(nestedQuestion?.question_id)
+    || toStringSafe(nestedQuestion?.id)
+    || toStringSafe(nestedQuestion?.uuid);
+  const questionNumber = toNumberSafe(record?.question_number ?? nestedQuestion?.question_number);
   return {
     id: toStringSafe(record?.id),
-    question: toStringSafe(record?.question),
-    question_number: toNumberSafe(record?.question_number),
-    question_text: toStringSafe(record?.question_text),
-    question_type: toStringSafe(record?.question_type),
-    student_answer_json: record?.student_answer_json ?? null,
-    correct_answer_json: record?.correct_answer_json ?? null,
+    question: questionId,
+    question_number: questionNumber,
+    question_text: toStringSafe(record?.question_text ?? nestedQuestion?.question_text),
+    question_type: toStringSafe(record?.question_type ?? nestedQuestion?.question_type),
+    student_answer_json: record?.student_answer_json ?? record?.student_answer ?? record?.answer_json ?? record?.answer ?? null,
+    correct_answer_json: record?.correct_answer_json ?? record?.correct_answer ?? nestedQuestion?.correct_answer_json ?? null,
     is_correct: toBooleanSafe(record?.is_correct),
     is_skipped: toBooleanSafe(record?.is_skipped),
     is_flagged: toBooleanSafe(record?.is_flagged),
-    explanation: toStringSafe(record?.explanation) || null,
-    answer_evidence_json: record?.answer_evidence_json ?? null
+    explanation: toStringSafe(record?.explanation ?? nestedQuestion?.explanation) || null,
+    answer_evidence_json:
+      record?.answer_evidence_json
+      ?? record?.answer_evidence
+      ?? record?.evidence_json
+      ?? record?.evidence
+      ?? nestedQuestion?.answer_evidence_json
+      ?? nestedQuestion?.answer_evidence
+      ?? null
   };
 }
 
