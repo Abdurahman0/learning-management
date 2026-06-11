@@ -20,6 +20,7 @@ import {Switch} from "@/components/ui/switch";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {adminMarathonsService} from "@/src/services/admin/marathons.service";
+import {AdminApiError} from "@/src/services/admin/types";
 import type {
   AdminEntityId,
   AdminMarathonDayDetailRecord,
@@ -72,6 +73,10 @@ const EMPTY_PART_FORM: AdminMarathonListeningPartPayload = {
   audio_file: null,
   remove_audio: false
 };
+
+function getAdminErrorDescription(cause: unknown, fallback: string) {
+  return cause instanceof AdminApiError && cause.message ? cause.message : fallback;
+}
 
 function toNumberOrNull(value: string) {
   const trimmed = value.trim();
@@ -509,7 +514,7 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
   };
 
   const upsertPassage = async () => {
-    if (!passageForm.title.trim()) return;
+    if (!selectedDay || !passageForm.title.trim()) return;
     setSavingPassage(true);
     try {
       const createdPassage = await adminMarathonsService.createReadingPassage(marathonId, {
@@ -518,12 +523,13 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
         passage_text: "Draft passage",
         topic: passageForm.topic?.trim() ?? ""
       });
+      await adminMarathonsService.assignPassage(marathonId, selectedDay.day_number, createdPassage.id);
       router.push(`/${locale}/admin/marathons/${marathonId}/reading-passages/${createdPassage.id}/builder`);
       return;
-    } catch {
+    } catch (cause) {
       setNotice({
         title: t("notices.passageFailed.title"),
-        description: t("notices.passageFailed.description"),
+        description: getAdminErrorDescription(cause, t("notices.passageFailed.description")),
         tone: "error"
       });
     } finally {
@@ -587,7 +593,7 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
   };
 
   const upsertPart = async () => {
-    if (!partForm.title.trim()) return;
+    if (!selectedDay || !partForm.title.trim()) return;
     setSavingPart(true);
     try {
       const createdPart = await adminMarathonsService.createListeningPart(marathonId, {
@@ -595,10 +601,15 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
         title: partForm.title.trim(),
         transcript_text: "Draft transcript"
       });
+      await adminMarathonsService.assignListeningPart(marathonId, selectedDay.day_number, createdPart.id);
       router.push(`/${locale}/admin/marathons/${marathonId}/listening-parts/${createdPart.id}/builder`);
       return;
-    } catch {
-      setNotice({title: t("notices.partFailed.title"), description: t("notices.partFailed.description"), tone: "error"});
+    } catch (cause) {
+      setNotice({
+        title: t("notices.partFailed.title"),
+        description: getAdminErrorDescription(cause, t("notices.partFailed.description")),
+        tone: "error"
+      });
     } finally {
       setSavingPart(false);
     }
