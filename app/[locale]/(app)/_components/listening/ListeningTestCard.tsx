@@ -14,9 +14,14 @@ import {DifficultySignal} from "./DifficultySignal";
 
 type ListeningTestCardProps = {
   test: ListeningTestItem;
+  action?: {
+    href: string;
+    label: string;
+  };
+  badgeLabel?: string;
 };
 
-export function ListeningTestCard({test}: ListeningTestCardProps) {
+export function ListeningTestCard({test, action, badgeLabel}: ListeningTestCardProps) {
   const t = useTranslations("guest");
   const locale = useLocale();
   const router = useRouter();
@@ -53,7 +58,7 @@ export function ListeningTestCard({test}: ListeningTestCardProps) {
                   {t("card.premium")}
                 </span>
               ) : (
-                t("card.free")
+                badgeLabel ?? t("card.free")
               )}
             </Badge>
 
@@ -126,6 +131,15 @@ export function ListeningTestCard({test}: ListeningTestCardProps) {
                 >
                   <Lock className="mr-2 size-4" aria-hidden="true" />
                   {t("card.locked")}
+                </Button>
+              ) : action ? (
+                <Button
+                  type="button"
+                  onClick={() => router.push(action.href)}
+                  className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90"
+                >
+                  {action.label}
+                  <Play className="ml-2 size-4 fill-current" aria-hidden="true" />
                 </Button>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2">

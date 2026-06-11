@@ -139,6 +139,82 @@ function parseOptionTexts(optionsJson: unknown) {
   return parseOptionTexts(record.options);
 }
 
+function parseSharedOptionTexts(groupContent: unknown) {
+  const record = asRecord(groupContent);
+  if (!record) return [];
+
+  const rows = Array.isArray(record.choices)
+    ? record.choices
+    : Array.isArray(record.options)
+      ? record.options
+      : Array.isArray(record.labels)
+        ? record.labels
+        : Array.isArray(record.categories)
+          ? record.categories
+          : [];
+
+  return rows
+    .map((item, index) => {
+      if (typeof item === "string") return item.trim();
+      const row = asRecord(item);
+      if (!row) return "";
+      const key = toStringSafe(row.key, String.fromCharCode(65 + index)).trim();
+      const text = toStringSafe(row.text, "").trim() || toStringSafe(row.label, "").trim();
+      return text || key;
+    })
+    .filter(Boolean);
+}
+
+function generateRangeOptions(startRaw: string, endRaw: string): string[] {
+  const start = startRaw.trim();
+  const end = endRaw.trim();
+  if (!start || !end) return [];
+
+  if (/^[A-Z]$/.test(start) && /^[A-Z]$/.test(end)) {
+    const from = start.charCodeAt(0);
+    const to = end.charCodeAt(0);
+    const step = from <= to ? 1 : -1;
+    const result: string[] = [];
+    for (let code = from; step > 0 ? code <= to : code >= to; code += step) {
+      result.push(String.fromCharCode(code));
+    }
+    return result;
+  }
+
+  return [];
+}
+
+function extractLetterOptionsFromInstructionText(text: string): string[] {
+  const source = String(text ?? "");
+  if (!source) return [];
+
+  const options: string[] = [];
+  const seen = new Set<string>();
+  const lineRegex = /^\s*(?:[-*]\s*)?(?:\*\*)?([A-Z])(?:\*\*)?\s*[\)\].:\-]\s+\S.+$/gm;
+  let match: RegExpExecArray | null;
+
+  while ((match = lineRegex.exec(source))) {
+    const key = String(match[1] ?? "").trim().toUpperCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    options.push(key);
+  }
+
+  return options.length >= 2 ? options : [];
+}
+
+function extractMatchingOptionsFromInstructions(text: string): string[] {
+  const source = String(text ?? "");
+  if (!source) return [];
+
+  const explicit = extractLetterOptionsFromInstructionText(source);
+  if (explicit.length) return explicit;
+
+  const range = source.match(/\b([A-Z])\s*[-–—]\s*([A-Z])\b/);
+  if (!range) return [];
+  return generateRangeOptions(range[1] ?? "", range[2] ?? "");
+}
+
 function normalizeQuestionType(value: string): ReadingQuestion["type"] {
   const normalized = value.toLowerCase();
   if (
@@ -285,6 +361,8 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
             : "";
 
         const options = parseOptionTexts(question.options_json);
+        const sharedOptions = parseSharedOptionTexts(group.group_content_json);
+        const instructionOptions = extractMatchingOptionsFromInstructions(group.instructions ?? "");
         const evidenceSpans = parseEvidenceSpans(
           question.answer_evidence_json,
           passageInfo.passageId,
@@ -331,6 +409,11 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
             evidenceSpans
           };
         } else if (questionType === "matchingInfo") {
+          const paragraphOptions = sharedOptions.length
+            ? sharedOptions
+            : instructionOptions.length
+              ? instructionOptions
+              : ["A", "B", "C", "D", "E", "F"];
           readingQuestion = {
             id: question.id,
             number: questionNumber,
@@ -339,7 +422,7 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
             prompt,
             groupTitle,
             groupInstruction: group.instructions ?? undefined,
-            paragraphOptions: options.length ? options : ["A", "B", "C", "D", "E", "F"],
+            paragraphOptions,
             correctAnswer: typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] ?? "",
             acceptableAnswers: toAcceptableAnswers(typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] ?? ""),
             explanation: toStringSafe(question.explanation, ""),

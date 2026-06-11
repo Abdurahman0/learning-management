@@ -19,6 +19,7 @@ import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {Progress} from "@/components/ui/progress";
 import {Separator} from "@/components/ui/separator";
+import {SiteToast} from "@/components/ui/site-toast";
 import {cn} from "@/lib/utils";
 import {studentMarathonService} from "@/src/services/student/marathon.service";
 import type {
@@ -305,12 +306,13 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
         setDetail((prev) => (prev ? {...prev, enrollment: nextEnrollment} : prev));
         setDays(nextDays);
 
-        const fallbackDay =
-          selectedDayNumber && preserveSelection
-            ? selectedDayNumber
-            : nextEnrollment?.current_day_number || nextDays[nextDays.length - 1]?.day_number || 1;
-
-        await loadDay(fallbackDay);
+        if (selectedDayNumber && preserveSelection) {
+          await loadDay(selectedDayNumber);
+        } else {
+          setSelectedDayNumber(null);
+          setSelectedDay(null);
+          setWorkspaceOpen(false);
+        }
       } else {
         setDays([]);
         setSelectedDay(null);
@@ -478,28 +480,18 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
 
   if (loading || !detail) {
     return (
-      <div className="mx-auto max-w-5xl space-y-5">
-        <div className="h-[1200px] rounded-[32px] border border-slate-200 bg-white/80 dark:border-white/10 dark:bg-white/6" />
-      </div>
+      <>
+        <SiteToast notice={notice ? {title: notice.text, tone: notice.tone} : null} />
+        <div className="mx-auto max-w-5xl space-y-5">
+          <div className="h-[1200px] rounded-[32px] border border-slate-200 bg-white/80 dark:border-white/10 dark:bg-white/6" />
+        </div>
+      </>
     );
   }
 
   return (
     <div className="space-y-6">
-      {notice ? (
-        <Card
-          className={cn(
-            "rounded-[22px] border",
-            notice.tone === "success"
-              ? "border-emerald-200 bg-emerald-50 dark:border-emerald-300/20 dark:bg-emerald-400/10"
-              : notice.tone === "error"
-                ? "border-rose-200 bg-rose-50 dark:border-rose-300/20 dark:bg-rose-500/10"
-                : "border-sky-200 bg-sky-50 dark:border-cyan-300/20 dark:bg-cyan-400/10"
-          )}
-        >
-          <CardContent className="p-4 text-sm text-slate-700 dark:text-slate-200">{notice.text}</CardContent>
-        </Card>
-      ) : null}
+      <SiteToast notice={notice ? {title: notice.text, tone: notice.tone} : null} />
 
       <div className="mx-auto max-w-5xl space-y-6">
         {enrollment ? (
@@ -622,7 +614,7 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
                       const state = getDayState(day, currentDayNumber);
                       const isSelected = selectedDayNumber === day.day_number;
                       const canOpen = state !== "locked";
-                      const showExpanded = isSelected || (!selectedDayNumber && state === "current");
+                      const showExpanded = isSelected;
                       const title = day.title || `Day ${day.day_number}`;
                       const isLeftAnchor = index % 2 === 0;
                       const anchorX = isLeftAnchor ? JOURNEY_LEFT_X : JOURNEY_RIGHT_X;

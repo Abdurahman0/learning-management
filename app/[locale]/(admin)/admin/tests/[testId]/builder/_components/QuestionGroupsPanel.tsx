@@ -161,7 +161,9 @@ function toTableRowsText(value: unknown) {
 }
 
 function inferRangeTokenFromChoices(values: string[]) {
-  const cleaned = values.map((value) => value.trim()).filter(Boolean);
+  const cleaned = values
+    .map((value) => parseInstructionChoiceKey(value) ?? value.trim())
+    .filter(Boolean);
   if (cleaned.length < 2) return null;
 
   const letterOnly = cleaned.every((value) => /^[A-Z]$/.test(value));
@@ -185,6 +187,79 @@ function inferRangeTokenFromChoices(values: string[]) {
 
 function hasRangeInText(text: string) {
   return /\b([A-Z]|\d{1,2})\s*[-–—]\s*([A-Z]|\d{1,2})\b/.test(text);
+}
+
+function parseInstructionChoiceKey(value: string) {
+  const trimmed = value.trim();
+  const prefixed = trimmed.match(/^\s*(?:[-*]\s*)?(?:\*\*)?([A-Z])(?:\*\*)?\s*[\)\].:\-]\s+\S/i);
+  if (prefixed) return prefixed[1].toUpperCase();
+
+  const paragraph = trimmed.match(/^\s*paragraph\s+([A-Z])(?:\s*[\)\].:\-]\s+\S)?/i);
+  if (paragraph) return paragraph[1].toUpperCase();
+
+  return /^[A-Z]$/.test(trimmed) ? trimmed : null;
+}
+
+function extractChoiceKeysFromInstructionText(text: string) {
+  const source = String(text ?? "");
+  const keys: string[] = [];
+  const seen = new Set<string>();
+  const lineRegex = /^\s*(?:[-*]\s*)?(?:\*\*)?([A-Z])(?:\*\*)?\s*[\)\].:\-]\s+\S.+$/gm;
+  let match: RegExpExecArray | null;
+
+  while ((match = lineRegex.exec(source))) {
+    const key = String(match[1] ?? "").trim().toUpperCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    keys.push(key);
+  }
+
+  return keys.length >= 2 ? keys : [];
+}
+
+function extractChoicesFromInstructionText(text: string) {
+  const source = String(text ?? "");
+  const choices: string[] = [];
+  const seen = new Set<string>();
+  const lineRegex = /^\s*(?:[-*]\s*)?((?:\*\*)?[A-Z](?:\*\*)?\s*[\)\].:\-]\s+\S.+)$/gm;
+  let match: RegExpExecArray | null;
+
+  while ((match = lineRegex.exec(source))) {
+    const choice = String(match[1] ?? "").replace(/\*\*/g, "").trim();
+    const key = parseInstructionChoiceKey(choice);
+    if (!choice || !key || seen.has(key)) continue;
+    seen.add(key);
+    choices.push(choice);
+  }
+
+  return choices;
+}
+
+function hasChoiceListInText(text: string, values: string[]) {
+  const expectedKeys = values
+    .map((value) => parseInstructionChoiceKey(value))
+    .filter((key): key is string => Boolean(key));
+  if (expectedKeys.length < 2) return false;
+  const existingKeys = new Set(extractChoiceKeysFromInstructionText(text));
+  return expectedKeys.every((key) => existingKeys.has(key));
+}
+
+function buildInstructionChoiceList(values: string[]) {
+  return values
+    .map((value, index) => {
+      const trimmed = value.trim();
+      if (!trimmed) return "";
+
+      const key = parseInstructionChoiceKey(trimmed) ?? toMcqKey(index);
+      if (trimmed.toUpperCase() === key) return key;
+
+      const withoutDecoratedKey = trimmed
+        .replace(/^\s*(?:[-*]\s*)?(?:\*\*)?[A-Z](?:\*\*)?\s*[\)\].:\-]\s*/i, "")
+        .trim();
+      return withoutDecoratedKey ? `${key}. ${withoutDecoratedKey}` : key;
+    })
+    .filter(Boolean)
+    .join("\n");
 }
 
 function generateRangeOptions(startRaw: string, endRaw: string): string[] {
@@ -217,6 +292,8 @@ function generateRangeOptions(startRaw: string, endRaw: string): string[] {
 function extractRangeFromInstructionText(text: string) {
   const source = String(text ?? "");
   if (!source) return [];
+  const explicitKeys = extractChoiceKeysFromInstructionText(source);
+  if (explicitKeys.length) return explicitKeys;
   const match = source.match(/\b([A-Z]|\d{1,2})\s*[-–—]\s*([A-Z]|\d{1,2})\b/);
   if (!match) return [];
   return generateRangeOptions(match[1] ?? "", match[2] ?? "");
@@ -352,7 +429,7 @@ export function QuestionGroupsPanel({
   const openEditEditor = (group: QuestionGroup) => {
     const derivedChoicesFromInstructions =
       group.type === "matching_information" && module === "reading"
-        ? extractRangeFromInstructionText(group.instructions ?? "").join("\n")
+        ? (extractChoicesFromInstructionText(group.instructions ?? "").join("\n") || extractRangeFromInstructionText(group.instructions ?? "").join("\n"))
         : "";
     const storedWordBank = getStoredWordBank((group.groupContentJson as any)?.word_bank);
     const hasStoredWordBank = storedWordBank.length > 0 && !isPlaceholderWordBank(storedWordBank);
@@ -423,10 +500,20 @@ export function QuestionGroupsPanel({
     let nextInstructions = editor.instructions;
     if (editor.type === "matching_information" && module === "reading") {
       // Backend docs: MATCH_PARA_INFO group_content_json must be null.
-      // We still let admin type A..G here, but we persist it by embedding the range into instructions
-      // so the student UI can derive the option list.
+      // Persist admin-entered paragraph choices by embedding them into instructions
+      // so the student UI can derive the matrix columns after a reload.
       const inferredRange = inferRangeTokenFromChoices(parsedChoices);
-      if (inferredRange && !hasRangeInText(nextInstructions)) {
+      const hasChoiceLabels = parsedChoices.some((choice) => {
+        const key = parseInstructionChoiceKey(choice);
+        return Boolean(key) && choice.trim().toUpperCase() !== key;
+      });
+      const shouldEmbedChoiceList = hasChoiceLabels && parsedChoices.length >= 2 && !hasChoiceListInText(nextInstructions, parsedChoices);
+      if (shouldEmbedChoiceList) {
+        const choiceList = buildInstructionChoiceList(parsedChoices);
+        if (choiceList) {
+          nextInstructions = `${nextInstructions.trim()}\n\n${choiceList}`.trim();
+        }
+      } else if (inferredRange && !hasRangeInText(nextInstructions)) {
         nextInstructions = `${nextInstructions.trim()}\n\nThe Reading Passage has paragraphs ${inferredRange}.`.trim();
       }
     }

@@ -496,34 +496,38 @@ function parseMatchingInfoOption(option: string, index: number) {
   const trimmed = option.trim();
   const prefixed = trimmed.match(/^\s*([A-Z])[\)\].:\-]\s*(.+)$/i);
   if (prefixed) {
+    const key = prefixed[1].toUpperCase();
     return {
-      value: option,
-      key: prefixed[1].toUpperCase(),
+      value: key,
+      key,
       label: prefixed[2].trim(),
     };
   }
 
   const paragraph = trimmed.match(/^\s*paragraph\s+([A-Z])(?:\s*[\)\].:\-]\s*(.+))?$/i);
   if (paragraph) {
+    const key = paragraph[1].toUpperCase();
     return {
-      value: option,
-      key: paragraph[1].toUpperCase(),
+      value: key,
+      key,
       label: paragraph[2]?.trim() ?? "",
     };
   }
 
   const keyOnly = trimmed.match(/^\s*([A-Z])\s*$/i);
   if (keyOnly) {
+    const key = keyOnly[1].toUpperCase();
     return {
-      value: option,
-      key: keyOnly[1].toUpperCase(),
+      value: key,
+      key,
       label: "",
     };
   }
 
+  const key = toAlphabetKey(index);
   return {
-    value: option,
-    key: toAlphabetKey(index),
+    value: key,
+    key,
     label: trimmed,
   };
 }
@@ -602,10 +606,32 @@ function extractRangeFromInstructionText(text: string): string[] {
   const source = String(text ?? "");
   if (!source) return [];
 
-  // Match "A-I" / "A – I" / "1-7", etc.
+  const explicitOptions = extractLetterOptionsFromInstructionText(source);
+  if (explicitOptions.length) return explicitOptions;
+
+  // Match "A-I" / "A - I" / "1-7", etc.
   const match = source.match(/\b([A-Z]|\d{1,2})\s*[-–—]\s*([A-Z]|\d{1,2})\b/);
   if (!match) return [];
   return generateRangeOptions(match[1] ?? "", match[2] ?? "");
+}
+
+function extractLetterOptionsFromInstructionText(text: string): string[] {
+  const source = String(text ?? "");
+  if (!source) return [];
+
+  const options: string[] = [];
+  const seen = new Set<string>();
+  const lineRegex = /^\s*(?:[-*]\s*)?(?:\*\*)?([A-Z])(?:\*\*)?\s*[\)\].:\-]\s+\S.+$/gm;
+  let match: RegExpExecArray | null;
+
+  while ((match = lineRegex.exec(source))) {
+    const key = String(match[1] ?? "").trim().toUpperCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    options.push(key);
+  }
+
+  return options.length >= 2 ? options : [];
 }
 
 function extractParagraphMarkersFromPassageText(passageText: string): string[] {
@@ -3411,7 +3437,13 @@ function ReadingTestClient({
                     .map((option) => option.trim())
                     .filter(Boolean)
                     .filter((option, index, source) => source.indexOf(option) === index);
-                  const showMatchingInfoBank = matchingInfoGroupOptions.some((option) => !/^[A-Z]$/.test(option));
+                  const matchingInfoGroupParsedOptions = matchingInfoGroupOptions
+                    .map((option, optionIndex) => parseMatchingInfoOption(option, optionIndex))
+                    .filter((option, index, source) => source.findIndex((item) => item.key === option.key) === index);
+                  const showMatchingInfoBank = matchingInfoGroupOptions.some((option, optionIndex) => {
+                    const parsed = parseMatchingInfoOption(option, optionIndex);
+                    return Boolean(parsed.label) && !/^\s*(?:paragraph\s+)?[A-Z]\s*[\)\].:\-]/i.test(option.trim());
+                  });
 
                   if (!visibleGroupQuestions.length && !matchingHeadingGroupQuestions.length) {
                     return null;
@@ -3542,9 +3574,7 @@ function ReadingTestClient({
                             renderedSharedBlocksInGroup.add(sharedBlockKey);
                           }
                           const matchingInfoRawOptions = isMatchingInfoSharedBlock ? matchingInfoGroupOptions : [];
-                          const matchingInfoParsedOptions = matchingInfoRawOptions.map((option, optionIndex) =>
-                            parseMatchingInfoOption(option, optionIndex)
-                          );
+                          const matchingInfoParsedOptions = isMatchingInfoSharedBlock ? matchingInfoGroupParsedOptions : [];
                           const matchingInfoBlockActive = isMatchingInfoSharedBlock
                             && matchingInfoGroupQuestions.some((item) => item.number === activeQuestionNumber);
                           const articleActive = active || matchingInfoBlockActive;

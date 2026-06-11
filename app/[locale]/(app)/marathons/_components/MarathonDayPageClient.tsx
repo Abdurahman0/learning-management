@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import {ArrowLeft, BookOpen, ExternalLink, Headphones, Link2} from "lucide-react";
+import {ArrowLeft, BookOpen, ExternalLink, FileText, Headphones, Link2, Youtube} from "lucide-react";
 import {useEffect, useMemo, useState, type ReactNode} from "react";
 import {useLocale} from "next-intl";
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {cn} from "@/lib/utils";
+import {ReadingTestCard} from "@/app/[locale]/(app)/_components/reading/ReadingTestCard";
+import {ListeningTestCard} from "@/app/[locale]/(app)/_components/listening/ListeningTestCard";
+import type {
+  Difficulty,
+  ListeningTestItem,
+  ReadingGuestTest,
+} from "@/app/[locale]/(app)/_components/tests/types";
 import {studentMarathonService} from "@/src/services/student/marathon.service";
 import type {
   StudentMarathonDayContentItem,
@@ -78,58 +85,96 @@ function buildMarathonTaskHref(params: {
   return `/${params.locale}/${params.route}/${params.contentId}?${query.toString()}`;
 }
 
-function ReadingCard({
-  item,
-  href,
-}: {
-  item: StudentMarathonDayContentItem;
-  href: string;
-}) {
-  return (
-    <Card className="rounded-[24px] border border-slate-200 bg-white/94 dark:border-white/10 dark:bg-white/7">
-      <CardContent className="space-y-4 p-5">
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-slate-950 dark:text-white">{item.title}</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            {item.max_questions} questions
-            {item.estimated_time_minutes ? ` • ${item.estimated_time_minutes} min` : ""}
-          </p>
-        </div>
-        <Button asChild className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15">
-          <Link href={href}>
-            {item.attempt_status === "COMPLETED" ? "Review reading" : item.attempt_status === "IN_PROGRESS" ? "Continue reading" : "Start reading"}
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
+function normalizeDifficulty(value: string | null): Difficulty {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "easy" || normalized === "beginner") return "easy";
+  if (normalized === "hard" || normalized === "advanced") return "hard";
+  return "medium";
 }
 
-function ListeningCard({
-  item,
-  href,
-}: {
-  item: StudentMarathonListeningDayItem;
-  href: string;
-}) {
-  return (
-    <Card className="rounded-[24px] border border-slate-200 bg-white/94 dark:border-white/10 dark:bg-white/7">
-      <CardContent className="space-y-4 p-5">
-        <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-slate-950 dark:text-white">{item.title}</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-300">
-            {item.max_questions} questions
-            {item.estimated_time_minutes ? ` • ${item.estimated_time_minutes} min` : ""}
-          </p>
-        </div>
-        <Button asChild className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15">
-          <Link href={href}>
-            {item.attempt_status === "COMPLETED" ? "Review listening" : item.attempt_status === "IN_PROGRESS" ? "Continue listening" : "Start listening"}
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
+function toReadingTest(item: StudentMarathonDayContentItem): ReadingGuestTest {
+  const difficulty = normalizeDifficulty(item.difficulty_level);
+  return {
+    id: item.id,
+    title: item.title,
+    testFormat: "part",
+    isPremium: false,
+    durationMinutes: item.estimated_time_minutes ?? 20,
+    totalQuestions: item.max_questions,
+    difficulty,
+    practiceSource: "custom",
+    passages: [{
+      id: item.id,
+      title: item.title,
+      questionsCount: item.max_questions,
+      difficulty,
+    }],
+  };
+}
+
+function toListeningTest(item: StudentMarathonListeningDayItem): ListeningTestItem {
+  const difficulty = normalizeDifficulty(item.difficulty_level);
+  return {
+    id: item.id,
+    title: item.title,
+    testFormat: "part",
+    isPremium: false,
+    difficulty,
+    practiceSource: "custom",
+    durationMins: item.estimated_time_minutes ?? 10,
+    durationMinutes: item.estimated_time_minutes ?? 10,
+    totalQuestions: item.max_questions,
+    sectionsCount: 1,
+    sections: [{
+      id: item.id,
+      title: item.title,
+      label: item.title,
+      questions: item.max_questions,
+    }],
+  };
+}
+
+function getAttemptBadgeLabel(status: string | null) {
+  if (status === "COMPLETED") return "Completed";
+  if (status === "IN_PROGRESS") return "In progress";
+  return "Marathon";
+}
+
+function getResourceMeta(rawUrl: string) {
+  try {
+    const url = new URL(rawUrl);
+    const hostname = url.hostname.replace(/^www\./, "");
+    const isYoutube = hostname === "youtu.be" || hostname.endsWith("youtube.com");
+    if (isYoutube) {
+      return {
+        label: "YouTube video",
+        icon: Youtube,
+        accentClass: "bg-red-500/10 text-red-600 dark:bg-red-500/15 dark:text-red-300",
+      };
+    }
+
+    const filename = decodeURIComponent(url.pathname.split("/").filter(Boolean).at(-1) ?? "");
+    const extension = filename.match(/\.([a-z0-9]{2,8})$/i)?.[1]?.toUpperCase();
+    if (extension) {
+      return {
+        label: `${extension} file`,
+        icon: FileText,
+        accentClass: "bg-blue-500/10 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+      };
+    }
+
+    return {
+      label: hostname || "External link",
+      icon: Link2,
+      accentClass: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+    };
+  } catch {
+    return {
+      label: "External link",
+      icon: Link2,
+      accentClass: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
+    };
+  }
 }
 
 export function MarathonDayPageClient({
@@ -251,18 +296,26 @@ export function MarathonDayPageClient({
             {activeSection === "reading" ? (
               day.reading_passages.length ? (
                 day.reading_passages.map((item) => (
-                  <ReadingCard
+                  <ReadingTestCard
                     key={item.id}
-                    item={item}
-                    href={buildMarathonTaskHref({
-                      locale,
-                      marathonId,
-                      dayNumber,
-                      route: "reading",
-                      contentId: item.id,
-                      attemptStatus: item.attempt_status,
-                      attemptId: item.attempt_id,
-                    })}
+                    test={toReadingTest(item)}
+                    badgeLabel={getAttemptBadgeLabel(item.attempt_status)}
+                    action={{
+                      href: buildMarathonTaskHref({
+                        locale,
+                        marathonId,
+                        dayNumber,
+                        route: "reading",
+                        contentId: item.id,
+                        attemptStatus: item.attempt_status,
+                        attemptId: item.attempt_id,
+                      }),
+                      label: item.attempt_status === "COMPLETED"
+                        ? "Review reading"
+                        : item.attempt_status === "IN_PROGRESS"
+                          ? "Continue reading"
+                          : "Start reading",
+                    }}
                   />
                 ))
               ) : (
@@ -275,18 +328,26 @@ export function MarathonDayPageClient({
             {activeSection === "listening" ? (
               day.listening_parts.length ? (
                 day.listening_parts.map((item) => (
-                  <ListeningCard
+                  <ListeningTestCard
                     key={item.id}
-                    item={item}
-                    href={buildMarathonTaskHref({
-                      locale,
-                      marathonId,
-                      dayNumber,
-                      route: "listening",
-                      contentId: item.id,
-                      attemptStatus: item.attempt_status,
-                      attemptId: item.attempt_id,
-                    })}
+                    test={toListeningTest(item)}
+                    badgeLabel={getAttemptBadgeLabel(item.attempt_status)}
+                    action={{
+                      href: buildMarathonTaskHref({
+                        locale,
+                        marathonId,
+                        dayNumber,
+                        route: "listening",
+                        contentId: item.id,
+                        attemptStatus: item.attempt_status,
+                        attemptId: item.attempt_id,
+                      }),
+                      label: item.attempt_status === "COMPLETED"
+                        ? "Review listening"
+                        : item.attempt_status === "IN_PROGRESS"
+                          ? "Continue listening"
+                          : "Start listening",
+                    }}
                   />
                 ))
               ) : (
@@ -298,22 +359,40 @@ export function MarathonDayPageClient({
 
             {activeSection === "resources" ? (
               day.external_links.length ? (
-                day.external_links.map((link) => (
-                  <Card key={link.id} className="rounded-[24px] border border-slate-200 bg-white/94 dark:border-white/10 dark:bg-white/7">
-                    <CardContent className="flex items-center justify-between gap-4 p-5">
-                      <div className="min-w-0">
-                        <h3 className="truncate text-base font-semibold text-slate-950 dark:text-white">{link.title}</h3>
-                        <p className="mt-1 truncate text-sm text-slate-600 dark:text-slate-300">{link.url}</p>
-                      </div>
-                      <Button asChild variant="outline" className="rounded-2xl">
-                        <a href={link.url} target="_blank" rel="noreferrer">
-                          <ExternalLink className="size-4" />
-                          Open
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+                  {[...day.external_links]
+                    .sort((left, right) => left.order - right.order)
+                    .map((link) => {
+                      const resource = getResourceMeta(link.url);
+                      const ResourceIcon = resource.icon;
+
+                      return (
+                        <a
+                          key={link.id}
+                          href={link.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="group relative flex aspect-square min-h-36 flex-col justify-between overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-blue-400/70 hover:bg-accent/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <span className={cn("inline-flex size-10 items-center justify-center rounded-xl", resource.accentClass)}>
+                              <ResourceIcon className="size-5" aria-hidden="true" />
+                            </span>
+                            <ExternalLink className="size-4 text-muted-foreground transition-colors group-hover:text-blue-600 dark:group-hover:text-blue-300" aria-hidden="true" />
+                          </div>
+
+                          <div className="min-w-0">
+                            <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground sm:text-base">
+                              {link.title}
+                            </h3>
+                            <p className="mt-1.5 truncate text-xs font-medium text-muted-foreground">
+                              {resource.label}
+                            </p>
+                          </div>
                         </a>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))
+                      );
+                    })}
+                </div>
               ) : (
                 <Card className="rounded-[24px] border border-slate-200 bg-white/94 dark:border-white/10 dark:bg-white/7">
                   <CardContent className="p-5 text-sm text-slate-600 dark:text-slate-300">No resources added to this day.</CardContent>
