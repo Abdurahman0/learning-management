@@ -413,6 +413,13 @@ function ensureAlternativeAnswers(answer: string, alternatives: string[]) {
   );
 }
 
+function buildCompletionCorrectAnswer(answer: string, alternatives: string[]) {
+  const cleanedAlternatives = ensureAlternativeAnswers(answer, alternatives);
+  return cleanedAlternatives.length
+    ? {answer, alternative_answers: cleanedAlternatives}
+    : {answer};
+}
+
 export function isQuestionReadyForSync(question: BuilderQuestion) {
   const prompt = question.prompt.trim();
 
@@ -482,10 +489,7 @@ export function mapBuilderQuestionToBulkPayload(question: BuilderQuestion, apiTy
   return {
     ...base,
     options_json: null,
-    correct_answer_json: {
-      answer: answers.answer,
-      alternative_answers: ensureAlternativeAnswers(answers.answer, answers.alternatives)
-    }
+    correct_answer_json: buildCompletionCorrectAnswer(answers.answer, answers.alternatives)
   };
 }
 
