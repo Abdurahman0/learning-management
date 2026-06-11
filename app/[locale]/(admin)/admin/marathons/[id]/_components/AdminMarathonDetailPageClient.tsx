@@ -3,7 +3,7 @@
 import Link from "next/link";
 import {useRouter, useSearchParams} from "next/navigation";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {ArrowLeft, Trash2, Wand2} from "lucide-react";
+import {ArrowLeft, ExternalLink, Trash2, Video, Wand2} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {AdminSidebar} from "@/app/[locale]/(admin)/admin/_components/AdminSidebar";
@@ -74,8 +74,24 @@ const EMPTY_PART_FORM: AdminMarathonListeningPartPayload = {
   remove_audio: false
 };
 
+type ContentLinkEditorState = {
+  kind: "passage" | "part";
+  contentId: AdminEntityId;
+  title: string;
+  url: string;
+};
+
 function getAdminErrorDescription(cause: unknown, fallback: string) {
   return cause instanceof AdminApiError && cause.message ? cause.message : fallback;
+}
+
+function normalizeHttpUrl(value: string) {
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 function toNumberOrNull(value: string) {
@@ -298,6 +314,8 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
   const [editingLink, setEditingLink] = useState<AdminMarathonExternalLinkRecord | null>(null);
   const [selectedPassageId, setSelectedPassageId] = useState("none");
   const [selectedPartId, setSelectedPartId] = useState("none");
+  const [contentLinkEditor, setContentLinkEditor] = useState<ContentLinkEditorState | null>(null);
+  const [savingContentLink, setSavingContentLink] = useState(false);
   const [savingDay, setSavingDay] = useState(false);
   const [savingLink, setSavingLink] = useState(false);
   const [savingPassage, setSavingPassage] = useState(false);
@@ -670,6 +688,98 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
     }
   };
 
+  const openContentLinkEditor = (
+    kind: ContentLinkEditorState["kind"],
+    contentId: AdminEntityId,
+    link?: {title: string; url: string} | null
+  ) => {
+    setContentLinkEditor({
+      kind,
+      contentId,
+      title: link?.title ?? "",
+      url: link?.url ?? ""
+    });
+  };
+
+  const saveContentLink = async () => {
+    if (!selectedDay || !contentLinkEditor?.url.trim()) return;
+    const normalizedUrl = normalizeHttpUrl(contentLinkEditor.url);
+    if (!normalizedUrl) {
+      setNotice({
+        title: t("notices.contentLinkFailed.title"),
+        description: t("notices.contentLinkFailed.description"),
+        tone: "error"
+      });
+      return;
+    }
+    setSavingContentLink(true);
+    try {
+      const payload = {
+        title: contentLinkEditor.title.trim(),
+        url: normalizedUrl
+      };
+      if (contentLinkEditor.kind === "passage") {
+        await adminMarathonsService.upsertPassageLink(
+          marathonId,
+          selectedDay.day_number,
+          contentLinkEditor.contentId,
+          payload
+        );
+      } else {
+        await adminMarathonsService.upsertPartLink(
+          marathonId,
+          selectedDay.day_number,
+          contentLinkEditor.contentId,
+          payload
+        );
+      }
+      setContentLinkEditor(null);
+      await loadAll(selectedDay.day_number);
+      setNotice({
+        title: t("notices.contentLinkSaved.title"),
+        description: t("notices.contentLinkSaved.description"),
+        tone: "success"
+      });
+    } catch (cause) {
+      setNotice({
+        title: t("notices.contentLinkFailed.title"),
+        description: getAdminErrorDescription(cause, t("notices.contentLinkFailed.description")),
+        tone: "error"
+      });
+    } finally {
+      setSavingContentLink(false);
+    }
+  };
+
+  const removeContentLink = async (kind: ContentLinkEditorState["kind"], contentId: AdminEntityId) => {
+    if (!selectedDay) return;
+    setSavingContentLink(true);
+    try {
+      if (kind === "passage") {
+        await adminMarathonsService.removePassageLink(marathonId, selectedDay.day_number, contentId);
+      } else {
+        await adminMarathonsService.removePartLink(marathonId, selectedDay.day_number, contentId);
+      }
+      if (contentLinkEditor?.kind === kind && String(contentLinkEditor.contentId) === String(contentId)) {
+        setContentLinkEditor(null);
+      }
+      await loadAll(selectedDay.day_number);
+      setNotice({
+        title: t("notices.contentLinkRemoved.title"),
+        description: t("notices.contentLinkRemoved.description"),
+        tone: "success"
+      });
+    } catch (cause) {
+      setNotice({
+        title: t("notices.contentLinkFailed.title"),
+        description: getAdminErrorDescription(cause, t("notices.contentLinkFailed.description")),
+        tone: "error"
+      });
+    } finally {
+      setSavingContentLink(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex min-h-screen">
@@ -970,31 +1080,109 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
                                 selectedDay.reading_passages.map((item) => (
                                   <div
                                     key={String(item.id)}
-                                    className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card/55 px-4 py-3"
+                                    className="rounded-2xl border border-border/70 bg-card/55 px-4 py-3"
                                   >
-                                    <div className="min-w-0">
-                                      <p className="font-medium">{item.title}</p>
-                                      <p className="text-sm text-muted-foreground">
-                                        {item.max_questions} {t("detail.questions")} • {formatMinutes(item.estimated_time_minutes)}
-                                      </p>
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="font-medium">{item.title}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                          {item.max_questions} {t("detail.questions")} • {formatMinutes(item.estimated_time_minutes)}
+                                        </p>
+                                      </div>
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="rounded-xl"
+                                          onClick={() => openContentLinkEditor("passage", item.id, item.external_link)}
+                                        >
+                                          <Video className="size-4" />
+                                          {item.external_link ? t("detail.editVideoLink") : t("detail.addVideoLink")}
+                                        </Button>
+                                        <Button asChild type="button" variant="outline" size="sm" className="rounded-xl">
+                                          <Link href={`/${locale}/admin/marathons/${marathonId}/reading-passages/${item.id}/builder`}>
+                                            <Wand2 className="size-4" />
+                                            {t("detail.buildQuestions")}
+                                          </Link>
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="rounded-xl"
+                                          onClick={() => void unassignPassage(item.id)}
+                                        >
+                                          {t("actions.remove")}
+                                        </Button>
+                                      </div>
                                     </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <Button asChild type="button" variant="outline" size="sm" className="rounded-xl">
-                                        <Link href={`/${locale}/admin/marathons/${marathonId}/reading-passages/${item.id}/builder`}>
-                                          <Wand2 className="size-4" />
-                                          {t("detail.buildQuestions")}
-                                        </Link>
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="rounded-xl"
-                                        onClick={() => void unassignPassage(item.id)}
-                                      >
-                                        {t("actions.remove")}
-                                      </Button>
-                                    </div>
+                                    {item.external_link ? (
+                                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50/70 px-3 py-2.5 dark:border-red-400/20 dark:bg-red-500/8">
+                                        <a
+                                          href={item.external_link.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex min-w-0 items-center gap-2 text-sm font-medium text-foreground hover:text-red-600 dark:hover:text-red-300"
+                                        >
+                                          <Video className="size-4 shrink-0 text-red-600 dark:text-red-300" />
+                                          <span className="truncate">{item.external_link.title || t("detail.videoLink")}</span>
+                                          <ExternalLink className="size-3.5 shrink-0" />
+                                        </a>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          disabled={savingContentLink}
+                                          className="h-8 rounded-lg text-rose-600 hover:bg-rose-100 hover:text-rose-700 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                                          onClick={() => void removeContentLink("passage", item.id)}
+                                        >
+                                          {t("detail.removeVideoLink")}
+                                        </Button>
+                                      </div>
+                                    ) : null}
+                                    {contentLinkEditor?.kind === "passage" && String(contentLinkEditor.contentId) === String(item.id) ? (
+                                      <div className="mt-3 grid gap-3 rounded-xl border border-border/70 bg-background/70 p-3 sm:grid-cols-2">
+                                        <div className="space-y-1.5">
+                                          <Label>{t("detail.videoTitle")}</Label>
+                                          <Input
+                                            value={contentLinkEditor.title}
+                                            placeholder={t("detail.videoTitlePlaceholder")}
+                                            onChange={(event) => setContentLinkEditor({...contentLinkEditor, title: event.target.value})}
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label>{t("detail.videoUrl")}</Label>
+                                          <Input
+                                            type="url"
+                                            value={contentLinkEditor.url}
+                                            placeholder={t("detail.videoUrlPlaceholder")}
+                                            onChange={(event) => setContentLinkEditor({...contentLinkEditor, url: event.target.value})}
+                                          />
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 sm:col-span-2">
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            disabled={savingContentLink || !contentLinkEditor.url.trim()}
+                                            className="rounded-xl"
+                                            onClick={() => void saveContentLink()}
+                                          >
+                                            {t("detail.saveVideoLink")}
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={savingContentLink}
+                                            className="rounded-xl"
+                                            onClick={() => setContentLinkEditor(null)}
+                                          >
+                                            {t("detail.cancelVideoLink")}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : null}
                                   </div>
                                 ))
                               ) : (
@@ -1093,41 +1281,119 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
                                 selectedDay.listening_parts.map((item) => (
                                   <div
                                     key={String(item.id)}
-                                    className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card/55 px-4 py-3"
+                                    className="rounded-2xl border border-border/70 bg-card/55 px-4 py-3"
                                   >
-                                    <div className="min-w-0">
-                                      <p className="font-medium">{item.title}</p>
-                                      <p className="text-sm text-muted-foreground">
-                                        {item.max_questions} {t("detail.questions")} • {formatMinutes(item.estimated_time_minutes)}
-                                      </p>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      {item.audio_file_url || item.audio_url ? (
-                                        <a
-                                          href={item.audio_file_url ?? item.audio_url ?? "#"}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="text-sm text-blue-600 hover:underline dark:text-blue-300"
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="font-medium">{item.title}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                          {item.max_questions} {t("detail.questions")} • {formatMinutes(item.estimated_time_minutes)}
+                                        </p>
+                                      </div>
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        {item.audio_file_url || item.audio_url ? (
+                                          <a
+                                            href={item.audio_file_url ?? item.audio_url ?? "#"}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-sm text-blue-600 hover:underline dark:text-blue-300"
+                                          >
+                                            {t("detail.audioReady")}
+                                          </a>
+                                        ) : null}
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="rounded-xl"
+                                          onClick={() => openContentLinkEditor("part", item.id, item.external_link)}
                                         >
-                                          {t("detail.audioReady")}
-                                        </a>
-                                      ) : null}
-                                      <Button asChild type="button" variant="outline" size="sm" className="rounded-xl">
-                                        <Link href={`/${locale}/admin/marathons/${marathonId}/listening-parts/${item.id}/builder`}>
-                                          <Wand2 className="size-4" />
-                                          {t("detail.buildQuestions")}
-                                        </Link>
-                                      </Button>
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="rounded-xl"
-                                        onClick={() => void unassignPart(item.id)}
-                                      >
-                                        {t("actions.remove")}
-                                      </Button>
+                                          <Video className="size-4" />
+                                          {item.external_link ? t("detail.editVideoLink") : t("detail.addVideoLink")}
+                                        </Button>
+                                        <Button asChild type="button" variant="outline" size="sm" className="rounded-xl">
+                                          <Link href={`/${locale}/admin/marathons/${marathonId}/listening-parts/${item.id}/builder`}>
+                                            <Wand2 className="size-4" />
+                                            {t("detail.buildQuestions")}
+                                          </Link>
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          className="rounded-xl"
+                                          onClick={() => void unassignPart(item.id)}
+                                        >
+                                          {t("actions.remove")}
+                                        </Button>
+                                      </div>
                                     </div>
+                                    {item.external_link ? (
+                                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50/70 px-3 py-2.5 dark:border-red-400/20 dark:bg-red-500/8">
+                                        <a
+                                          href={item.external_link.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex min-w-0 items-center gap-2 text-sm font-medium text-foreground hover:text-red-600 dark:hover:text-red-300"
+                                        >
+                                          <Video className="size-4 shrink-0 text-red-600 dark:text-red-300" />
+                                          <span className="truncate">{item.external_link.title || t("detail.videoLink")}</span>
+                                          <ExternalLink className="size-3.5 shrink-0" />
+                                        </a>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          disabled={savingContentLink}
+                                          className="h-8 rounded-lg text-rose-600 hover:bg-rose-100 hover:text-rose-700 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                                          onClick={() => void removeContentLink("part", item.id)}
+                                        >
+                                          {t("detail.removeVideoLink")}
+                                        </Button>
+                                      </div>
+                                    ) : null}
+                                    {contentLinkEditor?.kind === "part" && String(contentLinkEditor.contentId) === String(item.id) ? (
+                                      <div className="mt-3 grid gap-3 rounded-xl border border-border/70 bg-background/70 p-3 sm:grid-cols-2">
+                                        <div className="space-y-1.5">
+                                          <Label>{t("detail.videoTitle")}</Label>
+                                          <Input
+                                            value={contentLinkEditor.title}
+                                            placeholder={t("detail.videoTitlePlaceholder")}
+                                            onChange={(event) => setContentLinkEditor({...contentLinkEditor, title: event.target.value})}
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label>{t("detail.videoUrl")}</Label>
+                                          <Input
+                                            type="url"
+                                            value={contentLinkEditor.url}
+                                            placeholder={t("detail.videoUrlPlaceholder")}
+                                            onChange={(event) => setContentLinkEditor({...contentLinkEditor, url: event.target.value})}
+                                          />
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 sm:col-span-2">
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            disabled={savingContentLink || !contentLinkEditor.url.trim()}
+                                            className="rounded-xl"
+                                            onClick={() => void saveContentLink()}
+                                          >
+                                            {t("detail.saveVideoLink")}
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={savingContentLink}
+                                            className="rounded-xl"
+                                            onClick={() => setContentLinkEditor(null)}
+                                          >
+                                            {t("detail.cancelVideoLink")}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : null}
                                   </div>
                                 ))
                               ) : (

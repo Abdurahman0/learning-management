@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import {ChevronDown, Clock3, ListChecks, Lock, Play} from "lucide-react";
+import {ChevronDown, Clock3, ExternalLink, ListChecks, Lock, Play, Youtube} from "lucide-react";
 import {useState} from "react";
 import {useRouter} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
@@ -18,10 +18,14 @@ type ListeningTestCardProps = {
     href: string;
     label: string;
   };
+  resourceLink?: {
+    href: string;
+    label: string;
+  };
   badgeLabel?: string;
 };
 
-export function ListeningTestCard({test, action, badgeLabel}: ListeningTestCardProps) {
+export function ListeningTestCard({test, action, resourceLink, badgeLabel}: ListeningTestCardProps) {
   const t = useTranslations("guest");
   const locale = useLocale();
   const router = useRouter();
@@ -161,6 +165,23 @@ export function ListeningTestCard({test, action, badgeLabel}: ListeningTestCardP
                   </Button>
                 </div>
               )}
+              {resourceLink ? (
+                <a
+                  href={resourceLink.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2.5 flex min-h-10 w-full items-center gap-3 rounded-xl border border-red-200 bg-red-50/70 px-3.5 py-2.5 text-left transition-colors hover:border-red-300 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 dark:border-red-400/20 dark:bg-red-500/8 dark:hover:bg-red-500/12"
+                >
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white">
+                    <Youtube className="size-4" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] text-red-600 dark:text-red-300">{t("card.videoResource")}</span>
+                    <span className="block truncate text-sm font-semibold text-foreground">{resourceLink.label || t("card.watchVideo")}</span>
+                  </span>
+                  <ExternalLink className="size-4 shrink-0 text-red-500" aria-hidden="true" />
+                </a>
+              ) : null}
             </div>
           </div>
         )}

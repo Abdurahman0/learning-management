@@ -300,6 +300,12 @@ export function MarathonDayPageClient({
                     key={item.id}
                     test={toReadingTest(item)}
                     badgeLabel={getAttemptBadgeLabel(item.attempt_status)}
+                    resourceLink={item.external_link
+                      ? {
+                          href: item.external_link.url,
+                          label: item.external_link.title || "Watch video",
+                        }
+                      : undefined}
                     action={{
                       href: buildMarathonTaskHref({
                         locale,
@@ -332,6 +338,12 @@ export function MarathonDayPageClient({
                     key={item.id}
                     test={toListeningTest(item)}
                     badgeLabel={getAttemptBadgeLabel(item.attempt_status)}
+                    resourceLink={item.external_link
+                      ? {
+                          href: item.external_link.url,
+                          label: item.external_link.title || "Watch video",
+                        }
+                      : undefined}
                     action={{
                       href: buildMarathonTaskHref({
                         locale,

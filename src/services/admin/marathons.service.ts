@@ -10,6 +10,8 @@ import type {
   AdminMarathonDayDetailRecord,
   AdminMarathonDayPayload,
   AdminMarathonDayRecord,
+  AdminMarathonContentLinkPayload,
+  AdminMarathonContentLinkRecord,
   AdminMarathonEnrollmentRecord,
   AdminMarathonExternalLinkPayload,
   AdminMarathonExternalLinkRecord,
@@ -271,6 +273,31 @@ export const adminMarathonsService = {
     }
   },
 
+  async upsertPassageLink(
+    marathonId: AdminEntityId,
+    dayNumber: number,
+    passageId: AdminEntityId,
+    payload: AdminMarathonContentLinkPayload
+  ) {
+    try {
+      const response = await adminHttpClient.put<AdminMarathonContentLinkRecord>(
+        `/marathons/${marathonId}/days/${dayNumber}/passage-links/${passageId}/`,
+        payload
+      );
+      return response.data;
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async removePassageLink(marathonId: AdminEntityId, dayNumber: number, passageId: AdminEntityId) {
+    try {
+      await adminHttpClient.delete(`/marathons/${marathonId}/days/${dayNumber}/passage-links/${passageId}/`);
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
   async listListeningParts(_marathonId: AdminEntityId, params?: AdminListQuery) {
     try {
       const response = await adminHttpClient.get<AdminPaginatedResponse<AdminMarathonListeningPartRecord> | AdminMarathonListeningPartRecord[]>(
@@ -396,6 +423,31 @@ export const adminMarathonsService = {
   async unassignListeningPart(marathonId: AdminEntityId, dayNumber: number, partId: AdminEntityId) {
     try {
       await adminHttpClient.delete(`/marathons/${marathonId}/days/${dayNumber}/assign-part/${partId}/`);
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async upsertPartLink(
+    marathonId: AdminEntityId,
+    dayNumber: number,
+    partId: AdminEntityId,
+    payload: AdminMarathonContentLinkPayload
+  ) {
+    try {
+      const response = await adminHttpClient.put<AdminMarathonContentLinkRecord>(
+        `/marathons/${marathonId}/days/${dayNumber}/part-links/${partId}/`,
+        payload
+      );
+      return response.data;
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async removePartLink(marathonId: AdminEntityId, dayNumber: number, partId: AdminEntityId) {
+    try {
+      await adminHttpClient.delete(`/marathons/${marathonId}/days/${dayNumber}/part-links/${partId}/`);
     } catch (error) {
       throw toAdminApiError(error);
     }

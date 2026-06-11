@@ -28,7 +28,7 @@ const inputClassName =
 
 function toArray(value: string) {
   return value
-    .split(",")
+    .split("/")
     .map((item) => item.trim())
     .filter(Boolean);
 }
@@ -120,7 +120,7 @@ export function QuestionTypeFields({
     if (!("correctAnswer" in question)) {
       return "";
     }
-    return Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : String(question.correctAnswer ?? "");
+    return Array.isArray(question.correctAnswer) ? question.correctAnswer.join(" / ") : String(question.correctAnswer ?? "");
   }, [question]);
   const hasSummaryWordBankOptions = summaryWordBankOptions.length > 0;
   const summaryAnswerOptions = useMemo(

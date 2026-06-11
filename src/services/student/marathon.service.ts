@@ -141,6 +141,9 @@ function normalizeDayLink(value: unknown): StudentMarathonDayLink {
 
 function normalizeDayItem(value: unknown): StudentMarathonDayContentItem {
   const record = asRecord(value);
+  const externalLink = asRecord(record?.external_link);
+  const externalLinkUrl = toStringSafe(externalLink?.url);
+  const hasSafeExternalLink = /^https?:\/\//i.test(externalLinkUrl);
   return {
     id: toStringSafe(record?.id),
     title: toStringSafe(record?.title, "Reading passage"),
@@ -151,7 +154,13 @@ function normalizeDayItem(value: unknown): StudentMarathonDayContentItem {
     attempt_id: toStringSafe(record?.attempt_id) || null,
     attempt_status: toStringSafe(record?.attempt_status) || null,
     band_score: toStringSafe(record?.band_score) || null,
-    question_groups_count: toNumberSafe(record?.question_groups_count)
+    question_groups_count: toNumberSafe(record?.question_groups_count),
+    external_link: externalLink && hasSafeExternalLink
+      ? {
+          title: toStringSafe(externalLink.title),
+          url: externalLinkUrl
+        }
+      : null
   };
 }
 

@@ -85,6 +85,12 @@ export type StudentMarathonDayContentItem = {
   attempt_status: "IN_PROGRESS" | "COMPLETED" | string | null;
   band_score: string | null;
   question_groups_count: number;
+  external_link: StudentMarathonContentLink | null;
+};
+
+export type StudentMarathonContentLink = {
+  title: string;
+  url: string;
 };
 
 export type StudentMarathonListeningDayItem = StudentMarathonDayContentItem & {

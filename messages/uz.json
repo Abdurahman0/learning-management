@@ -214,6 +214,8 @@
       "free": "BEPUL",
       "premium": "PREMIUM",
       "lastAccuracy": "Oxirgi aniqlik",
+      "videoResource": "Video manba",
+      "watchVideo": "Videoni ko'rish",
       "locked": "Qulflangan",
       "startReadingFull": "To'liq Reading testini boshlash",
       "startListening": "Listening testini boshlash",
@@ -1579,7 +1581,7 @@
         "mapping": "Moslash",
         "selectChoice": "Tanlovni belgilang",
         "acceptableAnswers": "Qabul qilinadigan javoblar",
-        "acceptableAnswersPlaceholder": "Javob 1, Javob 2",
+        "acceptableAnswersPlaceholder": "Javob 1 / Javob 2",
         "explanation": "Izoh",
         "evidence": "Dalil",
         "evidencePlaceholder": "Passage/transkriptdan ajratilgan matnni kiriting"
@@ -5117,6 +5119,16 @@
       "questions": "questions",
       "noPassages": "No reading passages are assigned to this day.",
       "assignedPassagesTitle": "Shu kunga biriktirilgan",
+      "videoLink": "Video havola",
+      "addVideoLink": "Video qo'shish",
+      "editVideoLink": "Videoni tahrirlash",
+      "videoTitle": "Video nomi",
+      "videoTitlePlaceholder": "Masalan, Lug'at bo'yicha tushuntirish",
+      "videoUrl": "Video URL manzili",
+      "videoUrlPlaceholder": "https://youtube.com/watch?v=...",
+      "saveVideoLink": "Videoni saqlash",
+      "removeVideoLink": "Videoni olib tashlash",
+      "cancelVideoLink": "Bekor qilish",
       "libraryPassagesTitle": "Ushbu marafondagi barcha reading passage'lar",
       "libraryPassagesEmpty": "No marathon reading passages created yet.",
       "listeningLibraryTitle": "Listening part library",
@@ -5255,6 +5267,18 @@
       "passageAssignFailed": {
         "title": "Could not update passage assignment",
         "description": "Please retry after refreshing the day data."
+      },
+      "contentLinkSaved": {
+        "title": "Video havola saqlandi",
+        "description": "Video endi shu biriktirilgan test bilan ko'rinadi."
+      },
+      "contentLinkRemoved": {
+        "title": "Video havola olib tashlandi",
+        "description": "Video shu biriktirilgan testdan olib tashlandi."
+      },
+      "contentLinkFailed": {
+        "title": "Video havolani yangilab bo'lmadi",
+        "description": "URL manzilini va test shu kunga biriktirilganini tekshiring."
       },
       "partSaved": {
         "title": "Listening part created",

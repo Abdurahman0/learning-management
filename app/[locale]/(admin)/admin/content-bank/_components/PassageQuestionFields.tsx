@@ -20,7 +20,7 @@ const inputClassName =
 
 function toArray(value: string) {
   return value
-    .split(",")
+    .split("/")
     .map((item) => item.trim())
     .filter(Boolean)
 }
@@ -101,7 +101,7 @@ export function PassageQuestionFields({question, onChange}: PassageQuestionField
     if (!("correctAnswer" in question)) {
       return ""
     }
-    return Array.isArray(question.correctAnswer) ? question.correctAnswer.join(", ") : String(question.correctAnswer ?? "")
+    return Array.isArray(question.correctAnswer) ? question.correctAnswer.join(" / ") : String(question.correctAnswer ?? "")
   }, [question])
 
   return (

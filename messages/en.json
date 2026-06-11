@@ -214,6 +214,8 @@
       "free": "FREE",
       "premium": "PREMIUM",
       "lastAccuracy": "Last accuracy",
+      "videoResource": "Video resource",
+      "watchVideo": "Watch video",
       "locked": "Locked",
       "startReadingFull": "Start Full Reading Test",
       "startListening": "Start Listening Test",
@@ -1579,7 +1581,7 @@
         "mapping": "Mapping",
         "selectChoice": "Select choice",
         "acceptableAnswers": "Acceptable Answers",
-        "acceptableAnswersPlaceholder": "Answer 1, Answer 2",
+        "acceptableAnswersPlaceholder": "Answer 1 / Answer 2",
         "explanation": "Explanation",
         "evidence": "Evidence",
         "evidencePlaceholder": "Attach highlighted text from passage/transcript"
@@ -5118,6 +5120,16 @@
       "questions": "questions",
       "noPassages": "No reading passages are assigned to this day.",
       "assignedPassagesTitle": "Assigned to this day",
+      "videoLink": "Video link",
+      "addVideoLink": "Add video",
+      "editVideoLink": "Edit video",
+      "videoTitle": "Video title",
+      "videoTitlePlaceholder": "e.g. Vocabulary walkthrough",
+      "videoUrl": "Video URL",
+      "videoUrlPlaceholder": "https://youtube.com/watch?v=...",
+      "saveVideoLink": "Save video",
+      "removeVideoLink": "Remove video",
+      "cancelVideoLink": "Cancel",
       "libraryPassagesTitle": "All reading passages in this marathon",
       "libraryPassagesEmpty": "No marathon reading passages created yet.",
       "listeningLibraryTitle": "Listening part library",
@@ -5256,6 +5268,18 @@
       "passageAssignFailed": {
         "title": "Could not update passage assignment",
         "description": "Please retry after refreshing the day data."
+      },
+      "contentLinkSaved": {
+        "title": "Video link saved",
+        "description": "The video now appears with this assigned test."
+      },
+      "contentLinkRemoved": {
+        "title": "Video link removed",
+        "description": "The video was removed from this assigned test."
+      },
+      "contentLinkFailed": {
+        "title": "Could not update video link",
+        "description": "Check the URL and confirm the test is assigned to this day."
       },
       "partSaved": {
         "title": "Listening part created",

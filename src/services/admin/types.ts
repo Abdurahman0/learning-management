@@ -315,8 +315,24 @@ export type AdminMarathonReadingPassageRecord = {
   is_active: boolean;
   source?: string | null;
   question_groups_count?: number | null;
+  external_link?: AdminMarathonContentLinkRecord | null;
   created_at?: string;
   updated_at?: string;
+};
+
+export type AdminMarathonContentLinkRecord = {
+  id: AdminEntityId;
+  reading_passage?: AdminEntityId | null;
+  listening_part?: AdminEntityId | null;
+  title: string;
+  url: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AdminMarathonContentLinkPayload = {
+  title?: string;
+  url: string;
 };
 
 export type AdminMarathonListeningPartRecord = {
@@ -333,6 +349,7 @@ export type AdminMarathonListeningPartRecord = {
   is_active: boolean;
   source?: string | null;
   question_groups_count?: number | null;
+  external_link?: AdminMarathonContentLinkRecord | null;
   created_at?: string;
   updated_at?: string;
 };
