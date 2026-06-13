@@ -31,6 +31,7 @@ type ListeningResultSummaryHeaderProps = {
   feedbackAction?: ReactNode;
   backHref?: string;
   backLabel?: string;
+  retakeHref?: string;
 };
 
 export function ListeningResultSummaryHeader({
@@ -55,6 +56,7 @@ export function ListeningResultSummaryHeader({
   feedbackAction,
   backHref,
   backLabel,
+  retakeHref,
 }: ListeningResultSummaryHeaderProps) {
   const locale = useLocale();
   const t = useTranslations("listeningResult");
@@ -103,7 +105,7 @@ export function ListeningResultSummaryHeader({
                 </Button>
               ) : null}
               <Button variant="outline" asChild className="h-9 rounded-xl border-slate-200 bg-white/90 px-4 hover:bg-slate-100/80 dark:border-border/70 dark:bg-background/35">
-                <Link href={`/${locale}/listening/${testId}?restart=1`}>
+                <Link href={retakeHref ?? `/${locale}/listening/${testId}?restart=1`}>
                   <RotateCcw className="size-4" />
                   {t("retakeTest")}
                 </Link>

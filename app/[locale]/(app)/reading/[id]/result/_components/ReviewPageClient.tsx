@@ -15,7 +15,6 @@ import { loadAttemptResult, loadLatestAttemptResult, type PersistedAttempt } fro
 import { ReviewAiCoachCard } from "./ReviewAiCoachCard";
 import { ReviewHeader } from "./ReviewHeader";
 import { ReviewMistakeHeatmap } from "./ReviewMistakeHeatmap";
-import { ReviewNextActions } from "./ReviewNextActions";
 import { ReviewPassagePanel } from "./ReviewPassagePanel";
 import { ReviewQuestionsPanel } from "./ReviewQuestionsPanel";
 import { QuestionTypePerformance, type QuestionTypePerformanceItem } from "./QuestionTypePerformance";
@@ -298,7 +297,6 @@ export function ReviewPageClient() {
           <ReviewMistakeHeatmap items={dynamicHeatmap} />
         </div>
 
-        <ReviewNextActions actions={reviewData.nextActions} onAction={handleAction} />
       </section>
     </section>
   );

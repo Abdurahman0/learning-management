@@ -1,5 +1,6 @@
 import type {ReadingAnswerMeta} from "@/data/reading-answer-keys";
 import type {ReviewPassage} from "@/data/review-reading";
+import {normalizeEvidenceLookupText} from "@/lib/evidence-text";
 import type {ReadingQuestion} from "@/data/reading-tests";
 import type {StudentAttemptReviewResponse} from "@/src/services/student/types";
 
@@ -52,7 +53,7 @@ function toMappedPassageId(rawValue: unknown, fallback: "p1" | "p2" | "p3") {
 }
 
 function normalizeLookupText(value: string) {
-  return value.toLowerCase().replace(/\s+/g, " ").trim();
+  return normalizeEvidenceLookupText(value);
 }
 
 function normalizeLookupTextLoose(value: string) {

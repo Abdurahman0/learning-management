@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { findEvidenceTextRange } from "@/lib/evidence-text";
 import { cn } from "@/lib/utils";
 import type { ReviewPassage } from "@/data/review-reading";
 
@@ -30,16 +31,15 @@ export function ReviewPassagePanel({
   const renderParagraphText = (text: string, highlights?: Array<{ questionNumber: number; text: string }>) => {
     if (!highlights?.length) return text;
 
-    const lowerText = text.toLowerCase();
     const ranges = highlights
       .map((item) => {
         const phrase = item.text.trim();
         if (!phrase) return null;
-        const start = lowerText.indexOf(phrase.toLowerCase());
-        if (start < 0) return null;
+        const range = findEvidenceTextRange(text, phrase);
+        if (!range) return null;
         return {
-          start,
-          end: start + phrase.length,
+          start: range.start,
+          end: range.end,
           questionNumbers: [item.questionNumber],
         };
       })

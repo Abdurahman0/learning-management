@@ -78,8 +78,8 @@ function buildMarathonTaskHref(params: {
   });
 
   if (params.attemptStatus === "COMPLETED" && params.attemptId) {
-    query.set("review", "1");
     query.set("attempt", params.attemptId);
+    return `/${params.locale}/${params.route}/${params.contentId}/result?${query.toString()}`;
   }
 
   return `/${params.locale}/${params.route}/${params.contentId}?${query.toString()}`;

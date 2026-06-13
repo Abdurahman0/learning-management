@@ -443,8 +443,8 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
       returnLabel: "Back to marathon day",
     });
     if (item.attempt_status === "COMPLETED" && item.attempt_id) {
-      query.set("review", "1");
       query.set("attempt", item.attempt_id);
+      return `/${locale}/${route}/${item.id}/result?${query.toString()}`;
     }
     return `/${locale}/${route}/${item.id}?${query.toString()}`;
   };

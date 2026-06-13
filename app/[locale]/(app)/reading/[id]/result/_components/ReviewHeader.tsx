@@ -33,6 +33,7 @@ type ReviewHeaderProps = {
   feedbackAction?: ReactNode;
   backHref?: string;
   backLabel?: string;
+  retakeHref?: string;
 };
 
 export function ReviewHeader({
@@ -58,6 +59,7 @@ export function ReviewHeader({
   feedbackAction,
   backHref,
   backLabel,
+  retakeHref,
 }: ReviewHeaderProps) {
   const locale = useLocale();
   const t = useTranslations("readingResult");
@@ -123,7 +125,7 @@ export function ReviewHeader({
                 asChild
                 className="h-9 rounded-xl border-slate-200 bg-white/90 px-4 hover:bg-slate-100/80 dark:border-border/70 dark:bg-background/35"
               >
-                <Link href={`/${locale}/reading/${testId}?restart=1`}>
+                <Link href={retakeHref ?? `/${locale}/reading/${testId}?restart=1`}>
                   <RotateCcw className="size-4" />
                   {t("retakeTest")}
                 </Link>

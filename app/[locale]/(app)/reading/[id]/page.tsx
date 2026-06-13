@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
+import { findEvidenceTextRange } from "@/lib/evidence-text";
 import { cn } from "@/lib/utils";
 import { formatAnswerForDisplay } from "@/lib/answer-display";
 import {
@@ -382,17 +383,16 @@ type ParagraphMatch = {
 };
 
 function findParagraphMatches(paragraph: string, spans: HighlightItem[]): ParagraphMatch[] {
-  const lowerParagraph = paragraph.toLowerCase();
   const raw = spans
     .map((span) => {
       const phrase = span.phrase.trim();
       if (!phrase) return null;
-      const start = lowerParagraph.indexOf(phrase.toLowerCase());
-      if (start < 0) return null;
+      const range = findEvidenceTextRange(paragraph, phrase);
+      if (!range) return null;
       return {
-        start,
-        end: start + phrase.length,
-        phrase: paragraph.slice(start, start + phrase.length),
+        start: range.start,
+        end: range.end,
+        phrase: paragraph.slice(range.start, range.end),
         questionNumber: span.questionNumber,
       } satisfies ParagraphMatch;
     })
@@ -1773,6 +1773,7 @@ function ReadingTestClient({
   const fullscreenRequestInFlightRef = useRef(false);
   const initDoneRef = useRef(false);
   const backendSaveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const backendAttemptLifecycleRef = useRef<"active" | "submitting" | "submitted">("active");
   const initialBackendSaveAttemptRef = useRef<string | null>(null);
   const restartNeedsFreshBackendAttemptRef = useRef(false);
   const leaveWarningMessage = t.has("leaveWarning")
@@ -2210,12 +2211,13 @@ function ReadingTestClient({
   );
 
   const saveAttemptToBackend = useCallback(
-    (options?: {strict?: boolean; includeAnswers?: boolean; context?: string; finishedAtMs?: number}) => {
+    (options?: {strict?: boolean; includeAnswers?: boolean; context?: string; finishedAtMs?: number; allowDuringSubmit?: boolean}) => {
       const strict = Boolean(options?.strict);
       const includeAnswers = options?.includeAnswers ?? true;
 
       const runSave = async () => {
         if (!backendAttemptId || reviewMode) return;
+        if (backendAttemptLifecycleRef.current !== "active" && !options?.allowDuringSubmit) return;
         if (attemptId && !isAttemptTabOwner("reading", test.id, attemptId, attemptTabIdRef.current)) return;
 
         const runtimeSubmitCandidatesByNumber = collectRuntimeSubmitCandidatesByNumber(test.questions);
@@ -2316,10 +2318,11 @@ function ReadingTestClient({
   );
 
   useEffect(() => {
+    backendAttemptLifecycleRef.current = "active";
     if (!backendAttemptId) {
       initialBackendSaveAttemptRef.current = null;
     }
-  }, [backendAttemptId]);
+  }, [backendAttemptId, test.id]);
 
   useEffect(() => {
     if (isGuest) {
@@ -2661,7 +2664,9 @@ function ReadingTestClient({
 
   const finishTest = useCallback(async () => {
     if (!attemptId || isSubmittingResult) return;
+    if (backendAttemptLifecycleRef.current !== "active") return;
     if (!isAttemptTabOwner("reading", test.id, attemptId, attemptTabIdRef.current)) return;
+    backendAttemptLifecycleRef.current = "submitting";
     setIsSubmittingResult(true);
 
     const finishedAt = Date.now();
@@ -2674,7 +2679,8 @@ function ReadingTestClient({
           strict: true,
           includeAnswers: true,
           context: "finish",
-          finishedAtMs: finishedAt
+          finishedAtMs: finishedAt,
+          allowDuringSubmit: true
         });
 
         const buildSubmitAnswers = (
@@ -2721,6 +2727,7 @@ function ReadingTestClient({
         }
       }
 
+      backendAttemptLifecycleRef.current = "submitted";
       saveAttemptResult({
         attemptId,
         backendAttemptId: backendAttemptId ?? undefined,
@@ -2780,7 +2787,7 @@ function ReadingTestClient({
 
       if (backendAttemptId) {
         if (isMarathonContext) {
-          router.push(`/${locale}/reading/${test.id}?review=1&attempt=${backendAttemptId}${returnQuerySuffix}`);
+          router.push(`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId}${returnQuerySuffix}`);
           return;
         }
         router.push(`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId}${returnQuerySuffix}`);
@@ -2796,6 +2803,7 @@ function ReadingTestClient({
       setReviewMode(true);
       setReviewAnswersVisible(false);
     } catch {
+      backendAttemptLifecycleRef.current = "active";
       // Keep submit failure silent in UI logs.
     } finally {
       setIsSubmittingResult(false);

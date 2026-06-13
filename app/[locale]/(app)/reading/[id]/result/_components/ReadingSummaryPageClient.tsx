@@ -17,6 +17,7 @@ import {studentMarathonService} from "@/src/services/student/marathon.service";
 import {adaptMarathonReadingReviewResponse} from "@/src/services/student/marathon-runner-adapters";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
 import {DashboardFeedbackButton} from "../../../../dashboard/_components/DashboardFeedbackButton";
+import {MarathonResultVideoCard} from "../../../../marathons/_components/MarathonResultVideoCard";
 import type {
   MistakeReasonCategory,
   MistakeReasonDetail,
@@ -28,7 +29,6 @@ import {QuestionTypePerformance, type QuestionTypePerformanceItem} from "./Quest
 import {ReviewAiCoachCard} from "./ReviewAiCoachCard";
 import {ReviewHeader} from "./ReviewHeader";
 import {ReviewMistakeHeatmap} from "./ReviewMistakeHeatmap";
-import {ReviewNextActions} from "./ReviewNextActions";
 import {adaptReadingBackendReview, type AdaptedReadingBackendReview} from "./backendReviewAdapters";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -193,7 +193,7 @@ export function ReadingSummaryPageClient() {
   useEffect(() => {
     let active = true;
 
-    if (!resolvedBackendAttemptId) {
+    if (!resolvedBackendAttemptId || isMarathonContext) {
       setIsReasonsLoading(false);
       setMistakeReasons([]);
       return () => {
@@ -228,7 +228,7 @@ export function ReadingSummaryPageClient() {
     return () => {
       active = false;
     };
-  }, [resolvedBackendAttemptId]);
+  }, [isMarathonContext, resolvedBackendAttemptId]);
 
   useEffect(() => {
     if (resolvedBackendAttemptId) return;
@@ -530,6 +530,9 @@ export function ReadingSummaryPageClient() {
   const reviewHref = resolvedBackendAttemptId
     ? `/${locale}/reading/${testId}?review=1&attempt=${resolvedBackendAttemptId}${reviewQuerySuffix}`
     : "#review-main";
+  const retakeHref = isMarathonContext
+    ? `/${locale}/reading/${testId}?restart=1${reviewQuerySuffix}`
+    : undefined;
 
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
@@ -547,11 +550,12 @@ export function ReadingSummaryPageClient() {
         reviewHref={reviewHref}
         bandScore={attemptDetail?.band_score ?? reviewPayload?.band_score ?? null}
         reviewVariant="analysis"
-        showAiAnalysisButton
-        aiAnalysisNotice={aiAnalysisNotice}
-        onAiAnalysisClick={handleAiAnalysisClick}
+        showAiAnalysisButton={!isMarathonContext}
+        aiAnalysisNotice={isMarathonContext ? actionNotice : aiAnalysisNotice}
+        onAiAnalysisClick={isMarathonContext ? undefined : handleAiAnalysisClick}
         backHref={returnHref}
         backLabel={returnLabel}
+        retakeHref={retakeHref}
         feedbackAction={
           <DashboardFeedbackButton
             className="h-10 rounded-xl border-blue-200 bg-white/90 px-4 font-semibold text-blue-700 shadow-sm shadow-blue-100/60 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100 dark:shadow-none dark:hover:bg-blue-500/15"
@@ -559,6 +563,15 @@ export function ReadingSummaryPageClient() {
           />
         }
       />
+
+      {isMarathonContext ? (
+        <MarathonResultVideoCard
+          marathonId={marathonIdParam}
+          dayNumber={marathonDayNumber}
+          contentId={testId}
+          contentType="reading"
+        />
+      ) : null}
 
       {/* Attempt metadata card is temporarily hidden. */}
       {/*
@@ -576,20 +589,22 @@ export function ReadingSummaryPageClient() {
 
       <QuestionTypePerformance items={accuracyByType} />
 
-      <PostTestMistakeReasonsPanel
-        open={mistakeModalOpen}
-        reasons={mistakeReasons}
-        selectedReasonIds={selectedMistakeReasonIds}
-        isLoading={isReasonsLoading}
-        isAnalyzing={isMistakeAnalyzing}
-        error={mistakeReasonsError}
-        canAnalyze={canUseMistakeReasonAnalysis}
-        disabledReason={mistakeReasonUsageStatus?.reset_message || null}
-        categoryQuestionNumbers={categoryQuestionNumbers}
-        onOpenChange={setMistakeModalOpen}
-        onToggleReason={handleMistakeReasonSelect}
-        onAnalyze={handleAnalyzeMistakes}
-      />
+      {!isMarathonContext ? (
+        <PostTestMistakeReasonsPanel
+          open={mistakeModalOpen}
+          reasons={mistakeReasons}
+          selectedReasonIds={selectedMistakeReasonIds}
+          isLoading={isReasonsLoading}
+          isAnalyzing={isMistakeAnalyzing}
+          error={mistakeReasonsError}
+          canAnalyze={canUseMistakeReasonAnalysis}
+          disabledReason={mistakeReasonUsageStatus?.reset_message || null}
+          categoryQuestionNumbers={categoryQuestionNumbers}
+          onOpenChange={setMistakeModalOpen}
+          onToggleReason={handleMistakeReasonSelect}
+          onAnalyze={handleAnalyzeMistakes}
+        />
+      ) : null}
 
       {questionTypeStats ? (
         <Card className="rounded-3xl border-border/70 bg-card/80 p-4 text-sm">
@@ -645,7 +660,7 @@ export function ReadingSummaryPageClient() {
             : "grid gap-5"
         }
       >
-        {showAiInsights ? (
+        {showAiInsights && !isMarathonContext ? (
           <div ref={aiInsightsRef} id="ai-insights" className="scroll-mt-24">
             <ReviewAiCoachCard
               coach={dynamicCoach}
@@ -659,10 +674,6 @@ export function ReadingSummaryPageClient() {
         <ReviewMistakeHeatmap items={dynamicHeatmap} />
       </div>
 
-      <ReviewNextActions
-        actions={reviewData.nextActions}
-        onAction={(message) => setActionNotice(tReadingReview("actionPlaceholder", {action: message}))}
-      />
     </section>
   );
 }

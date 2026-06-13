@@ -17,6 +17,7 @@ import { studentMarathonService } from "@/src/services/student/marathon.service"
 import { adaptMarathonListeningReviewResponse } from "@/src/services/student/marathon-runner-adapters";
 import {studentMistakeReasonsService} from "@/src/services/student/mistakeReasons.service";
 import {DashboardFeedbackButton} from "../../../dashboard/_components/DashboardFeedbackButton";
+import {MarathonResultVideoCard} from "../../../marathons/_components/MarathonResultVideoCard";
 import type {
   MistakeReasonCategory,
   MistakeReasonDetail,
@@ -180,7 +181,7 @@ export default function ListeningResultPage() {
   useEffect(() => {
     let active = true;
 
-    if (!resolvedBackendAttemptId) {
+    if (!resolvedBackendAttemptId || isMarathonContext) {
       setIsReasonsLoading(false);
       setMistakeReasons([]);
       return () => {
@@ -215,7 +216,7 @@ export default function ListeningResultPage() {
     return () => {
       active = false;
     };
-  }, [resolvedBackendAttemptId]);
+  }, [isMarathonContext, resolvedBackendAttemptId]);
 
   useEffect(() => {
     if (!actionNotice) return;
@@ -431,6 +432,9 @@ export default function ListeningResultPage() {
   const reviewHref = resolvedBackendAttemptId
     ? `/${locale}/listening/${testId}?review=1&attempt=${resolvedBackendAttemptId}${reviewQuerySuffix}`
     : "#review-main";
+  const retakeHref = isMarathonContext
+    ? `/${locale}/listening/${testId}?restart=1${reviewQuerySuffix}`
+    : undefined;
 
   return (
     <section className="mx-auto w-full max-w-445 space-y-5 px-2 pb-10 pt-4 sm:px-4 lg:px-6">
@@ -448,11 +452,12 @@ export default function ListeningResultPage() {
         seconds={seconds}
         reviewHref={reviewHref}
         reviewVariant="analysis"
-        showAiAnalysisButton
-        aiAnalysisNotice={aiAnalysisNotice}
-        onAiAnalysisClick={scrollToAiInsights}
+        showAiAnalysisButton={!isMarathonContext}
+        aiAnalysisNotice={isMarathonContext ? actionNotice : aiAnalysisNotice}
+        onAiAnalysisClick={isMarathonContext ? undefined : scrollToAiInsights}
         backHref={returnHref}
         backLabel={returnLabel}
+        retakeHref={retakeHref}
         feedbackAction={
           <DashboardFeedbackButton
             className="h-10 rounded-xl border-blue-200 bg-white/90 px-4 font-semibold text-blue-700 shadow-sm shadow-blue-100/60 hover:border-blue-300 hover:bg-blue-50 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100 dark:shadow-none dark:hover:bg-blue-500/15"
@@ -461,25 +466,36 @@ export default function ListeningResultPage() {
         }
       />
 
+      {isMarathonContext ? (
+        <MarathonResultVideoCard
+          marathonId={marathonIdParam}
+          dayNumber={marathonDayNumber}
+          contentId={testId}
+          contentType="listening"
+        />
+      ) : null}
+
       <ListeningSectionPerformance items={backendReview.sectionPerformance} />
       <ListeningTypePerformance items={backendReview.typePerformance} />
 
-      <PostTestMistakeReasonsPanel
-        open={mistakeModalOpen}
-        reasons={mistakeReasons}
-        selectedReasonIds={selectedMistakeReasonIds}
-        isLoading={isReasonsLoading}
-        isAnalyzing={isMistakeAnalyzing}
-        error={mistakeReasonsError}
-        canAnalyze={canUseMistakeReasonAnalysis}
-        disabledReason={mistakeReasonUsageStatus?.reset_message || null}
-        categoryQuestionNumbers={categoryQuestionNumbers}
-        onOpenChange={setMistakeModalOpen}
-        onToggleReason={handleMistakeReasonSelect}
-        onAnalyze={handleAnalyzeMistakes}
-      />
+      {!isMarathonContext ? (
+        <PostTestMistakeReasonsPanel
+          open={mistakeModalOpen}
+          reasons={mistakeReasons}
+          selectedReasonIds={selectedMistakeReasonIds}
+          isLoading={isReasonsLoading}
+          isAnalyzing={isMistakeAnalyzing}
+          error={mistakeReasonsError}
+          canAnalyze={canUseMistakeReasonAnalysis}
+          disabledReason={mistakeReasonUsageStatus?.reset_message || null}
+          categoryQuestionNumbers={categoryQuestionNumbers}
+          onOpenChange={setMistakeModalOpen}
+          onToggleReason={handleMistakeReasonSelect}
+          onAnalyze={handleAnalyzeMistakes}
+        />
+      ) : null}
 
-        {showAiInsights ? (
+        {showAiInsights && !isMarathonContext ? (
           <div ref={aiInsightsRef} id="ai-insights" className="scroll-mt-24">
           <MistakeReasonAiResponseCard selectedReason={selectedMistakeReason} selectedReasons={analyzedMistakeReasons} />
           </div>

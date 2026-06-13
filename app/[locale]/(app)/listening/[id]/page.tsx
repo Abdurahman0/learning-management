@@ -1501,6 +1501,7 @@ function ListeningTestClient({
   const fullscreenRequestInFlightRef = useRef(false);
   const initDoneRef = useRef(false);
   const backendSaveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const backendAttemptLifecycleRef = useRef<"active" | "submitting" | "submitted">("active");
   const realModeStartTimeoutRef = useRef<number | null>(null);
   const leaveWarningMessage = t.has("leaveWarning")
     ? t("leaveWarning")
@@ -2574,12 +2575,13 @@ function ListeningTestClient({
   }, [remainingSeconds, startedAt, test.durationMinutes, timerRunning]);
 
   const saveListeningAttemptToBackend = useCallback(
-    (options?: { includeAnswers?: boolean; finishedAtMs?: number; strict?: boolean }) => {
+    (options?: { includeAnswers?: boolean; finishedAtMs?: number; strict?: boolean; allowDuringSubmit?: boolean }) => {
       const includeAnswers = options?.includeAnswers ?? true;
       const strict = Boolean(options?.strict);
 
       const runSave = async () => {
         if (!backendAttemptId || reviewMode || submitMetaByNumber.size === 0) return;
+        if (backendAttemptLifecycleRef.current !== "active" && !options?.allowDuringSubmit) return;
         if (attemptId && !isAttemptTabOwner("listening", test.id, attemptId, attemptTabIdRef.current)) return;
 
         const payloadAnswers = includeAnswers
@@ -2658,6 +2660,10 @@ function ListeningTestClient({
   );
 
   useEffect(() => {
+    backendAttemptLifecycleRef.current = "active";
+  }, [attemptId, test.id]);
+
+  useEffect(() => {
     if (isGuest || !backendAttemptId || !attemptMode || reviewMode || submitMetaByNumber.size === 0) return;
     const autosaveTimer = window.setTimeout(() => {
       void saveListeningAttemptToBackend({ includeAnswers: true });
@@ -2675,7 +2681,9 @@ function ListeningTestClient({
 
   const finishTest = useCallback(async () => {
     if (!attemptId || isSubmittingResult) return;
+    if (backendAttemptLifecycleRef.current !== "active") return;
     if (!isAttemptTabOwner("listening", test.id, attemptId, attemptTabIdRef.current)) return;
+    backendAttemptLifecycleRef.current = "submitting";
     setIsSubmittingResult(true);
     try {
       const finishedAt = Date.now();
@@ -2704,6 +2712,7 @@ function ListeningTestClient({
 
       if (!isGuest && submitAttemptId) {
         try {
+          await backendSaveChainRef.current;
           const buildSubmitAnswers = (metaByNumber: Map<number, ListeningSubmitQuestionMeta>) =>
             buildListeningBackendAnswerPayload({
               answers,
@@ -2760,10 +2769,13 @@ function ListeningTestClient({
             });
           }
         } catch {
+          backendAttemptLifecycleRef.current = "active";
           // Keep console clean on submit failure.
+          return;
         }
       }
 
+      backendAttemptLifecycleRef.current = "submitted";
       // Result page will load review/explanations; no need to fetch here.
 
       saveAttemptResult({
@@ -2848,7 +2860,7 @@ function ListeningTestClient({
       const resultAttemptId = submitAttemptId ?? backendAttemptId;
         if (resultAttemptId) {
           if (isMarathonContext) {
-            router.push(`/${locale}/listening/${test.id}?review=1&attempt=${resultAttemptId}${returnQuerySuffix}`);
+            router.push(`/${locale}/listening/${test.id}/result?attempt=${resultAttemptId}${returnQuerySuffix}`);
             return;
           }
           router.push(`/${locale}/listening/${test.id}/result?attempt=${resultAttemptId}${returnQuerySuffix}`);
