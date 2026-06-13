@@ -285,21 +285,45 @@ function normalizeAttemptResultAnswer(value: unknown): StudentMarathonAttemptRes
   };
 }
 
+function collectAttemptResultQuestions(record: Record<string, unknown> | null) {
+  const directAnswers = toArray(record?.answers);
+  if (directAnswers.length > 0) return directAnswers;
+
+  const contentItems = [
+    ...toArray(record?.passages),
+    ...toArray(record?.parts),
+    ...toArray(record?.listening_parts)
+  ];
+
+  return contentItems.flatMap((item) => {
+    const content = asRecord(item);
+    return toArray(content?.question_groups).flatMap((group) => {
+      const groupRecord = asRecord(group);
+      return toArray(groupRecord?.questions);
+    });
+  });
+}
+
 function normalizeAttemptResult(value: unknown): StudentMarathonAttemptResult {
   const record = asRecord(value);
+  const answers = collectAttemptResultQuestions(record).map(normalizeAttemptResultAnswer);
+  const derivedCorrectCount = answers.filter((answer) => answer.is_correct).length;
+  const derivedSkippedCount = answers.filter((answer) => answer.is_skipped).length;
+  const derivedIncorrectCount = answers.filter((answer) => !answer.is_correct && !answer.is_skipped).length;
+
   return {
-    id: toStringSafe(record?.id),
+    id: toStringSafe(record?.id ?? record?.attempt_id),
     status: toStringSafe(record?.status),
     score: record?.score == null ? null : toNumberSafe(record?.score),
     band_score: toStringSafe(record?.band_score) || null,
-    question_type_stats_json: asRecord(record?.question_type_stats_json),
+    question_type_stats_json: asRecord(record?.question_type_stats_json ?? record?.question_type_stats),
     time_used_seconds: toNumberSafe(record?.time_used_seconds),
     started_at: toStringSafe(record?.started_at) || null,
     completed_at: toStringSafe(record?.completed_at) || null,
-    correct_count: toNumberSafe(record?.correct_count),
-    incorrect_count: toNumberSafe(record?.incorrect_count),
-    skipped_count: toNumberSafe(record?.skipped_count),
-    answers: toArray(record?.answers).map(normalizeAttemptResultAnswer)
+    correct_count: record?.correct_count == null ? derivedCorrectCount : toNumberSafe(record.correct_count),
+    incorrect_count: record?.incorrect_count == null ? derivedIncorrectCount : toNumberSafe(record.incorrect_count),
+    skipped_count: record?.skipped_count == null ? derivedSkippedCount : toNumberSafe(record.skipped_count),
+    answers
   };
 }
 

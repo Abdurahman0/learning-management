@@ -59,20 +59,54 @@ function normalizeLookupTextLoose(value: string) {
   return normalizeLookupText(value).replace(/[^a-z0-9 ]+/g, "");
 }
 
-function findParagraphIndexByPhrase(paragraphs: string[], phrase: string, fallback: number) {
+function toLookupTokens(value: string) {
+  return normalizeLookupTextLoose(value)
+    .split(" ")
+    .filter((token) => token.length >= 3);
+}
+
+function findBestMatchingExcerpt(paragraph: string, phrase: string) {
+  const candidates = paragraph.match(/[^.!?]+[.!?]?/g)?.map((item) => item.trim()).filter(Boolean) ?? [paragraph];
+  const phraseTokens = new Set(toLookupTokens(phrase));
+  if (phraseTokens.size === 0) return {text: "", score: 0, matches: 0};
+
+  return candidates.reduce(
+    (best, candidate) => {
+      const candidateTokens = new Set(toLookupTokens(candidate));
+      const matches = [...phraseTokens].filter((token) => candidateTokens.has(token)).length;
+      const score = matches / phraseTokens.size;
+      return score > best.score ? {text: candidate, score, matches} : best;
+    },
+    {text: "", score: 0, matches: 0}
+  );
+}
+
+function resolveEvidenceLocation(paragraphs: string[], phrase: string, fallback: number) {
   const normalizedPhrase = normalizeLookupText(phrase);
   if (normalizedPhrase) {
     const strictIndex = paragraphs.findIndex((paragraph) => normalizeLookupText(paragraph).includes(normalizedPhrase));
-    if (strictIndex >= 0) return strictIndex;
+    if (strictIndex >= 0) return {paragraphIndex: strictIndex, phrase};
   }
 
   const loosePhrase = normalizeLookupTextLoose(phrase);
   if (loosePhrase) {
     const looseIndex = paragraphs.findIndex((paragraph) => normalizeLookupTextLoose(paragraph).includes(loosePhrase));
-    if (looseIndex >= 0) return looseIndex;
+    if (looseIndex >= 0) return {paragraphIndex: looseIndex, phrase};
   }
 
-  return Math.max(0, fallback);
+  const fuzzyMatch = paragraphs.reduce(
+    (best, paragraph, paragraphIndex) => {
+      const excerpt = findBestMatchingExcerpt(paragraph, phrase);
+      return excerpt.score > best.score ? {...excerpt, paragraphIndex} : best;
+    },
+    {text: "", score: 0, matches: 0, paragraphIndex: Math.max(0, fallback)}
+  );
+
+  if (fuzzyMatch.matches >= 2 && fuzzyMatch.score >= 0.18) {
+    return {paragraphIndex: fuzzyMatch.paragraphIndex, phrase: fuzzyMatch.text};
+  }
+
+  return {paragraphIndex: Math.max(0, fallback), phrase};
 }
 
 function getEvidenceEntries(value: unknown): unknown[] {
@@ -245,10 +279,10 @@ function parseEvidenceSpans(
     .map((entry) => {
       if (typeof entry === "string") {
         const phrase = entry.trim() || fallbackPhrase;
+        const resolved = resolveEvidenceLocation(paragraphs, phrase, fallbackParagraphIndex);
         return {
           passageId: fallbackPassageId,
-          paragraphIndex: findParagraphIndexByPhrase(paragraphs, phrase, fallbackParagraphIndex),
-          phrase
+          ...resolved
         };
       }
 
@@ -274,14 +308,20 @@ function parseEvidenceSpans(
           record.paragraph_number ??
           record.paragraphNumber
       );
-      const resolvedParagraphIndex = Number.isFinite(paragraphIndex)
-        ? Math.max(0, paragraphIndex)
-        : findParagraphIndexByPhrase(paragraphs, phrase, fallbackParagraphIndex);
+      const resolved = Number.isFinite(paragraphIndex)
+        ? {
+            paragraphIndex: Math.max(0, paragraphIndex),
+            phrase: resolveEvidenceLocation(
+              [paragraphs[Math.max(0, paragraphIndex)] ?? ""],
+              phrase,
+              0
+            ).phrase
+          }
+        : resolveEvidenceLocation(paragraphs, phrase, fallbackParagraphIndex);
       const mappedPassage = toMappedPassageId(record.passage_id ?? record.passageId ?? record.passage, fallbackPassageId);
       return {
         passageId: mappedPassage as "p1" | "p2" | "p3",
-        paragraphIndex: resolvedParagraphIndex,
-        phrase
+        ...resolved
       };
     })
     .filter((item): item is {passageId: "p1" | "p2" | "p3"; paragraphIndex: number; phrase: string} => Boolean(item));
