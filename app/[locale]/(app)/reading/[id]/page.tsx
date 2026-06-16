@@ -3295,6 +3295,26 @@ function ReadingTestClient({
                       ? `${headingAnswerKey} - ${headingAnswerLabel}`
                       : headingAnswerKey
                     : "";
+                  const reviewedHeadingQuestion =
+                    headingQuestion
+                      ? reviewQuestionById.get(headingQuestion.id)
+                        ?? reviewQuestionByNumber.get(headingQuestion.number)
+                        ?? headingQuestion
+                      : null;
+                  const reviewedHeadingCorrectAnswerRaw = reviewedHeadingQuestion
+                    ? formatAnswerForDisplay(reviewedHeadingQuestion.correctAnswer)
+                    : "";
+                  const reviewedHeadingCorrectAnswerKey = reviewedHeadingCorrectAnswerRaw
+                    ? parseMatchingHeadingOption(reviewedHeadingCorrectAnswerRaw).key || reviewedHeadingCorrectAnswerRaw
+                    : "";
+                  const reviewedHeadingCorrectAnswerLabel = reviewedHeadingCorrectAnswerKey
+                    ? normalizeHeadingDisplayText(headingOptionLabelByKey.get(reviewedHeadingCorrectAnswerKey) ?? "")
+                    : "";
+                  const reviewedHeadingCorrectAnswerDisplay = reviewedHeadingCorrectAnswerKey
+                    ? reviewedHeadingCorrectAnswerLabel && reviewedHeadingCorrectAnswerLabel !== reviewedHeadingCorrectAnswerKey
+                      ? `${reviewedHeadingCorrectAnswerKey} - ${reviewedHeadingCorrectAnswerLabel}`
+                      : reviewedHeadingCorrectAnswerKey
+                    : "";
                   const headingOptionKeys = headingOptions.map((option) => option.key);
 
                   return (
@@ -3345,6 +3365,26 @@ function ReadingTestClient({
                           >
                             {headingAnswerDisplay || (t.has("selectHeading") ? t("selectHeading") : "Select heading")}
                           </div>
+                          {reviewMode && reviewAnswersVisible && headingQuestion ? (
+                            <div className="w-full rounded-md border border-border/70 bg-background/65 px-2.5 py-2 text-xs text-muted-foreground">
+                              <p>
+                                <strong className="font-bold text-foreground">
+                                  {(t.has("yourAnswer") ? t("yourAnswer") : "Your answer")}:
+                                </strong>{" "}
+                                <strong className="font-bold text-foreground">
+                                  {headingAnswerDisplay || (t.has("noAnswer") ? t("noAnswer") : "No answer")}
+                                </strong>
+                              </p>
+                              <p className="mt-1">
+                                <strong className="font-bold text-foreground">
+                                  {(t.has("correctAnswer") ? t("correctAnswer") : "Correct answer")}:
+                                </strong>{" "}
+                                <strong className="font-bold text-emerald-700 dark:text-emerald-200">
+                                  {reviewedHeadingCorrectAnswerDisplay || (t.has("notAvailable") ? t("notAvailable") : "Not available")}
+                                </strong>
+                              </p>
+                            </div>
+                          ) : null}
                           {headingAnswer && !reviewMode ? (
                             <Button
                               type="button"

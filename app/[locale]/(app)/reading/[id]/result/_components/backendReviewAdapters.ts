@@ -200,6 +200,22 @@ function parseSharedOptionTexts(groupContent: unknown) {
     .filter(Boolean);
 }
 
+function parseSharedHeadingTexts(groupContent: unknown) {
+  const record = asRecord(groupContent);
+  if (!record || !Array.isArray(record.headings)) return [];
+
+  return record.headings
+    .map((item, index) => {
+      if (typeof item === "string") return item.trim();
+      const row = asRecord(item);
+      if (!row) return "";
+      const key = toStringSafe(row.key, `h${index + 1}`).trim();
+      const text = toStringSafe(row.text, "").trim() || toStringSafe(row.label, "").trim();
+      return text ? `${key} ${text}` : key;
+    })
+    .filter(Boolean);
+}
+
 function generateRangeOptions(startRaw: string, endRaw: string): string[] {
   const start = startRaw.trim();
   const end = endRaw.trim();
@@ -434,6 +450,7 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
             evidenceSpans
           };
         } else if (questionType === "matchingHeadings") {
+          const headingOptions = parseSharedHeadingTexts(group.group_content_json);
           readingQuestion = {
             id: question.id,
             number: questionNumber,
@@ -443,7 +460,7 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
             target: prompt,
             groupTitle,
             groupInstruction: group.instructions ?? undefined,
-            headingOptions: options.length ? options : ["i", "ii", "iii", "iv", "v"],
+            headingOptions: headingOptions.length ? headingOptions : ["i", "ii", "iii", "iv", "v"],
             correctAnswer: typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] ?? "",
             acceptableAnswers: toAcceptableAnswers(typeof correctAnswer === "string" ? correctAnswer : correctAnswer[0] ?? ""),
             explanation: toStringSafe(question.explanation, ""),
