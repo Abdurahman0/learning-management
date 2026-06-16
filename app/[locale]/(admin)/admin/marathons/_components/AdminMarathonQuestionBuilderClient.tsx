@@ -56,6 +56,70 @@ type SelectedQuestionRef = {
 
 type OwnerRecord = AdminMarathonReadingPassageRecord | AdminMarathonListeningPartRecord;
 
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function extractSharedChoiceOptions(groupContent: unknown) {
+  const content = asRecord(groupContent);
+  const rows = Array.isArray(content.choices)
+    ? content.choices
+    : Array.isArray(content.options)
+      ? content.options
+      : Array.isArray(content.labels)
+        ? content.labels
+        : Array.isArray(content.categories)
+          ? content.categories
+          : [];
+
+  return rows
+    .map((item) => {
+      if (typeof item === "string") return item;
+      const row = asRecord(item);
+      return String(row.text ?? row.label ?? row.key ?? "").trim();
+    })
+    .filter(Boolean);
+}
+
+function extractSharedHeadings(groupContent: unknown) {
+  const content = asRecord(groupContent);
+  const rows = Array.isArray(content.headings) ? content.headings : [];
+
+  return rows
+    .map((item) => {
+      if (typeof item === "string") return item;
+      const row = asRecord(item);
+      return String(row.text ?? row.label ?? row.key ?? "").trim();
+    })
+    .filter(Boolean);
+}
+
+function hydrateQuestionWithGroupContent(question: BuilderQuestion, groupContent?: unknown): BuilderQuestion {
+  if (!groupContent) {
+    return question;
+  }
+
+  if (question.type === "matching_headings") {
+    const headings = extractSharedHeadings(groupContent);
+    return headings.length > 0 ? {...question, headings} : question;
+  }
+
+  if (
+    question.type === "matching_information"
+    || question.type === "matching_features"
+    || question.type === "selecting_from_a_list"
+    || question.type === "map"
+  ) {
+    const choices = extractSharedChoiceOptions(groupContent);
+    return choices.length > 0 ? {...question, choices} : question;
+  }
+
+  return question;
+}
+
 function buildStructure(owner: OwnerRecord, module: OwnerModule): BuilderStructureItem {
   return {
     id: String(owner.id),
@@ -77,7 +141,7 @@ function buildStructure(owner: OwnerRecord, module: OwnerModule): BuilderStructu
 function createGroup(type: QuestionType, from: number, to: number, instructions: string, groupContent?: unknown): QuestionGroup {
   const questions: BuilderQuestion[] = [];
   for (let number = from; number <= to; number += 1) {
-    questions.push(createDefaultQuestion(type, number));
+    questions.push(hydrateQuestionWithGroupContent(createDefaultQuestion(type, number), groupContent));
   }
 
   return normalizeGroup({
@@ -211,9 +275,9 @@ export function AdminMarathonQuestionBuilderClient({marathonId, ownerId, module}
         for (let number = from; number <= to; number += 1) {
           const existing = existingByNumber.get(number);
           if (existing && existing.type === type) {
-            nextQuestions.push({...existing, number});
+            nextQuestions.push(hydrateQuestionWithGroupContent({...existing, number}, groupContent));
           } else {
-            nextQuestions.push(createDefaultQuestion(type, number));
+            nextQuestions.push(hydrateQuestionWithGroupContent(createDefaultQuestion(type, number), groupContent));
           }
         }
 
@@ -270,7 +334,10 @@ export function AdminMarathonQuestionBuilderClient({marathonId, ownerId, module}
         const occupiedByOthers = getOccupiedNumbers(current, group.id);
         const insertNumber = getBoundaryInsertNumber(group, range, occupiedByOthers);
         if (insertNumber == null) return group;
-        return normalizeGroup({...group, questions: [...group.questions, createDefaultQuestion(group.type, insertNumber)]});
+        return normalizeGroup({
+          ...group,
+          questions: [...group.questions, hydrateQuestionWithGroupContent(createDefaultQuestion(group.type, insertNumber), group.groupContentJson)]
+        });
       })
     );
   };
@@ -329,9 +396,42 @@ export function AdminMarathonQuestionBuilderClient({marathonId, ownerId, module}
     setGroups((current) =>
       current.map((group) => {
         if (group.id !== selectedQuestionRef.groupId) return group;
+
+        const updatedQuestions = group.questions.map((question) => (question.id === selectedQuestionRef.questionId ? nextQuestion : question));
+        const changedQuestion = updatedQuestions.find((question) => question.id === selectedQuestionRef.questionId);
+
+        if (!changedQuestion) {
+          return group;
+        }
+
+        const isMatchingHeadings = changedQuestion.type === "matching_headings";
+        const isOtherGroupedType =
+          changedQuestion.type === "matching_information"
+          || changedQuestion.type === "matching_features"
+          || changedQuestion.type === "selecting_from_a_list"
+          || changedQuestion.type === "map";
+
+        if (isMatchingHeadings || isOtherGroupedType) {
+          const sourceQuestion = changedQuestion as BuilderQuestion & {headings?: string[]; choices?: string[]};
+          return {
+            ...group,
+            questions: updatedQuestions.map((question) => {
+              if (question.id === changedQuestion.id) {
+                return question;
+              }
+
+              if (isMatchingHeadings) {
+                return {...question, headings: [...(sourceQuestion.headings ?? [])]} as BuilderQuestion;
+              }
+
+              return {...question, choices: [...(sourceQuestion.choices ?? [])]} as BuilderQuestion;
+            })
+          };
+        }
+
         return {
           ...group,
-          questions: group.questions.map((question) => (question.id === selectedQuestionRef.questionId ? nextQuestion : question))
+          questions: updatedQuestions
         };
       })
     );
