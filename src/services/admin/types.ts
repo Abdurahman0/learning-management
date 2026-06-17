@@ -305,6 +305,7 @@ export type AdminMarathonExternalLinkRecord = {
 
 export type AdminMarathonReadingPassageRecord = {
   id: AdminEntityId;
+  passage_number?: string | null;
   title: string;
   passage_text: string;
   difficulty_level: string;
@@ -426,6 +427,7 @@ export type AdminMarathonExternalLinkPayload = {
 };
 
 export type AdminMarathonReadingPassagePayload = {
+  passage_number?: string | null;
   title: string;
   passage_text: string;
   difficulty_level: string;
@@ -437,7 +439,7 @@ export type AdminMarathonReadingPassagePayload = {
 };
 
 export type AdminMarathonListeningPartPayload = {
-  part_number?: string;
+  part_number?: string | null;
   title: string;
   transcript_text: string;
   difficulty_level: string;

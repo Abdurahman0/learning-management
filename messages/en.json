@@ -5114,6 +5114,7 @@
       "resourcesEmpty": "No external resources are attached to this day yet.",
       "readingLibraryTitle": "Reading passage library",
       "readingLibraryDescription": "Create marathon-scoped reading passages and assign them to the selected day.",
+      "passageNumber": "Passage number",
       "topic": "Topic",
       "passageText": "Passage text",
       "assignPassage": "Assign passage to this day",

@@ -77,6 +77,10 @@ export type StudentMarathonDayNote = {
 export type StudentMarathonDayContentItem = {
   id: string;
   title: string;
+  passage_number: string | null;
+  passage_number_display: string;
+  part_number: string | null;
+  part_number_display: string;
   max_questions: number;
   difficulty_level: string | null;
   estimated_time_minutes: number | null;

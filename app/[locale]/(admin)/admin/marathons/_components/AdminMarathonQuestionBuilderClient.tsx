@@ -56,6 +56,31 @@ type SelectedQuestionRef = {
 
 type OwnerRecord = AdminMarathonReadingPassageRecord | AdminMarathonListeningPartRecord;
 
+function getReadingPassageRange(value?: string | null, fallbackMaxQuestions?: number | null) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "PASSAGE_1") return {from: 1, to: 13};
+  if (normalized === "PASSAGE_2") return {from: 14, to: 26};
+  if (normalized === "PASSAGE_3") return {from: 27, to: 40};
+  const maxQuestions = Math.max(1, Number(fallbackMaxQuestions ?? 1));
+  return {from: 1, to: maxQuestions};
+}
+
+function getListeningPartRange(value?: string | null, fallbackMaxQuestions?: number | null) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "PART_1") return {from: 1, to: 10};
+  if (normalized === "PART_2") return {from: 11, to: 20};
+  if (normalized === "PART_3") return {from: 21, to: 30};
+  if (normalized === "PART_4") return {from: 31, to: 40};
+  const maxQuestions = Math.max(1, Number(fallbackMaxQuestions ?? 1));
+  return {from: 1, to: maxQuestions};
+}
+
+function getOwnerQuestionRange(owner: OwnerRecord, module: OwnerModule) {
+  return module === "reading"
+    ? getReadingPassageRange((owner as AdminMarathonReadingPassageRecord).passage_number, owner.max_questions)
+    : getListeningPartRange((owner as AdminMarathonListeningPartRecord).part_number, owner.max_questions);
+}
+
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return {};
@@ -121,12 +146,13 @@ function hydrateQuestionWithGroupContent(question: BuilderQuestion, groupContent
 }
 
 function buildStructure(owner: OwnerRecord, module: OwnerModule): BuilderStructureItem {
+  const range = getOwnerQuestionRange(owner, module);
   return {
     id: String(owner.id),
     index: 1,
     kind: module === "reading" ? "passage" : "section",
     title: owner.title,
-    questionRangeLabel: `Q1-${Math.max(1, Number(owner.max_questions ?? 1))}`,
+    questionRangeLabel: `Q${range.from}-${range.to}`,
     content: [
       module === "reading"
         ? ((owner as AdminMarathonReadingPassageRecord).passage_text || "")
@@ -468,15 +494,13 @@ export function AdminMarathonQuestionBuilderClient({marathonId, ownerId, module}
     setSaving(true);
     try {
       const orderedGroups = [...groups].sort((left, right) => left.from - right.from);
-      const highestAssignedNumber = orderedGroups.reduce((highest, group) => {
-        return Math.max(highest, ...group.questions.map((question) => question.number));
-      }, 0);
-      const maxQuestions = Math.max(range.to - range.from + 1, highestAssignedNumber, 1);
+      const maxQuestions = Math.max(range.to - range.from + 1, 1);
       const fullText = structure.content.join("\n\n").trim() || " ";
 
       if (module === "reading") {
         const readingOwner = owner as AdminMarathonReadingPassageRecord;
         const updatedOwner = await adminMarathonsService.patchReadingPassage(readingOwner.id, {
+          passage_number: readingOwner.passage_number ?? undefined,
           title: structure.title.trim() || owner.title,
           passage_text: fullText,
           difficulty_level: readingOwner.difficulty_level,

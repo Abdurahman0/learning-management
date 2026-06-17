@@ -51,6 +51,7 @@ const EMPTY_LINK_FORM: AdminMarathonExternalLinkPayload = {
 };
 
 const EMPTY_PASSAGE_FORM: AdminMarathonReadingPassagePayload = {
+  passage_number: "PASSAGE_1",
   title: "",
   passage_text: "",
   difficulty_level: "INTERMEDIATE",
@@ -62,7 +63,7 @@ const EMPTY_PASSAGE_FORM: AdminMarathonReadingPassagePayload = {
 };
 
 const EMPTY_PART_FORM: AdminMarathonListeningPartPayload = {
-  part_number: "",
+  part_number: "PART_1",
   title: "",
   transcript_text: "",
   difficulty_level: "INTERMEDIATE",
@@ -117,6 +118,37 @@ function formatDateTime(value?: string | null) {
 function formatMinutes(value?: number | null) {
   if (value == null) return "-";
   return `${value} min`;
+}
+
+function getReadingPassageSlotMeta(value?: string | null) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "PASSAGE_1") return {value: "PASSAGE_1", label: "Passage 1", from: 1, to: 13, maxQuestions: 13};
+  if (normalized === "PASSAGE_2") return {value: "PASSAGE_2", label: "Passage 2", from: 14, to: 26, maxQuestions: 13};
+  if (normalized === "PASSAGE_3") return {value: "PASSAGE_3", label: "Passage 3", from: 27, to: 40, maxQuestions: 14};
+  return null;
+}
+
+function getListeningPartSlotMeta(value?: string | null) {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "PART_1") return {value: "PART_1", label: "Part 1", from: 1, to: 10, maxQuestions: 10};
+  if (normalized === "PART_2") return {value: "PART_2", label: "Part 2", from: 11, to: 20, maxQuestions: 10};
+  if (normalized === "PART_3") return {value: "PART_3", label: "Part 3", from: 21, to: 30, maxQuestions: 10};
+  if (normalized === "PART_4") return {value: "PART_4", label: "Part 4", from: 31, to: 40, maxQuestions: 10};
+  return null;
+}
+
+function formatQuestionRangeLabel(from: number, to: number) {
+  return `Questions ${from}-${to}`;
+}
+
+function formatPassageNumber(value?: string | null) {
+  const slot = getReadingPassageSlotMeta(value);
+  return slot?.label ?? "";
+}
+
+function formatPartNumber(value?: string | null) {
+  const slot = getListeningPartSlotMeta(value);
+  return slot?.label ?? "";
 }
 
 function ResourceForm({
@@ -180,6 +212,8 @@ function ReadingPassageForm({
   onChange: (next: AdminMarathonReadingPassagePayload) => void;
   onSubmit: () => void;
 }) {
+  const selectedSlot = getReadingPassageSlotMeta(value.passage_number);
+
   return (
     <div className="space-y-4 rounded-2xl border border-dashed border-border/70 bg-card/55 p-4">
       <div className="space-y-1">
@@ -187,6 +221,32 @@ function ReadingPassageForm({
         <p className="text-sm text-muted-foreground">{t("detail.readingLibraryDescription")}</p>
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
+        <div className="space-y-2">
+          <Label>{t("detail.passageNumber")}</Label>
+          <Select
+            value={value.passage_number ?? "PASSAGE_1"}
+            onValueChange={(nextValue) => {
+              const slot = getReadingPassageSlotMeta(nextValue);
+              onChange({
+                ...value,
+                passage_number: nextValue,
+                max_questions: slot?.maxQuestions ?? value.max_questions
+              });
+            }}
+          >
+            <SelectTrigger className="rounded-xl border-border/70 bg-card/55">
+              <SelectValue placeholder={t("detail.passageNumber")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PASSAGE_1">Passage 1</SelectItem>
+              <SelectItem value="PASSAGE_2">Passage 2</SelectItem>
+              <SelectItem value="PASSAGE_3">Passage 3</SelectItem>
+            </SelectContent>
+          </Select>
+          {selectedSlot ? (
+            <p className="text-xs text-muted-foreground">{formatQuestionRangeLabel(selectedSlot.from, selectedSlot.to)}</p>
+          ) : null}
+        </div>
         <div className="space-y-2">
           <Label>{t("fields.title")}</Label>
           <Input
@@ -212,7 +272,7 @@ function ReadingPassageForm({
         />
         <Input
           value={String(value.max_questions)}
-          onChange={(event) => onChange({...value, max_questions: Math.max(1, Number(event.target.value) || 1)})}
+          readOnly
           className="rounded-xl border-border/70 bg-card/55"
         />
         <Input
@@ -241,6 +301,8 @@ function ListeningPartForm({
   onChange: (next: AdminMarathonListeningPartPayload) => void;
   onSubmit: () => void;
 }) {
+  const selectedSlot = getListeningPartSlotMeta(value.part_number);
+
   return (
     <div className="space-y-4 rounded-2xl border border-dashed border-border/70 bg-card/55 p-4">
       <div className="space-y-1">
@@ -248,18 +310,42 @@ function ListeningPartForm({
         <p className="text-sm text-muted-foreground">{t("detail.listeningLibraryDescription")}</p>
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
-        <Input
-          value={value.title}
-          onChange={(event) => onChange({...value, title: event.target.value})}
-          placeholder={t("fields.title")}
-          className="rounded-xl border-border/70 bg-card/55"
-        />
-        <Input
-          value={value.part_number ?? ""}
-          onChange={(event) => onChange({...value, part_number: event.target.value})}
-          placeholder={t("detail.partNumber")}
-          className="rounded-xl border-border/70 bg-card/55"
-        />
+        <div className="space-y-2">
+          <Label>{t("detail.partNumber")}</Label>
+          <Select
+            value={value.part_number ?? "PART_1"}
+            onValueChange={(nextValue) => {
+              const slot = getListeningPartSlotMeta(nextValue);
+              onChange({
+                ...value,
+                part_number: nextValue,
+                max_questions: slot?.maxQuestions ?? value.max_questions
+              });
+            }}
+          >
+            <SelectTrigger className="rounded-xl border-border/70 bg-card/55">
+              <SelectValue placeholder={t("detail.partNumber")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PART_1">Part 1</SelectItem>
+              <SelectItem value="PART_2">Part 2</SelectItem>
+              <SelectItem value="PART_3">Part 3</SelectItem>
+              <SelectItem value="PART_4">Part 4</SelectItem>
+            </SelectContent>
+          </Select>
+          {selectedSlot ? (
+            <p className="text-xs text-muted-foreground">{formatQuestionRangeLabel(selectedSlot.from, selectedSlot.to)}</p>
+          ) : null}
+        </div>
+        <div className="space-y-2">
+          <Label>{t("fields.title")}</Label>
+          <Input
+            value={value.title}
+            onChange={(event) => onChange({...value, title: event.target.value})}
+            placeholder={t("fields.title")}
+            className="rounded-xl border-border/70 bg-card/55"
+          />
+        </div>
       </div>
       <div className="grid gap-3 md:grid-cols-4">
         <Input
@@ -269,7 +355,7 @@ function ListeningPartForm({
         />
         <Input
           value={String(value.max_questions)}
-          onChange={(event) => onChange({...value, max_questions: Math.max(1, Number(event.target.value) || 1)})}
+          readOnly
           className="rounded-xl border-border/70 bg-card/55"
         />
         <Input
@@ -1056,7 +1142,7 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
                                   <SelectItem value="none">{t("detail.assignPassage")}</SelectItem>
                                   {unassignedPassages.map((item) => (
                                     <SelectItem key={String(item.id)} value={String(item.id)}>
-                                      {item.title}
+                                      {formatPassageNumber(item.passage_number) || item.title}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -1086,7 +1172,7 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
                                       <div className="min-w-0">
                                         <p className="font-medium">{item.title}</p>
                                         <p className="text-sm text-muted-foreground">
-                                          {item.max_questions} {t("detail.questions")} • {formatMinutes(item.estimated_time_minutes)}
+                                          {formatPassageNumber(item.passage_number) || "-"} • {formatQuestionRangeLabel(getReadingPassageSlotMeta(item.passage_number)?.from ?? 1, getReadingPassageSlotMeta(item.passage_number)?.to ?? item.max_questions)} • {formatMinutes(item.estimated_time_minutes)}
                                         </p>
                                       </div>
                                       <div className="flex flex-wrap items-center gap-2">
@@ -1201,7 +1287,7 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
                                       <div className="min-w-0">
                                         <p className="font-medium">{item.title}</p>
                                         <p className="text-sm text-muted-foreground">
-                                          {item.topic || "-"} • {item.max_questions} {t("detail.questions")}
+                                          {formatPassageNumber(item.passage_number) || "-"} • {item.topic || "-"} • {item.max_questions} {t("detail.questions")}
                                         </p>
                                       </div>
                                       <div className="flex flex-wrap items-center gap-2">
@@ -1257,7 +1343,7 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
                                   <SelectItem value="none">{t("detail.assignPart")}</SelectItem>
                                   {unassignedParts.map((item) => (
                                     <SelectItem key={String(item.id)} value={String(item.id)}>
-                                      {item.title}
+                                      {formatPartNumber(item.part_number) || item.title}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -1287,7 +1373,7 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
                                       <div className="min-w-0">
                                         <p className="font-medium">{item.title}</p>
                                         <p className="text-sm text-muted-foreground">
-                                          {item.max_questions} {t("detail.questions")} • {formatMinutes(item.estimated_time_minutes)}
+                                          {formatPartNumber(item.part_number) || "-"} • {formatQuestionRangeLabel(getListeningPartSlotMeta(item.part_number)?.from ?? 1, getListeningPartSlotMeta(item.part_number)?.to ?? item.max_questions)} • {formatMinutes(item.estimated_time_minutes)}
                                         </p>
                                       </div>
                                       <div className="flex flex-wrap items-center gap-2">
@@ -1412,7 +1498,7 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
                                       <div className="min-w-0">
                                         <p className="font-medium">{item.title}</p>
                                         <p className="text-sm text-muted-foreground">
-                                          {item.part_number || "-"} • {item.max_questions} {t("detail.questions")}
+                                          {formatPartNumber(item.part_number) || "-"} • {item.max_questions} {t("detail.questions")}
                                         </p>
                                       </div>
                                       <div className="flex flex-wrap items-center gap-2">

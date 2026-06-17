@@ -96,7 +96,7 @@ function toReadingTest(item: StudentMarathonDayContentItem): ReadingGuestTest {
   const difficulty = normalizeDifficulty(item.difficulty_level);
   return {
     id: item.id,
-    title: item.title,
+    title: item.passage_number_display || item.title,
     testFormat: "part",
     isPremium: false,
     durationMinutes: item.estimated_time_minutes ?? 20,
@@ -116,7 +116,7 @@ function toListeningTest(item: StudentMarathonListeningDayItem): ListeningTestIt
   const difficulty = normalizeDifficulty(item.difficulty_level);
   return {
     id: item.id,
-    title: item.title,
+    title: item.part_number_display || item.title,
     testFormat: "part",
     isPremium: false,
     difficulty,

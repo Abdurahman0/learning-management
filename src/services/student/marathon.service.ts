@@ -147,6 +147,10 @@ function normalizeDayItem(value: unknown): StudentMarathonDayContentItem {
   return {
     id: toStringSafe(record?.id),
     title: toStringSafe(record?.title, "Reading passage"),
+    passage_number: toStringSafe(record?.passage_number) || null,
+    passage_number_display: toStringSafe(record?.passage_number_display),
+    part_number: toStringSafe(record?.part_number) || null,
+    part_number_display: toStringSafe(record?.part_number_display),
     max_questions: toNumberSafe(record?.max_questions),
     difficulty_level: toStringSafe(record?.difficulty_level) || null,
     estimated_time_minutes: record?.estimated_time_minutes == null ? null : toNumberSafe(record?.estimated_time_minutes),
