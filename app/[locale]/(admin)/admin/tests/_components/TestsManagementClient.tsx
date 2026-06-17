@@ -1,11 +1,12 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
-import {CheckCircle2, FolderPlus, Plus, Save, Search, Upload} from "lucide-react";
+import {CheckCircle2, FolderPlus, Pencil, Plus, Save, Search, Trash2, Upload, X} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {useRouter} from "next/navigation";
 
 import {Button} from "@/components/ui/button";
+import {ConfirmModal} from "@/components/ui/confirm-modal";
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
 import {Input} from "@/components/ui/input";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
@@ -166,6 +167,12 @@ export function TestsManagementClient() {
   const [groups, setGroups] = useState<PracticeTestGroupRecord[]>([]);
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDescription, setNewGroupDescription] = useState("");
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [editingGroupName, setEditingGroupName] = useState("");
+  const [editingGroupDescription, setEditingGroupDescription] = useState("");
+  const [savingGroupId, setSavingGroupId] = useState<string | null>(null);
+  const [pendingDeleteGroup, setPendingDeleteGroup] = useState<PracticeTestGroupRecord | null>(null);
+  const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
   const [draggingTestId, setDraggingTestId] = useState<string | null>(null);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [page, setPage] = useState(1);
@@ -429,9 +436,22 @@ export function TestsManagementClient() {
   };
 
   const handleDelete = async (testId: string) => {
+    const deletedTest = tests.find((item) => item.id === testId) ?? null;
     try {
       await practiceTestsService.remove(testId, {hard: true});
       setTests((currentTests) => currentTests.filter((item) => item.id !== testId));
+      if (deletedTest?.groupId) {
+        setGroups((currentGroups) =>
+          currentGroups.map((group) =>
+            String(group.id) === deletedTest.groupId
+              ? {
+                  ...group,
+                  test_count: Math.max(0, Number(group.test_count ?? 0) - 1)
+                }
+              : group
+          )
+        );
+      }
       setExpandedTestIds((currentExpanded) => {
         const next = new Set(currentExpanded);
         next.delete(testId);
@@ -477,8 +497,82 @@ export function TestsManagementClient() {
     }
   };
 
+  const handleStartEditGroup = (group: PracticeTestGroupRecord) => {
+    setEditingGroupId(String(group.id));
+    setEditingGroupName(group.name);
+    setEditingGroupDescription(group.description ?? "");
+  };
+
+  const handleCancelEditGroup = () => {
+    setEditingGroupId(null);
+    setEditingGroupName("");
+    setEditingGroupDescription("");
+    setSavingGroupId(null);
+  };
+
+  const handleSaveGroup = async () => {
+    if (!editingGroupId) return;
+
+    const name = editingGroupName.trim();
+    if (!name) return;
+
+    setSavingGroupId(editingGroupId);
+
+    try {
+      const updated = await practiceTestGroupsService.patch(editingGroupId, {
+        name,
+        description: editingGroupDescription.trim()
+      });
+
+      setGroups((current) => current.map((group) => (String(group.id) === editingGroupId ? updated : group)));
+      setTests((current) =>
+        current.map((test) =>
+          test.groupId === editingGroupId
+            ? {
+                ...test,
+                groupName: updated.name
+              }
+            : test
+        )
+      );
+      handleCancelEditGroup();
+    } catch {
+      setSavingGroupId(null);
+    }
+  };
+
+  const handleDeleteGroup = async (group: PracticeTestGroupRecord) => {
+    const groupId = String(group.id);
+    setDeletingGroupId(groupId);
+
+    try {
+      await practiceTestGroupsService.remove(groupId);
+      setGroups((current) => current.filter((item) => String(item.id) !== groupId));
+      setTests((current) =>
+        current.map((test) =>
+          test.groupId === groupId
+            ? {
+                ...test,
+                groupId: null,
+                groupName: null
+              }
+            : test
+        )
+      );
+      if (editingGroupId === groupId) {
+        handleCancelEditGroup();
+      }
+    } catch {
+      // Keep UI stable when group deletion fails.
+    } finally {
+      setPendingDeleteGroup(null);
+      setDeletingGroupId(null);
+    }
+  };
+
   const handleAssignGroup = async (testId: string, groupId: string) => {
     const normalizedGroupId = groupId === "none" ? null : groupId;
+    const previousGroupId = tests.find((item) => item.id === testId)?.groupId ?? null;
     const group = normalizedGroupId ? groups.find((item) => String(item.id) === normalizedGroupId) : null;
     try {
       await practiceTestsService.patch(testId, {group: normalizedGroupId});
@@ -493,6 +587,26 @@ export function TestsManagementClient() {
             : item
         )
       );
+      if (previousGroupId !== normalizedGroupId) {
+        setGroups((current) =>
+          current.map((item) => {
+            const itemId = String(item.id);
+            if (itemId === previousGroupId) {
+              return {
+                ...item,
+                test_count: Math.max(0, Number(item.test_count ?? 0) - 1)
+              };
+            }
+            if (itemId === normalizedGroupId) {
+              return {
+                ...item,
+                test_count: Number(item.test_count ?? 0) + 1
+              };
+            }
+            return item;
+          })
+        );
+      }
     } catch {
       // Keep previous value if backend rejects assignment.
     }
@@ -713,12 +827,87 @@ export function TestsManagementClient() {
                     <p className="text-xs text-muted-foreground">{t("groups.description")}</p>
                   </div>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 grid gap-2">
                   {groups.length ? (
                     groups.map((group) => (
-                      <span key={String(group.id)} className="rounded-full border border-border/70 bg-background/55 px-3 py-1 text-xs font-medium">
-                        {group.name} · {group.test_count}
-                      </span>
+                      <div
+                        key={String(group.id)}
+                        className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-border/70 bg-background/55 px-3 py-3"
+                      >
+                        {editingGroupId === String(group.id) ? (
+                          <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-[1fr_1fr]">
+                            <Input
+                              value={editingGroupName}
+                              onChange={(event) => setEditingGroupName(event.target.value)}
+                              placeholder={t("groups.namePlaceholder")}
+                              className="h-10 rounded-xl border-border/70 bg-background/45"
+                            />
+                            <Input
+                              value={editingGroupDescription}
+                              onChange={(event) => setEditingGroupDescription(event.target.value)}
+                              placeholder={t("groups.descriptionPlaceholder")}
+                              className="h-10 rounded-xl border-border/70 bg-background/45"
+                            />
+                          </div>
+                        ) : (
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold">{group.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {t("groups.testCount", {count: Number(group.test_count ?? 0)})}
+                            </p>
+                            {group.description ? (
+                              <p className="mt-1 text-xs text-muted-foreground">{group.description}</p>
+                            ) : null}
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          {editingGroupId === String(group.id) ? (
+                            <>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="size-9 rounded-xl"
+                                onClick={handleCancelEditGroup}
+                              >
+                                <X className="size-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                className="size-9 rounded-xl"
+                                onClick={handleSaveGroup}
+                                disabled={!editingGroupName.trim() || savingGroupId === String(group.id)}
+                              >
+                                <Save className="size-4" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="size-9 rounded-xl"
+                                onClick={() => handleStartEditGroup(group)}
+                              >
+                                <Pencil className="size-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="size-9 rounded-xl border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                                onClick={() => setPendingDeleteGroup(group)}
+                                disabled={deletingGroupId === String(group.id)}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     ))
                   ) : (
                     <span className="text-sm text-muted-foreground">{t("groups.empty")}</span>
@@ -805,6 +994,29 @@ export function TestsManagementClient() {
           </main>
         </div>
       </div>
+
+      <ConfirmModal
+        open={Boolean(pendingDeleteGroup)}
+        title={t("groups.deleteTitle")}
+        description={
+          pendingDeleteGroup
+            ? t("groups.deleteConfirm", {name: pendingDeleteGroup.name})
+            : t("groups.deleteDescriptionFallback")
+        }
+        confirmText={t("groups.deleteAction")}
+        cancelText={t("groups.cancel")}
+        confirmVariant="destructive"
+        onCancel={() => {
+          if (!deletingGroupId) {
+            setPendingDeleteGroup(null);
+          }
+        }}
+        onConfirm={() => {
+          if (pendingDeleteGroup) {
+            void handleDeleteGroup(pendingDeleteGroup);
+          }
+        }}
+      />
 
       <Sheet open={importDialogOpen} onOpenChange={setImportDialogOpen}>
         <SheetContent side="right" className="w-full max-w-[440px] border-l border-border/70 bg-background/95 p-0">

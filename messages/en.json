@@ -1256,6 +1256,12 @@
       "namePlaceholder": "Group name",
       "descriptionPlaceholder": "Short description",
       "create": "Create group",
+      "testCount": "{count} tests",
+      "deleteTitle": "Delete group",
+      "deleteConfirm": "Delete \"{name}\"? Tests assigned to this group will be ungrouped.",
+      "deleteDescriptionFallback": "Delete this group? Tests assigned to this group will be ungrouped.",
+      "deleteAction": "Delete group",
+      "cancel": "Cancel",
       "assignTitle": "Assign tests to groups",
       "noGroup": "No group"
     },

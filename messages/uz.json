@@ -1256,6 +1256,12 @@
       "namePlaceholder": "Guruh nomi",
       "descriptionPlaceholder": "Qisqa izoh",
       "create": "Guruh yaratish",
+      "testCount": "{count} ta test",
+      "deleteTitle": "Guruhni o'chirish",
+      "deleteConfirm": "\"{name}\" guruhi o'chirilsinmi? Bu guruhga biriktirilgan testlar guruhsiz qoladi.",
+      "deleteDescriptionFallback": "Bu guruh o'chirilsinmi? Bu guruhga biriktirilgan testlar guruhsiz qoladi.",
+      "deleteAction": "Guruhni o'chirish",
+      "cancel": "Bekor qilish",
       "assignTitle": "Testlarni guruhlarga biriktirish",
       "noGroup": "Guruhsiz"
     },
