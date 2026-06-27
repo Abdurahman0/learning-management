@@ -498,7 +498,7 @@ function parseMatchingInfoOption(option: string, index: number) {
   if (prefixed) {
     const key = prefixed[1].toUpperCase();
     return {
-      value: key,
+      value: trimmed,
       key,
       label: prefixed[2].trim(),
     };
@@ -508,7 +508,7 @@ function parseMatchingInfoOption(option: string, index: number) {
   if (paragraph) {
     const key = paragraph[1].toUpperCase();
     return {
-      value: key,
+      value: trimmed,
       key,
       label: paragraph[2]?.trim() ?? "",
     };
@@ -1006,10 +1006,6 @@ function collectBackendAttemptAnswerEntries(params: {
           const parsedOptions = question.options.map((option, optionIndex) => parseOptionChoice(option, optionIndex));
           const resolvedKey = resolveChoiceKeyFromRawValue(answer, parsedOptions, question.options);
           return resolvedKey ? resolvedKey : normalizeLetterKeyAnswerForBackend(answer);
-        }
-
-        if (question.type === "matchingInfo" && typeof answer === "string") {
-          return normalizeLetterKeyAnswerForBackend(answer);
         }
 
         if (question.type === "listSelection" && typeof answer === "string") {
@@ -3490,7 +3486,7 @@ function ReadingTestClient({
                     .filter((option, index, source) => source.findIndex((item) => item.key === option.key) === index);
                   const showMatchingInfoBank = matchingInfoGroupOptions.some((option, optionIndex) => {
                     const parsed = parseMatchingInfoOption(option, optionIndex);
-                    return Boolean(parsed.label) && !/^\s*(?:paragraph\s+)?[A-Z]\s*[\)\].:\-]/i.test(option.trim());
+                    return Boolean(parsed.label);
                   });
 
                   if (!visibleGroupQuestions.length && !matchingHeadingGroupQuestions.length) {
