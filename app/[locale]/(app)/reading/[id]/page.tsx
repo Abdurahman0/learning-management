@@ -1013,7 +1013,11 @@ function collectBackendAttemptAnswerEntries(params: {
         }
 
         if (question.type === "matchingHeadings" && typeof answer === "string") {
-          return normalizeRomanKeyAnswerForBackend(answer);
+          const key = normalizeRomanKeyAnswerForBackend(answer);
+          const idx = question.headingOptions
+            .map((opt, i) => parseMatchingHeadingOption(opt, i))
+            .findIndex((opt) => opt.key === key);
+          return idx >= 0 ? question.headingOptions[idx].trim() : answer;
         }
 
         if (Array.isArray(answer)) {
@@ -4080,56 +4084,56 @@ function ReadingTestClient({
                                                       {targetReviewedExplanation}
                                                     </div>
                                                   ) : null}
+                                                  {reviewMode ? (
+                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                      <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="ghost"
+                                                        onClick={(event) => {
+                                                          event.stopPropagation();
+                                                          openExplanation(targetQuestion);
+                                                        }}
+                                                        className="h-6 rounded-md px-2 text-[10px]"
+                                                      >
+                                                        {expandedExplanations.has(targetQuestion.id)
+                                                          ? (t.has("hideExplanation") ? t("hideExplanation") : "Hide explanation")
+                                                          : (t.has("explain") ? t("explain") : "Explain")}
+                                                      </Button>
+                                                      <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={(event) => {
+                                                          event.stopPropagation();
+                                                          jumpToEvidenceFromReview(targetQuestion.id);
+                                                        }}
+                                                        className="h-6 rounded-md border-border/70 px-2 text-[10px]"
+                                                      >
+                                                        {t.has("jumpToEvidence") ? t("jumpToEvidence") : "Jump to evidence"}
+                                                      </Button>
+                                                      <span
+                                                        className={cn(
+                                                          "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold leading-none",
+                                                          !targetAnswered && "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300",
+                                                          targetAnswered && targetResult?.isCorrect && "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200",
+                                                          targetAnswered && !targetResult?.isCorrect && "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200"
+                                                        )}
+                                                      >
+                                                        {!targetAnswered ? (
+                                                          <CircleDashed className="size-3.5" aria-hidden="true" />
+                                                        ) : targetResult?.isCorrect ? (
+                                                          <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                                                        ) : (
+                                                          <XCircle className="size-3.5" aria-hidden="true" />
+                                                        )}
+                                                        {!targetAnswered ? "Skipped" : targetResult?.isCorrect ? "Correct" : "Incorrect"}
+                                                      </span>
+                                                    </div>
+                                                  ) : null}
                                                 </div>
                                                 {targetMarked && !reviewMode ? (
                                                   <Bookmark className="mt-1 size-4 shrink-0 text-amber-500" aria-label="Marked" />
-                                                ) : null}
-                                                {reviewMode ? (
-                                                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-                                                    <Button
-                                                      type="button"
-                                                      size="sm"
-                                                      variant="ghost"
-                                                      onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        openExplanation(targetQuestion);
-                                                      }}
-                                                      className="h-6 rounded-md px-2 text-[10px]"
-                                                    >
-                                                      {expandedExplanations.has(targetQuestion.id)
-                                                        ? (t.has("hideExplanation") ? t("hideExplanation") : "Hide explanation")
-                                                        : (t.has("explain") ? t("explain") : "Explain")}
-                                                    </Button>
-                                                    <Button
-                                                      type="button"
-                                                      size="sm"
-                                                      variant="outline"
-                                                      onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        jumpToEvidenceFromReview(targetQuestion.id);
-                                                      }}
-                                                      className="h-6 rounded-md border-border/70 px-2 text-[10px]"
-                                                    >
-                                                      {t.has("jumpToEvidence") ? t("jumpToEvidence") : "Jump to evidence"}
-                                                    </Button>
-                                                    <span
-                                                      className={cn(
-                                                        "inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold leading-none",
-                                                        !targetAnswered && "border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300",
-                                                        targetAnswered && targetResult?.isCorrect && "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200",
-                                                        targetAnswered && !targetResult?.isCorrect && "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200"
-                                                      )}
-                                                    >
-                                                      {!targetAnswered ? (
-                                                        <CircleDashed className="size-3.5" aria-hidden="true" />
-                                                      ) : targetResult?.isCorrect ? (
-                                                        <CheckCircle2 className="size-3.5" aria-hidden="true" />
-                                                      ) : (
-                                                        <XCircle className="size-3.5" aria-hidden="true" />
-                                                      )}
-                                                      {!targetAnswered ? "Skipped" : targetResult?.isCorrect ? "Correct" : "Incorrect"}
-                                                    </span>
-                                                  </div>
                                                 ) : null}
                                               </div>
                                             </td>
