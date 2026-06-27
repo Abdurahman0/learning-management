@@ -494,7 +494,7 @@ function parseOptionChoice(option: string, index: number) {
 
 function parseMatchingInfoOption(option: string, index: number) {
   const trimmed = option.trim();
-  const prefixed = trimmed.match(/^\s*([A-Z])[\)\].:\-]\s*(.+)$/i);
+  const prefixed = trimmed.match(/^\s*([A-Z])(?:[\)\].:\-]\s*|\s+)(.+)$/i);
   if (prefixed) {
     const key = prefixed[1].toUpperCase();
     return {
