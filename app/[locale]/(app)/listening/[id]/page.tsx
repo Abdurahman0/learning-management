@@ -357,11 +357,8 @@ function normalizeListeningAnswerForBackend(rawValue: unknown, questionType: str
     normalizedRaw = normalizeRomanKeyAnswerForBackend(normalizedRaw);
   } else if (
     normalizedType === "MCQ_SINGLE"
-    || normalizedType === "MATCHING"
-    || normalizedType === "CLASSIFICATION"
     || normalizedType === "LIST_SELECTION"
     || normalizedType === "CHOOSING_TITLE"
-    || normalizedType === "MATCH_PARA_INFO"
     || normalizedType === "MATCH_SENT_ENDINGS"
     || normalizedType === "PLAN_MAP_DIAGRAM"
     || normalizedType === "DIAGRAM_COMPLETION"
@@ -959,7 +956,7 @@ function parseOptionChoice(option: string, index: number) {
     return result || "A";
   };
 
-  const match = option.match(/^\s*([A-Z])[\)\].:\-]\s*(.+)$/i);
+  const match = option.trim().match(/^\s*([A-Z])(?:[\)\].:\-]\s*|\s+)(.+)$/i);
   if (match) {
     return {
       key: match[1].toUpperCase(),
@@ -994,6 +991,17 @@ function resolveChoiceKeyFromRawValue(
   if (byRawOption >= 0) return parsedOptions[byRawOption]?.key ?? "";
 
   return "";
+}
+
+function resolveMatchingRawOption(
+  rawValue: string | undefined,
+  parsedOptions: Array<{key: string; label: string}>,
+  rawOptions: string[]
+): string {
+  const key = resolveChoiceKeyFromRawValue(rawValue, parsedOptions, rawOptions);
+  if (!key) return "";
+  const idx = parsedOptions.findIndex((opt) => opt.key === key);
+  return idx >= 0 ? rawOptions[idx]?.trim() ?? "" : "";
 }
 
 type TemplateToken =
@@ -3458,7 +3466,7 @@ function ListeningTestClient({
                   <InlineBoldText text={item.prompt} />
                 </p>
                 <Select
-                  value={resolveChoiceKeyFromRawValue(answers[item.questionNumber], parsedOptions, block.options)}
+                  value={resolveMatchingRawOption(answers[item.questionNumber], parsedOptions, block.options)}
                   onValueChange={(value) =>
                     setAnswer(item.questionNumber, value)
                   }
@@ -3474,8 +3482,8 @@ function ListeningTestClient({
                     <SelectValue placeholder="-" />
                   </SelectTrigger>
                   <SelectContent>
-                    {parsedOptions.map((option) => (
-                      <SelectItem key={option.key} value={option.key}>
+                    {parsedOptions.map((option, optionIndex) => (
+                      <SelectItem key={option.key} value={block.options[optionIndex]?.trim() ?? option.key}>
                         {option.key}
                       </SelectItem>
                     ))}
