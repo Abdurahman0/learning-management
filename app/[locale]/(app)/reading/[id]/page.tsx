@@ -1368,6 +1368,7 @@ export default function ReadingTestPage() {
   const reviewRequested = searchParams.get("review") === "1";
   const reviewAttemptParam = searchParams.get("attempt")?.trim() ?? "";
   const reviewAttemptId = reviewRequested && UUID_PATTERN.test(reviewAttemptParam) ? reviewAttemptParam : null;
+  const resumeAttemptId = !reviewRequested && UUID_PATTERN.test(reviewAttemptParam) ? reviewAttemptParam : null;
   const shouldLoadFromBackend = Boolean(testId);
   const [test, setTest] = useState<ReadingFullTest | null>(null);
   const [backendAttemptId, setBackendAttemptId] = useState<string | null>(null);
@@ -1418,7 +1419,9 @@ export default function ReadingTestPage() {
 
           const marathonAttempt = reviewAttemptId
             ? await studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, reviewAttemptId)
-            : await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, { passage_id: testId });
+            : resumeAttemptId
+              ? await studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, resumeAttemptId)
+              : await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, { passage_id: testId });
           if (!active) return;
 
           const adapted = adaptMarathonReadingAttemptToDetail(marathonAttempt, testId);
@@ -1616,7 +1619,7 @@ export default function ReadingTestPage() {
     return () => {
       active = false;
     };
-  }, [isGuest, isMarathonContext, marathonDayNumber, marathonIdParam, requestedMode, restartRequested, reviewAttemptId, scopedPassageId, shouldLoadFromBackend, t, testId]);
+  }, [isGuest, isMarathonContext, marathonDayNumber, marathonIdParam, requestedMode, restartRequested, resumeAttemptId, reviewAttemptId, scopedPassageId, shouldLoadFromBackend, t, testId]);
 
   if (isLoading) {
     return (

@@ -74,6 +74,14 @@ export type StudentMarathonDayNote = {
   updated_at: string | null;
 };
 
+export type StudentMarathonLatestRetake = {
+  attempt_id: string;
+  status: "IN_PROGRESS" | "COMPLETED" | string;
+  score: number | null;
+  band_score: string | null;
+  completed_at: string | null;
+};
+
 export type StudentMarathonDayContentItem = {
   id: string;
   title: string;
@@ -90,6 +98,9 @@ export type StudentMarathonDayContentItem = {
   band_score: string | null;
   question_groups_count: number;
   external_link: StudentMarathonContentLink | null;
+  is_retakable: boolean;
+  retakes_count: number;
+  latest_retake: StudentMarathonLatestRetake | null;
 };
 
 export type StudentMarathonContentLink = {
@@ -165,6 +176,7 @@ export type StudentMarathonAttempt = {
   reading_passage: string | null;
   listening_part: string | null;
   status: "IN_PROGRESS" | "COMPLETED" | string;
+  attempt_kind: "FIRST_TIME" | "RETAKE" | string;
   score: number | null;
   band_score: string | null;
   started_at: string | null;
@@ -193,6 +205,7 @@ export type StudentMarathonAttemptResultAnswer = {
 export type StudentMarathonAttemptResult = {
   id: string;
   status: "COMPLETED" | string;
+  attempt_kind: "FIRST_TIME" | "RETAKE" | string;
   score: number | null;
   band_score: string | null;
   question_type_stats_json: Record<string, unknown> | null;

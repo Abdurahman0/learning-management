@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import {ChevronDown, Clock3, ExternalLink, ListChecks, Lock, Play, Youtube} from "lucide-react";
-import {useState} from "react";
+import {useState, type ReactNode} from "react";
 import {useRouter} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
 
@@ -18,6 +18,12 @@ type ListeningTestCardProps = {
     href: string;
     label: string;
   };
+  secondaryAction?: {
+    label: string;
+    icon?: ReactNode;
+    loading?: boolean;
+    onClick: () => void;
+  };
   resourceLink?: {
     href: string;
     label: string;
@@ -25,7 +31,7 @@ type ListeningTestCardProps = {
   badgeLabel?: string;
 };
 
-export function ListeningTestCard({test, action, resourceLink, badgeLabel}: ListeningTestCardProps) {
+export function ListeningTestCard({test, action, secondaryAction, resourceLink, badgeLabel}: ListeningTestCardProps) {
   const t = useTranslations("guest");
   const locale = useLocale();
   const router = useRouter();
@@ -137,14 +143,28 @@ export function ListeningTestCard({test, action, resourceLink, badgeLabel}: List
                   {t("card.locked")}
                 </Button>
               ) : action ? (
-                <Button
-                  type="button"
-                  onClick={() => router.push(action.href)}
-                  className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90"
-                >
-                  {action.label}
-                  <Play className="ml-2 size-4 fill-current" aria-hidden="true" />
-                </Button>
+                <div className={cn("grid gap-2", secondaryAction && "grid-cols-[1fr_auto]")}>
+                  <Button
+                    type="button"
+                    onClick={() => router.push(action.href)}
+                    className="h-10 w-full rounded-xl bg-blue-600 text-sm font-semibold hover:bg-blue-600/90"
+                  >
+                    {action.label}
+                    <Play className="ml-2 size-4 fill-current" aria-hidden="true" />
+                  </Button>
+                  {secondaryAction ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={secondaryAction.loading}
+                      onClick={secondaryAction.onClick}
+                      className="h-10 rounded-xl text-sm font-semibold"
+                    >
+                      {secondaryAction.icon}
+                      {secondaryAction.label}
+                    </Button>
+                  ) : null}
+                </div>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2">
                   <Button

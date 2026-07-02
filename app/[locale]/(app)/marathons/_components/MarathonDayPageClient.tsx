@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import {ArrowLeft, BookOpen, ExternalLink, FileText, Headphones, Link2, Youtube} from "lucide-react";
+import {ArrowLeft, BookOpen, ExternalLink, FileText, Headphones, Link2, RotateCcw, Youtube} from "lucide-react";
 import {useEffect, useMemo, useState, type ReactNode} from "react";
 import {useLocale} from "next-intl";
+import {useRouter} from "next/navigation";
 
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
@@ -182,10 +183,12 @@ export function MarathonDayPageClient({
   dayNumber,
 }: MarathonDayPageClientProps) {
   const locale = useLocale();
+  const router = useRouter();
   const [day, setDay] = useState<StudentMarathonDayDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<WorkspaceSection>("reading");
+  const [retakingId, setRetakingId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -233,6 +236,31 @@ export function MarathonDayPageClient({
     if (day.external_links.length) sections.push("resources");
     return sections;
   }, [day]);
+
+  const handleRetake = async (
+    item: StudentMarathonDayContentItem | StudentMarathonListeningDayItem,
+    route: "reading" | "listening",
+  ) => {
+    if (retakingId) return;
+    setRetakingId(item.id);
+    try {
+      const payload = route === "reading" ? {passage_id: item.id} : {part_id: item.id};
+      const attempt = await studentMarathonService.startRetake(marathonId, dayNumber, payload);
+      const query = new URLSearchParams({
+        mode: "practice",
+        marathonId,
+        dayNumber: String(dayNumber),
+        attempt: attempt.id,
+        returnTo: `/${locale}/marathons/${marathonId}/days/${dayNumber}`,
+        returnLabel: "Back to marathon day",
+      });
+      router.push(`/${locale}/${route}/${item.id}?${query.toString()}`);
+    } catch (cause) {
+      setError(cause instanceof StudentApiError ? cause.message : "Could not start retake.");
+    } finally {
+      setRetakingId(null);
+    }
+  };
 
   const sidebarContent = (
     <div className="space-y-2">
@@ -322,6 +350,14 @@ export function MarathonDayPageClient({
                           ? "Continue reading"
                           : "Start reading",
                     }}
+                    secondaryAction={item.is_retakable ? {
+                      label: item.latest_retake?.status === "IN_PROGRESS"
+                        ? "Continue retake"
+                        : "Retake",
+                      icon: <RotateCcw className="size-3.5" />,
+                      loading: retakingId === item.id,
+                      onClick: () => void handleRetake(item, "reading"),
+                    } : undefined}
                   />
                 ))
               ) : (
@@ -360,6 +396,14 @@ export function MarathonDayPageClient({
                           ? "Continue listening"
                           : "Start listening",
                     }}
+                    secondaryAction={item.is_retakable ? {
+                      label: item.latest_retake?.status === "IN_PROGRESS"
+                        ? "Continue retake"
+                        : "Retake",
+                      icon: <RotateCcw className="size-3.5" />,
+                      loading: retakingId === item.id,
+                      onClick: () => void handleRetake(item, "listening"),
+                    } : undefined}
                   />
                 ))
               ) : (

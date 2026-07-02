@@ -1092,6 +1092,7 @@ export default function ListeningTestPage() {
   const reviewRequested = searchParams.get("review") === "1";
   const reviewAttemptParam = searchParams.get("attempt")?.trim() ?? "";
   const reviewAttemptId = reviewRequested && UUID_PATTERN.test(reviewAttemptParam) ? reviewAttemptParam : null;
+  const resumeAttemptId = !reviewRequested && UUID_PATTERN.test(reviewAttemptParam) ? reviewAttemptParam : null;
 
   const [resolvedTestId, setResolvedTestId] = useState<string>(testId);
   const [loadingBackendTest, setLoadingBackendTest] = useState(false);
@@ -1165,7 +1166,9 @@ export default function ListeningTestPage() {
 
           const marathonAttempt = reviewAttemptId
             ? await studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, reviewAttemptId)
-            : await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, { part_id: testId });
+            : resumeAttemptId
+              ? await studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, resumeAttemptId)
+              : await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, { part_id: testId });
           const adapted = adaptMarathonListeningAttemptToDetail(marathonAttempt, testId);
           if (!adapted) {
             throw new Error("Failed to load marathon listening content.");
@@ -1320,7 +1323,7 @@ export default function ListeningTestPage() {
     return () => {
       active = false;
     };
-  }, [isGuest, isMarathonContext, marathonDayNumber, marathonIdParam, requestedMode, scopedPartId, testId, reviewAttemptId, t]);
+  }, [isGuest, isMarathonContext, marathonDayNumber, marathonIdParam, requestedMode, resumeAttemptId, scopedPartId, testId, reviewAttemptId, t]);
 
   const test = getListeningTestById(resolvedTestId);
 

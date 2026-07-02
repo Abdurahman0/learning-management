@@ -17,6 +17,7 @@ import type {
   StudentMarathonDetail,
   StudentMarathonEnrollment,
   StudentMarathonEnrollmentBrief,
+  StudentMarathonLatestRetake,
   StudentMarathonLeaderboardEntry,
   StudentMarathonListItem,
   StudentMarathonListeningDayItem
@@ -139,6 +140,20 @@ function normalizeDayLink(value: unknown): StudentMarathonDayLink {
   };
 }
 
+function normalizeLatestRetake(value: unknown): StudentMarathonLatestRetake | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const attemptId = toStringSafe(record.attempt_id);
+  if (!attemptId) return null;
+  return {
+    attempt_id: attemptId,
+    status: toStringSafe(record.status),
+    score: record.score == null ? null : toNumberSafe(record.score),
+    band_score: toStringSafe(record.band_score) || null,
+    completed_at: toStringSafe(record.completed_at) || null,
+  };
+}
+
 function normalizeDayItem(value: unknown): StudentMarathonDayContentItem {
   const record = asRecord(value);
   const externalLink = asRecord(record?.external_link);
@@ -164,7 +179,10 @@ function normalizeDayItem(value: unknown): StudentMarathonDayContentItem {
           title: toStringSafe(externalLink.title),
           url: externalLinkUrl
         }
-      : null
+      : null,
+    is_retakable: toBooleanSafe(record?.is_retakable),
+    retakes_count: toNumberSafe(record?.retakes_count),
+    latest_retake: normalizeLatestRetake(record?.latest_retake),
   };
 }
 
@@ -236,6 +254,7 @@ function normalizeAttempt(value: unknown): StudentMarathonAttempt {
     reading_passage: toStringSafe(record?.reading_passage) || null,
     listening_part: toStringSafe(record?.listening_part) || null,
     status: toStringSafe(record?.status),
+    attempt_kind: toStringSafe(record?.attempt_kind, "FIRST_TIME"),
     score: record?.score == null ? null : toNumberSafe(record?.score),
     band_score: toStringSafe(record?.band_score) || null,
     started_at: toStringSafe(record?.started_at) || null,
@@ -318,6 +337,7 @@ function normalizeAttemptResult(value: unknown): StudentMarathonAttemptResult {
   return {
     id: toStringSafe(record?.id ?? record?.attempt_id),
     status: toStringSafe(record?.status),
+    attempt_kind: toStringSafe(record?.attempt_kind, "FIRST_TIME"),
     score: record?.score == null ? null : toNumberSafe(record?.score),
     band_score: toStringSafe(record?.band_score) || null,
     question_type_stats_json: asRecord(record?.question_type_stats_json ?? record?.question_type_stats),
@@ -441,6 +461,15 @@ export const studentMarathonService = {
   async startAttempt(marathonId: string, dayNumber: number, payload: StudentMarathonAttemptCreatePayload) {
     try {
       const response = await studentHttpClient.post(`/marathons/${marathonId}/days/${dayNumber}/attempts/`, payload);
+      return normalizeAttempt(response.data);
+    } catch (error) {
+      throw toStudentApiError(error);
+    }
+  },
+
+  async startRetake(marathonId: string, dayNumber: number, payload: StudentMarathonAttemptCreatePayload) {
+    try {
+      const response = await studentHttpClient.post(`/marathons/${marathonId}/days/${dayNumber}/attempts/retake/`, payload);
       return normalizeAttempt(response.data);
     } catch (error) {
       throw toStudentApiError(error);
