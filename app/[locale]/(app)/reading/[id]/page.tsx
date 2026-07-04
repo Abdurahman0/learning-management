@@ -265,6 +265,7 @@ type MatchingHeadingsBankProps = {
   selectedOption: string | null;
   draggingOption: string | null;
   disabled: boolean;
+  usedOptions?: Set<string>;
   onSelectOption: (option: string) => void;
   onDragStartOption: (event: ReactDragEvent<HTMLButtonElement>, option: string) => void;
   onDragEndOption: () => void;
@@ -276,6 +277,7 @@ function MatchingHeadingsBank({
   selectedOption,
   draggingOption,
   disabled,
+  usedOptions,
   onSelectOption,
   onDragStartOption,
   onDragEndOption,
@@ -288,7 +290,7 @@ function MatchingHeadingsBank({
       <p className="text-sm font-semibold text-foreground">List of Headings</p>
       <p className="mt-1 text-xs text-muted-foreground">{hintText}</p>
       <div className="mt-3 space-y-1.5">
-        {options.map((option) => {
+        {options.filter((option) => !(usedOptions?.has(option.value) ?? false)).map((option) => {
           const labelText = normalizeHeadingDisplayText(option.label || option.value);
           const isSelected = selectedOption === option.value;
           const isDragging = draggingOption === option.value;
@@ -674,7 +676,7 @@ function extractMatchingChoiceOptions(
       const text = toStringSafe(row?.text);
       const label = toStringSafe(row?.label);
       const key = toStringSafe(row?.key);
-      return text || label || key;
+      return text || (key && label ? `${key}. ${label}` : label || key);
     })
     .map((item) => item.trim())
     .filter(Boolean);
@@ -2594,6 +2596,22 @@ function ReadingTestClient({
     setSelectedHeadingOption(null);
   }, []);
 
+  const assignMatchingHeadingExclusive = useCallback((questionId: string, headingValue: string, siblingIds: string[]) => {
+    const normalized = headingValue.trim();
+    if (!normalized) return;
+    setAnswers((prev) => {
+      const next = { ...prev };
+      for (const sibId of siblingIds) {
+        if (sibId !== questionId && next[sibId] === normalized) {
+          next[sibId] = "";
+        }
+      }
+      next[questionId] = normalized;
+      return next;
+    });
+    setSelectedHeadingOption(null);
+  }, []);
+
   const clearMatchingHeading = useCallback((questionId: string) => {
     setAnswers((prev) => ({ ...prev, [questionId]: "" }));
   }, []);
@@ -3319,6 +3337,7 @@ function ReadingTestClient({
                       : reviewedHeadingCorrectAnswerKey
                     : "";
                   const headingOptionKeys = headingOptions.map((option) => option.key);
+                  const headingSiblingIds = passageMatchingHeadingQuestions.map((q) => q.id);
 
                   return (
                     <div id={paragraphId} key={paragraphId} className="space-y-2">
@@ -3334,14 +3353,14 @@ function ReadingTestClient({
                             onClick={() => {
                               if (reviewMode || !selectedHeadingOption) return;
                               if (!headingOptionKeys.includes(selectedHeadingOption)) return;
-                              assignMatchingHeading(headingQuestion.id, selectedHeadingOption);
+                              assignMatchingHeadingExclusive(headingQuestion.id, selectedHeadingOption, headingSiblingIds);
                             }}
                             onKeyDown={(event) => {
                               if (reviewMode || !selectedHeadingOption) return;
                               if (event.key !== "Enter" && event.key !== " ") return;
                               event.preventDefault();
                               if (!headingOptionKeys.includes(selectedHeadingOption)) return;
-                              assignMatchingHeading(headingQuestion.id, selectedHeadingOption);
+                              assignMatchingHeadingExclusive(headingQuestion.id, selectedHeadingOption, headingSiblingIds);
                             }}
                             onDragOver={(event) => {
                               if (reviewMode) return;
@@ -3356,7 +3375,7 @@ function ReadingTestClient({
                                 || event.dataTransfer.getData("text/plain");
                               const dropped = raw.trim();
                               if (!dropped || !headingOptionKeys.includes(dropped)) return;
-                              assignMatchingHeading(headingQuestion.id, dropped);
+                              assignMatchingHeadingExclusive(headingQuestion.id, dropped, headingSiblingIds);
                             }}
                             className={cn(
                               "min-w-36 flex-1 rounded-md border-2 border-dashed px-2.5 py-1.5 text-xs transition-colors",
@@ -3518,6 +3537,11 @@ function ReadingTestClient({
                           selectedOption={selectedHeadingOption}
                           draggingOption={draggingHeadingOption}
                           disabled={reviewMode}
+                          usedOptions={new Set(
+                            matchingHeadingGroupQuestions
+                              .map((q) => (typeof answers[q.id] === "string" ? String(answers[q.id]).trim() : ""))
+                              .filter(Boolean)
+                          )}
                           hintText={
                             t.has("dragHeadingHint")
                               ? t("dragHeadingHint")
