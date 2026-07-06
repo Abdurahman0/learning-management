@@ -1432,11 +1432,18 @@ export default function ReadingTestPage() {
             throw new Error("Marathon content requires an enrolled student session.");
           }
 
-          const marathonAttempt = reviewAttemptId
-            ? await studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, reviewAttemptId)
-            : resumeAttemptId
-              ? await studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, resumeAttemptId)
-              : await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, { passage_id: testId });
+          let marathonAttempt;
+          if (reviewAttemptId) {
+            marathonAttempt = await studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, reviewAttemptId);
+          } else if (resumeAttemptId) {
+            marathonAttempt = await studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, resumeAttemptId);
+          } else {
+            try {
+              marathonAttempt = await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, {passage_id: testId});
+            } catch {
+              marathonAttempt = await studentMarathonService.startRetake(marathonIdParam, marathonDayNumber, {passage_id: testId});
+            }
+          }
           if (!active) return;
 
           const adapted = adaptMarathonReadingAttemptToDetail(marathonAttempt, testId);
@@ -2361,7 +2368,12 @@ function ReadingTestClient({
       try {
         let hydratedAttempt: StudentAttemptDetail | null = null;
         if (isMarathonContext) {
-          const createdAttempt = await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, { passage_id: test.id });
+          let createdAttempt;
+          try {
+            createdAttempt = await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, {passage_id: test.id});
+          } catch {
+            createdAttempt = await studentMarathonService.startRetake(marathonIdParam, marathonDayNumber, {passage_id: test.id});
+          }
           hydratedAttempt = adaptMarathonReadingAttemptToDetail(createdAttempt, test.id)?.attempt ?? null;
         } else {
           const createdAttempt = await studentAttemptsService.create({

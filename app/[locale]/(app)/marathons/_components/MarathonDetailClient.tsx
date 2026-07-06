@@ -5,34 +5,30 @@ import {
   BookOpen,
   CheckCircle2,
   ExternalLink,
+  Flame,
   Headphones,
   Lock,
   PlayCircle,
-  X
+  Timer,
+  Trophy,
+  X,
+  Zap,
 } from "lucide-react";
-import {useEffect, useMemo, useRef, useState, type ReactNode} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import {useLocale, useTranslations} from "next-intl";
 
-import {AnimatedNumber} from "@/components/ui/animated-number";
-import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
-import {Card, CardContent} from "@/components/ui/card";
-import {Progress} from "@/components/ui/progress";
-import {Separator} from "@/components/ui/separator";
 import {SiteToast} from "@/components/ui/site-toast";
 import {cn} from "@/lib/utils";
 import {studentMarathonService} from "@/src/services/student/marathon.service";
 import type {
-  StudentMarathonAttempt,
-  StudentMarathonAttemptResult,
-  StudentMarathonDayContentItem,
   StudentMarathonDayDetail,
   StudentMarathonDaySummary,
   StudentMarathonDetail,
-  StudentMarathonLeaderboardEntry,
-  StudentMarathonListeningDayItem
 } from "@/src/services/student/marathon.types";
+import {StudentApiError} from "@/src/services/student/types";
 
+// ── URL helpers ───────────────────────────────────────────────────────────────
 function normalizeHttpUrl(value: string | null | undefined) {
   if (!value) return null;
   try {
@@ -47,27 +43,12 @@ function normalizeHttpUrl(value: string | null | undefined) {
 function getYoutubeVideoId(url: URL | null) {
   if (!url) return null;
   const host = url.hostname.toLowerCase().replace(/^www\./, "");
-
   if (host === "youtube.com" || host === "m.youtube.com") {
-    if (url.pathname === "/watch") {
-      const videoId = url.searchParams.get("v")?.trim() ?? "";
-      return videoId || null;
-    }
-    if (url.pathname.startsWith("/embed/")) {
-      const videoId = url.pathname.split("/")[2]?.trim() ?? "";
-      return videoId || null;
-    }
-    if (url.pathname.startsWith("/shorts/")) {
-      const videoId = url.pathname.split("/")[2]?.trim() ?? "";
-      return videoId || null;
-    }
+    if (url.pathname === "/watch") return url.searchParams.get("v")?.trim() || null;
+    if (url.pathname.startsWith("/embed/")) return url.pathname.split("/")[2]?.trim() || null;
+    if (url.pathname.startsWith("/shorts/")) return url.pathname.split("/")[2]?.trim() || null;
   }
-
-  if (host === "youtu.be") {
-    const videoId = url.pathname.replace(/^\/+/, "").trim();
-    return videoId || null;
-  }
-
+  if (host === "youtu.be") return url.pathname.replace(/^\/+/, "").trim() || null;
   return null;
 }
 
@@ -75,21 +56,8 @@ function buildYoutubeEmbedUrl(videoId: string | null) {
   if (!videoId || !/^[A-Za-z0-9_-]{6,}$/.test(videoId)) return null;
   return `https://www.youtube-nocookie.com/embed/${videoId}`;
 }
-import {StudentApiError} from "@/src/services/student/types";
 
-type MarathonDetailClientProps = {
-  marathonId: string;
-};
-
-type Notice = {
-  tone: "info" | "success" | "error";
-  text: string;
-};
-
-type AttemptPreview =
-  | {type: "attempt"; payload: StudentMarathonAttempt}
-  | {type: "review"; payload: StudentMarathonAttemptResult};
-
+// ── Journey constants ─────────────────────────────────────────────────────────
 const JOURNEY_ROW_HEIGHT = 146;
 const JOURNEY_SVG_WIDTH = 136;
 const JOURNEY_CENTER_X = 68;
@@ -97,10 +65,9 @@ const JOURNEY_LEFT_X = 22;
 const JOURNEY_RIGHT_X = 136;
 const JOURNEY_RENDER_WIDTH = 220;
 const JOURNEY_NODE_CENTER_Y = 48;
-const JOURNEY_NODE_RADIUS = 28;
-const JOURNEY_NODE_X_SHIFT = 14;
 const JOURNEY_MARKER_CIRCLE_CENTER_OFFSET = 100;
 const JOURNEY_FINISH_Y_OFFSET = 92;
+const JOURNEY_NODE_X_SHIFT = 14;
 
 function getJourneyAnchorY(index: number) {
   return index * JOURNEY_ROW_HEIGHT + JOURNEY_NODE_CENTER_Y;
@@ -124,7 +91,6 @@ function buildJourneyDays(detail: StudentMarathonDetail, days: StudentMarathonDa
     const dayNumber = index + 1;
     const existing = byNumber.get(dayNumber);
     if (existing) return existing;
-
     return {
       id: `placeholder-${dayNumber}`,
       day_number: dayNumber,
@@ -137,12 +103,16 @@ function buildJourneyDays(detail: StudentMarathonDetail, days: StudentMarathonDa
       is_completed: false,
       external_links_count: 0,
       reading_passages_count: 0,
-      listening_parts_count: 0
+      listening_parts_count: 0,
     } satisfies StudentMarathonDaySummary;
   });
 }
 
-function getDayState(day: StudentMarathonDaySummary, currentDayNumber: number, prevDay: StudentMarathonDaySummary | null) {
+function getDayState(
+  day: StudentMarathonDaySummary,
+  currentDayNumber: number,
+  prevDay: StudentMarathonDaySummary | null,
+) {
   if (day.is_completed) return "completed" as const;
   if (day.day_number === currentDayNumber) return "current" as const;
   if (day.is_locked || day.day_number > currentDayNumber) return "locked" as const;
@@ -150,122 +120,43 @@ function getDayState(day: StudentMarathonDaySummary, currentDayNumber: number, p
   return "open" as const;
 }
 
-function progressPercent(detail: StudentMarathonDetail) {
-  const progress = detail.enrollment?.progress_percentage ?? 0;
-  return Math.max(0, Math.min(100, progress));
-}
-
 function buildWavePath(totalRows: number) {
   if (totalRows <= 0) return "";
-
   const firstAnchorY = getJourneyAnchorY(0);
   let path = `M ${JOURNEY_CENTER_X} 28 C ${JOURNEY_CENTER_X} 40 ${JOURNEY_CENTER_X} 52 ${JOURNEY_LEFT_X} ${firstAnchorY}`;
-
   for (let index = 0; index < totalRows; index += 1) {
     const centerY = getJourneyAnchorY(index);
     const nextCenterY = getJourneyAnchorY(index + 1);
-    const currentX = index % 2 === 0 ? JOURNEY_LEFT_X : JOURNEY_RIGHT_X;
     const nextX = (index + 1) % 2 === 0 ? JOURNEY_LEFT_X : JOURNEY_RIGHT_X;
-
     if (index < totalRows - 1) {
-      const controlOutY = centerY + 34;
-      const controlInY = nextCenterY - 34;
-      path += ` C ${JOURNEY_CENTER_X} ${controlOutY} ${JOURNEY_CENTER_X} ${controlInY} ${nextX} ${nextCenterY}`;
+      path += ` C ${JOURNEY_CENTER_X} ${centerY + 34} ${JOURNEY_CENTER_X} ${nextCenterY - 34} ${nextX} ${nextCenterY}`;
     } else {
       path += ` C ${JOURNEY_CENTER_X} ${centerY + 36} ${JOURNEY_CENTER_X} ${centerY + 72} ${JOURNEY_CENTER_X} ${centerY + JOURNEY_FINISH_Y_OFFSET}`;
     }
   }
-
   return path;
 }
 
 function getRouteTerminalLabel(totalRows: number) {
   if (totalRows <= 0) return null;
-  const lastAnchorY = getJourneyAnchorY(totalRows - 1);
   return {
     startX: JOURNEY_CENTER_X,
     startY: 18,
     endX: JOURNEY_CENTER_X,
-    endY: lastAnchorY + JOURNEY_FINISH_Y_OFFSET
+    endY: getJourneyAnchorY(totalRows - 1) + JOURNEY_FINISH_Y_OFFSET,
   };
 }
 
-function MetricCard({label, value}: {label: string; value: ReactNode}) {
-  return (
-    <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 dark:border-white/10 dark:bg-slate-950/26">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">{label}</p>
-      <div className="mt-3 text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">{value}</div>
-    </div>
-  );
-}
+// Edit these quotes freely — they appear evenly spaced along the path
+const MOTIVATIONAL_QUOTES = [
+  "The pain of discipline is far less than the pain of regret.",
+  "Small steps every day lead to big results.",
+  "Consistency is the bridge between goals and accomplishment.",
+];
 
-function TaskCard({
-  title,
-  subtitle,
-  meta,
-  href,
-  buttonLabel,
-  icon
-}: {
-  title: string;
-  subtitle: string;
-  meta: string;
-  href: string;
-  buttonLabel: string;
-  icon: ReactNode;
-}) {
-  return (
-    <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-950/28">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <span className="mb-3 inline-flex size-10 items-center justify-center rounded-2xl border border-sky-100 bg-sky-50 text-sky-700 dark:border-white/10 dark:bg-white/8 dark:text-cyan-100">
-            {icon}
-          </span>
-          <p className="truncate text-lg font-semibold text-slate-950 dark:text-white">{title}</p>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{subtitle}</p>
-          <p className="mt-3 text-xs uppercase tracking-[0.18em] text-slate-500">{meta}</p>
-        </div>
-        <Button asChild className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15">
-          <Link href={href}>{buttonLabel}</Link>
-        </Button>
-      </div>
-    </div>
-  );
-}
+type Notice = {tone: "info" | "success" | "error"; text: string};
 
-function Overlay({
-  title,
-  subtitle,
-  onClose,
-  children
-}: {
-  title: string;
-  subtitle?: string;
-  onClose: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm" onMouseDown={onClose}>
-      <div
-        className="max-h-[90vh] w-full max-w-5xl overflow-auto rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_40px_100px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#0b1424] dark:shadow-[0_36px_120px_rgba(0,0,0,0.5)]"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">{title}</h3>
-            {subtitle ? <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{subtitle}</p> : null}
-          </div>
-          <Button variant="ghost" className="rounded-2xl text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white" onClick={onClose}>
-            <X className="size-4" />
-          </Button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
+export function MarathonDetailClient({marathonId}: {marathonId: string}) {
   const locale = useLocale();
   const t = useTranslations("marathon");
   const [detail, setDetail] = useState<StudentMarathonDetail | null>(null);
@@ -275,8 +166,6 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrollLoading, setEnrollLoading] = useState(false);
-  const [attemptPreview, setAttemptPreview] = useState<AttemptPreview | null>(null);
-  const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
   const savedNoteRef = useRef("");
@@ -291,7 +180,7 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
     if (day.is_completable && !day.is_completed) {
       try {
         await studentMarathonService.completeDay(marathonId, dayNumber);
-        setSelectedDay((prev) => prev ? {...prev, is_completed: true} : prev);
+        setSelectedDay((prev) => (prev ? {...prev, is_completed: true} : prev));
       } catch {
         // silent
       }
@@ -304,22 +193,18 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
     try {
       const nextDetail = await studentMarathonService.getById(marathonId);
       setDetail(nextDetail);
-
       if (nextDetail.enrollment) {
         const [nextEnrollment, nextDays] = await Promise.all([
           studentMarathonService.getEnrollment(marathonId),
-          studentMarathonService.listDays(marathonId)
+          studentMarathonService.listDays(marathonId),
         ]);
-
         setDetail((prev) => (prev ? {...prev, enrollment: nextEnrollment} : prev));
         setDays(nextDays);
-
         if (selectedDayNumber && preserveSelection) {
           await loadDay(selectedDayNumber);
         } else {
           setSelectedDayNumber(null);
           setSelectedDay(null);
-          setWorkspaceOpen(false);
         }
       } else {
         setDays([]);
@@ -345,21 +230,18 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
   }, [notice]);
 
   useEffect(() => {
-    if (!selectedDayNumber || workspaceOpen) return;
-
+    if (!selectedDayNumber) return;
     const handlePointerDown = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
       if (!target) return;
       if (target.closest("[data-marathon-day-interactive='true']")) return;
       if (routeSelectionRef.current?.contains(target)) return;
-
       setSelectedDayNumber(null);
       setSelectedDay(null);
     };
-
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [selectedDayNumber, workspaceOpen]);
+  }, [selectedDayNumber]);
 
   const handleEnroll = async () => {
     try {
@@ -377,83 +259,33 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
   const handleSaveNote = async () => {
     if (!detail?.enrollment || !selectedDayNumber) return;
     if (noteDraft === savedNoteRef.current) return;
-
     try {
       setNoteSaving(true);
       const note = await studentMarathonService.updateNote(marathonId, selectedDayNumber, noteDraft);
       savedNoteRef.current = note?.note_text ?? "";
       setSelectedDay((prev) => (prev ? {...prev, note} : prev));
-      setNotice({tone: "success", text: t("detail.noteSaved")});
-    } catch (cause) {
-      setNotice({tone: "error", text: cause instanceof StudentApiError ? cause.message : t("errors.note")});
+    } catch {
+      // silent
     } finally {
       setNoteSaving(false);
     }
   };
 
-  const handlePreviewAttempt = async (
-    item: StudentMarathonDayContentItem | StudentMarathonListeningDayItem,
-    type: "reading" | "listening"
-  ) => {
-    if (!selectedDayNumber) return;
-    try {
-      if (item.attempt_status === "COMPLETED" && item.attempt_id) {
-        const review = await studentMarathonService.reviewAttempt(marathonId, selectedDayNumber, item.attempt_id);
-        setAttemptPreview({type: "review", payload: review});
-        return;
-      }
-
-      const attempt = item.attempt_id
-        ? await studentMarathonService.getAttempt(marathonId, selectedDayNumber, item.attempt_id)
-        : await studentMarathonService.startAttempt(
-            marathonId,
-            selectedDayNumber,
-            type === "reading" ? {passage_id: item.id} : {part_id: item.id}
-          );
-
-      setAttemptPreview({type: "attempt", payload: attempt});
-      setNotice({tone: "info", text: item.attempt_id ? t("detail.attemptLoaded") : t("detail.attemptStarted")});
-      await loadDetail(true);
-    } catch (cause) {
-      setNotice({tone: "error", text: cause instanceof StudentApiError ? cause.message : t("errors.attempt")});
-    }
-  };
-
-  const buildMarathonTaskHref = (
-    route: "reading" | "listening",
-    item: StudentMarathonDayContentItem | StudentMarathonListeningDayItem,
-  ) => {
-    if (!selectedDay) return "#";
-    const query = new URLSearchParams({
-      mode: "practice",
-      marathonId,
-      dayNumber: String(selectedDay.day_number),
-      returnTo: `/${locale}/marathons/${marathonId}/days/${selectedDay.day_number}`,
-      returnLabel: "Back to marathon day",
-    });
-    if (item.attempt_status === "COMPLETED" && item.attempt_id) {
-      query.set("attempt", item.attempt_id);
-      return `/${locale}/${route}/${item.id}/result?${query.toString()}`;
-    }
-    return `/${locale}/${route}/${item.id}?${query.toString()}`;
-  };
-
   const handleToggleDay = async (dayNumber: number, canOpen: boolean) => {
     if (!canOpen) return;
-
     if (selectedDayNumber === dayNumber) {
       setSelectedDayNumber(null);
       setSelectedDay(null);
-      setWorkspaceOpen(false);
       return;
     }
-
     await loadDay(dayNumber);
   };
 
   const enrollment = detail?.enrollment ?? null;
   const journeyDays = detail ? buildJourneyDays(detail, days) : [];
   const currentDayNumber = enrollment?.current_day_number ?? 0;
+  const progress = enrollment ? Math.max(0, Math.min(100, enrollment.progress_percentage)) : 0;
+
   const marathonExternalUrl = useMemo(() => normalizeHttpUrl(detail?.external_link), [detail?.external_link]);
   const marathonYoutubeVideoId = useMemo(() => getYoutubeVideoId(marathonExternalUrl), [marathonExternalUrl]);
   const marathonYoutubeEmbedUrl = useMemo(() => buildYoutubeEmbedUrl(marathonYoutubeVideoId), [marathonYoutubeVideoId]);
@@ -461,445 +293,507 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
 
   const journeySvgHeight = useMemo(
     () => Math.max(260, journeyDays.length * JOURNEY_ROW_HEIGHT + 144),
-    [journeyDays.length]
+    [journeyDays.length],
   );
-
   const wavePath = useMemo(() => buildWavePath(journeyDays.length), [journeyDays.length]);
   const routeTerminalLabel = useMemo(() => getRouteTerminalLabel(journeyDays.length), [journeyDays.length]);
+
+  const quotePositions = useMemo(() => {
+    if (journeyDays.length < 3) return [];
+    return MOTIVATIONAL_QUOTES.map((quote, i) => ({
+      quote,
+      afterIndex: Math.floor(journeyDays.length * (i + 1) / (MOTIVATIONAL_QUOTES.length + 1)),
+    })).filter(({afterIndex}) => afterIndex < journeyDays.length - 1);
+  }, [journeyDays.length]);
 
   if (loading || !detail) {
     return (
       <>
         <SiteToast notice={notice ? {title: notice.text, tone: notice.tone} : null} />
-        <div className="mx-auto max-w-5xl space-y-5">
-          <div className="h-[1200px] rounded-[32px] border border-slate-200 bg-white/80 dark:border-white/10 dark:bg-white/6" />
+        <div className="space-y-4">
+          <div className="h-12 animate-pulse rounded-2xl bg-slate-200 dark:bg-white/4" />
+          <div className="h-[900px] animate-pulse rounded-[32px] bg-slate-100 dark:bg-white/3" />
         </div>
       </>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <SiteToast notice={notice ? {title: notice.text, tone: notice.tone} : null} />
 
-      <div className="mx-auto max-w-5xl space-y-6">
-        {enrollment ? (
-          <section id="journey" className="space-y-5">
-            {marathonExternalUrl ? (
-              marathonYoutubeEmbedUrl ? (
-                <Card className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/94 shadow-[0_18px_60px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/7 dark:shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
-                  <CardContent className="p-0">
-                    <div className="border-b border-slate-200/80 px-4 py-3 dark:border-white/10 sm:px-6 sm:py-4">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
-                        Marathon intro
-                      </p>
-                      <div className="mt-2 flex items-center gap-2.5 sm:gap-3">
-                        <span className="inline-flex size-9 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 ring-1 ring-rose-100 dark:bg-rose-500/12 dark:text-rose-300 dark:ring-rose-400/15 sm:size-11">
-                          <PlayCircle className="size-4 sm:size-5" />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="line-clamp-1 text-sm font-semibold text-slate-950 dark:text-white sm:text-base">{marathonExternalTitle}</p>
-                          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
-                            Watch this before starting the route.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-slate-950/95">
-                      <div className="aspect-[16/10] w-full sm:aspect-video">
-                        <iframe
-                          src={marathonYoutubeEmbedUrl}
-                          title={marathonExternalTitle}
-                          className="h-full w-full border-0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          referrerPolicy="strict-origin-when-cross-origin"
-                          allowFullScreen
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="rounded-[28px] border border-slate-200 bg-white/94 shadow-[0_18px_60px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/7 dark:shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex min-w-0 items-start gap-2.5 sm:gap-3">
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-600 ring-1 ring-sky-100 dark:bg-sky-500/12 dark:text-sky-300 dark:ring-sky-400/15 sm:size-11">
-                          <BookOpen className="size-4 sm:size-5" />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
-                            Marathon resource
-                          </p>
-                          <p className="mt-1 line-clamp-1 text-sm font-semibold text-slate-950 dark:text-white sm:text-base">{marathonExternalTitle}</p>
-                          <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
-                            {marathonExternalUrl.toString()}
-                          </p>
-                        </div>
-                      </div>
-                      <a href={marathonExternalUrl.toString()} target="_blank" rel="noopener noreferrer" className="shrink-0">
-                        <Button type="button" className="h-9 rounded-full px-4 text-sm sm:h-10 sm:px-5">
-                          Open resource
-                          <ExternalLink className="size-4" />
-                        </Button>
-                      </a>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            ) : null}
-
-            <Card className="overflow-hidden rounded-[34px] border border-slate-200 bg-white/94 shadow-[0_24px_80px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-white/7 dark:shadow-[0_24px_80px_rgba(0,0,0,0.26)]">
-              <CardContent className="p-0">
-                <div className="relative px-4 py-8 sm:px-8">
-                  <svg
-                    aria-hidden="true"
-                    className="pointer-events-none absolute left-1/2 top-0 hidden -translate-x-1/2 lg:block"
-                    width="220"
-                    height={journeySvgHeight}
-                    viewBox={`0 0 ${JOURNEY_SVG_WIDTH} ${journeySvgHeight}`}
-                    preserveAspectRatio="none"
-                  >
-                    {routeTerminalLabel ? (
-                      <>
-                        <text
-                          x={routeTerminalLabel.startX}
-                          y={routeTerminalLabel.startY}
-                          textAnchor="middle"
-                          fill="currentColor"
-                          fontSize="10"
-                          fontWeight="700"
-                          letterSpacing="0.08em"
-                          className="text-slate-400 dark:text-slate-500"
-                        >
-                          Start
-                        </text>
-                        <text
-                          x={routeTerminalLabel.endX}
-                          y={routeTerminalLabel.endY}
-                          textAnchor="middle"
-                          fill="currentColor"
-                          fontSize="10"
-                          fontWeight="700"
-                          letterSpacing="0.08em"
-                          className="text-slate-400 dark:text-slate-500"
-                        >
-                          Finish
-                        </text>
-                      </>
-                    ) : null}
-                    <path
-                      d={wavePath}
-                      fill="none"
-                      stroke="rgba(148,163,184,0.32)"
-                      strokeWidth="1.7"
-                      strokeDasharray="5 7"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-
-                  <div className="relative pb-4">
-                    {journeyDays.map((day, index) => {
-                      const state = getDayState(day, currentDayNumber, journeyDays[index - 1] ?? null);
-                      const isSelected = selectedDayNumber === day.day_number;
-                      const canOpen = state !== "locked";
-                      const showExpanded = isSelected;
-                      const title = day.title || `Day ${day.day_number}`;
-                      const isLeftAnchor = index % 2 === 0;
-                      const anchorX = isLeftAnchor ? JOURNEY_LEFT_X : JOURNEY_RIGHT_X;
-                      const anchorOffsetPx = (anchorX / JOURNEY_SVG_WIDTH) * JOURNEY_RENDER_WIDTH - JOURNEY_RENDER_WIDTH / 2;
-                      const nodeOffsetPx = anchorOffsetPx + JOURNEY_NODE_X_SHIFT;
-                      return (
-                        <div key={day.id} className="relative">
-                          <div className="relative w-full" style={{minHeight: `${JOURNEY_ROW_HEIGHT}px`}}>
-                            <div
-                              className="absolute flex w-[156px] flex-col items-center"
-                              style={{
-                                left: `calc(50% + ${nodeOffsetPx}px)`,
-                                top: `${JOURNEY_NODE_CENTER_Y}px`,
-                                transform: `translate(-50%, -${JOURNEY_MARKER_CIRCLE_CENTER_OFFSET}px)`
-                              }}
-                            >
-                              <p
-                                className="flex h-10 max-w-[156px] items-end justify-center text-center text-sm font-semibold leading-5 text-slate-950 dark:text-white line-clamp-2"
-                              >
-                                {title}
-                              </p>
-                              <div
-                                className="mt-2 flex w-14 flex-col items-center"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => void handleToggleDay(day.day_number, canOpen)}
-                                  disabled={!canOpen}
-                                  data-marathon-day-interactive="true"
-                                  className={cn(
-                                    "inline-flex size-14 cursor-pointer items-center justify-center rounded-full border text-sm font-semibold transition",
-                                    state === "completed" && "border-emerald-200 bg-emerald-50 text-emerald-700",
-                                    state === "current" &&
-                                      "border-sky-300 bg-linear-to-br from-sky-500 to-blue-600 text-white shadow-[0_0_0_6px_rgba(224,242,254,0.95),0_0_40px_rgba(59,130,246,0.30)] dark:border-cyan-300/60 dark:shadow-[0_0_0_3px_rgba(8,16,28,0.94),0_0_16px_rgba(34,211,238,0.18)]",
-                                    state === "open" && "border-slate-300 bg-white text-slate-950 hover:border-sky-200 dark:border-white/12 dark:bg-white/8 dark:text-white",
-                                    state === "locked" && "border-slate-200 bg-slate-100 text-slate-400 dark:border-white/8 dark:bg-slate-950/48 dark:text-slate-500"
-                                  )}
-                                >
-                                  {state === "completed" ? (
-                                    <CheckCircle2 className="size-4.5" />
-                                  ) : state === "locked" ? (
-                                    <Lock className="size-4" />
-                                  ) : (
-                                    day.day_number
-                                  )}
-                                </button>
-                                <span
-                                  className={cn(
-                                    "mt-2 block w-14 text-center text-[10px] font-semibold uppercase tracking-[0.18em]",
-                                    state === "current"
-                                      ? "text-sky-700"
-                                      : state === "completed"
-                                        ? "text-emerald-700"
-                                        : "text-slate-500"
-                                  )}
-                                >
-                                  {day.reading_passages_count + day.listening_parts_count} tasks
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {showExpanded && selectedDay ? (
-                            <div
-                              ref={routeSelectionRef}
-                              data-marathon-day-interactive="true"
-                              className="pointer-events-none absolute left-0 right-0 top-[132px] z-20 w-full"
-                            >
-                              <div
-                                className="pointer-events-auto w-full max-w-[390px] rounded-[28px] border border-sky-200 bg-white px-5 py-5 text-center shadow-[0_24px_50px_rgba(59,130,246,0.10)] dark:border-cyan-300/20 dark:bg-[#0b1424]"
-                                style={{marginLeft: `calc(50% + ${nodeOffsetPx}px - 195px)`}}
-                              >
-                                <h4 className="text-xl font-semibold text-slate-950 dark:text-white">{selectedDay.title || `Day ${selectedDay.day_number}`}</h4>
-                                <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                                  {selectedDay.content
-                                    ? selectedDay.content.split(/\n+/)[0]
-                                    : "Open this checkpoint to read the lesson and work through the tasks for today."}
-                                </p>
-                                <div className="mt-5 flex flex-wrap justify-center gap-3">
-                                  <Button
-                                    asChild
-                                    className="rounded-2xl bg-slate-950 px-5 text-white hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15"
-                                  >
-                                    <Link href={`/${locale}/marathons/${marathonId}/days/${selectedDay.day_number}`}>Open day</Link>
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-        ) : (
-          <Card className="rounded-[30px] border border-slate-200 bg-white/92 dark:border-white/10 dark:bg-white/7">
-            <CardContent className="space-y-5 p-6">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex size-12 items-center justify-center rounded-2xl border border-sky-100 bg-sky-50 text-sky-700 dark:border-white/10 dark:bg-white/8 dark:text-cyan-100">
-                  <PlayCircle className="size-5" />
-                </span>
-                <div>
-                  <p className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">Join to unlock the route</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                    This marathon opens one day at a time, so enrollment is required before the route becomes available.
-                  </p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                onClick={() => void handleEnroll()}
-                disabled={enrollLoading}
-                className="h-12 rounded-2xl bg-slate-950 px-5 text-base font-semibold text-white hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15"
-              >
-                {enrollLoading ? t("detail.enrolling") : t("detail.enroll")}
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {workspaceOpen && selectedDay ? (
-        <Overlay
-          title={selectedDay.title || `Day ${selectedDay.day_number}`}
-          subtitle="Lesson, notes, resources, and practice for the selected checkpoint."
-          onClose={() => setWorkspaceOpen(false)}
-        >
-          <div className="space-y-6">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <MetricCard label={t("detail.estimatedTime")} value={selectedDay.estimated_minutes ?? "-"} />
-              <MetricCard label={t("detail.readingPassages")} value={selectedDay.reading_passages.length} />
-              <MetricCard label={t("detail.listeningParts")} value={selectedDay.listening_parts.length} />
-            </div>
-
-            {selectedDay.content ? (
-              <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5 dark:border-white/10 dark:bg-slate-950/26">
-                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Lesson</p>
-                <div className="space-y-4 text-sm leading-8 text-slate-700 dark:text-slate-300">
-                  {selectedDay.content.split(/\n{2,}/).map((paragraph, index) => (
-                    <p key={index}>{paragraph}</p>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div className="space-y-4">
-              {selectedDay.reading_passages.map((item) => (
-                <TaskCard
-                  key={item.id}
-                  title={item.title}
-                  subtitle={t("detail.readingPassageCard", {questions: item.max_questions})}
-                  meta={`${item.difficulty_level ?? "-"} - ${item.estimated_time_minutes ?? 0}m`}
-                  icon={<BookOpen className="size-4" />}
-                  buttonLabel={
-                    item.attempt_status === "COMPLETED"
-                      ? t("detail.reviewAttempt")
-                      : item.attempt_status === "IN_PROGRESS"
-                        ? t("detail.continueAttempt")
-                        : t("detail.startAttempt")
-                  }
-                  href={buildMarathonTaskHref("reading", item)}
+      {enrollment ? (
+        <>
+          {/* Stats row */}
+          <div className="flex flex-wrap gap-2">
+            {/* Progress */}
+            <div className="flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-4 py-2 dark:border-teal-500/20 dark:bg-teal-500/5">
+              <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 transition-[width] duration-700"
+                  style={{width: `${progress}%`}}
                 />
-              ))}
-
-              {selectedDay.listening_parts.map((item) => (
-                <TaskCard
-                  key={item.id}
-                  title={item.title}
-                  subtitle={t("detail.listeningPartCard", {questions: item.max_questions})}
-                  meta={`${item.difficulty_level ?? "-"} - ${item.estimated_time_minutes ?? 0}m`}
-                  icon={<Headphones className="size-4" />}
-                  buttonLabel={
-                    item.attempt_status === "COMPLETED"
-                      ? t("detail.reviewAttempt")
-                      : item.attempt_status === "IN_PROGRESS"
-                        ? t("detail.continueAttempt")
-                        : t("detail.startAttempt")
-                  }
-                  href={buildMarathonTaskHref("listening", item)}
-                />
-              ))}
-            </div>
-
-            {selectedDay.external_links.length ? (
-              <>
-                <Separator className="bg-slate-200" />
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                    {t("detail.resourcesLabel")}
-                  </p>
-                  <div className="grid gap-3">
-                    {selectedDay.external_links.map((link) => (
-                      <a
-                        key={link.id}
-                        href={link.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center justify-between gap-3 rounded-[22px] border border-slate-200 bg-slate-50 p-4 transition hover:border-sky-200 hover:bg-sky-50 dark:border-white/10 dark:bg-slate-950/26 dark:hover:border-cyan-300/22 dark:hover:bg-white/8"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-base font-semibold text-slate-950 dark:text-white">{link.title}</p>
-                          <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">{link.url}</p>
-                        </div>
-                        <ExternalLink className="size-4 shrink-0 text-sky-700 dark:text-cyan-100" />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              </>
-            ) : null}
-
-            <Separator className="bg-slate-200" />
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                    {t("detail.notesLabel")}
-                  </p>
-                  <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-950">{t("detail.notesTitle")}</p>
-                </div>
-                {noteSaving ? <span className="text-xs text-sky-700 dark:text-cyan-100">{t("detail.saving")}</span> : null}
               </div>
-
-              <textarea
-                value={noteDraft}
-                onChange={(event) => setNoteDraft(event.target.value)}
-                onBlur={() => void handleSaveNote()}
-                placeholder={t("detail.notesPlaceholder")}
-                className="min-h-36 w-full resize-y rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-8 text-slate-900 outline-none placeholder:text-slate-400 focus:border-sky-200 focus:bg-white dark:border-white/10 dark:bg-slate-950/26 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-cyan-300/28 dark:focus:bg-[#0f1a30]"
-              />
+              <span className="text-sm font-bold text-teal-700 dark:text-teal-300">{progress}%</span>
+              <span className="hidden text-xs text-slate-500 sm:inline">complete</span>
             </div>
+            {/* Streak */}
+            <div className="flex items-center gap-1.5 rounded-full border border-orange-200 bg-orange-50 px-4 py-2 dark:border-orange-500/20 dark:bg-orange-500/5">
+              <Flame className="size-3.5 text-orange-500 dark:text-orange-400" />
+              <span className="text-sm font-bold text-orange-700 dark:text-orange-300">{enrollment.current_streak}</span>
+              <span className="hidden text-xs text-slate-500 sm:inline">day streak</span>
+            </div>
+            {/* Days done */}
+            <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 dark:border-white/10 dark:bg-white/5">
+              <CheckCircle2 className="size-3.5 text-teal-500 dark:text-teal-400" />
+              <span className="text-sm font-bold text-slate-800 dark:text-white">{enrollment.days_completed}</span>
+              <span className="text-xs text-slate-500">/ {journeyDays.length} days</span>
+            </div>
+            {/* Time */}
+            {enrollment.total_time_seconds > 0 ? (
+              <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 dark:border-white/10 dark:bg-white/5">
+                <Timer className="size-3.5 text-slate-400" />
+                <span className="text-sm font-bold text-slate-800 dark:text-white">{secondsToLabel(enrollment.total_time_seconds)}</span>
+                <span className="hidden text-xs text-slate-500 sm:inline">total time</span>
+              </div>
+            ) : null}
           </div>
-        </Overlay>
-      ) : null}
 
-      {attemptPreview ? (
-        <Overlay
-          title={attemptPreview.type === "attempt" ? "Current attempt state" : "Latest result snapshot"}
-          subtitle={attemptPreview.type === "attempt" ? "This attempt is already attached to the selected marathon day." : "Latest result snapshot for the selected task."}
-          onClose={() => setAttemptPreview(null)}
-        >
-          {attemptPreview.type === "attempt" ? (
-            <div className="space-y-5">
-              <div className="grid gap-3 md:grid-cols-4">
-                <MetricCard label={t("detail.status")} value={attemptPreview.payload.status} />
-                <MetricCard
-                  label={t("detail.answered")}
-                  value={`${attemptPreview.payload.questions_answered} / ${attemptPreview.payload.total_questions}`}
-                />
-                <MetricCard label={t("detail.timeUsed")} value={secondsToLabel(attemptPreview.payload.time_used_seconds)} />
-                <MetricCard label={t("detail.band")} value={attemptPreview.payload.band_score ?? "-"} />
-              </div>
-                <div className="rounded-[24px] border border-sky-200 bg-sky-50 p-4 text-sm leading-7 text-slate-700 dark:border-cyan-300/18 dark:bg-cyan-400/10 dark:text-slate-200">
-                  This attempt is correctly linked to the marathon day. The next step is opening the full runner directly from this state.
+          {/* Video / external link */}
+          {marathonExternalUrl ? (
+            marathonYoutubeEmbedUrl ? (
+              <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white dark:border-white/10 dark:bg-[#0a1525]">
+                <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3 dark:border-white/8">
+                  <span className="inline-flex size-8 items-center justify-center rounded-xl bg-red-100 text-red-500 dark:bg-red-500/15 dark:text-red-400">
+                    <PlayCircle className="size-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Marathon intro</p>
+                    <p className="line-clamp-1 text-sm font-semibold text-slate-900 dark:text-white">{marathonExternalTitle}</p>
+                  </div>
                 </div>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              <div className="grid gap-3 md:grid-cols-4">
-                <MetricCard label={t("detail.score")} value={attemptPreview.payload.score ?? 0} />
-                <MetricCard label={t("detail.band")} value={attemptPreview.payload.band_score ?? "-"} />
-                <MetricCard label={t("detail.correct")} value={attemptPreview.payload.correct_count} />
-                <MetricCard label={t("detail.skipped")} value={attemptPreview.payload.skipped_count} />
+                <div className="aspect-video bg-slate-950">
+                  <iframe
+                    src={marathonYoutubeEmbedUrl}
+                    title={marathonExternalTitle}
+                    className="h-full w-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                  />
+                </div>
               </div>
-              <div className="space-y-3">
-                {attemptPreview.payload.answers.map((answer) => (
-                    <div key={answer.id} className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-950/25">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                            {t("detail.questionLabel", {number: answer.question_number})}
-                          </p>
-                          <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{answer.question_text}</p>
-                        </div>
-                      <Badge
-                        className={cn(
-                          "rounded-full border px-3 py-1",
-                          answer.is_correct
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                            : "border-rose-200 bg-rose-50 text-rose-700"
-                        )}
-                      >
-                        {answer.is_correct ? t("detail.correct") : t("detail.incorrect")}
-                      </Badge>
-                    </div>
+            ) : (
+              <a
+                href={marathonExternalUrl.toString()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-3 rounded-[20px] border border-slate-200 bg-white px-4 py-3 transition hover:border-teal-200 hover:bg-teal-50/50 dark:border-white/10 dark:bg-[#0a1525] dark:hover:border-teal-500/25 dark:hover:bg-teal-500/5"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600 dark:bg-sky-500/15 dark:text-sky-400">
+                    <BookOpen className="size-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="line-clamp-1 text-sm font-semibold text-slate-900 dark:text-white">{marathonExternalTitle}</p>
+                    <p className="truncate text-xs text-slate-500">{marathonExternalUrl.toString()}</p>
+                  </div>
+                </div>
+                <ExternalLink className="size-4 shrink-0 text-slate-400 dark:text-slate-600" />
+              </a>
+            )
+          ) : null}
+
+          {/* Journey map */}
+          <div className="relative overflow-hidden rounded-[32px] border border-slate-200/80 bg-slate-50/60 dark:border-teal-500/10 dark:bg-[#060d18]">
+            {/* Grid overlay */}
+            <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgba(0,178,178,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,178,178,0.06)_1px,transparent_1px)] [background-size:36px_36px] dark:[background-image:linear-gradient(rgba(0,178,178,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(0,178,178,0.025)_1px,transparent_1px)]" />
+            {/* Ambient glow — visible in both modes, subtle in light */}
+            <div className="pointer-events-none absolute left-1/2 top-1/4 size-[500px] -translate-x-1/2 rounded-full bg-teal-400/4 blur-3xl dark:bg-teal-500/4" />
+
+            <div className="relative px-4 py-10 sm:px-8">
+              {/* Desktop wave SVG */}
+              <svg
+                aria-hidden="true"
+                className="pointer-events-none absolute left-1/2 top-0 hidden -translate-x-1/2 lg:block"
+                width="220"
+                height={journeySvgHeight}
+                viewBox={`0 0 ${JOURNEY_SVG_WIDTH} ${journeySvgHeight}`}
+                preserveAspectRatio="none"
+              >
+                {routeTerminalLabel ? (
+                  <>
+                    <text
+                      x={routeTerminalLabel.startX}
+                      y={routeTerminalLabel.startY}
+                      textAnchor="middle"
+                      className="fill-teal-500/60 dark:fill-teal-400/40"
+                      fontSize="7"
+                      fontWeight="700"
+                      letterSpacing="0.14em"
+                    >
+                      START
+                    </text>
+                    <text
+                      x={routeTerminalLabel.endX}
+                      y={routeTerminalLabel.endY}
+                      textAnchor="middle"
+                      className="fill-orange-500/60 dark:fill-orange-400/55"
+                      fontSize="7"
+                      fontWeight="700"
+                      letterSpacing="0.14em"
+                    >
+                      FINISH
+                    </text>
+                  </>
+                ) : null}
+                {/* Base path */}
+                <path
+                  d={wavePath}
+                  className="stroke-slate-300/70 dark:stroke-white/4"
+                  fill="none"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                {/* Animated dashes */}
+                <path
+                  d={wavePath}
+                  className="stroke-teal-400/50 dark:stroke-teal-400/30"
+                  fill="none"
+                  strokeWidth="1.5"
+                  strokeDasharray="6 12"
+                  strokeLinecap="round"
+                >
+                  <animate attributeName="stroke-dashoffset" from="72" to="0" dur="2s" repeatCount="indefinite" />
+                </path>
+              </svg>
+
+              {/* Mobile vertical line */}
+              <div className="pointer-events-none absolute bottom-0 left-1/2 top-0 w-px -translate-x-1/2 bg-gradient-to-b from-teal-400/25 via-teal-300/12 to-transparent dark:from-teal-500/20 dark:via-teal-500/10 lg:hidden" />
+
+              <div className="relative pb-4">
+                {quotePositions.map(({quote, afterIndex}, qi) => (
+                  <div
+                    key={qi}
+                    className="pointer-events-none absolute hidden -translate-y-1/2 lg:block"
+                    style={{
+                      top: `${(afterIndex + 0.5) * JOURNEY_ROW_HEIGHT}px`,
+                      ...(qi % 2 === 0 ? {left: "8%"} : {right: "8%"}),
+                    }}
+                  >
+                    <p className="max-w-[130px] text-center font-mono text-[10px] italic leading-4 text-slate-400/60 dark:text-slate-600/70">
+                      &#8220;{quote}&#8221;
+                    </p>
                   </div>
                 ))}
+                {journeyDays.map((day, index) => {
+                  const state = getDayState(day, currentDayNumber, journeyDays[index - 1] ?? null);
+                  const isSelected = selectedDayNumber === day.day_number;
+                  const canOpen = state !== "locked";
+                  const isFinal = index === journeyDays.length - 1;
+                  const title = day.title || `Day ${day.day_number}`;
+                  const isLeftAnchor = index % 2 === 0;
+                  const anchorX = isLeftAnchor ? JOURNEY_LEFT_X : JOURNEY_RIGHT_X;
+                  const anchorOffsetPx =
+                    (anchorX / JOURNEY_SVG_WIDTH) * JOURNEY_RENDER_WIDTH - JOURNEY_RENDER_WIDTH / 2;
+                  const nodeOffsetPx = anchorOffsetPx + JOURNEY_NODE_X_SHIFT;
+                  const taskCount = day.reading_passages_count + day.listening_parts_count;
+
+                  return (
+                    <div key={day.id} className="relative">
+                      <div className="relative w-full" style={{minHeight: `${JOURNEY_ROW_HEIGHT}px`}}>
+                        <div
+                          className="absolute flex w-[156px] flex-col items-center"
+                          style={{
+                            left: `calc(50% + ${nodeOffsetPx}px)`,
+                            top: `${JOURNEY_NODE_CENTER_Y}px`,
+                            transform: `translate(-50%, -${JOURNEY_MARKER_CIRCLE_CENTER_OFFSET}px)`,
+                          }}
+                        >
+                          {/* Day label */}
+                          <p
+                            className={cn(
+                              "flex h-10 max-w-[140px] items-end justify-center text-center text-xs font-semibold leading-4 line-clamp-2",
+                              state === "locked"
+                                ? "text-slate-400 dark:text-slate-700"
+                                : state === "completed"
+                                  ? "text-slate-500 dark:text-slate-500"
+                                  : "text-slate-700 dark:text-slate-200",
+                            )}
+                          >
+                            {title}
+                          </p>
+
+                          <div className="mt-2 flex flex-col items-center">
+                            <button
+                              type="button"
+                              onClick={() => void handleToggleDay(day.day_number, canOpen)}
+                              disabled={!canOpen}
+                              data-marathon-day-interactive="true"
+                              className={cn(
+                                "relative inline-flex size-14 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-200",
+                                // locked
+                                state === "locked" &&
+                                  "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 dark:border-white/8 dark:bg-white/3 dark:text-slate-700",
+                                // open — teal
+                                state === "open" && !isFinal &&
+                                  "cursor-pointer border-slate-300 bg-white text-slate-700 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-700 hover:shadow-[0_0_16px_rgba(20,184,166,0.15)] dark:border-white/15 dark:bg-white/5 dark:text-slate-300 dark:hover:border-teal-400/40 dark:hover:bg-teal-500/10 dark:hover:text-teal-300 dark:hover:shadow-[0_0_20px_rgba(0,178,178,0.22)]",
+                                // open — orange (final)
+                                state === "open" && isFinal &&
+                                  "cursor-pointer border-orange-200 bg-orange-50/50 text-orange-600 hover:border-orange-300 hover:bg-orange-50 hover:shadow-[0_0_16px_rgba(234,88,12,0.15)] dark:border-orange-500/20 dark:bg-orange-500/5 dark:text-orange-400 dark:hover:border-orange-400/40 dark:hover:shadow-[0_0_20px_rgba(230,81,0,0.22)]",
+                                // current — teal
+                                state === "current" && !isFinal &&
+                                  "cursor-pointer border-teal-400 bg-teal-50 text-teal-700 shadow-[0_0_0_5px_rgba(20,184,166,0.12)] dark:border-teal-400/70 dark:bg-teal-500/15 dark:text-teal-300 dark:shadow-[0_0_28px_rgba(0,178,178,0.45),0_0_0_5px_rgba(0,178,178,0.08)]",
+                                // current — orange (final)
+                                state === "current" && isFinal &&
+                                  "cursor-pointer border-orange-400 bg-orange-50 text-orange-700 shadow-[0_0_0_5px_rgba(234,88,12,0.12)] dark:border-orange-400/70 dark:bg-orange-500/15 dark:text-orange-300 dark:shadow-[0_0_28px_rgba(230,81,0,0.45),0_0_0_5px_rgba(230,81,0,0.08)]",
+                                // completed — teal
+                                state === "completed" && !isFinal &&
+                                  "cursor-pointer border-teal-200 bg-teal-50/80 text-teal-600 dark:border-teal-500/40 dark:bg-teal-500/10 dark:text-teal-400",
+                                // completed — orange (final)
+                                state === "completed" && isFinal &&
+                                  "cursor-pointer border-orange-200 bg-orange-50/70 text-orange-600 dark:border-orange-400/60 dark:bg-orange-500/12 dark:text-orange-300 dark:shadow-[0_0_28px_rgba(230,81,0,0.40),0_0_0_5px_rgba(230,81,0,0.07)]",
+                              )}
+                            >
+                              {/* Pulse rings */}
+                              {state === "current" ? (
+                                <span
+                                  className={cn(
+                                    "absolute inset-0 animate-ping rounded-full border opacity-50",
+                                    isFinal
+                                      ? "border-orange-400/60 dark:border-orange-400/50"
+                                      : "border-teal-400/60 dark:border-teal-400/50",
+                                  )}
+                                />
+                              ) : null}
+                              {/* Extra glow rings for final boss node (unlocked) */}
+                              {isFinal && state !== "locked" ? (
+                                <>
+                                  <span
+                                    className="absolute -inset-3 animate-ping rounded-full border border-orange-400/35 dark:border-orange-400/30"
+                                    style={{animationDuration: "1.6s"}}
+                                  />
+                                  <span
+                                    className="absolute -inset-5 animate-ping rounded-full border border-orange-400/18 dark:border-orange-400/15"
+                                    style={{animationDuration: "2.2s"}}
+                                  />
+                                </>
+                              ) : null}
+
+                              {isFinal ? (
+                                state === "locked" ? <Lock className="size-4" /> : <Trophy className="size-5" />
+                              ) : state === "completed" ? (
+                                <CheckCircle2 className="size-5" />
+                              ) : state === "locked" ? (
+                                <Lock className="size-4" />
+                              ) : (
+                                <span>{day.day_number}</span>
+                              )}
+                            </button>
+
+                            {isFinal && state !== "locked" ? (
+                              <span
+                                className={cn(
+                                  "mt-2 text-[9px] font-bold uppercase tracking-widest",
+                                  state === "completed"
+                                    ? "text-orange-400 dark:text-orange-500"
+                                    : "text-orange-500 dark:text-orange-400",
+                                )}
+                              >
+                                Finish Line
+                              </span>
+                            ) : taskCount > 0 && !isFinal ? (
+                              <span
+                                className={cn(
+                                  "mt-2 text-[9px] font-bold uppercase tracking-widest",
+                                  state === "current" && "text-teal-600 dark:text-teal-500",
+                                  state === "completed" && "text-teal-500 dark:text-teal-600",
+                                  state === "open" && "text-slate-500",
+                                  state === "locked" && "text-slate-400 dark:text-slate-700",
+                                )}
+                              >
+                                {taskCount} tasks
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Popup */}
+                      {isSelected && selectedDay ? (
+                        <div
+                          ref={routeSelectionRef}
+                          data-marathon-day-interactive="true"
+                          className="pointer-events-none absolute left-0 right-0 top-[132px] z-20 w-full"
+                        >
+                          <div
+                            className={cn(
+                              "pointer-events-auto w-full max-w-[380px] rounded-[22px] border p-5",
+                              "bg-white/96 backdrop-blur-sm dark:bg-[#0a1525]/96",
+                              isFinal
+                                ? "border-orange-200 shadow-[0_20px_60px_rgba(0,0,0,0.12)] dark:border-orange-500/20 dark:shadow-[0_20px_60px_rgba(0,0,0,0.65),0_0_40px_rgba(230,81,0,0.07)]"
+                                : "border-teal-200 shadow-[0_20px_60px_rgba(0,0,0,0.12)] dark:border-teal-500/15 dark:shadow-[0_20px_60px_rgba(0,0,0,0.65),0_0_40px_rgba(0,178,178,0.06)]",
+                            )}
+                            style={{
+                              marginLeft: `clamp(0px, calc(50% + ${nodeOffsetPx}px - 190px), calc(100% - 380px))`,
+                            }}
+                          >
+                            {/* Header */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <span
+                                  className={cn(
+                                    "text-[10px] font-bold uppercase tracking-widest",
+                                    isFinal
+                                      ? "text-orange-600 dark:text-orange-400"
+                                      : "text-teal-600 dark:text-teal-400",
+                                  )}
+                                >
+                                  {isFinal ? "Final Day" : `Day ${selectedDay.day_number}`}
+                                </span>
+                                <h4 className="mt-0.5 line-clamp-1 text-base font-bold text-slate-900 dark:text-white">
+                                  {selectedDay.title || `Day ${selectedDay.day_number}`}
+                                </h4>
+                              </div>
+                              <button
+                                type="button"
+                                data-marathon-day-interactive="true"
+                                onClick={() => {
+                                  setSelectedDayNumber(null);
+                                  setSelectedDay(null);
+                                }}
+                                className="shrink-0 rounded-lg p-1 text-slate-400 transition hover:text-slate-700 dark:text-slate-600 dark:hover:text-slate-300"
+                              >
+                                <X className="size-4" />
+                              </button>
+                            </div>
+
+                            {/* Excerpt */}
+                            {selectedDay.content ? (
+                              <p className="mt-2.5 line-clamp-2 text-xs leading-5 text-slate-500">
+                                {selectedDay.content.split(/\n+/)[0]}
+                              </p>
+                            ) : null}
+
+                            {/* Task chips */}
+                            {selectedDay.reading_passages.length + selectedDay.listening_parts.length > 0 ? (
+                              <div className="mt-3 flex flex-wrap gap-1.5">
+                                {selectedDay.reading_passages.map((item) => (
+                                  <span
+                                    key={item.id}
+                                    className={cn(
+                                      "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide",
+                                      item.attempt_status === "COMPLETED"
+                                        ? "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-400"
+                                        : item.attempt_status === "IN_PROGRESS"
+                                          ? "bg-sky-100 text-sky-700 dark:bg-sky-500/12 dark:text-sky-400"
+                                          : "bg-slate-100 text-slate-500 dark:bg-white/6 dark:text-slate-500",
+                                    )}
+                                  >
+                                    <BookOpen className="size-2.5" />
+                                    {item.passage_number_display || "Reading"}
+                                  </span>
+                                ))}
+                                {selectedDay.listening_parts.map((item) => (
+                                  <span
+                                    key={item.id}
+                                    className={cn(
+                                      "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide",
+                                      item.attempt_status === "COMPLETED"
+                                        ? "bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-400"
+                                        : item.attempt_status === "IN_PROGRESS"
+                                          ? "bg-sky-100 text-sky-700 dark:bg-sky-500/12 dark:text-sky-400"
+                                          : "bg-slate-100 text-slate-500 dark:bg-white/6 dark:text-slate-500",
+                                    )}
+                                  >
+                                    <Headphones className="size-2.5" />
+                                    {item.part_number_display || "Listening"}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+
+                            {/* Note */}
+                            {detail?.enrollment ? (
+                              <div className="mt-3">
+                                <textarea
+                                  value={noteDraft}
+                                  onChange={(e) => setNoteDraft(e.target.value)}
+                                  onBlur={() => void handleSaveNote()}
+                                  placeholder="Add a note..."
+                                  rows={2}
+                                  className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-700 outline-none placeholder:text-slate-400 focus:border-teal-300 focus:bg-white dark:border-white/8 dark:bg-white/4 dark:text-slate-300 dark:placeholder:text-slate-700 dark:focus:border-teal-500/30 dark:focus:bg-white/6"
+                                />
+                                {noteSaving ? (
+                                  <span className="text-[10px] text-teal-600 dark:text-teal-500">Saving...</span>
+                                ) : null}
+                              </div>
+                            ) : null}
+
+                            {/* CTA */}
+                            <Link
+                              href={`/${locale}/marathons/${marathonId}/days/${selectedDay.day_number}`}
+                              className={cn(
+                                "mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition",
+                                isFinal
+                                  ? "bg-orange-50 text-orange-700 hover:bg-orange-100 dark:bg-orange-500/15 dark:text-orange-300 dark:hover:bg-orange-500/25 dark:hover:text-orange-200"
+                                  : "bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-500/15 dark:text-teal-300 dark:hover:bg-teal-500/25 dark:hover:text-teal-200",
+                              )}
+                            >
+                              Open Day
+                              <Zap className="size-3.5" />
+                            </Link>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          )}
-        </Overlay>
-      ) : null}
+          </div>
+        </>
+      ) : (
+        /* Enrollment CTA */
+        <div className="relative overflow-hidden rounded-[28px] border border-teal-100 bg-white p-10 text-center dark:border-teal-500/15 dark:bg-[#060d18]">
+          <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgba(0,178,178,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(0,178,178,0.06)_1px,transparent_1px)] [background-size:36px_36px] dark:[background-image:linear-gradient(rgba(0,178,178,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(0,178,178,0.025)_1px,transparent_1px)]" />
+          <div className="pointer-events-none absolute left-1/2 top-0 size-[320px] -translate-x-1/2 rounded-full bg-teal-200/30 blur-3xl dark:bg-teal-500/6" />
+          <div className="relative">
+            <div className="mb-5 inline-flex size-16 items-center justify-center rounded-2xl border border-teal-200 bg-teal-50 dark:border-teal-500/25 dark:bg-teal-500/10">
+              <Zap className="size-7 text-teal-600 dark:text-teal-400" />
+            </div>
+            <h3 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{detail.title}</h3>
+            {detail.description ? (
+              <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-600 dark:text-slate-400">
+                {detail.description}
+              </p>
+            ) : null}
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {detail.difficulty_display ? (
+                <span className="rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-teal-700 dark:border-teal-500/20 dark:bg-teal-500/8 dark:text-teal-400">
+                  {detail.difficulty_display}
+                </span>
+              ) : null}
+              {detail.target_band ? (
+                <span className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/8 dark:text-orange-400">
+                  Band {detail.target_band}
+                </span>
+              ) : null}
+              <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+                {Math.max(detail.total_days || 0, detail.marathon_days || 0)} days
+              </span>
+            </div>
+            <Button
+              type="button"
+              onClick={() => void handleEnroll()}
+              disabled={enrollLoading}
+              className="mt-7 h-12 rounded-xl border border-teal-600 bg-teal-600 px-8 text-sm font-bold text-white hover:bg-teal-700 dark:border-teal-500/30 dark:bg-teal-500/15 dark:text-teal-300 dark:hover:bg-teal-500/25 dark:hover:text-teal-200"
+            >
+              {enrollLoading ? t("detail.enrolling") : t("detail.enroll")}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
