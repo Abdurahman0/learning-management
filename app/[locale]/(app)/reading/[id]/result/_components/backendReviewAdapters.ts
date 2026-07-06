@@ -195,7 +195,7 @@ function parseSharedOptionTexts(groupContent: unknown) {
       if (!row) return "";
       const key = toStringSafe(row.key, String.fromCharCode(65 + index)).trim();
       const text = toStringSafe(row.text, "").trim() || toStringSafe(row.label, "").trim();
-      return text || key;
+      return text ? (key ? `${key}. ${text}` : text) : key;
     })
     .filter(Boolean);
 }
@@ -248,7 +248,8 @@ function extractLetterOptionsFromInstructionText(text: string): string[] {
     const key = String(match[1] ?? "").trim().toUpperCase();
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    options.push(key);
+    const fullText = String(match[0] ?? "").replace(/^\s*[-*]\s*/, "").replace(/\*\*/g, "").trim();
+    options.push(fullText || key);
   }
 
   return options.length >= 2 ? options : [];

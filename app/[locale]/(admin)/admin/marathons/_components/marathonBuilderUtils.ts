@@ -250,7 +250,12 @@ function ensureGroupContentForApi(type: QuestionType, from: number, to: number, 
       })
       .map((item) => item.trim())
       .filter(Boolean);
-    return categories.length > 0 ? {categories: categories.map((label, index) => ({key: toOptionKey(index), label}))} : fallback;
+    return categories.length > 0 ? {categories: categories.map((rawLabel, index) => {
+      const prefixed = rawLabel.match(/^\s*([A-Z])(?:[\)\].:\-]\s*|\s+)(.+)$/i);
+      const key = prefixed ? prefixed[1].toUpperCase() : toOptionKey(index);
+      const label = prefixed ? prefixed[2].trim() : rawLabel;
+      return {key, label};
+    })} : fallback;
   }
 
   if (type === "selecting_from_a_list") {
@@ -332,7 +337,12 @@ export function resolveGroupContentForSync(group: QuestionGroup, module: "readin
 
   if (group.type === "matching_features") {
     return {
-      categories: ((group.questions[0] as {choices?: string[]})?.choices ?? []).map((text: string, index: number) => ({key: toOptionKey(index), label: text}))
+      categories: ((group.questions[0] as {choices?: string[]})?.choices ?? []).map((rawLabel: string, index: number) => {
+        const prefixed = rawLabel.match(/^\s*([A-Z])(?:[\)\].:\-]\s*|\s+)(.+)$/i);
+        const key = prefixed ? prefixed[1].toUpperCase() : toOptionKey(index);
+        const label = prefixed ? prefixed[2].trim() : rawLabel;
+        return {key, label};
+      })
     };
   }
 

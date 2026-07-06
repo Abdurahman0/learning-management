@@ -191,7 +191,7 @@ function hasRangeInText(text: string) {
 
 function parseInstructionChoiceKey(value: string) {
   const trimmed = value.trim();
-  const prefixed = trimmed.match(/^\s*(?:[-*]\s*)?(?:\*\*)?([A-Z])(?:\*\*)?\s*[\)\].:\-]\s+\S/i);
+  const prefixed = trimmed.match(/^\s*(?:[-*]\s*)?(?:\*\*)?([A-Z])(?:\*\*)?\s*(?:[\)\].:\-]\s*|\s+)\S/i);
   if (prefixed) return prefixed[1].toUpperCase();
 
   const paragraph = trimmed.match(/^\s*paragraph\s+([A-Z])(?:\s*[\)\].:\-]\s+\S)?/i);
@@ -254,7 +254,7 @@ function buildInstructionChoiceList(values: string[]) {
       if (trimmed.toUpperCase() === key) return key;
 
       const withoutDecoratedKey = trimmed
-        .replace(/^\s*(?:[-*]\s*)?(?:\*\*)?[A-Z](?:\*\*)?\s*[\)\].:\-]\s*/i, "")
+        .replace(/^\s*(?:[-*]\s*)?(?:\*\*)?[A-Z](?:\*\*)?\s*(?:[\)\].:\-]\s*|\s+)/i, "")
         .trim();
       return withoutDecoratedKey ? `${key}. ${withoutDecoratedKey}` : key;
     })
@@ -504,8 +504,11 @@ export function QuestionGroupsPanel({
       // so the student UI can derive the matrix columns after a reload.
       const inferredRange = inferRangeTokenFromChoices(parsedChoices);
       const hasChoiceLabels = parsedChoices.some((choice) => {
-        const key = parseInstructionChoiceKey(choice);
-        return Boolean(key) && choice.trim().toUpperCase() !== key;
+        const trimmed = choice.trim();
+        if (!trimmed) return false;
+        const key = parseInstructionChoiceKey(trimmed);
+        if (key) return trimmed.toUpperCase() !== key;
+        return trimmed.length > 1;
       });
       const shouldEmbedChoiceList = hasChoiceLabels && parsedChoices.length >= 2 && !hasChoiceListInText(nextInstructions, parsedChoices);
       if (shouldEmbedChoiceList) {

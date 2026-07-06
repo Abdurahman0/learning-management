@@ -606,10 +606,12 @@ function ensureGroupContentForApi(
 
     if (categories.length > 0) {
       return {
-        categories: categories.map((label, index) => ({
-          key: toOptionKey(index),
-          label
-        }))
+        categories: categories.map((rawLabel, index) => {
+          const prefixed = rawLabel.match(/^\s*([A-Z])(?:[\)\].:\-]\s*|\s+)(.+)$/i);
+          const key = prefixed ? prefixed[1].toUpperCase() : toOptionKey(index);
+          const label = prefixed ? prefixed[2].trim() : rawLabel;
+          return { key, label };
+        })
       };
     }
 

@@ -30,6 +30,25 @@ function normalizeAnswerValue(value: string | string[] | null | undefined) {
   return formatAnswerForDisplay(value);
 }
 
+function resolveMatchingInfoAnswer(rawValue: string | string[] | null | undefined, paragraphOptions: string[]): string {
+  if (typeof rawValue !== "string" || !rawValue.trim()) return formatAnswerForDisplay(rawValue);
+  const upper = rawValue.trim().toUpperCase();
+  for (let i = 0; i < paragraphOptions.length; i++) {
+    const trimmed = paragraphOptions[i]?.trim() ?? "";
+    if (!trimmed) continue;
+    if (trimmed.toUpperCase() === upper) return trimmed;
+    const prefixed = trimmed.match(/^\s*([A-Z])(?:[\)\].:\-]\s*|\s+)(.+)$/i);
+    if (prefixed && prefixed[1].toUpperCase() === upper) return trimmed;
+    const keyOnly = trimmed.match(/^\s*([A-Z])\s*$/i);
+    if (keyOnly && keyOnly[1].toUpperCase() === upper) return trimmed;
+  }
+  const letterIndex = upper.length === 1 && /^[A-Z]$/.test(upper) ? upper.charCodeAt(0) - 65 : -1;
+  if (letterIndex >= 0 && letterIndex < paragraphOptions.length) {
+    return paragraphOptions[letterIndex];
+  }
+  return formatAnswerForDisplay(rawValue);
+}
+
 function getQuestionStatus(grading: GradeTestResult, questionId: string): QuestionStatus {
   const result = grading.byQuestion[questionId];
   if (!result?.normalizedUser) return "skipped";
@@ -152,7 +171,9 @@ export function ReviewQuestionsPanel({
           const status = getQuestionStatus(grading, question.id);
           const statusStyles = getStatusStyles(status);
           const isOpen = expanded.has(question.id);
-          const userAnswer = normalizeAnswerValue(answers[question.id]);
+          const userAnswer = question.type === "matchingInfo"
+            ? resolveMatchingInfoAnswer(answers[question.id], question.paragraphOptions)
+            : normalizeAnswerValue(answers[question.id]);
           const correctAnswer = formatAnswerForDisplay(question.correctAnswer);
           const evidenceSnippet = question.evidenceSpans[0]?.phrase ?? "";
 

@@ -199,7 +199,21 @@ export function MarathonDayPageClient({
         setError(null);
         const response = await studentMarathonService.getDay(marathonId, dayNumber);
         if (!active) return;
+        if (response.is_locked) {
+          setError("This day is locked. Complete the previous day's test first.");
+          setLoading(false);
+          return;
+        }
         setDay(response);
+        if (response.is_completable && !response.is_completed) {
+          try {
+            await studentMarathonService.completeDay(marathonId, dayNumber);
+            if (!active) return;
+            setDay((prev) => prev ? {...prev, is_completed: true} : prev);
+          } catch {
+            // silent — backend may reject if items incomplete
+          }
+        }
       } catch (cause) {
         if (!active) return;
         setDay(null);

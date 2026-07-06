@@ -142,10 +142,11 @@ function buildJourneyDays(detail: StudentMarathonDetail, days: StudentMarathonDa
   });
 }
 
-function getDayState(day: StudentMarathonDaySummary, currentDayNumber: number) {
+function getDayState(day: StudentMarathonDaySummary, currentDayNumber: number, prevDay: StudentMarathonDaySummary | null) {
   if (day.is_completed) return "completed" as const;
   if (day.day_number === currentDayNumber) return "current" as const;
   if (day.is_locked || day.day_number > currentDayNumber) return "locked" as const;
+  if (prevDay !== null && !prevDay.is_completed) return "locked" as const;
   return "open" as const;
 }
 
@@ -274,7 +275,6 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrollLoading, setEnrollLoading] = useState(false);
-  const [completeLoading, setCompleteLoading] = useState(false);
   const [attemptPreview, setAttemptPreview] = useState<AttemptPreview | null>(null);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState("");
@@ -288,6 +288,14 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
     setSelectedDay(day);
     setNoteDraft(day.note?.note_text ?? "");
     savedNoteRef.current = day.note?.note_text ?? "";
+    if (day.is_completable && !day.is_completed) {
+      try {
+        await studentMarathonService.completeDay(marathonId, dayNumber);
+        setSelectedDay((prev) => prev ? {...prev, is_completed: true} : prev);
+      } catch {
+        // silent
+      }
+    }
   };
 
   const loadDetail = async (preserveSelection = true) => {
@@ -380,25 +388,6 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
       setNotice({tone: "error", text: cause instanceof StudentApiError ? cause.message : t("errors.note")});
     } finally {
       setNoteSaving(false);
-    }
-  };
-
-  const handleCompleteDay = async () => {
-    if (!selectedDayNumber) return;
-    try {
-      setCompleteLoading(true);
-      const response = await studentMarathonService.completeDay(marathonId, selectedDayNumber);
-      setNotice({
-        tone: response.is_completed ? "success" : "info",
-        text: response.incomplete.length
-          ? `${response.detail} ${response.incomplete.map((item) => item.title).join(", ")}`
-          : response.detail
-      });
-      await loadDetail(true);
-    } catch (cause) {
-      setNotice({tone: "error", text: cause instanceof StudentApiError ? cause.message : t("errors.complete")});
-    } finally {
-      setCompleteLoading(false);
     }
   };
 
@@ -611,7 +600,7 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
 
                   <div className="relative pb-4">
                     {journeyDays.map((day, index) => {
-                      const state = getDayState(day, currentDayNumber);
+                      const state = getDayState(day, currentDayNumber, journeyDays[index - 1] ?? null);
                       const isSelected = selectedDayNumber === day.day_number;
                       const canOpen = state !== "locked";
                       const showExpanded = isSelected;
@@ -699,15 +688,6 @@ export function MarathonDetailClient({marathonId}: MarathonDetailClientProps) {
                                     className="rounded-2xl bg-slate-950 px-5 text-white hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15"
                                   >
                                     <Link href={`/${locale}/marathons/${marathonId}/days/${selectedDay.day_number}`}>Open day</Link>
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => void handleCompleteDay()}
-                                    disabled={completeLoading || !selectedDay.is_completable}
-                                    className="rounded-2xl border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-950 dark:border-white/12 dark:bg-white/8 dark:text-slate-200 dark:hover:bg-white/10 dark:hover:text-white"
-                                  >
-                                    {completeLoading ? "Updating..." : t("detail.markComplete")}
                                   </Button>
                                 </div>
                               </div>

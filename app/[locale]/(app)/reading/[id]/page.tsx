@@ -528,7 +528,7 @@ function parseMatchingInfoOption(option: string, index: number) {
 
   const key = toAlphabetKey(index);
   return {
-    value: key,
+    value: trimmed,
     key,
     label: trimmed,
   };
@@ -630,7 +630,8 @@ function extractLetterOptionsFromInstructionText(text: string): string[] {
     const key = String(match[1] ?? "").trim().toUpperCase();
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    options.push(key);
+    const fullText = String(match[0] ?? "").replace(/^\s*[-*]\s*/, "").replace(/\*\*/g, "").trim();
+    options.push(fullText || key);
   }
 
   return options.length >= 2 ? options : [];
@@ -672,11 +673,16 @@ function extractMatchingChoiceOptions(
 
   const options = optionRows
     .map((item) => {
+      if (typeof item === "string") return item.trim();
       const row = asRecord(item);
-      const text = toStringSafe(row?.text);
-      const label = toStringSafe(row?.label);
-      const key = toStringSafe(row?.key);
-      return text || (key && label ? `${key}. ${label}` : label || key);
+      if (!row) return "";
+      const text = toStringSafe(row.text ?? row.value);
+      const label = toStringSafe(row.label ?? row.name ?? row.title ?? row.description);
+      const key = toStringSafe(row.key ?? row.letter ?? row.option);
+      if (text) return text;
+      if (!key || !label) return label || key;
+      const labelAlreadyPrefixed = /^\s*[A-Z](?:[\)\].:\-]\s*|\s+)/i.test(label);
+      return labelAlreadyPrefixed ? label : `${key}. ${label}`;
     })
     .map((item) => item.trim())
     .filter(Boolean);
@@ -1012,6 +1018,13 @@ function collectBackendAttemptAnswerEntries(params: {
 
         if (question.type === "listSelection" && typeof answer === "string") {
           return normalizeLetterKeyAnswerForBackend(answer);
+        }
+
+        if (question.type === "matchingInfo" && typeof answer === "string") {
+          const rawOpts = question.paragraphOptions;
+          const parsedOpts = rawOpts.map((opt, i) => parseMatchingInfoOption(opt, i));
+          const resolvedKey = resolveChoiceKeyFromRawValue(answer, parsedOpts, rawOpts);
+          return resolvedKey || answer;
         }
 
         if (question.type === "matchingHeadings" && typeof answer === "string") {
@@ -2400,7 +2413,7 @@ function ReadingTestClient({
         includeAnswers: true,
         context: "change"
       });
-    }, 3000);
+    }, 6000);
     return () => window.clearTimeout(autosaveTimer);
   }, [answers, attemptMode, backendAttemptId, marked, reviewMode, saveAttemptToBackend]);
 
@@ -2411,7 +2424,7 @@ function ReadingTestClient({
         includeAnswers: false,
         context: "interval"
       });
-    }, 30_000);
+    }, 60_000);
     return () => window.clearInterval(intervalId);
   }, [attemptMode, backendAttemptId, reviewMode, saveAttemptToBackend]);
 
@@ -4035,6 +4048,13 @@ function ReadingTestClient({
                                           matchingInfoParsedOptions,
                                           matchingInfoRawOptions
                                         );
+                                        const resolvedStudentAnswerDisplay = (() => {
+                                          if (typeof targetValue !== "string" || !targetValue.trim()) return "";
+                                          const resolvedOpt = selectedKey
+                                            ? matchingInfoParsedOptions.find((o) => o.key === selectedKey)
+                                            : null;
+                                          return resolvedOpt ? resolvedOpt.value : formatAnswerForDisplay(targetValue);
+                                        })();
                                         const targetActive = activeQuestionNumber === targetQuestion.number;
                                         const targetMarked = marked.has(targetQuestion.id);
                                         const targetResult =
@@ -4095,7 +4115,7 @@ function ReadingTestClient({
                                                       <p>
                                                         {(t.has("yourAnswer") ? t("yourAnswer") : "Your answer")}:{" "}
                                                         <span className="font-medium text-foreground">
-                                                          {formatAnswerForDisplay(targetValue) || (t.has("noAnswer") ? t("noAnswer") : "No answer")}
+                                                          {resolvedStudentAnswerDisplay || (t.has("noAnswer") ? t("noAnswer") : "No answer")}
                                                         </span>
                                                       </p>
                                                       <p>
