@@ -3,7 +3,7 @@
 import {useEffect, useMemo, useState} from "react";
 import Link from "next/link";
 import {usePathname, useRouter} from "next/navigation";
-import {BookOpen, ChevronDown, Headphones, Home, Lock, Map, Mic, PenLine, TriangleAlert} from "lucide-react";
+import {BookOpen, ChevronDown, Crown, Headphones, Home, Lock, Map, Mic, PenLine, TriangleAlert} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
@@ -270,6 +270,20 @@ export function GuestSidebar({usedTests, totalTests, role}: GuestSidebarProps) {
             </Link>
           );
         })}
+
+        {/* Upgrade CTA */}
+        <Link
+          href={`/${locale}/upgrade`}
+          className={cn(
+            "flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-base font-medium transition-colors",
+            pathname.startsWith(`/${locale}/upgrade`)
+              ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+              : "text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-500/10"
+          )}
+        >
+          <Crown className="size-4" aria-hidden="true" />
+          Go Premium
+        </Link>
       </nav>
 
       {isGuest && usedTests !== null && totalTests !== null ? (

@@ -1,10 +1,12 @@
 "use client";
 
 import {useEffect, useState} from "react";
+import {Crown, Loader2} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
 import {Badge} from "@/components/ui/badge";
+import {Button} from "@/components/ui/button";
 import {Separator} from "@/components/ui/separator";
 import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle} from "@/components/ui/sheet";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
@@ -13,6 +15,7 @@ import type {AdminUser} from "@/data/admin-users";
 import {UserHistoryTab} from "./UserHistoryTab";
 import {UserOverviewTab} from "./UserOverviewTab";
 import {UserPaymentsTab} from "./UserPaymentsTab";
+import {UserPremiumHistoryTab} from "./UserPremiumHistoryTab";
 
 type UserProfileDrawerProps = {
   open: boolean;
@@ -20,6 +23,8 @@ type UserProfileDrawerProps = {
   onOpenChange: (open: boolean) => void;
   onSendMessage: (user: AdminUser) => void;
   onResetPassword: (user: AdminUser) => void;
+  onTogglePremium?: (userId: string, enable: boolean) => void;
+  premiumLoading?: Set<string>;
 };
 
 const statusClassName = {
@@ -41,7 +46,7 @@ function formatDate(dateString: string, t: (key: string, values?: Record<string,
   return day ? `${t(`dates.months.${month}`)} ${day}, ${year}` : `${t(`dates.months.${month}`)} ${year}`;
 }
 
-export function UserProfileDrawer({open, user, onOpenChange, onSendMessage, onResetPassword}: UserProfileDrawerProps) {
+export function UserProfileDrawer({open, user, onOpenChange, onSendMessage, onResetPassword, onTogglePremium, premiumLoading}: UserProfileDrawerProps) {
   const t = useTranslations("adminUsers");
   const [tab, setTab] = useState("overview");
 
@@ -50,6 +55,8 @@ export function UserProfileDrawer({open, user, onOpenChange, onSendMessage, onRe
       setTab("overview");
     }
   }, [open, user?.id]);
+
+  const isPremiumToggleLoading = user ? (premiumLoading?.has(user.id) ?? false) : false;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -61,15 +68,43 @@ export function UserProfileDrawer({open, user, onOpenChange, onSendMessage, onRe
                 <Avatar className="size-14 rounded-xl ring-2 ring-border/70">
                   <AvatarFallback className="rounded-xl bg-primary/15 text-base font-semibold text-primary">{user.avatarFallback}</AvatarFallback>
                 </Avatar>
-                <div className="min-w-0 space-y-1 text-left">
+                <div className="min-w-0 flex-1 space-y-1 text-left">
                   <SheetTitle className="truncate text-2xl leading-tight font-semibold tracking-tight">{user.name}</SheetTitle>
                   <SheetDescription className="text-sm text-muted-foreground">
                     {t("drawer.memberSince", {date: formatDate(user.joinedAt, t)})}
                   </SheetDescription>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
                     <Badge className={`border px-2 py-0.5 text-[10px] tracking-wide uppercase ${statusClassName[user.status]}`}>
                       {t(`status.${user.status}`)}
                     </Badge>
+                    {user.isPremium ? (
+                      <Badge className="border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] tracking-wide uppercase text-amber-400">
+                        <Crown className="mr-1 size-2.5" />
+                        Premium
+                      </Badge>
+                    ) : (
+                      <Badge className="border border-slate-500/20 bg-slate-500/8 px-2 py-0.5 text-[10px] tracking-wide uppercase text-muted-foreground">
+                        Free
+                      </Badge>
+                    )}
+                    {onTogglePremium ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={isPremiumToggleLoading}
+                        onClick={() => onTogglePremium(user.id, !user.isPremium)}
+                        className={`h-6 rounded-md border px-2 text-[10px] font-semibold uppercase tracking-wide ${user.isPremium ? "border-rose-500/30 bg-rose-500/8 text-rose-400 hover:bg-rose-500/15" : "border-amber-500/30 bg-amber-500/8 text-amber-500 hover:bg-amber-500/15"}`}
+                      >
+                        {isPremiumToggleLoading ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : user.isPremium ? (
+                          "Revoke"
+                        ) : (
+                          "Grant"
+                        )}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -86,6 +121,10 @@ export function UserProfileDrawer({open, user, onOpenChange, onSendMessage, onRe
                 <TabsTrigger value="payments" className="h-11 px-4">
                   {t("drawer.tabs.payments")}
                 </TabsTrigger>
+                <TabsTrigger value="premium" className="h-11 px-4">
+                  <Crown className="mr-1.5 size-3.5" />
+                  Premium
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="pt-4 pb-5">
@@ -98,6 +137,10 @@ export function UserProfileDrawer({open, user, onOpenChange, onSendMessage, onRe
 
               <TabsContent value="payments" className="pt-4 pb-5">
                 <UserPaymentsTab items={user.payments} />
+              </TabsContent>
+
+              <TabsContent value="premium" className="pt-4 pb-5">
+                <UserPremiumHistoryTab userId={user.id} />
               </TabsContent>
             </Tabs>
           </div>
@@ -112,4 +155,3 @@ export function UserProfileDrawer({open, user, onOpenChange, onSendMessage, onRe
     </Sheet>
   );
 }
-

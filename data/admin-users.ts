@@ -48,6 +48,7 @@ export type AdminUser = {
   targetBand: number;
   joinedAt: string;
   isActiveToday: boolean;
+  isPremium?: boolean;
   stats: UserModuleStats;
   weakAreas: WeakArea[];
   bandProgress: {label: string; value: number}[];

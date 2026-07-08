@@ -37,11 +37,11 @@ function appendListeningFormData(formData: FormData, payload: Partial<ListeningP
 }
 
 export const listeningPartsService = {
-  async listByPracticeTest(testId: number | string, params?: AdminListQuery) {
+  async listByPracticeTest(testId: number | string, params?: AdminListQuery & {is_premium?: boolean}) {
     try {
       const response = await adminHttpClient.get<AdminPaginatedResponse<ListeningPartRecord> | ListeningPartRecord[]>(
         `/practice-tests/${testId}/listening-parts/`,
-        {params: toListQuery(params)}
+        {params: {...toListQuery(params), ...(typeof params?.is_premium === "boolean" ? {is_premium: params.is_premium} : {})}}
       );
       return normalizeListResponse(response.data);
     } catch (error) {

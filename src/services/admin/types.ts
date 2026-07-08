@@ -46,6 +46,7 @@ export type PracticeTestRecord = {
   total_questions: number;
   time_limit_seconds: number | null;
   is_active: boolean;
+  is_premium?: boolean;
   listening_parts_count: number;
   reading_passages_count: number;
   display_order?: number | null;
@@ -76,6 +77,7 @@ export type ListeningPartRecord = {
   max_questions: number;
   time_limit_seconds: number | null;
   is_active: boolean;
+  is_premium?: boolean;
   question_groups?: QuestionGroupRecord[];
 };
 
@@ -117,6 +119,7 @@ export type ReadingPassageRecord = {
   max_questions: number;
   time_limit_seconds: number | null;
   is_active: boolean;
+  is_premium?: boolean;
   question_groups?: QuestionGroupRecord[];
 };
 
@@ -172,6 +175,7 @@ export type PracticeTestCreatePayload = {
   total_questions: number;
   time_limit_seconds: number | null;
   is_active: boolean;
+  is_premium?: boolean;
 };
 
 export type PracticeTestPatchPayload = Partial<PracticeTestCreatePayload>;
@@ -183,6 +187,7 @@ export type ListeningPartPayload = {
   max_questions: number;
   time_limit_seconds: number | null;
   is_active: boolean;
+  is_premium?: boolean;
   audio_file?: File | null;
   remove_audio?: boolean;
 };
@@ -194,6 +199,7 @@ export type ReadingPassagePayload = {
   max_questions: number;
   time_limit_seconds: number;
   is_active: boolean;
+  is_premium?: boolean;
 };
 
 export type QuestionGroupPayload = {

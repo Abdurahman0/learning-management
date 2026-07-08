@@ -87,6 +87,7 @@ function mapUserListItemToAdminUser(item: Awaited<ReturnType<typeof adminUsersSe
     targetBand: item.targetBand,
     joinedAt: toJoinedAt(item.dateJoined),
     isActiveToday: Boolean(item.lastActivityAt),
+    isPremium: item.isPremium,
     stats: {
       reading: item.readingBand,
       listening: item.listeningBand,
@@ -113,6 +114,7 @@ function mapUserDetail(base: AdminUser, detail: Awaited<ReturnType<typeof adminU
     targetBand: detail.targetBand,
     joinedAt: toJoinedAt(detail.dateJoined),
     isActiveToday: Boolean(detail.lastActivityAt),
+    isPremium: detail.isPremium,
     stats: {
       reading: detail.modulePerformance.reading,
       listening: detail.modulePerformance.listening,
@@ -149,6 +151,7 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [metrics, setMetrics] = useState({totalUsers: 0, activeToday: 0, newThisMonth: 0});
+  const [premiumLoading, setPremiumLoading] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -250,6 +253,28 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
     }
   };
 
+  const handleTogglePremium = async (userId: string, enable: boolean) => {
+    setPremiumLoading((prev) => new Set(prev).add(userId));
+    try {
+      if (enable) {
+        await adminUsersService.enablePremium(userId);
+      } else {
+        await adminUsersService.disablePremium(userId);
+      }
+      setUsers((current) =>
+        current.map((item) => (item.id === userId ? {...item, isPremium: enable} : item))
+      );
+    } catch {
+      // silent — user sees no change
+    } finally {
+      setPremiumLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+    }
+  };
+
   const handleResetPassword = async (user: AdminUser) => {
     const confirmed = window.confirm(t("drawer.confirmResetPassword", {name: user.name}));
     if (!confirmed) {
@@ -299,8 +324,10 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
               pageSize={PAGE_SIZE}
               totalItems={filteredUsers.length}
               totalPages={totalPages}
+              premiumLoading={premiumLoading}
               onRowClick={handleSelectUser}
               onPageChange={(nextPage) => setPage(Math.min(Math.max(1, nextPage), totalPages))}
+              onTogglePremium={handleTogglePremium}
             />
           </main>
         </div>
@@ -312,6 +339,8 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
         onOpenChange={setDrawerOpen}
         onSendMessage={handleSendMessage}
         onResetPassword={handleResetPassword}
+        onTogglePremium={handleTogglePremium}
+        premiumLoading={premiumLoading}
       />
     </div>
   );

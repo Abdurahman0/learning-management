@@ -1,11 +1,12 @@
 "use client";
 
-import {ChevronLeft, ChevronRight} from "lucide-react";
+import {ChevronLeft, ChevronRight, Crown} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Avatar, AvatarFallback} from "@/components/ui/avatar";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
+import {Switch} from "@/components/ui/switch";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import type {AdminUser} from "@/data/admin-users";
 import {cn} from "@/lib/utils";
@@ -17,8 +18,10 @@ type UsersTableProps = {
   pageSize: number;
   totalItems: number;
   totalPages: number;
+  premiumLoading?: Set<string>;
   onRowClick: (userId: string) => void;
   onPageChange: (page: number) => void;
+  onTogglePremium?: (userId: string, enable: boolean) => void;
 };
 
 const moduleColorClass: Record<keyof AdminUser["stats"], string> = {
@@ -55,7 +58,7 @@ function formatJoinedDate(value: string) {
   }).format(date);
 }
 
-export function UsersTable({users, selectedUserId, page, pageSize, totalItems, totalPages, onRowClick, onPageChange}: UsersTableProps) {
+export function UsersTable({users, selectedUserId, page, pageSize, totalItems, totalPages, premiumLoading, onRowClick, onPageChange, onTogglePremium}: UsersTableProps) {
   const t = useTranslations("adminUsers");
   const start = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = totalItems === 0 ? 0 : start + users.length - 1;
@@ -65,61 +68,84 @@ export function UsersTable({users, selectedUserId, page, pageSize, totalItems, t
     <Card className="overflow-hidden rounded-3xl border-border/70 bg-card/70 py-0">
       <CardContent className="p-0">
         <div className="overflow-x-auto">
-          <Table className="min-w-[920px]">
+          <Table className="min-w-[1040px]">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("table.columns.user")}</TableHead>
                 <TableHead>{t("table.columns.joined")}</TableHead>
                 <TableHead>{t("table.columns.band")}</TableHead>
                 <TableHead>{t("table.columns.moduleStats")}</TableHead>
+                <TableHead className="w-[110px]">Premium</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
                     {t("table.empty")}
                   </TableCell>
                 </TableRow>
               ) : (
-                users.map((user) => (
-                  <TableRow
-                    key={user.id}
-                    className={cn(
-                      "h-[84px] cursor-pointer transition-colors hover:bg-muted/35",
-                      selectedUserId === user.id ? "bg-primary/10 hover:bg-primary/14" : ""
-                    )}
-                    onClick={() => onRowClick(user.id)}
-                  >
-                    <TableCell className="py-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="ring-2 ring-border/70" size="lg">
-                          <AvatarFallback className="bg-primary/15 font-semibold text-primary">{user.avatarFallback}</AvatarFallback>
-                        </Avatar>
-                        <div className="space-y-0.5">
-                          <p className="text-lg leading-tight font-semibold tracking-tight">{user.name}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                          <p className="text-xs text-muted-foreground">{t("table.userId", {id: user.id})}</p>
+                users.map((user) => {
+                  const isLoading = premiumLoading?.has(user.id) ?? false;
+                  return (
+                    <TableRow
+                      key={user.id}
+                      className={cn(
+                        "h-[84px] cursor-pointer transition-colors hover:bg-muted/35",
+                        selectedUserId === user.id ? "bg-primary/10 hover:bg-primary/14" : ""
+                      )}
+                      onClick={() => onRowClick(user.id)}
+                    >
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="ring-2 ring-border/70" size="lg">
+                            <AvatarFallback className="bg-primary/15 font-semibold text-primary">{user.avatarFallback}</AvatarFallback>
+                          </Avatar>
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-lg leading-tight font-semibold tracking-tight">{user.name}</p>
+                              {user.isPremium ? (
+                                <Crown className="size-3.5 text-amber-500" aria-label="Premium" />
+                              ) : null}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                            <p className="text-xs text-muted-foreground">{t("table.userId", {id: user.id})}</p>
+                          </div>
                         </div>
-                      </div>
-                    </TableCell>
+                      </TableCell>
 
-                    <TableCell className="py-4 text-sm font-medium text-muted-foreground">{formatJoinedDate(user.joinedAt)}</TableCell>
+                      <TableCell className="py-4 text-sm font-medium text-muted-foreground">{formatJoinedDate(user.joinedAt)}</TableCell>
 
-                    <TableCell className="py-4 text-2xl font-semibold tracking-tight">{user.overallBand.toFixed(1)}</TableCell>
+                      <TableCell className="py-4 text-2xl font-semibold tracking-tight">{user.overallBand.toFixed(1)}</TableCell>
 
-                    <TableCell className="py-4">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {(Object.keys(user.stats) as Array<keyof AdminUser["stats"]>).map((key) => (
-                          <span key={`${user.id}-${key}`} className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/35 px-2 py-1 text-xs">
-                            <span className={`size-1.5 rounded-full ${moduleColorClass[key]}`} />
-                            {t(`modulesShort.${key}`)} {user.stats[key]}
+                      <TableCell className="py-4">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {(Object.keys(user.stats) as Array<keyof AdminUser["stats"]>).map((key) => (
+                            <span key={`${user.id}-${key}`} className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/35 px-2 py-1 text-xs">
+                              <span className={`size-1.5 rounded-full ${moduleColorClass[key]}`} />
+                              {t(`modulesShort.${key}`)} {user.stats[key]}
+                            </span>
+                          ))}
+                        </div>
+                      </TableCell>
+
+                      <TableCell className="py-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={user.isPremium ?? false}
+                            disabled={isLoading}
+                            onCheckedChange={(checked) => onTogglePremium?.(user.id, checked)}
+                            aria-label={user.isPremium ? "Disable premium" : "Enable premium"}
+                          />
+                          <span className={cn("text-xs font-medium", user.isPremium ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
+                            {user.isPremium ? "On" : "Off"}
                           </span>
-                        ))}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

@@ -40,11 +40,11 @@ function normalizeReadingPayload(payload: ReadingPassagePayload): ReadingPassage
 }
 
 export const readingPassagesService = {
-  async listByPracticeTest(testId: number | string, params?: AdminListQuery) {
+  async listByPracticeTest(testId: number | string, params?: AdminListQuery & {is_premium?: boolean}) {
     try {
       const response = await adminHttpClient.get<AdminPaginatedResponse<ReadingPassageRecord> | ReadingPassageRecord[]>(
         `/practice-tests/${testId}/reading-passages/`,
-        {params: toListQuery(params)}
+        {params: {...toListQuery(params), ...(typeof params?.is_premium === "boolean" ? {is_premium: params.is_premium} : {})}}
       );
       return normalizeListResponse(response.data);
     } catch (error) {

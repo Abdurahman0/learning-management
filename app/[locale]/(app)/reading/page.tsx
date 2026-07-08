@@ -5,6 +5,7 @@ import {useTranslations} from "next-intl";
 import {ChevronDown} from "lucide-react";
 
 import {studentTestsService} from "@/src/services/student/tests.service";
+import {studentProfileService} from "@/src/services/student/profile.service";
 import type {StudentTestRecord} from "@/src/services/student/types";
 import {Card, CardContent} from "@/components/ui/card";
 import {cn} from "@/lib/utils";
@@ -101,11 +102,13 @@ function buildReadingListRows(tests: ReadingGuestTest[]): ReadingListRow[] {
 function ReadingCardsList({
   tests,
   layout = "stack",
-  allowGroups = true
+  allowGroups = true,
+  isUserPremium = false
 }: {
   tests: ReadingGuestTest[];
   layout?: "stack" | "grid";
   allowGroups?: boolean;
+  isUserPremium?: boolean;
 }) {
   const isGrid = layout === "grid";
   const rows = allowGroups
@@ -116,13 +119,14 @@ function ReadingCardsList({
     <div className={isGrid ? "grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-4" : "space-y-3.5"}>
       {rows.map((row) => {
         if (row.type === "test") {
-          return <ReadingTestCard key={row.test.listKey ?? row.test.id} test={row.test} />;
+          return <ReadingTestCard key={row.test.listKey ?? row.test.id} test={row.test} isUserPremium={isUserPremium} />;
         }
 
         return (
           <ReadingGroupCard
             key={`group-${row.id}`}
             group={row}
+            isUserPremium={isUserPremium}
             className={isGrid ? "md:col-span-2 xl:col-span-4" : undefined}
           />
         );
@@ -133,9 +137,11 @@ function ReadingCardsList({
 
 function ReadingGroupCard({
   group,
+  isUserPremium = false,
   className
 }: {
   group: Extract<ReadingListRow, {type: "group"}>;
+  isUserPremium?: boolean;
   className?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -161,7 +167,7 @@ function ReadingGroupCard({
         {isOpen ? (
           <div className="space-y-3 border-t border-border px-4 py-4">
             {group.tests.map((test) => (
-              <ReadingTestCard key={test.listKey ?? test.id} test={test} />
+              <ReadingTestCard key={test.listKey ?? test.id} test={test} isUserPremium={isUserPremium} />
             ))}
           </div>
         ) : null}
@@ -305,6 +311,7 @@ export default function ReadingPage() {
   const isGuest = role === "guest";
 
   const [apiTests, setApiTests] = useState<ReadingGuestTest[]>([]);
+  const [isUserPremium, setIsUserPremium] = useState(false);
   const [tab, setTab] = useState<ReadingTab>("all");
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState<DifficultyFilter>("all");
@@ -336,6 +343,15 @@ export default function ReadingPage() {
     return () => {
       active = false;
     };
+  }, [isGuest]);
+
+  useEffect(() => {
+    if (isGuest) return;
+    let active = true;
+    studentProfileService.getProfile().then((profile) => {
+      if (active) setIsUserPremium(profile.is_premium === true);
+    }).catch(() => undefined);
+    return () => { active = false; };
   }, [isGuest]);
 
   useEffect(() => {
@@ -440,7 +456,7 @@ export default function ReadingPage() {
                 <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{fullTests.length}</span>
               </div>
               {fullTests.length ? (
-                <ReadingCardsList tests={fullTests} />
+                <ReadingCardsList tests={fullTests} isUserPremium={isUserPremium} />
               ) : (
                 <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("reading.noFullTests")}</p>
               )}
@@ -453,7 +469,7 @@ export default function ReadingPage() {
                 <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{passageTests.length}</span>
               </div>
               {passageTests.length ? (
-                <ReadingCardsList tests={passageTests} layout="grid" allowGroups={false} />
+                <ReadingCardsList tests={passageTests} layout="grid" allowGroups={false} isUserPremium={isUserPremium} />
               ) : (
                 <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("reading.noPassages")}</p>
               )}

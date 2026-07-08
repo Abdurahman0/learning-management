@@ -46,7 +46,7 @@ function isLockedPracticePath(pathWithoutLocale: string) {
 }
 
 function isBackendOnlySupportedStudentPath(pathWithoutLocale: string) {
-  const allowedPrefixes = ["/dashboard", "/reading", "/mistake-analysis", "/settings", "/onboarding", "/marathons"];
+  const allowedPrefixes = ["/dashboard", "/reading", "/mistake-analysis", "/settings", "/onboarding", "/marathons", "/upgrade"];
   const blockedPrefixes = ["/messages", "/assignments", "/study-bank", "/vocabulary", "/review-center", "/sessions", "/result"];
 
   if (blockedPrefixes.some((prefix) => pathWithoutLocale === prefix || pathWithoutLocale.startsWith(`${prefix}/`))) {
@@ -77,8 +77,8 @@ export function GuestShell({children}: GuestShellProps) {
   const baseRoute = `/${locale}`;
   const dashboardHref = role === "admin" ? `/${locale}/admin` : role === "teacher" ? `/${locale}/teacher` : `/${locale}/dashboard`;
   const topLevelRoutes = isGuest
-    ? "(reading|settings)"
-    : "(dashboard|reading|mistake-analysis|settings)";
+    ? "(reading|settings|upgrade)"
+    : "(dashboard|reading|mistake-analysis|settings|upgrade)";
   const isMobileHeaderVisible = new RegExp(`^${baseRoute}/${topLevelRoutes}/?$`).test(pathname);
   const pathWithoutLocale = pathname.replace(/^\/(uz|en)(?=\/|$)/, "") || "/";
   const isMarathonRoute = /^\/marathons(?:\/.*)?$/.test(pathWithoutLocale);

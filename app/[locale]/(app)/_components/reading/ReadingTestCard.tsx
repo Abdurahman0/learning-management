@@ -14,6 +14,7 @@ import {DifficultySignal} from "../guest-tests/DifficultySignal";
 
 type ReadingTestCardProps = {
   test: ReadingGuestTest;
+  isUserPremium?: boolean;
   action?: {
     href: string;
     label: string;
@@ -31,11 +32,12 @@ type ReadingTestCardProps = {
   badgeLabel?: string;
 };
 
-export function ReadingTestCard({test, action, secondaryAction, resourceLink, badgeLabel}: ReadingTestCardProps) {
+export function ReadingTestCard({test, isUserPremium = false, action, secondaryAction, resourceLink, badgeLabel}: ReadingTestCardProps) {
   const t = useTranslations("guest");
   const locale = useLocale();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const isLocked = test.isPremium && !isUserPremium;
   const scopedPassage = test.testFormat === "part" && test.passages.length === 1 ? test.passages[0] : null;
   const practiceHref = scopedPassage?.id
     ? `/${locale}/reading/${test.id}?mode=practice&passageId=${encodeURIComponent(scopedPassage.id)}`
@@ -45,7 +47,7 @@ export function ReadingTestCard({test, action, secondaryAction, resourceLink, ba
     : `/${locale}/reading/${test.id}?mode=real`;
 
   return (
-    <Card className={cn("border-border bg-card py-0 shadow-sm", test.isPremium && "opacity-85", isOpen && !test.isPremium && "border-blue-600")}>
+    <Card className={cn("border-border bg-card py-0 shadow-sm", isLocked && "opacity-85", isOpen && !isLocked && "border-blue-600")}>
       <CardContent className="p-0">
         <button
           type="button"
@@ -57,14 +59,20 @@ export function ReadingTestCard({test, action, secondaryAction, resourceLink, ba
               variant="secondary"
               className={cn(
                 "h-6 rounded-md px-2.5 text-[11px] font-semibold tracking-wide uppercase",
-                test.isPremium
+                isLocked
                   ? "bg-muted text-muted-foreground"
-                  : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
+                  : test.isPremium
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
               )}
             >
-              {test.isPremium ? (
+              {isLocked ? (
                 <span className="inline-flex items-center gap-1.5">
                   <Lock className="size-3" aria-hidden="true" />
+                  {t("card.premium")}
+                </span>
+              ) : test.isPremium ? (
+                <span className="inline-flex items-center gap-1.5">
                   {t("card.premium")}
                 </span>
               ) : (
@@ -72,7 +80,7 @@ export function ReadingTestCard({test, action, secondaryAction, resourceLink, ba
               )}
             </Badge>
 
-            <h3 className={cn("mt-2 truncate text-lg font-semibold text-foreground", test.isPremium && "text-muted-foreground")}>{test.title}</h3>
+            <h3 className={cn("mt-2 truncate text-lg font-semibold text-foreground", isLocked && "text-muted-foreground")}>{test.title}</h3>
 
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
@@ -118,7 +126,7 @@ export function ReadingTestCard({test, action, secondaryAction, resourceLink, ba
             ) : null}
 
             <div className="mt-3.5">
-              {test.isPremium ? (
+              {isLocked ? (
                 <Button type="button" disabled className="h-10 w-full rounded-xl border border-border bg-muted text-sm font-semibold text-muted-foreground">
                   <Lock className="mr-2 size-4" aria-hidden="true" />
                   {t("card.locked")}

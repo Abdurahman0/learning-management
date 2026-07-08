@@ -66,12 +66,22 @@ export type AdminUserListQuery = {
   status?: "ACTIVE" | "INACTIVE";
 };
 
+export type AdminPremiumHistoryEntry = {
+  id: string;
+  action: "ENABLED" | "DISABLED" | string;
+  performedById: string | null;
+  performedByEmail: string | null;
+  note: string;
+  createdAt: string;
+};
+
 export type AdminUserListItem = {
   id: string;
   fullName: string;
   email: string;
   isActive: boolean;
   isStaff: boolean;
+  isPremium: boolean;
   dateJoined: string;
   role: string;
   targetBand: number;
@@ -102,6 +112,7 @@ export type AdminUserDetailResponse = {
   email: string;
   isActive: boolean;
   isStaff: boolean;
+  isPremium: boolean;
   dateJoined: string;
   role: string;
   targetBand: number;
@@ -183,6 +194,7 @@ function normalizeListItem(payload: unknown): AdminUserListItem {
     email: asString(row.email),
     isActive: asBoolean(row.is_active ?? row.isActive),
     isStaff: asBoolean(row.is_staff ?? row.isStaff),
+    isPremium: asBoolean(row.is_premium ?? row.isPremium),
     dateJoined: asString(row.date_joined ?? row.dateJoined),
     role: asString(row.role),
     targetBand: asNumber(row.target_band ?? row.targetBand),
@@ -206,6 +218,7 @@ function normalizeDetailResponse(payload: unknown): AdminUserDetailResponse {
     email: asString(root.email),
     isActive: asBoolean(root.is_active ?? root.isActive),
     isStaff: asBoolean(root.is_staff ?? root.isStaff),
+    isPremium: asBoolean(root.is_premium ?? root.isPremium),
     dateJoined: asString(root.date_joined ?? root.dateJoined),
     role: asString(root.role),
     targetBand: asNumber(root.target_band ?? root.targetBand),
@@ -377,6 +390,45 @@ export const adminUsersService = {
     try {
       const response = await adminHttpClient.patch<unknown>("/reason-usage-limits/", toReasonUsageLimitsPayload(payload));
       return normalizeReasonUsageLimits(response.data);
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async enablePremium(userId: string, note?: string) {
+    try {
+      const response = await adminHttpClient.post<unknown>(`/users/${userId}/premium/enable/`, {note: note ?? ""});
+      return normalizeDetailResponse(response.data);
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async disablePremium(userId: string, note?: string) {
+    try {
+      const response = await adminHttpClient.post<unknown>(`/users/${userId}/premium/disable/`, {note: note ?? ""});
+      return normalizeDetailResponse(response.data);
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async getPremiumHistory(userId: string): Promise<AdminPremiumHistoryEntry[]> {
+    try {
+      const response = await adminHttpClient.get<unknown>(`/users/${userId}/premium-history/`);
+      const data = asRecord(response.data) ?? {};
+      const results = Array.isArray(data.results) ? data.results : Array.isArray(response.data) ? (response.data as unknown[]) : [];
+      return results.map((item) => {
+        const row = asRecord(item) ?? {};
+        return {
+          id: asString(row.id),
+          action: asString(row.action) as "ENABLED" | "DISABLED",
+          performedById: asString(row.performed_by_id) || null,
+          performedByEmail: asString(row.performed_by_email) || null,
+          note: asString(row.note),
+          createdAt: asString(row.created_at),
+        };
+      });
     } catch (error) {
       throw toAdminApiError(error);
     }
