@@ -11,7 +11,7 @@ export const DEFAULT_PREMIUM_CONFIG: PremiumPaymentConfig = {
   price: "99 000",
   currency: "UZS",
   period: "oy",
-  telegramUrl: "https://t.me/youradmin",
+  telegramUrl: "https://t.me/+U1YftX0MkDgzOGNi",
   telegramLabel: "Telegramda bog'lanish",
   features: [
     "Barcha premium reading testlari",

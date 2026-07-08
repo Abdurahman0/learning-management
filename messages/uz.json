@@ -699,26 +699,13 @@
     }
   },
   "comparison": {
-    "title": "Tayyorgarlikni maksimal darajaga olib chiqing",
-    "subtitle": "Nega akkaunt ochish eng to'g'ri tanlov ekanini ko'ring.",
-    "withoutLabel": "Akkauntsiz",
-    "withLabel": "Bepul akkaunt bilan",
-    "freeForever": "Doim bepul",
-    "recommended": "Tavsiya etiladi",
-    "cta": "Bepul akkaunt yaratish",
-    "without": {
-      "one": "Faqat 2 ta amaliy test",
-      "two": "Ball tarixini kuzatib bo'lmaydi",
-      "three": "Batafsil javob tahlili yo'q",
-      "four": "Shaxsiy tavsiyalar yo'q"
-    },
-    "with": {
-      "one": "Cheksiz amaliy testlar",
-      "two": "To'liq ball tarixi paneli",
-      "three": "Xatolar bo'yicha chuqur AI tahlil",
-      "four": "Haftalik IELTS maslahatlari va yangiliklar",
-      "five": "Ustuvor hamjamiyat yordami"
-    }
+    "title": "O'zingizga mos rejani tanlang",
+    "subtitle": "IELTS tayyorgarligingizni yangi bosqichga olib chiqing.",
+    "telegramCta": "Telegramda bog'lanish",
+    "silverName": "Silver",
+    "goldName": "Gold",
+    "recommended": "Eng yaxshi",
+    "perMonth": "oy"
   },
   "finalCta": {
     "title": "Maqsad bandingizga erishishga tayyormisiz?",

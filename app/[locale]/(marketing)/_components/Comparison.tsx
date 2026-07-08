@@ -1,4 +1,4 @@
-﻿import {CheckCircle2, CircleX} from "lucide-react";
+import {CheckCircle2, Crown, ExternalLink, Star} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Badge} from "@/components/ui/badge";
@@ -7,60 +7,103 @@ import {Card, CardContent} from "@/components/ui/card";
 
 import {Container} from "./Container";
 
-const withoutKeys = ["one", "two", "three", "four"] as const;
-const withKeys = ["one", "two", "three", "four", "five"] as const;
+const TELEGRAM_URL = "https://t.me/+U1YftX0MkDgzOGNi";
+
+const SILVER_FEATURES = [
+  "Barcha REAL exam reading testlar",
+  "Barcha REAL exam listening testlar (tez orada)",
+  "Ustuvor qo'llab-quvvatlash",
+  "Cheksiz AI tahlil",
+];
+
+const GOLD_EXTRA_FEATURES = [
+  "Barcha marathonlarga kirish",
+  "Online Reading kursi sovg'aga",
+];
 
 export function Comparison() {
-  const t = useTranslations();
+  const t = useTranslations("comparison");
 
   return (
     <section className="bg-muted/30 py-16 sm:py-20" id="pricing">
       <Container>
         <div data-reveal-item className="mx-auto max-w-3xl text-center">
-          <h2 className="text-4xl font-bold text-foreground">{t("comparison.title")}</h2>
-          <p className="mt-3 text-muted-foreground">{t("comparison.subtitle")}</p>
+          <h2 className="text-4xl font-bold text-foreground">{t("title")}</h2>
+          <p className="mt-3 text-muted-foreground">{t("subtitle")}</p>
         </div>
 
-        <div className="mx-auto mt-10 grid w-full max-w-6xl gap-6 lg:grid-cols-2">
-          <Card data-reveal-item className="min-h-105 hover:scale-103 transition duration-300 border-border bg-card py-0 shadow-sm">
-            <CardContent className="h-full px-7 py-8">
-              <p className="text-sm font-semibold tracking-[0.16em] text-muted-foreground uppercase">{t("comparison.withoutLabel")}</p>
-              <ul className="mt-6 space-y-4" aria-label={t("comparison.withoutLabel")}>
-                {withoutKeys.map((key) => (
-                  <li key={key} className="flex items-start gap-3 text-muted-foreground">
-                    <CircleX className="mt-0.5 size-4 shrink-0 text-red-500" aria-hidden="true" />
-                    <span>{t(`comparison.without.${key}`)}</span>
+        <div className="mx-auto mt-10 grid w-full max-w-4xl gap-6 sm:grid-cols-2">
+          {/* Silver */}
+          <Card data-reveal-item className="hover:scale-103 transition duration-300 border-border bg-card py-0 shadow-sm">
+            <CardContent className="flex h-full flex-col px-7 py-8">
+              <div className="flex items-center gap-2">
+                <Star className="size-5 text-slate-400" aria-hidden="true" />
+                <p className="text-base font-bold tracking-wide text-slate-500 dark:text-slate-400">{t("silverName")}</p>
+              </div>
+
+              <div className="mt-4">
+                <span className="text-4xl font-extrabold tracking-tight">60 000</span>
+                <span className="ml-1.5 text-base font-semibold text-muted-foreground">so&apos;m</span>
+                <p className="mt-1 text-sm text-muted-foreground">har {t("perMonth")} uchun</p>
+              </div>
+
+              <ul className="mt-6 flex-1 space-y-3">
+                {SILVER_FEATURES.map((feature) => (
+                  <li key={feature} className="flex items-start gap-3 text-sm text-foreground/80">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" aria-hidden="true" />
+                    {feature}
                   </li>
                 ))}
               </ul>
+
+              <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="mt-8 block">
+                <Button variant="outline" size="lg" className="w-full rounded-xl">
+                  <ExternalLink className="size-4" />
+                  {t("telegramCta")}
+                </Button>
+              </a>
             </CardContent>
           </Card>
 
-          <Card data-reveal-item className="relative min-h-105 hover:scale-103 transition duration-300 border-blue-600 bg-card py-0 shadow-md">
-            <Badge className="absolute top-3 right-3 rounded-full bg-blue-600 px-2.5 py-1 text-[10px] tracking-wide uppercase">
-              {t("comparison.recommended")}
+          {/* Gold */}
+          <Card data-reveal-item className="relative hover:scale-103 transition duration-300 border-amber-500/40 bg-card py-0 shadow-md">
+            <Badge className="absolute top-3 right-3 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-amber-600 uppercase dark:text-amber-400">
+              {t("recommended")}
             </Badge>
 
             <CardContent className="flex h-full flex-col px-7 py-8">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-bold tracking-[0.16em] text-blue-700 uppercase">{t("comparison.withLabel")}</p>
-                <Badge variant="secondary" className="rounded-full bg-muted text-[10px] text-muted-foreground uppercase">
-                  {t("comparison.freeForever")}
-                </Badge>
+                <Crown className="size-5 text-amber-500" aria-hidden="true" />
+                <p className="text-base font-bold tracking-wide text-amber-600 dark:text-amber-400">{t("goldName")}</p>
               </div>
 
-              <ul className="mt-6 space-y-4" aria-label={t("comparison.withLabel")}>
-                {withKeys.map((key) => (
-                  <li key={key} className="flex items-start gap-3 text-muted-foreground">
+              <div className="mt-4">
+                <span className="text-4xl font-extrabold tracking-tight">99 000</span>
+                <span className="ml-1.5 text-base font-semibold text-muted-foreground">so&apos;m</span>
+                <p className="mt-1 text-sm text-muted-foreground">har {t("perMonth")} uchun</p>
+              </div>
+
+              <ul className="mt-6 flex-1 space-y-3">
+                {SILVER_FEATURES.map((feature) => (
+                  <li key={feature} className="flex items-start gap-3 text-sm text-foreground/80">
                     <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" aria-hidden="true" />
-                    <span>{t(`comparison.with.${key}`)}</span>
+                    {feature}
+                  </li>
+                ))}
+                {GOLD_EXTRA_FEATURES.map((feature) => (
+                  <li key={feature} className="flex items-start gap-3 text-sm font-medium text-foreground">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden="true" />
+                    {feature}
                   </li>
                 ))}
               </ul>
 
-              <Button className="mt-auto w-full rounded-lg" size="lg">
-                {t("comparison.cta")}
-              </Button>
+              <a href={TELEGRAM_URL} target="_blank" rel="noopener noreferrer" className="mt-8 block">
+                <Button size="lg" className="w-full rounded-xl bg-amber-500 font-bold text-white hover:bg-amber-500/90 dark:bg-amber-500 dark:hover:bg-amber-500/90">
+                  <ExternalLink className="size-4" />
+                  {t("telegramCta")}
+                </Button>
+              </a>
             </CardContent>
           </Card>
         </div>

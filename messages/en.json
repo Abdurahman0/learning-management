@@ -699,26 +699,13 @@
     }
   },
   "comparison": {
-    "title": "Maximize Your Preparation",
-    "subtitle": "See why creating an account is the best choice for your journey.",
-    "withoutLabel": "Without Account",
-    "withLabel": "With Free Account",
-    "freeForever": "Free Forever",
-    "recommended": "Recommended",
-    "cta": "Create Free Account",
-    "without": {
-      "one": "Only 2 practice tests available",
-      "two": "No score history tracking",
-      "three": "No detailed answer analysis",
-      "four": "No personalized recommendations"
-    },
-    "with": {
-      "one": "Unlimited practice tests",
-      "two": "Full score history dashboard",
-      "three": "Deep AI analysis of mistakes",
-      "four": "Weekly IELTS tips & newsletters",
-      "five": "Priority community support"
-    }
+    "title": "Choose Your Plan",
+    "subtitle": "Take your IELTS preparation to the next level.",
+    "telegramCta": "Contact on Telegram",
+    "silverName": "Silver",
+    "goldName": "Gold",
+    "recommended": "Best Value",
+    "perMonth": "month"
   },
   "finalCta": {
     "title": "Ready to reach your target band?",
