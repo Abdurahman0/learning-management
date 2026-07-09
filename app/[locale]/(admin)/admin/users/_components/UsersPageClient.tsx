@@ -1,6 +1,6 @@
 "use client";
 
-import {useEffect, useMemo, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import {useTranslations} from "next-intl";
 
 import {
@@ -150,31 +150,39 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [metrics, setMetrics] = useState({totalUsers: 0, activeToday: 0, newThisMonth: 0});
   const [premiumLoading, setPremiumLoading] = useState<Set<string>>(new Set());
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    let active = true;
-
-    const loadUsers = async () => {
+  const fetchUsers = useMemo(
+    () => async (query: string) => {
+      setIsSearching(true);
       try {
-        const response = await adminUsersService.list({page: 1, pageSize: 200, search: initialQuery || undefined});
-        if (!active) return;
-
+        const response = await adminUsersService.list({page: 1, pageSize: 200, search: query || undefined});
         setMetrics(response.metrics);
         setUsers(response.results.map(mapUserListItemToAdminUser));
       } catch {
-        if (!active) return;
         setUsers([]);
+      } finally {
+        setIsSearching(false);
       }
-    };
+    },
+    []
+  );
 
-    void loadUsers();
+  useEffect(() => {
+    void fetchUsers(initialQuery);
+  }, [initialQuery, fetchUsers]);
 
-    return () => {
-      active = false;
-    };
-  }, [initialQuery]);
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
+    setPage(1);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      void fetchUsers(value);
+    }, 400);
+  };
 
   const stats = useMemo<UserStatCard[]>(() => {
     return [
@@ -224,6 +232,8 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
     setStatusFilter("all");
     setRoleFilter("all");
     setPage(1);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    void fetchUsers("");
   };
 
   const handleSelectUser = async (userId: string) => {
@@ -298,10 +308,8 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
         <div className="flex min-w-0 flex-1 flex-col">
           <UsersHeader
             searchValue={searchValue}
-            onSearchChange={(value) => {
-              setSearchValue(value);
-              setPage(1);
-            }}
+            onSearchChange={handleSearchChange}
+            isSearching={isSearching}
           />
 
           <main className="mx-auto min-w-0 w-full max-w-[1480px] space-y-5 overflow-x-hidden px-4 py-5 sm:px-6 lg:px-8">

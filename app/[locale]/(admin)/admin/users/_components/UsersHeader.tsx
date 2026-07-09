@@ -1,6 +1,6 @@
 "use client";
 
-import {Search} from "lucide-react";
+import {Loader2, Search} from "lucide-react";
 import {useTranslations} from "next-intl";
 
 import {Button} from "@/components/ui/button";
@@ -15,9 +15,10 @@ import {AdminSidebarMobileNav} from "../../_components/AdminSidebar";
 type UsersHeaderProps = {
   searchValue: string;
   onSearchChange: (value: string) => void;
+  isSearching?: boolean;
 };
 
-export function UsersHeader({searchValue, onSearchChange}: UsersHeaderProps) {
+export function UsersHeader({searchValue, onSearchChange, isSearching}: UsersHeaderProps) {
   const t = useTranslations("adminUsers");
 
   return (
@@ -30,7 +31,9 @@ export function UsersHeader({searchValue, onSearchChange}: UsersHeaderProps) {
 
         <div className="ml-auto hidden w-full max-w-[360px] md:block">
           <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            {isSearching
+              ? <Loader2 className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              : <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />}
             <Input
               type="search"
               placeholder={t("searchPlaceholder")}
