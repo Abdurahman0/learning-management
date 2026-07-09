@@ -35,7 +35,7 @@ export type ReadingQuestion =
   | (BaseQuestion & { type: "summaryCompletion"; summaryText: string; wordBank?: string[] | null })
   | (BaseQuestion & { type: "tableCompletion"; tableColumns: string[]; tableRows: string[][] })
   | (BaseQuestion & { type: "listSelection"; listOptions: string[] })
-  | (BaseQuestion & { type: "matchingInfo"; paragraphOptions: string[] });
+  | (BaseQuestion & { type: "matchingInfo"; paragraphOptions: string[]; matchingSubtype: "info" | "features" });
 
 export type ReadingFullTest = {
   id: string;
@@ -152,6 +152,7 @@ const mi = (id: string, number: number, passageId: ReadingPassage["id"], groupTi
   number,
   passageId,
   type: "matchingInfo",
+  matchingSubtype: "info",
   groupTitle,
   groupInstruction,
   prompt,

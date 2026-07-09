@@ -480,11 +480,15 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
             : instructionOptions.length
               ? instructionOptions
               : ["A", "B", "C", "D", "E", "F"];
+          const rawQType = toStringSafe(question.question_type, "").toUpperCase();
+          const matchingSubtype: "info" | "features" =
+            rawQType.includes("FEAT") || rawQType.includes("CLASSIF") ? "features" : "info";
           readingQuestion = {
             id: question.id,
             number: questionNumber,
             passageId: passageInfo.passageId,
             type: "matchingInfo",
+            matchingSubtype,
             prompt,
             groupTitle,
             groupInstruction: group.instructions ?? undefined,

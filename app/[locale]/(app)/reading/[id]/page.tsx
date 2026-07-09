@@ -1043,6 +1043,10 @@ function collectBackendAttemptAnswerEntries(params: {
         }
 
         if (question.type === "matchingInfo" && typeof answer === "string") {
+          if (question.matchingSubtype === "features") {
+            return answer;
+          }
+          // "info" subtype: backend grades by letter key (e.g. "A"), not full label
           const rawOpts = question.paragraphOptions;
           const parsedOpts = rawOpts.map((opt, i) => parseMatchingInfoOption(opt, i));
           const resolvedKey = resolveChoiceKeyFromRawValue(answer, parsedOpts, rawOpts);
@@ -1222,6 +1226,7 @@ function mapBackendAttemptToReadingTest(
             number,
             passageId,
             type: "matchingInfo",
+            matchingSubtype: "info",
             backendQuestionId: submitQuestionId || undefined,
             backendQuestionCandidateIds: submitQuestionCandidates.length ? submitQuestionCandidates : undefined,
             groupTitle,
@@ -1241,6 +1246,7 @@ function mapBackendAttemptToReadingTest(
             number,
             passageId,
             type: "matchingInfo",
+            matchingSubtype: "features",
             backendQuestionId: submitQuestionId || undefined,
             backendQuestionCandidateIds: submitQuestionCandidates.length ? submitQuestionCandidates : undefined,
             groupTitle,
