@@ -104,6 +104,8 @@ function buildJourneyDays(detail: StudentMarathonDetail, days: StudentMarathonDa
       external_links_count: 0,
       reading_passages_count: 0,
       listening_parts_count: 0,
+      is_premium: false,
+      lock_reason: null,
     } satisfies StudentMarathonDaySummary;
   });
 }

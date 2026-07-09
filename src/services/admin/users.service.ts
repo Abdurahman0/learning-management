@@ -57,6 +57,21 @@ function normalizeListResponse<T>(data: AdminPaginatedResponse<T> | T[]) {
   };
 }
 
+export type AdminSubscription = {
+  id: string;
+  package: string;
+  package_name: string;
+  package_tier: string;
+  months: number;
+  starts_at: string;
+  expires_at: string;
+  status: "ACTIVE" | "EXPIRED" | "CANCELLED" | string;
+  is_currently_active: boolean;
+  days_remaining: number;
+  cancelled_at: string | null;
+  created_at: string;
+};
+
 export type AdminUserListQuery = {
   page?: number;
   pageSize?: number;
@@ -395,9 +410,13 @@ export const adminUsersService = {
     }
   },
 
-  async enablePremium(userId: string, note?: string) {
+  async enablePremium(userId: string, payload: {package: string; months: number; note?: string}) {
     try {
-      const response = await adminHttpClient.post<unknown>(`/users/${userId}/premium/enable/`, {note: note ?? ""});
+      const response = await adminHttpClient.post<unknown>(`/users/${userId}/premium/enable/`, {
+        package: payload.package,
+        months: payload.months,
+        note: payload.note ?? ""
+      });
       return normalizeDetailResponse(response.data);
     } catch (error) {
       throw toAdminApiError(error);
@@ -429,6 +448,42 @@ export const adminUsersService = {
           createdAt: asString(row.created_at),
         };
       });
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async assignSubscription(userId: string, payload: {package: string; months: number; note?: string}): Promise<AdminSubscription> {
+    try {
+      const response = await adminHttpClient.post<AdminSubscription>(`/users/${userId}/subscription/`, {
+        package: payload.package,
+        months: payload.months,
+        note: payload.note ?? ""
+      });
+      return response.data;
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async cancelSubscription(userId: string): Promise<AdminSubscription> {
+    try {
+      const response = await adminHttpClient.post<AdminSubscription>(`/users/${userId}/subscription/cancel/`);
+      return response.data;
+    } catch (error) {
+      throw toAdminApiError(error);
+    }
+  },
+
+  async getSubscriptionHistory(userId: string): Promise<AdminSubscription[]> {
+    try {
+      const response = await adminHttpClient.get<unknown>(`/users/${userId}/subscription/`);
+      const data = response.data;
+      if (Array.isArray(data)) {
+        return data as AdminSubscription[];
+      }
+      const record = asRecord(data) ?? {};
+      return Array.isArray(record.results) ? (record.results as AdminSubscription[]) : [];
     } catch (error) {
       throw toAdminApiError(error);
     }

@@ -98,7 +98,10 @@ function normalizeMarathonItem(value: unknown): StudentMarathonListItem {
     for_premium_users: toBooleanSafe(record?.for_premium_users),
     external_link: toStringSafe(record?.external_link) || null,
     external_link_title: toStringSafe(record?.external_link_title) || null,
-    enrollment: normalizeEnrollmentBrief(record?.enrollment)
+    enrollment: normalizeEnrollmentBrief(record?.enrollment),
+    make_three_days_free: toBooleanSafe(record?.make_three_days_free),
+    access_type: toStringSafe(record?.access_type, "FREE"),
+    free_days_count: toNumberSafe(record?.free_days_count)
   };
 }
 
@@ -126,7 +129,9 @@ function normalizeDaySummary(value: unknown): StudentMarathonDaySummary {
     is_completed: toBooleanSafe(record?.is_completed),
     external_links_count: toNumberSafe(record?.external_links_count),
     reading_passages_count: toNumberSafe(record?.reading_passages_count),
-    listening_parts_count: toNumberSafe(record?.listening_parts_count)
+    listening_parts_count: toNumberSafe(record?.listening_parts_count),
+    is_premium: toBooleanSafe(record?.is_premium),
+    lock_reason: (toStringSafe(record?.lock_reason) || null) as "SEQUENCE" | "PREMIUM" | null
   };
 }
 
@@ -217,6 +222,8 @@ function normalizeDayDetail(value: unknown): StudentMarathonDayDetail {
     is_completable: toBooleanSafe(record?.is_completable),
     is_locked: toBooleanSafe(record?.is_locked),
     is_completed: toBooleanSafe(record?.is_completed),
+    is_premium: toBooleanSafe(record?.is_premium),
+    lock_reason: (toStringSafe(record?.lock_reason) || null) as "SEQUENCE" | "PREMIUM" | null,
     student_day_id: toStringSafe(record?.student_day_id) || null,
     time_spent_seconds: toNumberSafe(record?.time_spent_seconds),
     external_links: toArray(record?.external_links).map(normalizeDayLink),

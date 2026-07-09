@@ -39,6 +39,9 @@ export type StudentMarathonListItem = {
   external_link: string | null;
   external_link_title: string | null;
   enrollment: StudentMarathonEnrollmentBrief | null;
+  make_three_days_free: boolean;
+  access_type: "FREE" | "TRIAL" | "LOCKED" | string;
+  free_days_count: number;
 };
 
 export type StudentMarathonDetail = StudentMarathonListItem & {
@@ -59,6 +62,8 @@ export type StudentMarathonDaySummary = {
   external_links_count: number;
   reading_passages_count: number;
   listening_parts_count: number;
+  is_premium: boolean;
+  lock_reason: "SEQUENCE" | "PREMIUM" | null;
 };
 
 export type StudentMarathonDayLink = {
@@ -123,6 +128,8 @@ export type StudentMarathonDayDetail = {
   is_completable: boolean;
   is_locked: boolean;
   is_completed: boolean;
+  is_premium: boolean;
+  lock_reason: "SEQUENCE" | "PREMIUM" | null;
   student_day_id: string | null;
   time_spent_seconds: number;
   external_links: StudentMarathonDayLink[];
