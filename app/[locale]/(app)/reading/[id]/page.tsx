@@ -490,7 +490,7 @@ function toAlphabetKey(rawIndex: number) {
 
 function parseOptionChoice(option: string, index: number) {
   const trimmed = option.trim();
-  const match = trimmed.match(/^\s*([A-Z])[\)\].:\-]\s*(.+)$/i);
+  const match = trimmed.match(/^\s*([A-Z])(?:[\)\].:\-]\s*|\s+)(.+)$/i);
   if (match) {
     const key = match[1].toUpperCase();
     const text = match[2].trim();
