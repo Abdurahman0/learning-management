@@ -356,7 +356,7 @@ export function MarathonDayPageClient({
                         route: "reading",
                         contentId: item.id,
                         attemptStatus: item.attempt_status,
-                        attemptId: item.attempt_id,
+                        attemptId: item.attempt_id ?? item.latest_retake?.attempt_id ?? null,
                       }),
                       label: item.attempt_status === "COMPLETED"
                         ? "Review reading"
@@ -402,7 +402,7 @@ export function MarathonDayPageClient({
                         route: "listening",
                         contentId: item.id,
                         attemptStatus: item.attempt_status,
-                        attemptId: item.attempt_id,
+                        attemptId: item.attempt_id ?? item.latest_retake?.attempt_id ?? null,
                       }),
                       label: item.attempt_status === "COMPLETED"
                         ? "Review listening"

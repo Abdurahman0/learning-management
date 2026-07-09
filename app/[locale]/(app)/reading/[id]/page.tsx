@@ -1473,7 +1473,12 @@ export default function ReadingTestPage() {
           } else {
             try {
               marathonAttempt = await studentMarathonService.startAttempt(marathonIdParam, marathonDayNumber, {passage_id: testId});
-            } catch {
+            } catch (err) {
+              const apiErr = err instanceof StudentApiError ? err : null;
+              const raw = apiErr?.raw as Record<string, unknown> | null;
+              if (apiErr?.status === 400 && raw?.is_available_to_be_solved === false) {
+                throw new Error("This passage has already been completed. Go back to the marathon day to review your results.");
+              }
               marathonAttempt = await studentMarathonService.startRetake(marathonIdParam, marathonDayNumber, {passage_id: testId});
             }
           }

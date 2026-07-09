@@ -170,7 +170,7 @@ function normalizeDayItem(value: unknown): StudentMarathonDayContentItem {
     difficulty_level: toStringSafe(record?.difficulty_level) || null,
     estimated_time_minutes: record?.estimated_time_minutes == null ? null : toNumberSafe(record?.estimated_time_minutes),
     is_available_to_be_solved: toBooleanSafe(record?.is_available_to_be_solved, true),
-    attempt_id: toStringSafe(record?.attempt_id) || null,
+    attempt_id: toStringSafe(record?.attempt_id ?? record?.last_attempt_id ?? record?.current_attempt_id ?? record?.active_attempt_id) || null,
     attempt_status: toStringSafe(record?.attempt_status) || null,
     band_score: toStringSafe(record?.band_score) || null,
     question_groups_count: toNumberSafe(record?.question_groups_count),
