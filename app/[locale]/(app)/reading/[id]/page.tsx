@@ -37,6 +37,7 @@ import {
 import { authApi } from "@/lib/api/auth";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { HighlightableText } from "@/components/test/HighlightableText";
+import { BlankNumberBadge } from "@/components/test/BlankNumberBadge";
 import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
 import { InlineBoldText } from "@/components/test/InlineBoldText";
 import { TestNotesButton } from "@/components/test/TestNotesButton";
@@ -3830,7 +3831,7 @@ function ReadingTestClient({
                                 ) : null}
 
                               {question.type === "tfng" ? (
-                                <div className="flex flex-wrap gap-4">
+                                <div className="flex flex-col gap-2">
                                   {question.options.map((option, optionIndex) => (
                                     <label key={option} className="flex cursor-pointer items-center gap-2 text-sm font-medium">
                                       <input
@@ -4263,7 +4264,7 @@ function ReadingTestClient({
                                   disabled={reviewMode}
                                   onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
                                   placeholder={t("oneWordOnly")}
-                                  className="test-input-surface max-w-sm bg-background/70 placeholder:text-muted-foreground/80 dark:bg-muted/30"
+                                  className="test-input-surface max-w-sm rounded-[4px] bg-background/70 placeholder:text-muted-foreground/80 dark:bg-muted/30"
                                 />
                               ) : null}
 
@@ -4320,15 +4321,8 @@ function ReadingTestClient({
 
                                                     return (
                                                       <span key={`${question.id}-cell-input-${rowIndex}-${cellIndex}-${partIndex}`} className="inline-flex flex-col items-start gap-1.5">
-                                                        <span className="inline-flex items-baseline gap-1">
-                                                          <span
-                                                            className={cn(
-                                                              "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white",
-                                                              isActiveBlank ? "bg-blue-600" : "bg-muted-foreground/50"
-                                                            )}
-                                                          >
-                                                            {targetNumber}
-                                                          </span>
+                                                        <span className="relative inline-flex items-baseline">
+                                                          <BlankNumberBadge number={targetNumber} active={isActiveBlank} />
                                                           <Input
                                                             aria-label={`Question ${targetNumber}`}
                                                             value={typeof targetValue === "string" ? targetValue : ""}
@@ -4345,9 +4339,8 @@ function ReadingTestClient({
                                                               }
                                                             }}
                                                             onChange={(event) => setAnswers((prev) => ({...prev, [targetQuestion.id]: event.target.value}))}
-                                                            placeholder="..."
                                                             className={cn(
-                                                              "test-input-surface h-8 w-28 rounded-md px-2 text-sm sm:w-36",
+                                                              "test-input-surface h-8 w-28 rounded-[4px] pr-2 pl-6 text-sm sm:w-36",
                                                               isActiveBlank
                                                                 ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-400/30 dark:bg-blue-900/20"
                                                                 : "border-blue-300/40 bg-background/80 dark:bg-muted/30"
@@ -4508,16 +4501,8 @@ function ReadingTestClient({
                                               : (t.has("notAvailable") ? t("notAvailable") : "Not available");
 
                                             return (
-                                              <span key={partIndex} className="inline-flex select-none items-baseline gap-1 mx-0.5">
-                                                <span 
-                                                  className={cn(
-                                                    "inline-flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white transition-colors",
-                                                    isThisQuestion ? "bg-blue-600" : "bg-muted-foreground/40"
-                                                  )} 
-                                                  style={{ verticalAlign: "baseline", position: "relative", top: "2px" }}
-                                                >
-                                                  {num}
-                                                </span>
+                                              <span key={partIndex} className="relative inline-flex select-none items-baseline mx-0.5">
+                                                <BlankNumberBadge number={num} active={isThisQuestion} />
                                                 <Input
                                                   aria-label={`Question ${num}`}
                                                   value={typeof questionValue === "string" ? questionValue : ""}
@@ -4550,12 +4535,11 @@ function ReadingTestClient({
                                                     fillSummaryBlank(targetQuestion, normalizedDropped);
                                                   }}
                                                   onChange={(e) => setAnswers((prev) => ({ ...prev, [targetQuestion.id]: e.target.value }))}
-                                                  placeholder="………"
                                                   className={cn(
-                                                    "test-input-surface inline-block h-7 w-28 rounded-md px-2 text-sm transition-all sm:w-36",
-                                                    isThisQuestion 
-                                                      ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-400/30 dark:bg-blue-900/20" 
-                                                      : "border-blue-300/40 bg-background/70 placeholder:text-muted-foreground/30 dark:bg-muted/30"
+                                                    "test-input-surface inline-block h-7 w-28 rounded-[4px] pr-2 pl-6 text-sm transition-all sm:w-36",
+                                                    isThisQuestion
+                                                      ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-400/30 dark:bg-blue-900/20"
+                                                      : "border-blue-300/40 bg-background/70 dark:bg-muted/30"
                                                   )}
                                                   style={{ verticalAlign: "baseline" }}
                                                 />

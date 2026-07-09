@@ -516,6 +516,26 @@
     line-height: 1.86rem;
   }
 
+  /* Test-taking pages read like an exam paper: passage/question text uses a serif face
+     with a little extra breathing room between words, while every interactive control
+     (inputs, selects, buttons, the small question-number badges) stays in the sans font
+     so answers are visually distinct from the questions around them. */
+  .test-appearance-root {
+    font-family: var(--font-serif), Georgia, "Times New Roman", serif;
+    letter-spacing: 0.012em;
+    word-spacing: 0.06em;
+  }
+
+  .test-appearance-root input,
+  .test-appearance-root textarea,
+  .test-appearance-root select,
+  .test-appearance-root button,
+  .test-appearance-root .test-chip {
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    letter-spacing: normal;
+    word-spacing: normal;
+  }
+
   .reading-real-mode-content,
   .reading-real-mode-content input,
   .reading-real-mode-content textarea,

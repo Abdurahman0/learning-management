@@ -71,6 +71,7 @@ import { getListeningAnswerMeta } from "@/data/listening-answer-keys";
 import { gradeTest, type GradeableQuestion } from "@/lib/grading";
 import { flattenListeningQuestions } from "@/lib/listening-questions";
 import { Highlightable } from "@/components/test/Highlightable";
+import { BlankNumberBadge } from "@/components/test/BlankNumberBadge";
 import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
 import { InlineBoldText } from "@/components/test/InlineBoldText";
 import { TestNotesButton } from "@/components/test/TestNotesButton";
@@ -3011,37 +3012,33 @@ function ListeningTestClient({
                   questionRefs.current.set(field.questionNumber, el);
                 }}
                 className={cn(
-                  "grid min-w-0 grid-cols-[32px_minmax(0,1fr)] items-center gap-2 scroll-mt-24 sm:grid-cols-[140px_32px_minmax(0,1fr)]",
+                  "grid min-w-0 grid-cols-1 items-center gap-2 scroll-mt-24 sm:grid-cols-[140px_minmax(0,1fr)]",
                   isSmallLandscape &&
-                    "rounded-lg border border-border/60 p-2 grid-cols-[32px_minmax(0,1fr)]",
+                    "rounded-lg border border-border/60 p-2 grid-cols-1",
                   markedQuestionClass(field.questionNumber),
                 )}
               >
-                <p
-                  className={cn(
-                    "col-span-2 wrap-break-word text-sm text-foreground sm:col-span-1",
-                    isSmallLandscape && "col-span-2 sm:col-span-2",
-                  )}
-                >
+                <p className="wrap-break-word text-sm text-foreground">
                   <InlineBoldText text={field.label} />
                 </p>
-                <QuestionChip
-                  number={field.questionNumber}
-                  active={activeQuestionNumber === field.questionNumber}
-                />
-                <Input
-                  aria-label={`Question ${field.questionNumber}`}
-                  value={answers[field.questionNumber] ?? ""}
-                  onChange={(e) =>
-                    setAnswer(field.questionNumber, e.target.value)
-                  }
-                  onFocus={() => setActiveQuestionNumber(field.questionNumber)}
-                  placeholder={field.placeholder ?? "..."}
-                  className={cn(
-                    "test-input-surface w-full min-w-0 h-10",
-                    isSmallLandscape && "h-11",
-                  )}
-                />
+                <span className="relative flex w-full">
+                  <BlankNumberBadge
+                    number={field.questionNumber}
+                    active={activeQuestionNumber === field.questionNumber}
+                  />
+                  <Input
+                    aria-label={`Question ${field.questionNumber}`}
+                    value={answers[field.questionNumber] ?? ""}
+                    onChange={(e) =>
+                      setAnswer(field.questionNumber, e.target.value)
+                    }
+                    onFocus={() => setActiveQuestionNumber(field.questionNumber)}
+                    className={cn(
+                      "test-input-surface h-10 w-full min-w-0 rounded-[4px] pl-6",
+                      isSmallLandscape && "h-11",
+                    )}
+                  />
+                </span>
               </div>
             ))}
           </div>
@@ -3080,21 +3077,20 @@ function ListeningTestClient({
                 questionRefs.current.set(questionNumber, el);
               }}
               className={cn(
-                "inline-flex items-baseline gap-1.5 align-baseline",
+                "relative inline-flex items-baseline align-baseline",
                 isMarkedBlank && "rounded-md bg-amber-50/40 px-1 py-0.5 dark:bg-amber-500/10"
               )}
               onClick={() => setActiveQuestionNumber(questionNumber)}
             >
-              <QuestionChip number={questionNumber} active={isActiveBlank} />
+              <BlankNumberBadge number={questionNumber} active={isActiveBlank} />
               <Input
                 aria-label={`Question ${questionNumber}`}
                 value={answers[questionNumber] ?? ""}
                 disabled={reviewMode}
                 onFocus={() => setActiveQuestionNumber(questionNumber)}
                 onChange={(event) => setAnswer(questionNumber, event.target.value)}
-                placeholder="..."
                 className={cn(
-                  "test-input-surface h-9 w-28 rounded-md px-2 text-sm sm:w-36",
+                  "test-input-surface h-9 w-28 rounded-[4px] pr-2 pl-6 text-sm sm:w-36",
                   isActiveBlank
                     ? "border-blue-400 bg-blue-50/50 ring-1 ring-blue-400/30 dark:bg-blue-900/20"
                     : "border-blue-300/40 bg-background/80 dark:bg-muted/30"
@@ -3580,28 +3576,30 @@ function ListeningTestClient({
                       }
                       questionRefs.current.set(item.questionNumber, el);
                     }}
-                    className={cn("grid grid-cols-[32px_minmax(0,1fr)] items-center gap-2 scroll-mt-24", markedQuestionClass(item.questionNumber))}
+                    className={cn("grid grid-cols-1 items-center gap-2 scroll-mt-24", markedQuestionClass(item.questionNumber))}
                     onClick={() => setActiveQuestionNumber(item.questionNumber)}
                   >
-                    <QuestionChip
-                      number={item.questionNumber}
-                      active={activeQuestionNumber === item.questionNumber}
-                    />
-                    <Input
-                      aria-label={`Question ${item.questionNumber}`}
-                      value={answers[item.questionNumber] ?? ""}
-                      onChange={(e) =>
-                        setAnswer(item.questionNumber, e.target.value)
-                      }
-                      onFocus={() =>
-                        setActiveQuestionNumber(item.questionNumber)
-                      }
-                      placeholder={item.label}
-                      className={cn(
-                        "test-input-surface w-full min-w-0 h-10",
-                        isSmallLandscape && "h-11",
-                      )}
-                    />
+                    <span className="relative flex w-full">
+                      <BlankNumberBadge
+                        number={item.questionNumber}
+                        active={activeQuestionNumber === item.questionNumber}
+                      />
+                      <Input
+                        aria-label={`Question ${item.questionNumber}`}
+                        value={answers[item.questionNumber] ?? ""}
+                        onChange={(e) =>
+                          setAnswer(item.questionNumber, e.target.value)
+                        }
+                        onFocus={() =>
+                          setActiveQuestionNumber(item.questionNumber)
+                        }
+                        placeholder={item.label}
+                        className={cn(
+                          "test-input-surface h-10 w-full min-w-0 rounded-[4px] pl-6",
+                          isSmallLandscape && "h-11",
+                        )}
+                      />
+                    </span>
                   </div>
                 ))}
               </div>
@@ -3635,20 +3633,19 @@ function ListeningTestClient({
                         questionRefs.current.set(num, el);
                       }}
                       className={cn(
-                        "mx-0.5 inline-flex select-none items-baseline gap-1 scroll-mt-24 align-baseline",
+                        "relative mx-0.5 inline-flex select-none items-baseline scroll-mt-24 align-baseline",
                         token.bold && "font-semibold",
                         markedQuestionClass(num),
                       )}
                     >
-                      <QuestionChip number={num} active={isCurrent} />
+                      <BlankNumberBadge number={num} active={isCurrent} />
                       <Input
                         aria-label={`Question ${num}`}
                         value={answers[num] ?? ""}
                         onChange={(e) => setAnswer(num, e.target.value)}
                         onFocus={() => setActiveQuestionNumber(num)}
-                        placeholder="..."
                         className={cn(
-                          "test-input-surface inline-block h-8 w-28 rounded-md px-2 text-sm transition-all sm:w-36",
+                          "test-input-surface inline-block h-8 w-28 rounded-[4px] pr-2 pl-6 text-sm transition-all sm:w-36",
                           token.bold && "font-medium",
                           isCurrent
                             ? "border-blue-400 bg-blue-50/60 ring-1 ring-blue-400/30 dark:bg-blue-900/20"
@@ -3701,8 +3698,8 @@ function ListeningTestClient({
                 text={line.before}
                 className="wrap-break-word"
               />
-              <span className="inline-flex select-none items-center gap-2">
-                <QuestionChip
+              <span className="relative inline-flex select-none items-center">
+                <BlankNumberBadge
                   number={line.questionNumber}
                   active={activeQuestionNumber === line.questionNumber}
                 />
@@ -3711,9 +3708,8 @@ function ListeningTestClient({
                   value={answers[line.questionNumber] ?? ""}
                   onChange={(e) => setAnswer(line.questionNumber, e.target.value)}
                   onFocus={() => setActiveQuestionNumber(line.questionNumber)}
-                  placeholder="..."
                   className={cn(
-                    "test-input-surface w-full min-w-0 h-10 sm:w-44",
+                    "test-input-surface h-10 w-full min-w-0 rounded-[4px] pl-6 sm:w-44",
                     isSmallLandscape && "h-11",
                   )}
                 />
