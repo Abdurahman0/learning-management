@@ -10,6 +10,13 @@ import {
   type StatusFilterValue,
   type UserStatCard
 } from "@/data/admin-users";
+import {Button} from "@/components/ui/button";
+import {ConfirmModal} from "@/components/ui/confirm-modal";
+import {Input} from "@/components/ui/input";
+import {Label} from "@/components/ui/label";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
+import {Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle} from "@/components/ui/sheet";
+import {adminPackagesService, type AdminPackage} from "@/src/services/admin/packages.service";
 import {adminUsersService} from "@/src/services/admin/users.service";
 
 import {AdminSidebar} from "../../_components/AdminSidebar";
@@ -153,6 +160,12 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [metrics, setMetrics] = useState({totalUsers: 0, activeToday: 0, newThisMonth: 0});
   const [premiumLoading, setPremiumLoading] = useState<Set<string>>(new Set());
+  const [packages, setPackages] = useState<AdminPackage[]>([]);
+  const [grantUserId, setGrantUserId] = useState<string | null>(null);
+  const [grantPackageId, setGrantPackageId] = useState("");
+  const [grantMonths, setGrantMonths] = useState("1");
+  const [grantNote, setGrantNote] = useState("");
+  const [revokeUserId, setRevokeUserId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchUsers = useMemo(
@@ -174,6 +187,23 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
   useEffect(() => {
     void fetchUsers(initialQuery);
   }, [initialQuery, fetchUsers]);
+
+  useEffect(() => {
+    let active = true;
+    adminPackagesService.list({page: 1, pageSize: 100, is_active: true})
+      .then((response) => {
+        if (!active) return;
+        const activePackages = response.results.filter((item) => item.is_active);
+        setPackages(activePackages);
+        setGrantPackageId((current) => current || activePackages[0]?.id || "");
+      })
+      .catch(() => {
+        if (active) setPackages([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSearchChange = (value: string) => {
     setSearchValue(value);
@@ -264,18 +294,31 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
   };
 
   const handleTogglePremium = async (userId: string, enable: boolean) => {
+    if (enable) {
+      setGrantUserId(userId);
+      setGrantPackageId((current) => current || packages[0]?.id || "");
+      setGrantMonths("1");
+      setGrantNote("");
+      return;
+    }
+    setRevokeUserId(userId);
+  };
+
+  const confirmGrantPremium = async () => {
+    if (!grantUserId || !grantPackageId) return;
+    const userId = grantUserId;
+    const months = Math.max(1, Math.min(120, Number(grantMonths) || 1));
     setPremiumLoading((prev) => new Set(prev).add(userId));
     try {
-      if (enable) {
-        await adminUsersService.enablePremium(userId);
-      } else {
-        await adminUsersService.disablePremium(userId);
-      }
-      setUsers((current) =>
-        current.map((item) => (item.id === userId ? {...item, isPremium: enable} : item))
-      );
+      await adminUsersService.assignSubscription(userId, {
+        package: grantPackageId,
+        months,
+        note: grantNote.trim()
+      });
+      setUsers((current) => current.map((item) => (item.id === userId ? {...item, isPremium: true} : item)));
+      setGrantUserId(null);
     } catch {
-      // silent — user sees no change
+      console.info("Subscription assignment failed");
     } finally {
       setPremiumLoading((prev) => {
         const next = new Set(prev);
@@ -284,6 +327,26 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
       });
     }
   };
+
+  const confirmRevokePremium = async () => {
+    if (!revokeUserId) return;
+    const userId = revokeUserId;
+    setPremiumLoading((prev) => new Set(prev).add(userId));
+    try {
+      await adminUsersService.cancelSubscription(userId);
+      setUsers((current) => current.map((item) => (item.id === userId ? {...item, isPremium: false} : item)));
+      setRevokeUserId(null);
+    } catch {
+      console.info("Subscription cancellation failed");
+    } finally {
+      setPremiumLoading((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+    }
+  };
+
 
   const handleResetPassword = async (user: AdminUser) => {
     const confirmed = window.confirm(t("drawer.confirmResetPassword", {name: user.name}));
@@ -349,6 +412,78 @@ export function UsersPageClient({initialQuery = ""}: UsersPageClientProps) {
         onResetPassword={handleResetPassword}
         onTogglePremium={handleTogglePremium}
         premiumLoading={premiumLoading}
+      />
+
+      <Sheet open={Boolean(grantUserId)} onOpenChange={(open) => !open && setGrantUserId(null)}>
+        <SheetContent side="right" className="w-full max-w-[440px] border-l border-border/70 bg-background/95 p-0">
+          <SheetHeader>
+            <SheetTitle>Grant subscription</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 px-6 pb-6">
+            <div className="space-y-2">
+              <Label>Package</Label>
+              <Select value={grantPackageId} onValueChange={setGrantPackageId}>
+                <SelectTrigger className="rounded-xl border-border/70 bg-card/55">
+                  <SelectValue placeholder="Choose package" />
+                </SelectTrigger>
+                <SelectContent>
+                  {packages.map((item) => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name} · {item.tier_display || item.tier}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!packages.length ? (
+                <p className="text-xs text-amber-600 dark:text-amber-300">Create an active package before granting premium access.</p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label>Months</Label>
+              <Input
+                type="number"
+                min={1}
+                max={120}
+                value={grantMonths}
+                onChange={(event) => setGrantMonths(event.target.value)}
+                className="rounded-xl border-border/70 bg-card/55"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Note</Label>
+              <Input
+                value={grantNote}
+                onChange={(event) => setGrantNote(event.target.value)}
+                className="rounded-xl border-border/70 bg-card/55"
+                placeholder="Optional admin note"
+              />
+            </div>
+          </div>
+          <SheetFooter>
+            <Button type="button" variant="ghost" className="rounded-xl" onClick={() => setGrantUserId(null)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-xl"
+              disabled={!grantPackageId || Boolean(grantUserId && premiumLoading.has(grantUserId))}
+              onClick={() => void confirmGrantPremium()}
+            >
+              Grant
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <ConfirmModal
+        open={Boolean(revokeUserId)}
+        title="Cancel subscription?"
+        description="The user will lose premium access after this subscription is cancelled."
+        confirmText="Cancel subscription"
+        cancelText="Keep access"
+        confirmVariant="destructive"
+        onCancel={() => setRevokeUserId(null)}
+        onConfirm={() => void confirmRevokePremium()}
       />
     </div>
   );

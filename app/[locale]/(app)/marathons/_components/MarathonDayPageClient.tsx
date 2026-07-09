@@ -200,7 +200,7 @@ export function MarathonDayPageClient({
         const response = await studentMarathonService.getDay(marathonId, dayNumber);
         if (!active) return;
         if (response.is_locked) {
-          setError("This day is locked. Complete the previous day's test first.");
+          setError(response.lock_reason === "PREMIUM" ? "This day requires premium access." : "This day is locked. Complete the previous day's test first.");
           setLoading(false);
           return;
         }
@@ -331,7 +331,14 @@ export function MarathonDayPageClient({
           </Card>
         ) : error || !day ? (
           <Card className="rounded-[28px] border border-rose-200 bg-rose-50 dark:border-rose-300/20 dark:bg-rose-500/10">
-            <CardContent className="p-4 text-sm text-rose-700 dark:text-rose-100">{error ?? "Could not load this marathon day."}</CardContent>
+            <CardContent className="space-y-4 p-4 text-sm text-rose-700 dark:text-rose-100">
+              <p>{error ?? "Could not load this marathon day."}</p>
+              {error === "This day requires premium access." ? (
+                <Button asChild className="rounded-xl bg-amber-500 text-white hover:bg-amber-600">
+                  <Link href={`/${locale}/upgrade`}>View packages</Link>
+                </Button>
+              ) : null}
+            </CardContent>
           </Card>
         ) : (
           <>

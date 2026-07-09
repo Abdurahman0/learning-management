@@ -61,6 +61,15 @@ function MarathonListItem({
               <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-300">
                 {item.difficulty_display}
               </span>
+              {item.access_type === "LOCKED" ? (
+                <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+                  Premium
+                </span>
+              ) : item.access_type === "TRIAL" ? (
+                <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
+                  {item.free_days_count || 3} days free
+                </span>
+              ) : null}
               {item.enrollment?.status ? (
                 <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-white/6 dark:text-slate-300">
                   {item.enrollment.status}

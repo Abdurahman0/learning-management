@@ -1255,6 +1255,15 @@
     "ordering": {
       "saving": "Saving test order..."
     },
+    "premium": {
+      "title": "Premium access",
+      "description": "Choose which packages unlock premium tests.",
+      "activePackages": "active packages",
+      "premium": "Premium",
+      "free": "Free",
+      "enabled": "Premium on",
+      "enable": "Make premium"
+    },
     "filters": {
       "moduleLabel": "Module",
       "difficultyLabel": "Difficulty",

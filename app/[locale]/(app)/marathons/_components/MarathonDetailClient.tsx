@@ -273,8 +273,15 @@ export function MarathonDetailClient({marathonId}: {marathonId: string}) {
     }
   };
 
-  const handleToggleDay = async (dayNumber: number, canOpen: boolean) => {
-    if (!canOpen) return;
+  const handleToggleDay = async (day: StudentMarathonDaySummary, canOpen: boolean) => {
+    if (!canOpen) {
+      setNotice({
+        tone: "error",
+        text: day.lock_reason === "PREMIUM" ? "This day requires premium access." : "Complete the previous day first."
+      });
+      return;
+    }
+    const dayNumber = day.day_number;
     if (selectedDayNumber === dayNumber) {
       setSelectedDayNumber(null);
       setSelectedDay(null);
@@ -287,6 +294,7 @@ export function MarathonDetailClient({marathonId}: {marathonId: string}) {
   const journeyDays = detail ? buildJourneyDays(detail, days) : [];
   const currentDayNumber = enrollment?.current_day_number ?? 0;
   const progress = enrollment ? Math.max(0, Math.min(100, enrollment.progress_percentage)) : 0;
+  const isPremiumLocked = detail?.access_type === "LOCKED";
 
   const marathonExternalUrl = useMemo(() => normalizeHttpUrl(detail?.external_link), [detail?.external_link]);
   const marathonYoutubeVideoId = useMemo(() => getYoutubeVideoId(marathonExternalUrl), [marathonExternalUrl]);
@@ -529,8 +537,7 @@ export function MarathonDetailClient({marathonId}: {marathonId: string}) {
                           <div className="mt-2 flex flex-col items-center">
                             <button
                               type="button"
-                              onClick={() => void handleToggleDay(day.day_number, canOpen)}
-                              disabled={!canOpen}
+                              onClick={() => void handleToggleDay(day, canOpen)}
                               data-marathon-day-interactive="true"
                               className={cn(
                                 "relative inline-flex size-14 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-200",
@@ -784,15 +791,30 @@ export function MarathonDetailClient({marathonId}: {marathonId: string}) {
               <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-widest text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
                 {Math.max(detail.total_days || 0, detail.marathon_days || 0)} days
               </span>
+              {detail.access_type === "TRIAL" ? (
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-widest text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/8 dark:text-emerald-400">
+                  {detail.free_days_count || 3} trial days
+                </span>
+              ) : null}
             </div>
-            <Button
-              type="button"
-              onClick={() => void handleEnroll()}
-              disabled={enrollLoading}
-              className="mt-7 h-12 rounded-xl border border-teal-600 bg-teal-600 px-8 text-sm font-bold text-white hover:bg-teal-700 dark:border-teal-500/30 dark:bg-teal-500/15 dark:text-teal-300 dark:hover:bg-teal-500/25 dark:hover:text-teal-200"
-            >
-              {enrollLoading ? t("detail.enrolling") : t("detail.enroll")}
-            </Button>
+            {isPremiumLocked ? (
+              <div className="mx-auto mt-7 max-w-md rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                <p className="font-bold">Premium marathon</p>
+                <p className="mt-1 text-amber-700/90 dark:text-amber-200/80">Subscribe to an eligible package to enroll in this marathon.</p>
+                <Button asChild className="mt-4 h-11 rounded-xl bg-amber-500 px-6 font-bold text-white hover:bg-amber-600">
+                  <Link href={`/${locale}/upgrade`}>View packages</Link>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                onClick={() => void handleEnroll()}
+                disabled={enrollLoading}
+                className="mt-7 h-12 rounded-xl border border-teal-600 bg-teal-600 px-8 text-sm font-bold text-white hover:bg-teal-700 dark:border-teal-500/30 dark:bg-teal-500/15 dark:text-teal-300 dark:hover:bg-teal-500/25 dark:hover:text-teal-200"
+              >
+                {enrollLoading ? t("detail.enrolling") : t("detail.enroll")}
+              </Button>
+            )}
           </div>
         </div>
       )}

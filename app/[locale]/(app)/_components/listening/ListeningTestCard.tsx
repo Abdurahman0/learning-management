@@ -14,6 +14,7 @@ import {DifficultySignal} from "./DifficultySignal";
 
 type ListeningTestCardProps = {
   test: ListeningTestItem;
+  isUserPremium?: boolean;
   action?: {
     href: string;
     label: string;
@@ -31,11 +32,12 @@ type ListeningTestCardProps = {
   badgeLabel?: string;
 };
 
-export function ListeningTestCard({test, action, secondaryAction, resourceLink, badgeLabel}: ListeningTestCardProps) {
+export function ListeningTestCard({test, isUserPremium = false, action, secondaryAction, resourceLink, badgeLabel}: ListeningTestCardProps) {
   const t = useTranslations("guest");
   const locale = useLocale();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const isLocked = typeof test.isAccessible === "boolean" ? !test.isAccessible : test.isPremium && !isUserPremium;
   const scopedSection = test.testFormat === "part" && test.sections.length === 1 ? test.sections[0] : null;
   const practiceHref = scopedSection?.id
     ? `/${locale}/listening/${test.id}?mode=practice&partId=${encodeURIComponent(scopedSection.id)}`
@@ -45,7 +47,7 @@ export function ListeningTestCard({test, action, secondaryAction, resourceLink, 
     : `/${locale}/listening/${test.id}?mode=real`;
 
   return (
-    <Card className={cn("max-w-full overflow-hidden border-border bg-card py-0 shadow-sm", test.isPremium && "opacity-85", isOpen && !test.isPremium && "border-blue-600")}>
+    <Card className={cn("max-w-full overflow-hidden border-border bg-card py-0 shadow-sm", isLocked && "opacity-85", isOpen && !isLocked && "border-blue-600")}>
       <CardContent className="max-w-full p-0">
         <button
           type="button"
@@ -57,14 +59,20 @@ export function ListeningTestCard({test, action, secondaryAction, resourceLink, 
               variant="secondary"
               className={cn(
                 "h-6 rounded-md px-2.5 text-[11px] font-semibold tracking-wide uppercase",
-                test.isPremium
+                isLocked
                   ? "bg-muted text-muted-foreground"
+                  : test.isPremium
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
                   : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
               )}
             >
-              {test.isPremium ? (
+              {isLocked ? (
                 <span className="inline-flex items-center gap-1.5">
                   <Lock className="size-3" aria-hidden="true" />
+                  {t("card.premium")}
+                </span>
+              ) : test.isPremium ? (
+                <span className="inline-flex items-center gap-1.5">
                   {t("card.premium")}
                 </span>
               ) : (
@@ -72,7 +80,7 @@ export function ListeningTestCard({test, action, secondaryAction, resourceLink, 
               )}
             </Badge>
 
-            <h3 className={cn("mt-2 truncate text-sm md:text-lg font-semibold text-foreground", test.isPremium && "text-muted-foreground")}>{test.title}</h3>
+            <h3 className={cn("mt-2 truncate text-sm md:text-lg font-semibold text-foreground", isLocked && "text-muted-foreground")}>{test.title}</h3>
 
             <div className="mt-1.5 flex w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
               <span className="inline-flex min-w-0 items-center gap-1.5">
@@ -106,7 +114,7 @@ export function ListeningTestCard({test, action, secondaryAction, resourceLink, 
                   <div key={`${test.id}-${section.id ?? section.label}`} className="min-w-0 rounded-lg border border-border bg-background px-2.5 py-2 text-center">
                     <p className="truncate break-words text-[11px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">{section.label}</p>
                     <p className="mt-1 truncate break-words text-xs text-muted-foreground">{section.questions} {t("meta.questions")}</p>
-                    {!test.isPremium && section.id ? (
+                    {!isLocked && section.id ? (
                       <div className="mt-2 grid grid-cols-2 gap-1.5">
                         <Button
                           type="button"
@@ -133,7 +141,7 @@ export function ListeningTestCard({test, action, secondaryAction, resourceLink, 
             ) : null}
 
             <div className={cn(!scopedSection && "mt-3.5")}>
-              {test.isPremium ? (
+              {isLocked ? (
                 <Button
                   type="button"
                   disabled

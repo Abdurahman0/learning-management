@@ -31,7 +31,6 @@ function isBackendOnlySupportedAdminPath(pathWithoutLocale: string) {
   const blockedPrefixes = [
     "/admin/achievements",
     "/admin/reports",
-    "/admin/subscriptions",
     "/admin/mistakes-analysis"
   ];
 

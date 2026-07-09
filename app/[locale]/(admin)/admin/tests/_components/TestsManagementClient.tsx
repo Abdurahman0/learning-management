@@ -24,6 +24,7 @@ import {
   type TestSort
 } from "@/data/admin-tests";
 import {practiceTestGroupsService, practiceTestsService} from "@/src/services/admin/practiceTests.service";
+import {adminPackagesService, type AdminPackage} from "@/src/services/admin/packages.service";
 import type {PracticeTestDetailRecord, PracticeTestGroupRecord, PracticeTestRecord} from "@/src/services/admin/types";
 
 import {AdminProfileMenu} from "../../_components/AdminProfileMenu";
@@ -130,6 +131,8 @@ function mapPracticeTestToAdminTest(item: PracticeTestRecord): AdminTest {
     questions: Number(item.total_questions ?? 0),
     difficulty: mapDifficulty(item.difficulty_level),
     status: mapStatus(Boolean(item.is_active)),
+    isPremium: Boolean(item.is_premium),
+    packages: Array.isArray(item.packages) ? item.packages.map(String) : [],
     createdAt: String(item.created_at ?? item.updated_at ?? new Date().toISOString()).slice(0, 10),
     passages:
       testModule === "reading"
@@ -165,6 +168,7 @@ export function TestsManagementClient() {
   const [sortBy, setSortBy] = useState<TestSort>("newest");
   const [questionTypesByTestId, setQuestionTypesByTestId] = useState<Record<string, string[]>>({});
   const [groups, setGroups] = useState<PracticeTestGroupRecord[]>([]);
+  const [packages, setPackages] = useState<AdminPackage[]>([]);
   const [newGroupName, setNewGroupName] = useState("");
   const [newGroupDescription, setNewGroupDescription] = useState("");
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
@@ -181,6 +185,8 @@ export function TestsManagementClient() {
   const [selectedImportTestId, setSelectedImportTestId] = useState("");
   const [downloadToastOpen, setDownloadToastOpen] = useState(false);
   const [lastDownloadedTestName, setLastDownloadedTestName] = useState("");
+
+  const activePackages = useMemo(() => packages.filter((item) => item.is_active), [packages]);
 
   useEffect(() => {
     let active = true;
@@ -211,18 +217,23 @@ export function TestsManagementClient() {
   useEffect(() => {
     let active = true;
 
-    const loadGroups = async () => {
+    const loadGroupsAndPackages = async () => {
       try {
-        const response = await practiceTestGroupsService.list({pageSize: 100});
+        const [groupResponse, packageResponse] = await Promise.all([
+          practiceTestGroupsService.list({pageSize: 100}),
+          adminPackagesService.list({pageSize: 100, is_active: true})
+        ]);
         if (!active) return;
-        setGroups(response.results);
+        setGroups(groupResponse.results);
+        setPackages(packageResponse.results);
       } catch {
         if (!active) return;
         setGroups([]);
+        setPackages([]);
       }
     };
 
-    void loadGroups();
+    void loadGroupsAndPackages();
 
     return () => {
       active = false;
@@ -612,6 +623,48 @@ export function TestsManagementClient() {
     }
   };
 
+  const handleToggleTestPremium = async (testId: string, checked: boolean) => {
+    const test = tests.find((item) => item.id === testId);
+    if (!test) return;
+    const nextPackages = checked ? (test.packages?.length ? test.packages : activePackages.slice(0, 1).map((item) => item.id)) : [];
+    if (checked && nextPackages.length === 0) return;
+
+    try {
+      const saved = await practiceTestsService.patch(testId, {
+        is_premium: checked,
+        packages: nextPackages
+      });
+      const mapped = mapPracticeTestToAdminTest(saved);
+      setTests((current) => current.map((item) => (item.id === testId ? {...item, isPremium: mapped.isPremium, packages: mapped.packages} : item)));
+    } catch {
+      // Keep previous premium state if backend rejects it.
+    }
+  };
+
+  const handleToggleTestPackage = async (testId: string, packageId: string) => {
+    const test = tests.find((item) => item.id === testId);
+    if (!test) return;
+    const currentPackages = new Set(test.packages ?? []);
+    if (currentPackages.has(packageId)) {
+      currentPackages.delete(packageId);
+    } else {
+      currentPackages.add(packageId);
+    }
+    const nextPackages = [...currentPackages];
+    const nextPremium = nextPackages.length > 0;
+
+    try {
+      const saved = await practiceTestsService.patch(testId, {
+        is_premium: nextPremium,
+        packages: nextPackages
+      });
+      const mapped = mapPracticeTestToAdminTest(saved);
+      setTests((current) => current.map((item) => (item.id === testId ? {...item, isPremium: mapped.isPremium, packages: mapped.packages} : item)));
+    } catch {
+      // Keep previous package assignments if backend rejects it.
+    }
+  };
+
   const handleReorder = async (draggedId: string, targetId: string) => {
     const draggedIndex = sortedTests.findIndex((item) => item.id === draggedId);
     const targetIndex = sortedTests.findIndex((item) => item.id === targetId);
@@ -938,6 +991,66 @@ export function TestsManagementClient() {
               <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-300">
                 <Save className="size-3.5" />
                 {t("ordering.saving")}
+              </div>
+            ) : null}
+
+            {paginatedTests.length ? (
+              <div className="rounded-3xl border border-border/70 bg-card/70 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-semibold">{t("premium.title")}</h2>
+                    <p className="text-xs text-muted-foreground">{t("premium.description")}</p>
+                  </div>
+                  <span className="rounded-full border border-border/70 bg-background/45 px-3 py-1 text-xs text-muted-foreground">
+                    {activePackages.length} {t("premium.activePackages")}
+                  </span>
+                </div>
+
+                <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                  {paginatedTests.map((test) => (
+                    <div key={test.id} className="rounded-2xl border border-border/70 bg-background/45 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{test.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {test.isPremium ? t("premium.premium") : t("premium.free")}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={test.isPremium ? "default" : "outline"}
+                          className="h-8 rounded-xl text-xs"
+                          disabled={!test.isPremium && activePackages.length === 0}
+                          onClick={() => void handleToggleTestPremium(test.id, !test.isPremium)}
+                        >
+                          {test.isPremium ? t("premium.enabled") : t("premium.enable")}
+                        </Button>
+                      </div>
+                      {test.isPremium ? (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {activePackages.map((item) => {
+                            const selected = test.packages?.includes(item.id) ?? false;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => void handleToggleTestPackage(test.id, item.id)}
+                                className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                                  selected
+                                    ? "border-amber-400/50 bg-amber-500/15 text-amber-600 dark:text-amber-300"
+                                    : "border-border/70 bg-card/50 text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                {item.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : null}
 

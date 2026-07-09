@@ -37,7 +37,7 @@ export function ReadingTestCard({test, isUserPremium = false, action, secondaryA
   const locale = useLocale();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const isLocked = test.isPremium && !isUserPremium;
+  const isLocked = typeof test.isAccessible === "boolean" ? !test.isAccessible : test.isPremium && !isUserPremium;
   const scopedPassage = test.testFormat === "part" && test.passages.length === 1 ? test.passages[0] : null;
   const practiceHref = scopedPassage?.id
     ? `/${locale}/reading/${test.id}?mode=practice&passageId=${encodeURIComponent(scopedPassage.id)}`

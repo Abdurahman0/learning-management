@@ -51,6 +51,8 @@ export type AdminTest = {
   questions: number;
   difficulty: TestDifficulty;
   status: TestStatus;
+  isPremium?: boolean;
+  packages?: string[];
   createdAt: string;
   passages?: TestPassage[];
   sections?: TestSection[];

@@ -47,6 +47,7 @@ export type PracticeTestRecord = {
   time_limit_seconds: number | null;
   is_active: boolean;
   is_premium?: boolean;
+  packages?: AdminEntityId[];
   listening_parts_count: number;
   reading_passages_count: number;
   display_order?: number | null;
@@ -176,6 +177,7 @@ export type PracticeTestCreatePayload = {
   time_limit_seconds: number | null;
   is_active: boolean;
   is_premium?: boolean;
+  packages?: AdminEntityId[];
 };
 
 export type PracticeTestPatchPayload = Partial<PracticeTestCreatePayload>;
@@ -275,6 +277,8 @@ export type AdminMarathonRecord = {
   streak_goal_days: number;
   is_visible: boolean;
   for_premium_users: boolean;
+  make_three_days_free?: boolean;
+  packages?: AdminEntityId[];
   max_enrollments: number | null;
   external_link: string;
   external_link_title: string;
@@ -406,6 +410,8 @@ export type AdminMarathonPayload = {
   streak_goal_days?: number;
   is_visible?: boolean;
   for_premium_users?: boolean;
+  make_three_days_free?: boolean;
+  packages?: AdminEntityId[];
   max_enrollments?: number | null;
   external_link?: string;
   external_link_title?: string;

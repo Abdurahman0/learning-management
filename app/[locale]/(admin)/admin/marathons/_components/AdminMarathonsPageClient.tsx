@@ -18,6 +18,7 @@ import {Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTi
 import {SiteToast, type SiteToastNotice} from "@/components/ui/site-toast";
 import {Switch} from "@/components/ui/switch";
 import {adminMarathonsService, adminMarathonSeriesService} from "@/src/services/admin/marathons.service";
+import {adminPackagesService, type AdminPackage} from "@/src/services/admin/packages.service";
 import type {AdminMarathonPayload, AdminMarathonRecord, AdminMarathonSeriesPayload, AdminMarathonSeriesRecord} from "@/src/services/admin/types";
 
 const EMPTY_FORM: AdminMarathonPayload = {
@@ -30,6 +31,8 @@ const EMPTY_FORM: AdminMarathonPayload = {
   streak_goal_days: 7,
   is_visible: false,
   for_premium_users: false,
+  make_three_days_free: false,
+  packages: [],
   max_enrollments: null,
   external_link: "",
   external_link_title: "",
@@ -84,6 +87,7 @@ export function AdminMarathonsPageClient() {
   const [seriesSaving, setSeriesSaving] = useState(false);
   const [marathons, setMarathons] = useState<AdminMarathonRecord[]>([]);
   const [series, setSeries] = useState<AdminMarathonSeriesRecord[]>([]);
+  const [packages, setPackages] = useState<AdminPackage[]>([]);
   const [notice, setNotice] = useState<SiteToastNotice | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [seriesSheetOpen, setSeriesSheetOpen] = useState(false);
@@ -93,16 +97,19 @@ export function AdminMarathonsPageClient() {
   const [deletingSeries, setDeletingSeries] = useState<AdminMarathonSeriesRecord | null>(null);
   const [form, setForm] = useState<AdminMarathonPayload>(EMPTY_FORM);
   const [seriesForm, setSeriesForm] = useState<AdminMarathonSeriesPayload>(EMPTY_SERIES_FORM);
+  const activePackages = useMemo(() => packages.filter((item) => item.is_active), [packages]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [marathonResponse, seriesResponse] = await Promise.all([
+      const [marathonResponse, seriesResponse, packageResponse] = await Promise.all([
         adminMarathonsService.list({page: 1, pageSize: 200, ordering: "-created_at"}),
-        adminMarathonSeriesService.list({page: 1, pageSize: 200, ordering: "name"})
+        adminMarathonSeriesService.list({page: 1, pageSize: 200, ordering: "name"}),
+        adminPackagesService.list({page: 1, pageSize: 100, is_active: true})
       ]);
       setMarathons(marathonResponse.results);
       setSeries(seriesResponse.results);
+      setPackages(packageResponse.results);
     } catch {
       setNotice({title: t("notices.loadFailed.title"), description: t("notices.loadFailed.description"), tone: "error"});
     } finally {
@@ -170,6 +177,8 @@ export function AdminMarathonsPageClient() {
       streak_goal_days: item.streak_goal_days,
       is_visible: item.is_visible,
       for_premium_users: item.for_premium_users,
+      make_three_days_free: Boolean(item.make_three_days_free),
+      packages: Array.isArray(item.packages) ? item.packages.map(String) : [],
       max_enrollments: item.max_enrollments,
       external_link: item.external_link ?? "",
       external_link_title: item.external_link_title ?? "",
@@ -189,7 +198,32 @@ export function AdminMarathonsPageClient() {
     setSeriesSheetOpen(true);
   };
 
+  const togglePremiumPackage = (packageId: string) => {
+    setForm((current) => {
+      const selected = Array.isArray(current.packages) ? current.packages.map(String) : [];
+      const exists = selected.includes(packageId);
+      return {
+        ...current,
+        packages: exists ? selected.filter((item) => item !== packageId) : [...selected, packageId]
+      };
+    });
+  };
+
+  const setPremiumAccess = (checked: boolean) => {
+    setForm((current) => ({
+      ...current,
+      for_premium_users: checked,
+      make_three_days_free: checked ? Boolean(current.make_three_days_free) : false,
+      packages: checked ? (Array.isArray(current.packages) && current.packages.length ? current.packages : activePackages[0]?.id ? [activePackages[0].id] : []) : []
+    }));
+  };
+
   const upsertMarathon = async () => {
+    const selectedPackages = Array.isArray(form.packages) ? form.packages.map(String).filter(Boolean) : [];
+    if (form.for_premium_users && selectedPackages.length === 0) {
+      setNotice({title: "Package required", description: "Select at least one package for premium marathon access.", tone: "error"});
+      return;
+    }
     setSaving(true);
     try {
       const payload: AdminMarathonPayload = {
@@ -198,7 +232,9 @@ export function AdminMarathonsPageClient() {
         description: form.description?.trim() ?? "",
         target_band: form.target_band?.trim() ? form.target_band.trim() : null,
         external_link: form.external_link?.trim() ?? "",
-        external_link_title: form.external_link_title?.trim() ?? ""
+        external_link_title: form.external_link_title?.trim() ?? "",
+        make_three_days_free: Boolean(form.for_premium_users && form.make_three_days_free),
+        packages: form.for_premium_users ? selectedPackages : []
       };
 
       const saved = editingMarathon
@@ -424,8 +460,47 @@ export function AdminMarathonsPageClient() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-card/55 px-4 py-3"><div><p className="font-medium">{t("fields.visible")}</p><p className="text-sm text-muted-foreground">{t("fields.visibleHint")}</p></div><Switch checked={Boolean(form.is_visible)} onCheckedChange={(checked) => setForm((current) => ({...current, is_visible: checked}))} /></div>
-              <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-card/55 px-4 py-3"><div><p className="font-medium">{t("fields.premium")}</p><p className="text-sm text-muted-foreground">{t("fields.premiumHint")}</p></div><Switch checked={Boolean(form.for_premium_users)} onCheckedChange={(checked) => setForm((current) => ({...current, for_premium_users: checked}))} /></div>
+              <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-card/55 px-4 py-3"><div><p className="font-medium">{t("fields.premium")}</p><p className="text-sm text-muted-foreground">{t("fields.premiumHint")}</p></div><Switch checked={Boolean(form.for_premium_users)} onCheckedChange={setPremiumAccess} /></div>
             </div>
+            {form.for_premium_users ? (
+              <div className="space-y-4 rounded-3xl border border-amber-500/25 bg-amber-500/5 p-4">
+                <div className="flex items-center justify-between gap-4 rounded-2xl border border-border/70 bg-background/55 px-4 py-3">
+                  <div>
+                    <p className="font-medium">First 3 days free</p>
+                    <p className="text-sm text-muted-foreground">Let students try the first marathon days before premium lock starts.</p>
+                  </div>
+                  <Switch checked={Boolean(form.make_three_days_free)} onCheckedChange={(checked) => setForm((current) => ({...current, make_three_days_free: checked}))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Packages that unlock this marathon</Label>
+                  {activePackages.length ? (
+                    <div className="flex flex-wrap gap-2">
+                      {activePackages.map((item) => {
+                        const selected = (form.packages ?? []).map(String).includes(item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => togglePremiumPackage(item.id)}
+                            className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                              selected
+                                ? "border-blue-500 bg-blue-500 text-white shadow-sm"
+                                : "border-border/70 bg-background/60 text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {item.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="rounded-2xl border border-dashed border-border/70 bg-background/55 px-4 py-3 text-sm text-muted-foreground">
+                      Create an active package before saving a premium marathon.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
           <SheetFooter>
             <Button type="button" variant="ghost" className="rounded-xl" onClick={() => setSheetOpen(false)}>{t("actions.cancel")}</Button>

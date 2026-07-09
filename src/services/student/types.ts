@@ -98,6 +98,7 @@ export type StudentTestRecord = {
   total_questions: number;
   time_limit_seconds: number | null;
   is_premium: boolean;
+  is_accessible?: boolean;
   reading_passages: StudentReadingPassagePreview[];
   listening_parts: StudentListeningPartPreview[];
   user_attempt_status?: StudentUserAttemptStatus | null;

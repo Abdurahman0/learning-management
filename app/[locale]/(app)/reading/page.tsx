@@ -34,6 +34,7 @@ type ReadingGuestTest = {
   displayOrder?: number | null;
   testFormat: "full" | "part" | "both";
   isPremium: boolean;
+  isAccessible?: boolean;
   lastAccuracyPercent?: number | null;
   durationMinutes: number;
   totalQuestions: number;
@@ -240,6 +241,7 @@ function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
     displayOrder: item.display_order ?? null,
     testFormat: explicitFormat === "full" && passages.length === 1 ? "part" : explicitFormat,
     isPremium: item.is_premium,
+    isAccessible: item.is_accessible,
     lastAccuracyPercent:
       typeof item.user_attempt_status?.last_attempt_accuracy_percent === "number"
         ? item.user_attempt_status.last_attempt_accuracy_percent
@@ -356,8 +358,10 @@ export default function ReadingPage() {
 
   useEffect(() => {
     if (!showGroupFilters && groupId !== "all") {
-      setGroupId("all");
+      const timer = window.setTimeout(() => setGroupId("all"), 0);
+      return () => window.clearTimeout(timer);
     }
+    return undefined;
   }, [groupId, showGroupFilters]);
 
   const filteredTests = useMemo(() => {

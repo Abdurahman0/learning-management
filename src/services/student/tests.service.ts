@@ -62,6 +62,10 @@ function normalizeTestRecord(item: StudentTestRecord): StudentTestRecord {
     total_questions: Number(item.total_questions ?? 0),
     time_limit_seconds: typeof item.time_limit_seconds === "number" ? item.time_limit_seconds : null,
     is_premium: Boolean(item.is_premium),
+    is_accessible:
+      typeof (item as StudentTestRecord & {is_accessible?: unknown}).is_accessible === "boolean"
+        ? Boolean((item as StudentTestRecord & {is_accessible?: unknown}).is_accessible)
+        : !Boolean(item.is_premium),
     reading_passages: toArray<StudentTestRecord["reading_passages"][number]>(item.reading_passages),
     listening_parts: toArray<StudentTestRecord["listening_parts"][number]>(item.listening_parts),
     user_attempt_status: normalizeAttemptStatus(item.user_attempt_status)

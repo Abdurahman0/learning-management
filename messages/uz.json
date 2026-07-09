@@ -1255,6 +1255,15 @@
     "ordering": {
       "saving": "Test tartibi saqlanmoqda..."
     },
+    "premium": {
+      "title": "Premium kirish",
+      "description": "Premium testlarni qaysi paketlar ochishini tanlang.",
+      "activePackages": "faol paket",
+      "premium": "Premium",
+      "free": "Bepul",
+      "enabled": "Premium yoqilgan",
+      "enable": "Premium qilish"
+    },
     "filters": {
       "moduleLabel": "Modul",
       "difficultyLabel": "Daraja",
