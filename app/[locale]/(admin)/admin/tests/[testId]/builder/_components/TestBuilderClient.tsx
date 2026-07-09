@@ -19,6 +19,7 @@ import {
 } from "@/data/admin/selectors";
 import {
   formatMatchingInfoOptionsAsPlainLines,
+  normalizeMatchingAnswerToKey,
   parseMatchingInfoOptionsFromInstructions
 } from "@/lib/matching-info-instructions";
 import {AdminApiError} from "@/src/services/admin/types";
@@ -1052,10 +1053,12 @@ function mapBuilderQuestionToBulkPayload(question: BuilderQuestion, apiType: str
       ?? Object.values(question.correctAnswer).find((value) => String(value ?? "").trim().length > 0)
       ?? "";
 
+    // The backend grades these types by exact key match ("A"), so full-text answers
+    // saved by older builder versions ("A Alfred Binet") must be reduced to the key.
     return {
       ...base,
       options_json: question.type === "matching_information" && apiType !== "MATCHING" ? {statement: prompt} : null,
-      correct_answer_json: {answer: String(mappedAnswer).trim()}
+      correct_answer_json: {answer: normalizeMatchingAnswerToKey(String(mappedAnswer))}
     };
   }
 
@@ -1239,7 +1242,8 @@ function mapApiQuestionToBuilderQuestion(
         .filter(Boolean);
     }
 
-    const initialChoice = answer.answer.trim();
+    // Older builder versions stored the full option text ("A Alfred Binet") here.
+    const initialChoice = normalizeMatchingAnswerToKey(answer.answer);
     builderQuestion.correctAnswer = {[prompt]: initialChoice};
     return builderQuestion;
   }

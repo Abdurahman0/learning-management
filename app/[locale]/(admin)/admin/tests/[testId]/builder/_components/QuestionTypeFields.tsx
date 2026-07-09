@@ -8,7 +8,7 @@ import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {InlineBoldText} from "@/components/test/InlineBoldText";
 import type {BuilderQuestion, TextInputQuestion} from "@/data/admin-test-builder";
-import {extractKeyFromChoiceLabel} from "@/lib/matching-info-instructions";
+import {extractKeyFromChoiceLabel, normalizeMatchingAnswerToKey} from "@/lib/matching-info-instructions";
 import {BoldTextarea} from "./BoldTextarea";
 
 type QuestionTypeFieldsProps = {
@@ -351,11 +351,13 @@ export function QuestionTypeFields({
               key: extractKeyFromChoiceLabel(choice, index),
               label: choice
             }));
-            const trimmedStoredAnswer = String(storedAnswer ?? "").trim();
-            const resolvedValue = trimmedStoredAnswer
-              ? (keyedChoices.some((option) => option.key === trimmedStoredAnswer.toUpperCase())
-                  ? trimmedStoredAnswer.toUpperCase()
-                  : keyedChoices.find((option) => option.label === trimmedStoredAnswer)?.key ?? trimmedStoredAnswer.toUpperCase())
+            // Reduce legacy full-text answers ("A Alfred Binet") to their key so the
+            // dropdown still shows the current selection for data saved by old builds.
+            const storedKey = normalizeMatchingAnswerToKey(String(storedAnswer ?? ""));
+            const resolvedValue = storedKey
+              ? (keyedChoices.some((option) => option.key === storedKey)
+                  ? storedKey
+                  : keyedChoices.find((option) => option.label === String(storedAnswer ?? "").trim())?.key ?? storedKey)
               : "";
 
             return (

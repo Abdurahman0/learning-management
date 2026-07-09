@@ -187,6 +187,21 @@ export function extractMatchingInfoAnnotations(text: string): MatchingInfoAnnota
   return {note, heading};
 }
 
+/**
+ * Normalizes a stored matching answer down to its bare option key: "A" stays "A",
+ * "A. Marcel" / "A) Marcel" / "A Marcel" become "A". The backend grades matching
+ * questions by exact key match, so full-text answers saved by older builder versions
+ * must be reduced to the key before being sent. Values with no recognizable key
+ * prefix are returned unchanged rather than guessed.
+ */
+export function normalizeMatchingAnswerToKey(value: string) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return trimmed;
+  if (/^[A-Za-z]{1,2}$/.test(trimmed)) return trimmed.toUpperCase();
+  const prefixed = trimmed.match(/^([A-Za-z]{1,2})(?:[)\].:\-]|\s+)/);
+  return prefixed ? prefixed[1].toUpperCase() : trimmed;
+}
+
 /** Derives a short option key (e.g. "A") from a choice string like "A. Marcel", or falls back positionally. */
 export function extractKeyFromChoiceLabel(value: string, fallbackIndex: number) {
   const trimmed = String(value ?? "").trim();
