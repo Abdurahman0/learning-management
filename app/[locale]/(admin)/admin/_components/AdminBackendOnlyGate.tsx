@@ -25,6 +25,7 @@ function isBackendOnlySupportedAdminPath(pathWithoutLocale: string) {
     "/admin/reading-tests",
     "/admin/listening-tests",
     "/admin/question-bank",
+    "/admin/subscriptions",
     "/admin/settings"
   ];
 

@@ -1,4 +1,4 @@
-import {redirect} from "next/navigation";
+import {SubscriptionsPageClient} from "./_components/SubscriptionsPageClient";
 
 type AdminSubscriptionsPageProps = {
   params: Promise<{
@@ -7,7 +7,7 @@ type AdminSubscriptionsPageProps = {
 };
 
 export default async function AdminSubscriptionsPage({params}: AdminSubscriptionsPageProps) {
-  const {locale} = await params;
-  redirect(`/${locale}/admin`);
+  await params;
+  return <SubscriptionsPageClient />;
 }
 

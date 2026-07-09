@@ -1,7 +1,7 @@
 "use client";
 
 import {useCallback, useEffect, useMemo, useState} from "react";
-import {CheckCircle2, ExternalLink, Pencil, Plus, Search, Trash2} from "lucide-react";
+import {CheckCircle2, ExternalLink, Pencil, Plus, Trash2} from "lucide-react";
 
 import {AdminSidebar} from "../../_components/AdminSidebar";
 import {AdminTopbar} from "../../_components/AdminTopbar";

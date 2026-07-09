@@ -33,8 +33,8 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {key: "analytics", segment: "analytics"},
   {key: "feedback", segment: "feedback"},
   {key: "mistakeReasons", segment: "mistake-reasons"},
+  {key: "subscriptions", segment: "subscriptions"},
   // {key: "mistakesAnalysis", segment: "mistakes-analysis"},
-  // {key: "subscriptions", segment: "subscriptions"},
   // {key: "achievements", segment: "achievements"},
   // {key: "reports", segment: "reports"},
   {key: "settings", segment: "settings"}
