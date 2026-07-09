@@ -910,6 +910,47 @@ function collectAttemptScopedIdPool(attempt: StudentAttemptDetail) {
   return pool;
 }
 
+// When the admin re-publishes a test, the builder deletes and recreates every question,
+// so an attempt started before the re-publish holds answer rows that reference deleted
+// question IDs — every save/submit for it fails with "Question does not belong to this
+// attempt" and no retry with refreshed IDs can ever succeed. The only way forward is to
+// close that stale attempt and move the student onto a fresh one built from the current
+// content; answers are re-mapped by question number so nothing typed so far is lost.
+async function recoverStaleReadingBackendAttempt(params: {
+  staleAttemptId: string;
+  testId: string;
+  mode: AttemptMode | null;
+  scopedPassageId: string;
+  timeUsedSeconds: number;
+}): Promise<{attemptId: string; detail: StudentAttemptDetail} | null> {
+  try {
+    await studentAttemptsService.submit(params.staleAttemptId, {
+      time_used_seconds: params.timeUsedSeconds,
+      answers: []
+    });
+  } catch {
+    // The stale attempt may already be closed — still try to obtain a fresh one.
+  }
+
+  const created = params.scopedPassageId
+    ? await studentAttemptsService.createScoped({
+        passage_id: params.scopedPassageId,
+        mode: params.mode === "real" ? "REAL" : "PRACTICE"
+      })
+    : await studentAttemptsService.create({
+        practice_test: params.testId,
+        mode: params.mode === "real" ? "REAL" : "PRACTICE"
+      });
+  const detail = hasAttemptQuestionData(created)
+    ? created
+    : await studentAttemptsService.getById(String(created.id));
+  const attemptId = toStringSafe(detail.id).trim();
+  if (!attemptId || attemptId === params.staleAttemptId) {
+    return null;
+  }
+  return {attemptId, detail};
+}
+
 function collectRuntimeSubmitCandidatesByNumber(questions: ReadingQuestion[]) {
   const byNumber = new Map<number, string[]>();
 
@@ -1750,6 +1791,7 @@ function ReadingTestClient({
   const marathonIdParam = searchParams.get("marathonId")?.trim() ?? "";
   const marathonDayNumber = Number(searchParams.get("dayNumber")?.trim() ?? "");
   const isMarathonContext = UUID_PATTERN.test(marathonIdParam) && Number.isInteger(marathonDayNumber) && marathonDayNumber > 0;
+  const scopedPassageId = searchParams.get("passageId")?.trim() ?? "";
   const returnToParam = searchParams.get("returnTo")?.trim() ?? "";
   const returnLabelParam = searchParams.get("returnLabel")?.trim() ?? "";
   const returnQuerySuffix = useMemo(() => {
@@ -1795,6 +1837,9 @@ function ReadingTestClient({
   const [isSubmittingResult, setIsSubmittingResult] = useState(false);
   const [backendReviewData, setBackendReviewData] = useState<AdaptedReadingBackendReview | null>(null);
   const [backendAttemptId, setBackendAttemptId] = useState<string | null>(initialBackendAttemptId);
+  // Mirrors backendAttemptId, but is updated synchronously when a stale attempt gets
+  // swapped for a fresh one mid-save, so in-flight submit logic sees the new ID at once.
+  const backendAttemptIdRef = useRef<string | null>(initialBackendAttemptId);
   const attemptTabIdRef = useRef(createAttemptTabId());
   const attemptContentSignature = useMemo(() => buildReadingAttemptContentSignature(test), [test]);
   const splitStorageKey = "readingSplitPct";
@@ -2208,6 +2253,10 @@ function ReadingTestClient({
   }, [initialBackendAttemptId, test.id]);
 
   useEffect(() => {
+    backendAttemptIdRef.current = backendAttemptId;
+  }, [backendAttemptId]);
+
+  useEffect(() => {
     if (reviewDeepLinkActive) return;
     if (!attemptId || !attemptMode) return;
     if (!isAttemptTabOwner("reading", test.id, attemptId, attemptTabIdRef.current)) return;
@@ -2279,7 +2328,8 @@ function ReadingTestClient({
       const includeAnswers = options?.includeAnswers ?? true;
 
       const runSave = async () => {
-        if (!backendAttemptId || reviewMode) return;
+        const targetAttemptId = backendAttemptIdRef.current ?? backendAttemptId;
+        if (!targetAttemptId || reviewMode) return;
         if (backendAttemptLifecycleRef.current !== "active" && !options?.allowDuringSubmit) return;
         if (attemptId && !isAttemptTabOwner("reading", test.id, attemptId, attemptTabIdRef.current)) return;
 
@@ -2310,12 +2360,12 @@ function ReadingTestClient({
 
         try {
           if (isMarathonContext) {
-            await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, backendAttemptId, {
+            await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, targetAttemptId, {
               time_used_seconds: savePayload.time_used_seconds,
               answers: toMarathonSaveAnswers(savePayload.answers),
             });
           } else {
-            await studentAttemptsService.save(backendAttemptId, savePayload);
+            await studentAttemptsService.save(targetAttemptId, savePayload);
           }
           return;
         } catch (error) {
@@ -2327,10 +2377,10 @@ function ReadingTestClient({
           try {
             const freshSnapshot = await (isMarathonContext
               ? (() => {
-                  const response = studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, backendAttemptId);
+                  const response = studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, targetAttemptId);
                   return response.then((attemptResponse) => adaptMarathonReadingAttemptToDetail(attemptResponse, test.id)?.attempt ?? null);
                 })()
-              : studentAttemptsService.getById(backendAttemptId));
+              : studentAttemptsService.getById(targetAttemptId));
             if (!freshSnapshot) {
               throw error;
             }
@@ -2349,18 +2399,52 @@ function ReadingTestClient({
               .filter((item) => item.answer !== null || item.is_flagged);
 
             if (isMarathonContext) {
-              await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, backendAttemptId, {
+              await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, targetAttemptId, {
                 time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
                 answers: toMarathonSaveAnswers(retryPayloadAnswers),
               });
             } else {
-              await studentAttemptsService.save(backendAttemptId, {
+              await studentAttemptsService.save(targetAttemptId, {
                 time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
                 answers: retryPayloadAnswers
               });
             }
             return;
           } catch (retryError) {
+            // Both the original IDs and freshly refetched attempt IDs were rejected:
+            // the attempt predates a re-publish of the test content and can never
+            // accept answers again. Swap it for a fresh attempt and save into that.
+            const retryFailedIds = extractValidationAnswerQuestionIdFailures(retryError);
+            if (!isMarathonContext && retryFailedIds.size > 0) {
+              const recovered = await recoverStaleReadingBackendAttempt({
+                staleAttemptId: targetAttemptId,
+                testId: test.id,
+                mode: attemptMode,
+                scopedPassageId,
+                timeUsedSeconds: resolveTimeUsedSeconds(options?.finishedAtMs)
+              }).catch(() => null);
+
+              if (recovered) {
+                const recoveredEntries = includeAnswers
+                  ? collectBackendAttemptAnswerEntries({
+                      questions: test.questions,
+                      answers,
+                      marked,
+                      submitCandidatesByNumber: collectAttemptSubmitCandidatesByNumber(recovered.detail),
+                      allowedAttemptScopedIds: collectAttemptScopedIdPool(recovered.detail)
+                    })
+                  : [];
+                await studentAttemptsService.save(recovered.attemptId, {
+                  time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+                  answers: toReadingBackendAnswerPayload(recoveredEntries)
+                    .filter((item) => item.answer !== null || item.is_flagged)
+                });
+                backendAttemptIdRef.current = recovered.attemptId;
+                setBackendAttemptId(recovered.attemptId);
+                return;
+              }
+            }
+
             if (strict) {
               throw retryError;
             }
@@ -2377,7 +2461,7 @@ function ReadingTestClient({
 
       return run.catch(() => undefined);
     },
-    [answers, attemptId, backendAttemptId, isMarathonContext, marked, marathonDayNumber, marathonIdParam, resolveTimeUsedSeconds, reviewMode, test.id, test.questions]
+    [answers, attemptId, attemptMode, backendAttemptId, isMarathonContext, marked, marathonDayNumber, marathonIdParam, resolveTimeUsedSeconds, reviewMode, scopedPassageId, test.id, test.questions]
   );
 
   useEffect(() => {
@@ -2757,6 +2841,7 @@ function ReadingTestClient({
     const timerUsed = timerRunning || remainingSeconds !== test.durationMinutes * 60;
     const timeUsedSeconds = resolveTimeUsedSeconds(finishedAt);
 
+    let effectiveBackendAttemptId = backendAttemptId;
     try {
       if (backendAttemptId) {
         await saveAttemptToBackend({
@@ -2766,6 +2851,8 @@ function ReadingTestClient({
           finishedAtMs: finishedAt,
           allowDuringSubmit: true
         });
+        // The strict save may have swapped a stale attempt for a fresh one.
+        effectiveBackendAttemptId = backendAttemptIdRef.current ?? backendAttemptId;
 
         const buildSubmitAnswers = (
           submitCandidatesByNumber: Map<number, string[]>,
@@ -2781,12 +2868,12 @@ function ReadingTestClient({
 
         try {
           if (isMarathonContext) {
-            await studentMarathonService.submitAttempt(marathonIdParam, marathonDayNumber, backendAttemptId, {
+            await studentMarathonService.submitAttempt(marathonIdParam, marathonDayNumber, effectiveBackendAttemptId, {
               time_used_seconds: timeUsedSeconds,
               answers: toMarathonSaveAnswers(buildSubmitAnswers(collectRuntimeSubmitCandidatesByNumber(test.questions))),
             });
           } else {
-            await studentAttemptsService.submit(backendAttemptId, {
+            await studentAttemptsService.submit(effectiveBackendAttemptId, {
               time_used_seconds: timeUsedSeconds,
               answers: buildSubmitAnswers(collectRuntimeSubmitCandidatesByNumber(test.questions))
             });
@@ -2800,21 +2887,52 @@ function ReadingTestClient({
             throw error;
           }
 
-          const freshSnapshot = await studentAttemptsService.getById(backendAttemptId);
-          await studentAttemptsService.submit(backendAttemptId, {
-            time_used_seconds: timeUsedSeconds,
-            answers: buildSubmitAnswers(
-              collectAttemptSubmitCandidatesByNumber(freshSnapshot),
-              collectAttemptScopedIdPool(freshSnapshot)
-            )
-          });
+          const freshSnapshot = await studentAttemptsService.getById(effectiveBackendAttemptId);
+          try {
+            await studentAttemptsService.submit(effectiveBackendAttemptId, {
+              time_used_seconds: timeUsedSeconds,
+              answers: buildSubmitAnswers(
+                collectAttemptSubmitCandidatesByNumber(freshSnapshot),
+                collectAttemptScopedIdPool(freshSnapshot)
+              )
+            });
+          } catch (secondError) {
+            // Even refreshed attempt IDs were rejected: the attempt predates a
+            // re-publish of the test content. Move to a fresh attempt and submit there.
+            const secondFailedIds = extractValidationAnswerQuestionIdFailures(secondError);
+            if (!secondFailedIds.size) {
+              throw secondError;
+            }
+
+            const recovered = await recoverStaleReadingBackendAttempt({
+              staleAttemptId: effectiveBackendAttemptId,
+              testId: test.id,
+              mode: attemptMode,
+              scopedPassageId,
+              timeUsedSeconds
+            });
+            if (!recovered) {
+              throw secondError;
+            }
+
+            await studentAttemptsService.submit(recovered.attemptId, {
+              time_used_seconds: timeUsedSeconds,
+              answers: buildSubmitAnswers(
+                collectAttemptSubmitCandidatesByNumber(recovered.detail),
+                collectAttemptScopedIdPool(recovered.detail)
+              )
+            });
+            effectiveBackendAttemptId = recovered.attemptId;
+            backendAttemptIdRef.current = recovered.attemptId;
+            setBackendAttemptId(recovered.attemptId);
+          }
         }
       }
 
       backendAttemptLifecycleRef.current = "submitted";
       saveAttemptResult({
         attemptId,
-        backendAttemptId: backendAttemptId ?? undefined,
+        backendAttemptId: effectiveBackendAttemptId ?? undefined,
         ownerKey: isGuest ? "guest" : currentUserKey ?? undefined,
         contentSignature: attemptContentSignature,
         tabId: attemptTabIdRef.current,
@@ -2869,12 +2987,8 @@ function ReadingTestClient({
       setFinishOpen(false);
       setTimerRunning(false);
 
-      if (backendAttemptId) {
-        if (isMarathonContext) {
-          router.push(`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId}${returnQuerySuffix}`);
-          return;
-        }
-        router.push(`/${locale}/reading/${test.id}/result?attempt=${backendAttemptId}${returnQuerySuffix}`);
+      if (effectiveBackendAttemptId) {
+        router.push(`/${locale}/reading/${test.id}/result?attempt=${effectiveBackendAttemptId}${returnQuerySuffix}`);
         return;
       }
 
@@ -2908,6 +3022,7 @@ function ReadingTestClient({
     remainingSeconds,
     resolveTimeUsedSeconds,
     saveAttemptToBackend,
+    scopedPassageId,
     startedAt,
     test.durationMinutes,
     test.id,

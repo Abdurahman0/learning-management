@@ -285,6 +285,43 @@ function collectListeningSubmitMetaByNumber(attempt: StudentAttemptDetail) {
   return byNumber;
 }
 
+// When the admin re-publishes a test, the builder deletes and recreates every question,
+// so an attempt started before the re-publish holds answer rows that reference deleted
+// question IDs — every save/submit for it fails with "Question does not belong to this
+// attempt" and no retry with refreshed IDs can ever succeed. The only way forward is to
+// close that stale attempt and move the student onto a fresh one built from the current
+// content; answers are re-mapped by question number so nothing typed so far is lost.
+async function recoverStaleListeningBackendAttempt(params: {
+  staleAttemptId: string;
+  testId: string;
+  mode: AttemptMode | null;
+  timeUsedSeconds: number;
+}): Promise<{attemptId: string; metaByNumber: Map<number, ListeningSubmitQuestionMeta>} | null> {
+  try {
+    await studentAttemptsService.submit(params.staleAttemptId, {
+      time_used_seconds: params.timeUsedSeconds,
+      answers: []
+    });
+  } catch {
+    // The stale attempt may already be closed — still try to obtain a fresh one.
+  }
+
+  const created = await studentAttemptsService.create({
+    practice_test: params.testId,
+    mode: params.mode === "real" ? "REAL" : "PRACTICE"
+  });
+  let metaByNumber = collectListeningSubmitMetaByNumber(created);
+  if (metaByNumber.size === 0) {
+    const hydrated = await studentAttemptsService.getById(String(created.id));
+    metaByNumber = collectListeningSubmitMetaByNumber(hydrated);
+  }
+  const attemptId = toStringSafe(created.id).trim();
+  if (!attemptId || attemptId === params.staleAttemptId || metaByNumber.size === 0) {
+    return null;
+  }
+  return {attemptId, metaByNumber};
+}
+
 function normalizeTfngYnngAnswerForBackend(value: string, questionType: string) {
   const trimmed = value.trim();
   if (!trimmed) return trimmed;
@@ -1464,7 +1501,14 @@ function ListeningTestClient({
   const [attemptId, setAttemptId] = useState("");
   const [backendAttemptId, setBackendAttemptId] = useState<string | null>(initialBackendAttemptId);
   const [submitMetaByNumber, setSubmitMetaByNumber] = useState<Map<number, ListeningSubmitQuestionMeta>>(() => new Map(initialSubmitMetaByNumber));
+  // Mirrors backendAttemptId, but is updated synchronously when a stale attempt gets
+  // swapped for a fresh one mid-save, so in-flight submit logic sees the new ID at once.
+  const backendAttemptIdRef = useRef<string | null>(initialBackendAttemptId);
   const attemptTabIdRef = useRef(createAttemptTabId());
+
+  useEffect(() => {
+    backendAttemptIdRef.current = backendAttemptId;
+  }, [backendAttemptId]);
   const attemptContentSignature = useMemo(
     () => buildListeningAttemptContentSignature(normalizedSections, submitMetaByNumber),
     [normalizedSections, submitMetaByNumber]
@@ -2608,7 +2652,8 @@ function ListeningTestClient({
       const strict = Boolean(options?.strict);
 
       const runSave = async () => {
-        if (!backendAttemptId || reviewMode || submitMetaByNumber.size === 0) return;
+        const targetAttemptId = backendAttemptIdRef.current ?? backendAttemptId;
+        if (!targetAttemptId || reviewMode || submitMetaByNumber.size === 0) return;
         if (backendAttemptLifecycleRef.current !== "active" && !options?.allowDuringSubmit) return;
         if (attemptId && !isAttemptTabOwner("listening", test.id, attemptId, attemptTabIdRef.current)) return;
 
@@ -2622,12 +2667,12 @@ function ListeningTestClient({
 
         try {
           if (isMarathonContext) {
-            await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, backendAttemptId, {
+            await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, targetAttemptId, {
               time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
               answers: toMarathonListeningSaveAnswers(payloadAnswers),
             });
           } else {
-            await studentAttemptsService.save(backendAttemptId, {
+            await studentAttemptsService.save(targetAttemptId, {
               time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
               answers: payloadAnswers
             });
@@ -2642,10 +2687,10 @@ function ListeningTestClient({
           try {
             const snapshot = await (isMarathonContext
               ? (() => {
-                  const response = studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, backendAttemptId);
+                  const response = studentMarathonService.getAttempt(marathonIdParam, marathonDayNumber, targetAttemptId);
                   return response.then((attemptResponse) => adaptMarathonListeningAttemptToDetail(attemptResponse, test.id)?.attempt ?? null);
                 })()
-              : studentAttemptsService.getById(backendAttemptId));
+              : studentAttemptsService.getById(targetAttemptId));
             if (!snapshot) {
               throw error;
             }
@@ -2659,17 +2704,48 @@ function ListeningTestClient({
                 }).filter((item) => item.answer !== null || item.is_flagged)
               : [];
             if (isMarathonContext) {
-              await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, backendAttemptId, {
+              await studentMarathonService.saveAttempt(marathonIdParam, marathonDayNumber, targetAttemptId, {
                 time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
                 answers: toMarathonListeningSaveAnswers(retryPayloadAnswers),
               });
             } else {
-              await studentAttemptsService.save(backendAttemptId, {
+              await studentAttemptsService.save(targetAttemptId, {
                 time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
                 answers: retryPayloadAnswers
               });
             }
           } catch (retryError) {
+            // Both the original IDs and freshly refetched attempt IDs were rejected:
+            // the attempt predates a re-publish of the test content and can never
+            // accept answers again. Swap it for a fresh attempt and save into that.
+            const retryFailedIds = extractValidationAnswerQuestionIdFailures(retryError);
+            if (!isMarathonContext && retryFailedIds.size > 0) {
+              const recovered = await recoverStaleListeningBackendAttempt({
+                staleAttemptId: targetAttemptId,
+                testId: test.id,
+                mode: attemptMode,
+                timeUsedSeconds: resolveTimeUsedSeconds(options?.finishedAtMs)
+              }).catch(() => null);
+
+              if (recovered) {
+                const recoveredPayloadAnswers = includeAnswers
+                  ? buildListeningBackendAnswerPayload({
+                      answers,
+                      marked,
+                      submitMetaByNumber: recovered.metaByNumber
+                    }).filter((item) => item.answer !== null || item.is_flagged)
+                  : [];
+                await studentAttemptsService.save(recovered.attemptId, {
+                  time_used_seconds: resolveTimeUsedSeconds(options?.finishedAtMs),
+                  answers: recoveredPayloadAnswers
+                });
+                backendAttemptIdRef.current = recovered.attemptId;
+                setBackendAttemptId(recovered.attemptId);
+                setSubmitMetaByNumber(recovered.metaByNumber);
+                return;
+              }
+            }
+
             if (strict) {
               throw retryError;
             }
@@ -2684,7 +2760,7 @@ function ListeningTestClient({
       }
       return run.catch(() => undefined);
     },
-    [answers, attemptId, backendAttemptId, isMarathonContext, marked, marathonDayNumber, marathonIdParam, resolveTimeUsedSeconds, reviewMode, submitMetaByNumber, test.id]
+    [answers, attemptId, attemptMode, backendAttemptId, isMarathonContext, marked, marathonDayNumber, marathonIdParam, resolveTimeUsedSeconds, reviewMode, submitMetaByNumber, test.id]
   );
 
   useEffect(() => {
@@ -2721,7 +2797,7 @@ function ListeningTestClient({
         Object.entries(answers).map(([number, value]) => [`${test.id}-q${number}`, value])
       );
 
-      let submitAttemptId = backendAttemptId;
+      let submitAttemptId = backendAttemptIdRef.current ?? backendAttemptId;
       let submitMetaForRequest = submitMetaByNumber;
       if (!isGuest && !submitAttemptId && UUID_PATTERN.test(test.id) && !isMarathonContext) {
         try {
@@ -2741,6 +2817,8 @@ function ListeningTestClient({
       if (!isGuest && submitAttemptId) {
         try {
           await backendSaveChainRef.current;
+          // A queued autosave may have swapped a stale attempt for a fresh one.
+          submitAttemptId = backendAttemptIdRef.current ?? submitAttemptId;
           const buildSubmitAnswers = (metaByNumber: Map<number, ListeningSubmitQuestionMeta>) =>
             buildListeningBackendAnswerPayload({
               answers,
@@ -2787,14 +2865,46 @@ function ListeningTestClient({
             const freshSnapshot = await studentAttemptsService.getById(submitAttemptId);
             const freshMetaByNumber = collectListeningSubmitMetaByNumber(freshSnapshot);
             setSubmitMetaByNumber(freshMetaByNumber);
-            await studentAttemptsService.save(submitAttemptId, {
-              time_used_seconds: timeUsedSeconds,
-              answers: buildSaveAnswers(freshMetaByNumber)
-            });
-            await studentAttemptsService.submit(submitAttemptId, {
-              time_used_seconds: timeUsedSeconds,
-              answers: buildSubmitAnswers(freshMetaByNumber)
-            });
+            try {
+              await studentAttemptsService.save(submitAttemptId, {
+                time_used_seconds: timeUsedSeconds,
+                answers: buildSaveAnswers(freshMetaByNumber)
+              });
+              await studentAttemptsService.submit(submitAttemptId, {
+                time_used_seconds: timeUsedSeconds,
+                answers: buildSubmitAnswers(freshMetaByNumber)
+              });
+            } catch (secondError) {
+              // Even refreshed attempt IDs were rejected: the attempt predates a
+              // re-publish of the test content. Move to a fresh attempt and submit there.
+              const secondFailedIds = extractValidationAnswerQuestionIdFailures(secondError);
+              if (!secondFailedIds.size) {
+                throw secondError;
+              }
+
+              const recovered = await recoverStaleListeningBackendAttempt({
+                staleAttemptId: submitAttemptId,
+                testId: test.id,
+                mode: attemptMode,
+                timeUsedSeconds
+              });
+              if (!recovered) {
+                throw secondError;
+              }
+
+              await studentAttemptsService.save(recovered.attemptId, {
+                time_used_seconds: timeUsedSeconds,
+                answers: buildSaveAnswers(recovered.metaByNumber)
+              });
+              await studentAttemptsService.submit(recovered.attemptId, {
+                time_used_seconds: timeUsedSeconds,
+                answers: buildSubmitAnswers(recovered.metaByNumber)
+              });
+              submitAttemptId = recovered.attemptId;
+              backendAttemptIdRef.current = recovered.attemptId;
+              setBackendAttemptId(recovered.attemptId);
+              setSubmitMetaByNumber(recovered.metaByNumber);
+            }
           }
         } catch {
           backendAttemptLifecycleRef.current = "active";
