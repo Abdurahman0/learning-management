@@ -71,12 +71,18 @@ function PackageCard({item}: {item: StudentPackage}) {
           ))}
         </ul>
 
-        <a href={item.purchase_url} target="_blank" rel="noopener noreferrer" className="mt-6 block">
-          <Button className="h-11 w-full rounded-2xl bg-blue-600 font-bold text-white hover:bg-blue-600/90">
-            Paketni olish
-            <ExternalLink className="size-4" />
+        {item.purchase_url ? (
+          <a href={item.purchase_url} target="_blank" rel="noopener noreferrer" className="mt-6 block">
+            <Button className="h-11 w-full rounded-2xl bg-blue-600 font-bold text-white hover:bg-blue-600/90">
+              Paketni olish
+              <ExternalLink className="size-4" />
+            </Button>
+          </a>
+        ) : (
+          <Button disabled className="mt-6 h-11 w-full rounded-2xl font-bold">
+            Xarid linki tez orada
           </Button>
-        </a>
+        )}
       </CardContent>
     </Card>
   );
@@ -96,20 +102,26 @@ export function UpgradePageClient() {
     async function load() {
       setLoading(true);
       setError(false);
-      try {
-        const [packageResponse, subscriptionResponse] = await Promise.all([
-          studentPackagesService.listPackages(),
-          isStudent ? studentPackagesService.getSubscription() : Promise.resolve(null)
-        ]);
-        if (!active) return;
-        setPackages(packageResponse.filter((item) => item.purchase_url));
-        setSubscription(subscriptionResponse);
-      } catch {
-        if (!active) return;
+      const [packageResult, subscriptionResult] = await Promise.allSettled([
+        studentPackagesService.listPackages(),
+        isStudent ? studentPackagesService.getSubscription() : Promise.resolve(null)
+      ]);
+
+      if (!active) return;
+
+      if (packageResult.status === "fulfilled") {
+        setPackages(packageResult.value);
+      } else {
+        setPackages([]);
         setError(true);
-      } finally {
-        if (active) setLoading(false);
       }
+
+      if (subscriptionResult.status === "fulfilled") {
+        setSubscription(subscriptionResult.value);
+      } else {
+        setSubscription(null);
+      }
+      setLoading(false);
     }
     void load();
     return () => {
@@ -131,35 +143,6 @@ export function UpgradePageClient() {
     );
   }
 
-  if (activeSubscription) {
-    return (
-      <div className="mx-auto flex w-full max-w-lg flex-col items-center gap-6 px-4 pb-16 pt-12 text-center">
-        <div className="inline-flex size-20 items-center justify-center rounded-full bg-amber-500/10">
-          <Crown className="size-9 text-amber-500" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Premium access active</h1>
-          <p className="mt-2 text-muted-foreground">
-            {activeSubscription.package_name} paketingiz {formatDate(activeSubscription.expires_at)} gacha faol.
-          </p>
-        </div>
-        <div className="grid w-full gap-3 rounded-3xl border border-border/70 bg-card/70 p-4 text-left sm:grid-cols-2">
-          <div className="rounded-2xl bg-background/60 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Package</p>
-            <p className="mt-2 font-semibold">{activeSubscription.package_name}</p>
-          </div>
-          <div className="rounded-2xl bg-background/60 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Days left</p>
-            <p className="mt-2 font-semibold">{activeSubscription.days_remaining ?? "-"}</p>
-          </div>
-        </div>
-        <Button asChild className="h-11 w-full max-w-xs rounded-2xl bg-blue-600 font-semibold hover:bg-blue-600/90">
-          <Link href={`/${locale}/reading`}>Testlarga o&apos;tish</Link>
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 px-4 pb-16 pt-8">
       <div className="mx-auto max-w-2xl space-y-3 text-center">
@@ -169,6 +152,24 @@ export function UpgradePageClient() {
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Tarifni tanlang</h1>
         <p className="text-base text-muted-foreground">Premium testlar va marathon kontentlarini ochish uchun paket tanlang.</p>
       </div>
+
+      {activeSubscription ? (
+        <div className="grid gap-4 rounded-3xl border border-amber-500/25 bg-amber-500/10 p-5 shadow-sm sm:grid-cols-[auto_1fr_auto] sm:items-center">
+          <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-amber-500/15">
+            <Crown className="size-6 text-amber-500" />
+          </div>
+          <div>
+            <p className="font-bold text-foreground">Premium access active</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {activeSubscription.package_name} paketingiz {formatDate(activeSubscription.expires_at)} gacha faol.
+              {typeof activeSubscription.days_remaining === "number" ? ` ${activeSubscription.days_remaining} kun qoldi.` : ""}
+            </p>
+          </div>
+          <Button asChild className="h-10 rounded-xl bg-blue-600 font-semibold hover:bg-blue-600/90">
+            <Link href={`/${locale}/reading`}>Testlarga o&apos;tish</Link>
+          </Button>
+        </div>
+      ) : null}
 
       {error ? (
         <div className="rounded-3xl border border-rose-500/30 bg-rose-500/10 px-5 py-4 text-sm text-rose-600 dark:text-rose-300">
