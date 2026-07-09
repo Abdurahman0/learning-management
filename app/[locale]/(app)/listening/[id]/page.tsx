@@ -75,6 +75,10 @@ import { FormattedInstructionText } from "@/components/test/FormattedInstruction
 import { InlineBoldText } from "@/components/test/InlineBoldText";
 import { TestNotesButton } from "@/components/test/TestNotesButton";
 import { useTestAppearance } from "@/lib/test-appearance";
+import {
+  formatMatchingInfoOptionsAsPlainLines,
+  parseMatchingInfoOptionsFromInstructions
+} from "@/lib/matching-info-instructions";
 import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
 import { ListeningQuestionAnalysisPanel } from "./result/_components/ListeningQuestionAnalysisPanel";
 import { adaptListeningBackendReview, type AdaptedListeningBackendReview, type ListeningBackendAnswerMeta } from "./result/_components/backendReviewAdapters";
@@ -362,6 +366,9 @@ function normalizeListeningAnswerForBackend(rawValue: unknown, questionType: str
     || normalizedType === "MATCH_SENT_ENDINGS"
     || normalizedType === "PLAN_MAP_DIAGRAM"
     || normalizedType === "DIAGRAM_COMPLETION"
+    || normalizedType === "MATCHING"
+    || normalizedType === "MATCH_PARA_INFO"
+    || normalizedType === "CLASSIFICATION"
   ) {
     normalizedRaw = normalizeLetterKeyAnswerForBackend(normalizedRaw);
   }
@@ -716,10 +723,19 @@ function mapGroupToBlocks(group: StudentAttemptQuestionGroup): ListeningBlock[] 
           ? extractOptionTexts(content?.categories)
           : extractOptionTexts(content?.labels);
 
+    const parsedFromInstructions = options.length
+      ? []
+      : parseMatchingInfoOptionsFromInstructions(toStringSafe(group.instructions));
+    const resolvedOptions = options.length
+      ? options
+      : parsedFromInstructions.length
+        ? formatMatchingInfoOptionsAsPlainLines(parsedFromInstructions)
+        : ["A", "B", "C", "D"];
+
     return [withGroupMeta({
       type: "matching",
       title: "Matching",
-      options: options.length ? options : ["A", "B", "C", "D"],
+      options: resolvedOptions,
       items: questions.map((q) => ({
         questionNumber: q.question_number,
         prompt: extractQuestionPrompt(q)

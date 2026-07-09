@@ -5,6 +5,7 @@ import {useTranslations} from "next-intl"
 
 import {Label} from "@/components/ui/label"
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select"
+import {extractKeyFromChoiceLabel} from "@/lib/matching-info-instructions"
 import type {BuilderQuestion, MatchingInformationBuilderQuestion} from "@/types/admin"
 
 type PassageQuestionFieldsProps = {
@@ -87,11 +88,18 @@ function expandLetterRange(value: string) {
 
 function normalizeMatchingChoicesInput(value: string) {
   const tokens = value
-    .split(/[\n,]/g)
+    .split(/\n/g)
     .map((item) => item.trim())
     .filter(Boolean)
 
-  const parsed = tokens.flatMap((token) => expandLetterRange(token) ?? [token.toUpperCase()])
+  const parsed = tokens.flatMap((token) => {
+    const rangeExpansion = expandLetterRange(token)
+    if (rangeExpansion) return rangeExpansion
+    // Bare key with no label (e.g. "A") — normalize to uppercase for consistency.
+    if (/^[A-Za-z]{1,2}$/.test(token)) return [token.toUpperCase()]
+    // Labeled option (e.g. "A. Marcel") — keep as authored.
+    return [token]
+  })
   return [...new Set(parsed)]
 }
 
@@ -221,10 +229,11 @@ export function PassageQuestionFields({question, onChange}: PassageQuestionField
               value={question.choices.join("\n")}
               onChange={(event) => {
                 const choices = normalizeMatchingChoicesInput(event.target.value)
+                const keys = choices.map((choice, index) => extractKeyFromChoiceLabel(choice, index))
                 const nextMapping: Record<string, string> = {}
                 for (const item of question.items) {
                   const current = String(question.correctAnswer[item] ?? "").trim().toUpperCase()
-                  nextMapping[item] = choices.includes(current) ? current : ""
+                  nextMapping[item] = keys.includes(current) ? current : ""
                 }
                 onChange({
                   ...question,
@@ -232,6 +241,7 @@ export function PassageQuestionFields({question, onChange}: PassageQuestionField
                   correctAnswer: nextMapping
                 })
               }}
+              placeholder="A. Marcel"
               className={fieldClassName}
             />
           </div>
@@ -256,11 +266,14 @@ export function PassageQuestionFields({question, onChange}: PassageQuestionField
                 <SelectValue placeholder={t("questionBuilder.fields.selectChoice")} />
               </SelectTrigger>
               <SelectContent>
-                {question.choices.map((choice) => (
-                  <SelectItem key={`${question.id}-choice-${choice}`} value={choice}>
-                    {choice}
-                  </SelectItem>
-                ))}
+                {question.choices.map((choice, index) => {
+                  const key = extractKeyFromChoiceLabel(choice, index)
+                  return (
+                    <SelectItem key={`${question.id}-choice-${key}`} value={key}>
+                      {choice}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
           </div>

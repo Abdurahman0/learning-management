@@ -3,6 +3,7 @@
 import {Fragment} from "react";
 
 import {cn} from "@/lib/utils";
+import {stripMatchingInfoMarkersForDisplay} from "@/lib/matching-info-instructions";
 
 type FormattedInstructionTextProps = {
   text: string;
@@ -22,7 +23,7 @@ function normalizeLineBullets(text: string) {
 }
 
 export function FormattedInstructionText({text, className}: FormattedInstructionTextProps) {
-  const tokens = splitWithBoldMarkers(normalizeLineBullets(text));
+  const tokens = splitWithBoldMarkers(normalizeLineBullets(stripMatchingInfoMarkersForDisplay(text)));
 
   return (
     <span className={cn("whitespace-pre-wrap", className)}>

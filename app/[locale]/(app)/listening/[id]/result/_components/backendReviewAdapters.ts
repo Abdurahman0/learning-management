@@ -1,5 +1,6 @@
 import type {StudentAttemptReviewResponse} from "@/src/services/student/types";
 import type {FlattenedListeningQuestion} from "@/lib/listening-questions";
+import {parseMatchingInfoOptionsFromInstructions} from "@/lib/matching-info-instructions";
 import type {ListeningTypePerformance} from "@/lib/listening-review-insights";
 import type {ListeningSectionPerformanceItem} from "./ListeningSectionPerformance";
 import type {ListeningReviewSection} from "./ListeningTranscriptReviewPanel";
@@ -73,6 +74,41 @@ function parseOptionRows(value: unknown): Array<{key: string; text: string}> {
       key: row.key || String.fromCharCode("A".charCodeAt(0) + index),
       text: row.text,
     }));
+}
+
+function extractMatchingOptionRows(group: {group_content_json?: unknown; instructions?: string | null}): Array<{key: string; text: string}> {
+  const content = asRecord(group.group_content_json);
+  const rows = Array.isArray(content?.options)
+    ? content.options
+    : Array.isArray(content?.choices)
+      ? content.choices
+      : Array.isArray(content?.labels)
+        ? content.labels
+        : [];
+
+  const fromContent = rows
+    .map((item) => {
+      if (typeof item === "string") {
+        const trimmed = item.trim();
+        const match = trimmed.match(/^([A-Za-z]{1,2})[)\].:\-]?\s*(.*)$/);
+        return match
+          ? {key: match[1].toUpperCase(), text: match[2].trim() || match[1].toUpperCase()}
+          : {key: "", text: trimmed};
+      }
+      const row = asRecord(item);
+      return {
+        key: toStringSafe(row?.key).trim().toUpperCase(),
+        text: toStringSafe(row?.text ?? row?.label).trim()
+      };
+    })
+    .filter((row) => row.text.length > 0);
+
+  if (fromContent.length) return fromContent;
+
+  return parseMatchingInfoOptionsFromInstructions(toStringSafe(group.instructions)).map(({key, label}) => ({
+    key,
+    text: label
+  }));
 }
 
 function normalizeQuestionType(value: string): FlattenedListeningQuestion["type"] {
@@ -180,7 +216,7 @@ export function adaptListeningBackendReview(review: StudentAttemptReviewResponse
       .flatMap((group) => group.questions.map((question) => ({group, question})))
       .sort((a, b) => a.question.question_number - b.question.question_number);
 
-    sectionQuestions.forEach(({question}) => {
+    sectionQuestions.forEach(({group, question}) => {
       const questionType = normalizeQuestionType(toStringSafe(question.question_type, "text"));
       const prompt = toStringSafe(question.question_text, `Question ${question.question_number}`);
       questions.push({
@@ -199,7 +235,11 @@ export function adaptListeningBackendReview(review: StudentAttemptReviewResponse
         type: questionType,
         correctAnswer: parseAnswerValue(question.correct_answer_json) ?? serializeUnknown(question.correct_answer_json),
         acceptableAnswers: undefined,
-        options: questionType === "mcq" ? parseOptionRows(question.options_json) : undefined,
+        options: questionType === "mcq"
+          ? parseOptionRows(question.options_json)
+          : questionType === "matching"
+            ? extractMatchingOptionRows(group)
+            : undefined,
         explanation: toStringSafe(question.explanation, "No explanation provided by backend."),
         evidence: {
           sectionId,

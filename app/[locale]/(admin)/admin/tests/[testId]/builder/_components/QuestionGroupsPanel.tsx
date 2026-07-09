@@ -13,6 +13,11 @@ import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle} from "@/
 import {Switch} from "@/components/ui/switch";
 import type {BuilderMode, BuilderStructureItem, QuestionGroup, QuestionType, TestModule} from "@/data/admin-test-builder";
 import {QUESTION_TYPE_OPTIONS_BY_MODULE, getStructureRange} from "@/data/admin-test-builder";
+import {
+  buildMatchingInfoInstructionsBlock,
+  formatMatchingInfoOptionsAsPlainLines,
+  parseMatchingInfoOptionsFromInstructions
+} from "@/lib/matching-info-instructions";
 import {BoldTextarea} from "./BoldTextarea";
 
 import {QuestionGroupCard} from "./QuestionGroupCard";
@@ -160,145 +165,6 @@ function toTableRowsText(value: unknown) {
     .join("\n");
 }
 
-function inferRangeTokenFromChoices(values: string[]) {
-  const cleaned = values
-    .map((value) => parseInstructionChoiceKey(value) ?? value.trim())
-    .filter(Boolean);
-  if (cleaned.length < 2) return null;
-
-  const letterOnly = cleaned.every((value) => /^[A-Z]$/.test(value));
-  if (letterOnly) {
-    const codes = cleaned.map((value) => value.charCodeAt(0));
-    const sequential = codes.every((code, idx) => (idx === 0 ? true : code === codes[idx - 1] + 1));
-    if (!sequential) return null;
-    return `${cleaned[0]}-${cleaned[cleaned.length - 1]}`;
-  }
-
-  const numberOnly = cleaned.every((value) => /^\d{1,2}$/.test(value));
-  if (numberOnly) {
-    const nums = cleaned.map((value) => Number(value));
-    const sequential = nums.every((num, idx) => (idx === 0 ? true : num === nums[idx - 1] + 1));
-    if (!sequential) return null;
-    return `${cleaned[0]}-${cleaned[cleaned.length - 1]}`;
-  }
-
-  return null;
-}
-
-function hasRangeInText(text: string) {
-  return /\b([A-Z]|\d{1,2})\s*[-–—]\s*([A-Z]|\d{1,2})\b/.test(text);
-}
-
-function parseInstructionChoiceKey(value: string) {
-  const trimmed = value.trim();
-  const prefixed = trimmed.match(/^\s*(?:[-*]\s*)?(?:\*\*)?([A-Z])(?:\*\*)?\s*(?:[\)\].:\-]\s*|\s+)\S/i);
-  if (prefixed) return prefixed[1].toUpperCase();
-
-  const paragraph = trimmed.match(/^\s*paragraph\s+([A-Z])(?:\s*[\)\].:\-]\s+\S)?/i);
-  if (paragraph) return paragraph[1].toUpperCase();
-
-  return /^[A-Z]$/.test(trimmed) ? trimmed : null;
-}
-
-function extractChoiceKeysFromInstructionText(text: string) {
-  const source = String(text ?? "");
-  const keys: string[] = [];
-  const seen = new Set<string>();
-  const lineRegex = /^\s*(?:[-*]\s*)?(?:\*\*)?([A-Z])(?:\*\*)?\s*[\)\].:\-]\s+\S.+$/gm;
-  let match: RegExpExecArray | null;
-
-  while ((match = lineRegex.exec(source))) {
-    const key = String(match[1] ?? "").trim().toUpperCase();
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    keys.push(key);
-  }
-
-  return keys.length >= 2 ? keys : [];
-}
-
-function extractChoicesFromInstructionText(text: string) {
-  const source = String(text ?? "");
-  const choices: string[] = [];
-  const seen = new Set<string>();
-  const lineRegex = /^\s*(?:[-*]\s*)?((?:\*\*)?[A-Z](?:\*\*)?\s*[\)\].:\-]\s+\S.+)$/gm;
-  let match: RegExpExecArray | null;
-
-  while ((match = lineRegex.exec(source))) {
-    const choice = String(match[1] ?? "").replace(/\*\*/g, "").trim();
-    const key = parseInstructionChoiceKey(choice);
-    if (!choice || !key || seen.has(key)) continue;
-    seen.add(key);
-    choices.push(choice);
-  }
-
-  return choices;
-}
-
-function hasChoiceListInText(text: string, values: string[]) {
-  const expectedKeys = values
-    .map((value) => parseInstructionChoiceKey(value))
-    .filter((key): key is string => Boolean(key));
-  if (expectedKeys.length < 2) return false;
-  const existingKeys = new Set(extractChoiceKeysFromInstructionText(text));
-  return expectedKeys.every((key) => existingKeys.has(key));
-}
-
-function buildInstructionChoiceList(values: string[]) {
-  return values
-    .map((value, index) => {
-      const trimmed = value.trim();
-      if (!trimmed) return "";
-
-      const key = parseInstructionChoiceKey(trimmed) ?? toMcqKey(index);
-      if (trimmed.toUpperCase() === key) return key;
-
-      const withoutDecoratedKey = trimmed
-        .replace(/^\s*(?:[-*]\s*)?(?:\*\*)?[A-Z](?:\*\*)?\s*(?:[\)\].:\-]\s*|\s+)/i, "")
-        .trim();
-      return withoutDecoratedKey ? `${key}. ${withoutDecoratedKey}` : key;
-    })
-    .filter(Boolean)
-    .join("\n");
-}
-
-function generateRangeOptions(startRaw: string, endRaw: string): string[] {
-  const start = startRaw.trim();
-  const end = endRaw.trim();
-  if (!start || !end) return [];
-
-  if (/^\d+$/.test(start) && /^\d+$/.test(end)) {
-    const from = Number(start);
-    const to = Number(end);
-    if (!Number.isFinite(from) || !Number.isFinite(to)) return [];
-    const step = from <= to ? 1 : -1;
-    const out: string[] = [];
-    for (let n = from; step > 0 ? n <= to : n >= to; n += step) out.push(String(n));
-    return out;
-  }
-
-  if (/^[A-Z]$/.test(start) && /^[A-Z]$/.test(end)) {
-    const from = start.charCodeAt(0);
-    const to = end.charCodeAt(0);
-    const step = from <= to ? 1 : -1;
-    const out: string[] = [];
-    for (let c = from; step > 0 ? c <= to : c >= to; c += step) out.push(String.fromCharCode(c));
-    return out;
-  }
-
-  return [];
-}
-
-function extractRangeFromInstructionText(text: string) {
-  const source = String(text ?? "");
-  if (!source) return [];
-  const explicitKeys = extractChoiceKeysFromInstructionText(source);
-  if (explicitKeys.length) return explicitKeys;
-  const match = source.match(/\b([A-Z]|\d{1,2})\s*[-–—]\s*([A-Z]|\d{1,2})\b/);
-  if (!match) return [];
-  return generateRangeOptions(match[1] ?? "", match[2] ?? "");
-}
-
 export function QuestionGroupsPanel({
   mode,
   module,
@@ -427,10 +293,47 @@ export function QuestionGroupsPanel({
   };
 
   const openEditEditor = (group: QuestionGroup) => {
-    const derivedChoicesFromInstructions =
-      group.type === "matching_information" && module === "reading"
-        ? (extractChoicesFromInstructionText(group.instructions ?? "").join("\n") || extractRangeFromInstructionText(group.instructions ?? "").join("\n"))
-        : "";
+    // Older listening groups may have their option list only in structured
+    // group_content_json (from before the #A. Marcel# instructions convention existed).
+    // Backfill it into the visible Instructions text so the admin can see it and it
+    // gets persisted in the new format on next save.
+    const instructionsForEditor = (() => {
+      const raw = group.instructions ?? "";
+      if (group.type !== "matching_information") return raw;
+      if (parseMatchingInfoOptionsFromInstructions(raw).length) return raw;
+
+      const firstQuestion = group.questions[0] as {choices?: unknown[]} | undefined;
+      const groupContent = (group.groupContentJson ?? {}) as {options?: unknown[]; choices?: unknown[]};
+      const structuredRows: unknown[] = Array.isArray(firstQuestion?.choices) && firstQuestion.choices.length
+        ? firstQuestion.choices
+        : Array.isArray(groupContent.options)
+          ? groupContent.options
+          : Array.isArray(groupContent.choices)
+            ? groupContent.choices
+            : [];
+
+      const legacyOptions = structuredRows
+        .map((item, index) => {
+          if (typeof item === "string") {
+            const trimmed = item.trim();
+            const match = trimmed.match(/^([A-Za-z]{1,2})(?:[)\].:\-]|\s+)(.*)$/);
+            return match
+              ? {key: match[1].toUpperCase(), label: match[2].trim()}
+              : {key: toMcqKey(index), label: trimmed};
+          }
+          const row = item as {key?: string; text?: string; label?: string};
+          return {
+            key: String(row?.key ?? toMcqKey(index)).trim().toUpperCase(),
+            label: String(row?.text ?? row?.label ?? "").trim()
+          };
+        })
+        .filter((option) => option.label.length > 0);
+
+      if (!legacyOptions.length) return raw;
+      const block = buildMatchingInfoInstructionsBlock(legacyOptions);
+      return raw.trim() ? `${raw.trim()}\n\n${block}` : block;
+    })();
+
     const storedWordBank = getStoredWordBank((group.groupContentJson as any)?.word_bank);
     const hasStoredWordBank = storedWordBank.length > 0 && !isPlaceholderWordBank(storedWordBank);
     const isWordBankExplicitlyEnabled =
@@ -444,7 +347,7 @@ export function QuestionGroupsPanel({
       type: group.type,
       from: group.from,
       to: group.to,
-      instructions: group.instructions ?? "",
+      instructions: instructionsForEditor,
       summaryText: (group.groupContentJson as any)?.summary_text ?? "",
       completionTemplateText: (group.groupContentJson as any)?.template_text ?? "",
       mcqMode: "single",
@@ -465,16 +368,18 @@ export function QuestionGroupsPanel({
       wordBank: isWordBankExplicitlyEnabled && hasStoredWordBank ? storedWordBank.join("\n") : "",
       headings: (group.questions[0] as any)?.headings?.join("\n") ?? toLineJoinedValues((group.groupContentJson as any)?.headings),
       choices:
-        ((group.questions[0] as any)?.choices?.join("\n") || (
-          Array.isArray((group.groupContentJson as any)?.choices)
-            ? ((group.groupContentJson as any).choices as string[]).join("\n")
-            : Array.isArray((group.groupContentJson as any)?.options)
-              ? ((group.groupContentJson as any).options as Array<{text?: string; label?: string; key?: string}>)
-                  .map((item) => item?.text ?? item?.label ?? item?.key ?? "")
-                  .filter(Boolean)
-                  .join("\n")
-              : ""
-        ) || derivedChoicesFromInstructions),
+        group.type === "matching_information"
+          ? ""
+          : ((group.questions[0] as any)?.choices?.join("\n") || (
+              Array.isArray((group.groupContentJson as any)?.choices)
+                ? ((group.groupContentJson as any).choices as string[]).join("\n")
+                : Array.isArray((group.groupContentJson as any)?.options)
+                  ? ((group.groupContentJson as any).options as Array<{text?: string; label?: string; key?: string}>)
+                      .map((item) => item?.text ?? item?.label ?? item?.key ?? "")
+                      .filter(Boolean)
+                      .join("\n")
+                  : ""
+            )),
       tableColumns: toLineJoinedValues((group.groupContentJson as any)?.columns),
       tableRows: toTableRowsText((group.groupContentJson as any)?.rows)
     });
@@ -497,29 +402,14 @@ export function QuestionGroupsPanel({
       .filter(Boolean)
       .map((row) => row.split("|").map((cell) => cell.trim()));
 
-    let nextInstructions = editor.instructions;
-    if (editor.type === "matching_information" && module === "reading") {
-      // Backend docs: MATCH_PARA_INFO group_content_json must be null.
-      // Persist admin-entered paragraph choices by embedding them into instructions
-      // so the student UI can derive the matrix columns after a reload.
-      const inferredRange = inferRangeTokenFromChoices(parsedChoices);
-      const hasChoiceLabels = parsedChoices.some((choice) => {
-        const trimmed = choice.trim();
-        if (!trimmed) return false;
-        const key = parseInstructionChoiceKey(trimmed);
-        if (key) return trimmed.toUpperCase() !== key;
-        return trimmed.length > 1;
-      });
-      const shouldEmbedChoiceList = hasChoiceLabels && parsedChoices.length >= 2 && !hasChoiceListInText(nextInstructions, parsedChoices);
-      if (shouldEmbedChoiceList) {
-        const choiceList = buildInstructionChoiceList(parsedChoices);
-        if (choiceList) {
-          nextInstructions = `${nextInstructions.trim()}\n\n${choiceList}`.trim();
-        }
-      } else if (inferredRange && !hasRangeInText(nextInstructions)) {
-        nextInstructions = `${nextInstructions.trim()}\n\nThe Reading Passage has paragraphs ${inferredRange}.`.trim();
-      }
-    }
+    // Matching Information admins author the option list directly inside Instructions
+    // (one `#A. Marcel#`-style line per option), so it's parsed out here rather than
+    // from a separate Choices box.
+    const parsedMatchingInfoChoices =
+      editor.type === "matching_information"
+        ? formatMatchingInfoOptionsAsPlainLines(parseMatchingInfoOptionsFromInstructions(editor.instructions))
+        : [];
+    const nextInstructions = editor.instructions;
 
     const groupContent =
       editor.type === "multiple_choice"
@@ -555,7 +445,7 @@ export function QuestionGroupsPanel({
                 || editor.type === "selecting_from_a_list"
                 || editor.type === "map"
               )
-            ? {choices: parsedChoices}
+            ? {choices: editor.type === "matching_information" ? parsedMatchingInfoChoices : parsedChoices}
             : undefined;
 
     if (editor.mode === "create") {
@@ -692,6 +582,16 @@ export function QuestionGroupsPanel({
                 placeholder={t("groups.fields.instructionsPlaceholder")}
                 className="min-h-24 w-full resize-y rounded-xl border border-border/70 bg-background/50 px-3 py-2 text-sm outline-none focus-visible:ring-[3px] focus-visible:ring-primary/25"
               />
+              {editor.type === "matching_information" ? (
+                <p className="text-[10px] text-muted-foreground">
+                  List the options here, one per line, each wrapped in # symbols so the app can find them, e.g.{" "}
+                  <code>#A. Marcel#</code>, <code>#B. Diane#</code>. You can also wrap a note or heading in # the same
+                  way — e.g. <code>{"#**NB**  You may use any letter more than once.#"}</code> or{" "}
+                  <code>{"#**List of People**#"}</code> — those stay visible to students (just without the #), they
+                  just aren&apos;t treated as options. The answer field for each question only needs the letter (A,
+                  B, C…).
+                </p>
+              ) : null}
             </div>
 
             {editor.type === "summary_completion" && (
@@ -820,8 +720,7 @@ export function QuestionGroupsPanel({
               </div>
             )}
 
-            {(editor.type === "matching_information" ||
-              editor.type === "matching_features" ||
+            {(editor.type === "matching_features" ||
               editor.type === "selecting_from_a_list" ||
               editor.type === "map") && (
               <div className="space-y-1.5">

@@ -1,4 +1,8 @@
 import {createDefaultQuestion, type BuilderQuestion, type QuestionGroup, type QuestionType} from "@/data/admin-test-builder";
+import {
+  formatMatchingInfoOptionsAsPlainLines,
+  parseMatchingInfoOptionsFromInstructions
+} from "@/lib/matching-info-instructions";
 import type {QuestionBulkItemPayload, QuestionGroupRecord, QuestionRecord} from "@/src/services/admin/types";
 
 function buildGroupTitle(from: number, to: number) {
@@ -207,7 +211,14 @@ function buildDefaultGroupContentJson(type: QuestionType, from: number, to: numb
   }
 }
 
-function ensureGroupContentForApi(type: QuestionType, from: number, to: number, input: unknown, module?: "reading" | "listening") {
+function ensureGroupContentForApi(
+  type: QuestionType,
+  from: number,
+  to: number,
+  input: unknown,
+  module?: "reading" | "listening",
+  instructions?: string
+) {
   const fallback = buildDefaultGroupContentJson(type, from, to);
   const content = asRecord(input);
 
@@ -215,6 +226,13 @@ function ensureGroupContentForApi(type: QuestionType, from: number, to: number, 
   if (type === "matching_information" && module !== "listening") return null;
 
   if (type === "matching_information") {
+    // Instructions are the single source of truth for the option list (admin authors
+    // "#A. Marcel#" lines there); fall back to any structured content for older data.
+    const parsedFromInstructions = parseMatchingInfoOptionsFromInstructions(instructions ?? "");
+    if (parsedFromInstructions.length > 0) {
+      return {options: parsedFromInstructions.map(({key, label}) => ({key, text: label}))};
+    }
+
     const sourceRows = Array.isArray(content.options) ? content.options : Array.isArray(content.choices) ? content.choices : [];
     const options = sourceRows
       .map((item) => {
@@ -360,7 +378,7 @@ export function resolveGroupContentForSync(group: QuestionGroup, module: "readin
     };
   }
 
-  return ensureGroupContentForApi(group.type, group.from, group.to, group.groupContentJson, module);
+  return ensureGroupContentForApi(group.type, group.from, group.to, group.groupContentJson, module, group.instructions);
 }
 
 export function resolveApiQuestionTypeForGroup(type: QuestionType, _questionCount: number, _groupContent?: unknown, module?: "reading" | "listening") {
@@ -566,7 +584,39 @@ function mapApiQuestionToBuilderQuestion(type: QuestionType, question: QuestionR
     return builderQuestion;
   }
 
-  if (builderQuestion.type === "matching_information" || builderQuestion.type === "matching_features" || builderQuestion.type === "selecting_from_a_list" || builderQuestion.type === "map") {
+  if (builderQuestion.type === "matching_information") {
+    // Instructions are the single source of truth for the option list; fall back to
+    // structured group_content_json (older listening data saved before this convention).
+    const parsedFromInstructions = parseMatchingInfoOptionsFromInstructions(group.instructions ?? "");
+    if (parsedFromInstructions.length) {
+      (builderQuestion as Extract<BuilderQuestion, {type: "matching_information" | "matching_features" | "selecting_from_a_list" | "map"}>).choices =
+        formatMatchingInfoOptionsAsPlainLines(parsedFromInstructions);
+    } else {
+      const choiceRows = Array.isArray(groupContent.choices)
+        ? groupContent.choices
+        : Array.isArray(groupContent.options)
+          ? groupContent.options
+          : [];
+      const choices = choiceRows
+        .map((item, index) => {
+          if (typeof item === "string") return item;
+          const row = asRecord(item);
+          const key = toStringSafe(row.key).trim() || toOptionKey(index);
+          const label = toStringSafe(row.text ?? row.label).trim();
+          return label ? `${key}. ${label}` : key;
+        })
+        .map((item) => item.trim())
+        .filter(Boolean);
+      (builderQuestion as Extract<BuilderQuestion, {type: "matching_information" | "matching_features" | "selecting_from_a_list" | "map"}>).choices =
+        choices.length > 0 ? choices : extractRangeFromInstructionText(group.instructions ?? "");
+    }
+    (builderQuestion as Extract<BuilderQuestion, {type: "matching_information" | "matching_features" | "selecting_from_a_list" | "map"}>).correctAnswer = {
+      [builderQuestion.prompt.trim() || `Question ${builderQuestion.number}`]: toStringSafe(answerJson.answer)
+    };
+    return builderQuestion;
+  }
+
+  if (builderQuestion.type === "matching_features" || builderQuestion.type === "selecting_from_a_list" || builderQuestion.type === "map") {
     const choiceRows = Array.isArray(groupContent.choices)
       ? groupContent.choices
       : Array.isArray(groupContent.options)
@@ -632,7 +682,7 @@ export function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fa
     if (question.type === "matching_headings" && headings.length > 0) {
       return {...question, headings};
     }
-    if ((question.type === "matching_information" || question.type === "matching_features" || question.type === "selecting_from_a_list") && choices.length > 0) {
+    if ((question.type === "matching_features" || question.type === "selecting_from_a_list") && choices.length > 0) {
       return {...question, choices};
     }
     return question;

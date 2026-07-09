@@ -83,6 +83,25 @@ function normalizeAnswerValue(value: string | string[] | null | undefined) {
   return formatAnswerForDisplay(value);
 }
 
+// Matching-type answers are stored/submitted as a bare key (e.g. "A"); resolve it back
+// to "A — Marcel" using the question's option list so review reads as well as before.
+function formatMatchingAnswerForDisplay(
+  value: string | string[] | null | undefined,
+  options?: Array<{ key: string; text: string }>,
+) {
+  const formatted = formatAnswerForDisplay(value);
+  if (!formatted || !options?.length) return formatted;
+
+  return formatted
+    .split(", ")
+    .map((token) => {
+      const key = token.trim().toUpperCase();
+      const match = options.find((option) => option.key.toUpperCase() === key);
+      return match ? `${match.key.toUpperCase()} — ${match.text}` : token;
+    })
+    .join(", ");
+}
+
 function getQuestionStatus(
   grading: GradeTestResult,
   questionId: string,
@@ -150,7 +169,9 @@ export function ListeningQuestionAnalysisPanel({
     const cache = new Map<string, string>();
     for (const question of questions) {
       const meta = answerMetaByQuestionId[question.id];
-      const value = formatAnswerForDisplay(meta?.correctAnswer);
+      const value = meta?.type === "matching"
+        ? formatMatchingAnswerForDisplay(meta?.correctAnswer, meta?.options)
+        : formatAnswerForDisplay(meta?.correctAnswer);
       cache.set(question.id, value);
     }
     return cache;
@@ -218,7 +239,10 @@ export function ListeningQuestionAnalysisPanel({
 
   const renderCorrectAnswer = (questionId: string) => {
     if (!answersVisible) return null;
-    const userAnswer = normalizeAnswerValue(answers[questionId]);
+    const meta = answerMetaByQuestionId[questionId];
+    const userAnswer = meta?.type === "matching"
+      ? formatMatchingAnswerForDisplay(answers[questionId], meta?.options)
+      : normalizeAnswerValue(answers[questionId]);
     const correctAnswer = normalizeCorrectAnswer.get(questionId) ?? "";
     return (
       <div className="mt-2 grid gap-1 text-xs text-muted-foreground">
@@ -732,7 +756,10 @@ export function ListeningQuestionAnalysisPanel({
                         const questionId = getQuestionId(item.questionNumber);
                         const status = getStatusByNumber(item.questionNumber);
                         const statusStyles = getStatusStyles(status);
-                        const userAnswer = normalizeAnswerValue(getUserAnswerByNumber(item.questionNumber));
+                        const itemMeta = answerMetaByQuestionId[questionId];
+                        const userAnswer = itemMeta?.type === "matching"
+                          ? formatMatchingAnswerForDisplay(getUserAnswerByNumber(item.questionNumber), itemMeta.options)
+                          : normalizeAnswerValue(getUserAnswerByNumber(item.questionNumber));
 
                         return (
                           <div
@@ -897,8 +924,12 @@ export function ListeningQuestionAnalysisPanel({
           const statusStyles = getStatusStyles(status);
           const answerMeta = answerMetaByQuestionId[question.id];
           const isOpen = expanded.has(question.id);
-          const userAnswer = normalizeAnswerValue(answers[question.id]);
-          const correctAnswer = formatAnswerForDisplay(answerMeta?.correctAnswer);
+          const userAnswer = answerMeta?.type === "matching"
+            ? formatMatchingAnswerForDisplay(answers[question.id], answerMeta?.options)
+            : normalizeAnswerValue(answers[question.id]);
+          const correctAnswer = answerMeta?.type === "matching"
+            ? formatMatchingAnswerForDisplay(answerMeta?.correctAnswer, answerMeta?.options)
+            : formatAnswerForDisplay(answerMeta?.correctAnswer);
           const explanationText = (answerMeta?.explanation ?? "").trim();
 
           const rawAnswer = answers[question.id];

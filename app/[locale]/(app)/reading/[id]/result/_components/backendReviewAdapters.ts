@@ -1,6 +1,10 @@
 import type {ReadingAnswerMeta} from "@/data/reading-answer-keys";
 import type {ReviewPassage} from "@/data/review-reading";
 import {normalizeEvidenceLookupText} from "@/lib/evidence-text";
+import {
+  formatMatchingInfoOptionsAsPlainLines,
+  parseMatchingInfoOptionsFromInstructions
+} from "@/lib/matching-info-instructions";
 import type {ReadingQuestion} from "@/data/reading-tests";
 import type {StudentAttemptReviewResponse} from "@/src/services/student/types";
 
@@ -258,6 +262,9 @@ function extractLetterOptionsFromInstructionText(text: string): string[] {
 function extractMatchingOptionsFromInstructions(text: string): string[] {
   const source = String(text ?? "");
   if (!source) return [];
+
+  const parsedFromMarkers = parseMatchingInfoOptionsFromInstructions(source);
+  if (parsedFromMarkers.length) return formatMatchingInfoOptionsAsPlainLines(parsedFromMarkers);
 
   const explicit = extractLetterOptionsFromInstructionText(source);
   if (explicit.length) return explicit;

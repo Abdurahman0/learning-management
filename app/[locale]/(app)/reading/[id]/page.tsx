@@ -50,6 +50,12 @@ import {
   type ReadingHighlightColor,
 } from "@/lib/reading-highlights";
 import { useTestAppearance } from "@/lib/test-appearance";
+import {
+  extractMatchingInfoAnnotations,
+  formatMatchingInfoOptionsAsPlainLines,
+  parseMatchingInfoOptionsFromInstructions,
+  stripAllMatchingInfoMarkedLinesForDisplay
+} from "@/lib/matching-info-instructions";
 import { TestOptionsSheet } from "@/components/test/TestOptionsSheet";
 import { adaptReadingBackendReview, type AdaptedReadingBackendReview } from "./result/_components/backendReviewAdapters";
 import { studentAttemptsService } from "@/src/services/student/attempts.service";
@@ -333,24 +339,32 @@ function MatchingHeadingsBank({
 
 type MatchingInfoBankProps = {
   options: string[];
-  hintText: string;
+  hintText?: string;
+  headingText?: string;
 };
 
 function MatchingInfoBank({
   options,
   hintText,
+  headingText,
 }: MatchingInfoBankProps) {
   if (!options.length) return null;
   const parsedOptions = options.map((option, index) => parseMatchingInfoOption(option, index));
 
   return (
     <div className="test-panel space-y-5 rounded-xl border border-border/80 bg-card/85 px-4 py-4 shadow-sm dark:bg-card/65">
-      <p className="text-base italic leading-relaxed text-foreground">
-        <span className="mr-2 font-bold not-italic">NB</span>
-        {hintText}
-      </p>
+      {hintText ? (
+        <p className="text-base italic leading-relaxed text-foreground">
+          <span className="mr-2 font-bold not-italic">NB</span>
+          <InlineBoldText text={hintText} />
+        </p>
+      ) : null}
       <div className="space-y-2">
-        <p className="text-lg font-bold text-foreground">List of Options</p>
+        {headingText ? (
+          <p className="text-lg font-bold text-foreground">
+            <InlineBoldText text={headingText} />
+          </p>
+        ) : null}
         <div className="space-y-1.5">
           {parsedOptions.map((option) => (
             <div
@@ -692,8 +706,15 @@ function extractMatchingChoiceOptions(
   }
 
   // Reading MATCH_PARA_INFO doesn't accept shared group content on the backend.
-  // Derive the available options from instructions or from the passage text headers (A, B, C...).
-  const derivedFromInstruction = extractRangeFromInstructionText(instructionText ?? toStringSafe(group.instructions));
+  // Derive the available options from instructions (the "#A. Marcel#" authoring
+  // convention) or from the passage text headers (A, B, C...).
+  const rawInstructions = instructionText ?? toStringSafe(group.instructions);
+  const parsedFromInstructions = parseMatchingInfoOptionsFromInstructions(rawInstructions);
+  if (parsedFromInstructions.length) {
+    return formatMatchingInfoOptionsAsPlainLines(parsedFromInstructions);
+  }
+
+  const derivedFromInstruction = extractRangeFromInstructionText(rawInstructions);
   if (derivedFromInstruction.length) {
     return derivedFromInstruction;
   }
@@ -3539,6 +3560,12 @@ function ReadingTestClient({
                     const parsed = parseMatchingInfoOption(option, optionIndex);
                     return Boolean(parsed.label);
                   });
+                  const matchingInfoAnnotations = extractMatchingInfoAnnotations(group.instruction ?? "");
+                  // The NB note / heading are shown inside MatchingInfoBank below, so drop
+                  // them here to avoid showing the same text twice.
+                  const groupHeaderInstruction = showMatchingInfoBank
+                    ? stripAllMatchingInfoMarkedLinesForDisplay(group.instruction ?? "")
+                    : group.instruction;
 
                   if (!visibleGroupQuestions.length && !matchingHeadingGroupQuestions.length) {
                     return null;
@@ -3549,9 +3576,9 @@ function ReadingTestClient({
                     <section key={group.title} className="space-y-4">
                       <div>
                         <h3 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{group.title}</h3>
-                        {group.instruction ? (
+                        {groupHeaderInstruction ? (
                           <div className="mt-1 wrap-break-word text-sm leading-relaxed text-foreground/85">
-                            <FormattedInstructionText text={group.instruction} />
+                            <FormattedInstructionText text={groupHeaderInstruction} />
                           </div>
                         ) : null}
                       </div>
@@ -3589,11 +3616,8 @@ function ReadingTestClient({
                       {showMatchingInfoBank && matchingInfoGroupOptions.length ? (
                         <MatchingInfoBank
                           options={matchingInfoGroupOptions}
-                          hintText={
-                            t.has("dragMatchingInfoHint")
-                              ? t("dragMatchingInfoHint")
-                              : "You may use any letter more than once."
-                          }
+                          headingText={matchingInfoAnnotations.heading}
+                          hintText={matchingInfoAnnotations.note}
                         />
                       ) : null}
 

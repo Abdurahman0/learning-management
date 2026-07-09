@@ -17,6 +17,10 @@ import {
   type ContentBankPassage,
   type ContentBankVariantSet
 } from "@/data/admin/selectors";
+import {
+  formatMatchingInfoOptionsAsPlainLines,
+  parseMatchingInfoOptionsFromInstructions
+} from "@/lib/matching-info-instructions";
 import {AdminApiError} from "@/src/services/admin/types";
 import {adminContentBankService} from "@/src/services/admin/contentBank.service";
 import {listeningPartsService} from "@/src/services/admin/listeningParts.service";
@@ -526,7 +530,8 @@ function ensureGroupContentForApi(
   from: number,
   to: number,
   input: unknown,
-  module?: "reading" | "listening"
+  module?: "reading" | "listening",
+  instructions?: string
 ): unknown {
   const fallback = buildDefaultGroupContentJson(type, from, to);
   const content = asRecord(input);
@@ -540,6 +545,16 @@ function ensureGroupContentForApi(
     if (module !== "listening") {
       return null;
     }
+
+    // Instructions are the single source of truth for the option list (admin authors
+    // "#A. Marcel#" lines there); fall back to any structured content for older data.
+    const parsedFromInstructions = parseMatchingInfoOptionsFromInstructions(instructions ?? "");
+    if (parsedFromInstructions.length > 0) {
+      return {
+        options: parsedFromInstructions.map(({key, label}) => ({key, text: label}))
+      };
+    }
+
     const sourceRows = Array.isArray(content.options)
       ? content.options
       : Array.isArray(content.choices)
@@ -790,7 +805,7 @@ function resolveGroupContentForSync(group: QuestionGroup, module: "reading" | "l
     };
   }
 
-  return ensureGroupContentForApi(group.type, group.from, group.to, group.groupContentJson, module);
+  return ensureGroupContentForApi(group.type, group.from, group.to, group.groupContentJson, module, group.instructions);
 }
 
 function mapBuilderQuestionTypeToApi(value: QuestionType, questionCount: number) {
@@ -1196,9 +1211,41 @@ function mapApiQuestionToBuilderQuestion(
     return builderQuestion;
   }
 
+  if (builderQuestion.type === "matching_information") {
+    const prompt = basePrompt || `Item ${questionNumber}`;
+    builderQuestion.items = [prompt];
+
+    // Instructions are the single source of truth for the option list; fall back to
+    // structured group_content_json (older listening data saved before this convention).
+    const parsedFromInstructions = parseMatchingInfoOptionsFromInstructions(toStringSafe(group.instructions));
+    if (parsedFromInstructions.length) {
+      builderQuestion.choices = formatMatchingInfoOptionsAsPlainLines(parsedFromInstructions);
+    } else {
+      const groupContent = asRecord(group.group_content_json);
+      const optionRows = Array.isArray(groupContent.options)
+        ? groupContent.options
+        : Array.isArray(groupContent.choices)
+          ? groupContent.choices
+          : [];
+      builderQuestion.choices = optionRows
+        .map((item, index) => {
+          if (typeof item === "string") return item;
+          const row = asRecord(item);
+          const key = toStringSafe(row.key).trim() || toOptionKey(index);
+          const label = toStringSafe(row.text ?? row.label).trim();
+          return label ? `${key}. ${label}` : key;
+        })
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    const initialChoice = answer.answer.trim();
+    builderQuestion.correctAnswer = {[prompt]: initialChoice};
+    return builderQuestion;
+  }
+
   if (
-    builderQuestion.type === "matching_information"
-    || builderQuestion.type === "matching_features"
+    builderQuestion.type === "matching_features"
     || builderQuestion.type === "selecting_from_a_list"
     || builderQuestion.type === "map"
   ) {
@@ -1293,11 +1340,19 @@ function mapApiQuestionGroupToBuilderGroup(group: QuestionGroupRecord, fallbackI
     })
     .map((item) => item.trim())
     .filter(Boolean);
+  const matchingInfoChoicesFromInstructions =
+    type === "matching_information"
+      ? formatMatchingInfoOptionsAsPlainLines(parseMatchingInfoOptionsFromInstructions(toStringSafe(group.instructions ?? "")))
+      : [];
   const derivedMatchingInfoChoices =
-    type === "matching_information" && !choices.length
+    type === "matching_information" && !matchingInfoChoicesFromInstructions.length && !choices.length
       ? extractRangeFromInstructionText(toStringSafe(group.instructions ?? ""))
       : [];
-  const resolvedChoices = choices.length ? choices : derivedMatchingInfoChoices;
+  const resolvedChoices = matchingInfoChoicesFromInstructions.length
+    ? matchingInfoChoicesFromInstructions
+    : choices.length
+      ? choices
+      : derivedMatchingInfoChoices;
 
   const mcqOptions = mcqRows
     .map((item) => {
@@ -1900,7 +1955,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
           ? ({listening_part: activeStructure.id} satisfies Pick<QuestionGroupPayload, "listening_part">)
           : ({reading_passage: activeStructure.id} satisfies Pick<QuestionGroupPayload, "reading_passage">);
 
-      const resolvedGroupContent = ensureGroupContentForApi(type, from, to, groupContent, test.module);
+      const resolvedGroupContent = ensureGroupContentForApi(type, from, to, groupContent, test.module, instructions);
       const apiQuestionType = resolveApiQuestionTypeForGroup(type, Math.max(1, to - from + 1), groupContent, test.module);
 
       const payload: QuestionGroupPayload = {

@@ -8,6 +8,7 @@ import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {InlineBoldText} from "@/components/test/InlineBoldText";
 import type {BuilderQuestion, TextInputQuestion} from "@/data/admin-test-builder";
+import {extractKeyFromChoiceLabel} from "@/lib/matching-info-instructions";
 import {BoldTextarea} from "./BoldTextarea";
 
 type QuestionTypeFieldsProps = {
@@ -312,32 +313,73 @@ export function QuestionTypeFields({
         <div className="space-y-3">
           {(() => {
             const matchingQuestion = question as MatchingStyleBuilderQuestion;
+            const storedAnswer =
+              matchingQuestion.correctAnswer[matchingQuestion.prompt]
+              ?? Object.values(matchingQuestion.correctAnswer).find((value) => String(value ?? "").trim().length > 0)
+              ?? "";
+
+            // Matching Information is graded by backend as an exact-match key (e.g. "A"), not the
+            // full option label, so the stored/selected value must be the key while the dropdown
+            // still shows the full label for readability.
+            if (matchingQuestion.type !== "matching_information") {
+              return (
+                <div className="space-y-1.5">
+                  <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctAnswer")}</Label>
+                  <Select
+                    value={storedAnswer}
+                    onValueChange={(value) => onChange({...matchingQuestion, correctAnswer: {[matchingQuestion.prompt]: value}})}
+                  >
+                    <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">
+                      <SelectValue placeholder={t("questions.fields.selectChoice")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {matchingQuestion.choices.map((choice, index) => (
+                        <SelectItem key={`${matchingQuestion.id}-choice-${index}`} value={choice}>
+                          {choice}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">
+                    {t("questions.hints.groupWide")} ({t("groups.editTitle")})
+                  </p>
+                </div>
+              );
+            }
+
+            const keyedChoices = matchingQuestion.choices.map((choice, index) => ({
+              key: extractKeyFromChoiceLabel(choice, index),
+              label: choice
+            }));
+            const trimmedStoredAnswer = String(storedAnswer ?? "").trim();
+            const resolvedValue = trimmedStoredAnswer
+              ? (keyedChoices.some((option) => option.key === trimmedStoredAnswer.toUpperCase())
+                  ? trimmedStoredAnswer.toUpperCase()
+                  : keyedChoices.find((option) => option.label === trimmedStoredAnswer)?.key ?? trimmedStoredAnswer.toUpperCase())
+              : "";
+
             return (
-          <div className="space-y-1.5">
-            <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctAnswer")}</Label>
-            <Select
-              value={
-                matchingQuestion.correctAnswer[matchingQuestion.prompt]
-                ?? Object.values(matchingQuestion.correctAnswer).find((value) => String(value ?? "").trim().length > 0)
-                ?? ""
-              }
-              onValueChange={(value) => onChange({...matchingQuestion, correctAnswer: {[matchingQuestion.prompt]: value}})}
-            >
-              <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">
-                <SelectValue placeholder={t("questions.fields.selectChoice")} />
-              </SelectTrigger>
-              <SelectContent>
-                {matchingQuestion.choices.map((choice, index) => (
-                  <SelectItem key={`${matchingQuestion.id}-choice-${index}`} value={choice}>
-                    {choice}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-muted-foreground">
-              {t("questions.hints.groupWide")} ({t("groups.editTitle")})
-            </p>
-          </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctAnswer")}</Label>
+                <Select
+                  value={resolvedValue}
+                  onValueChange={(value) => onChange({...matchingQuestion, correctAnswer: {[matchingQuestion.prompt]: value}})}
+                >
+                  <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">
+                    <SelectValue placeholder={t("questions.fields.selectChoice")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {keyedChoices.map((option) => (
+                      <SelectItem key={`${matchingQuestion.id}-choice-${option.key}`} value={option.key}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  {t("questions.hints.groupWide")} ({t("groups.editTitle")})
+                </p>
+              </div>
             );
           })()}
         </div>
