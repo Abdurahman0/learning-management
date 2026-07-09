@@ -1043,13 +1043,18 @@ function collectBackendAttemptAnswerEntries(params: {
         }
 
         if (question.type === "matchingInfo" && typeof answer === "string") {
-          if (question.matchingSubtype === "features") {
-            return answer;
-          }
-          // "info" subtype: backend grades by letter key (e.g. "A"), not full label
           const rawOpts = question.paragraphOptions;
           const parsedOpts = rawOpts.map((opt, i) => parseMatchingInfoOption(opt, i));
           const resolvedKey = resolveChoiceKeyFromRawValue(answer, parsedOpts, rawOpts);
+
+          if (question.matchingSubtype === "features") {
+            // Backend expects the choice text without letter prefix (e.g. "Giulio Tononi", not "A. Giulio Tononi").
+            const matchedOpt = resolvedKey ? parsedOpts.find((opt) => opt.key === resolvedKey) : null;
+            if (matchedOpt?.label) return matchedOpt.label;
+            return answer;
+          }
+
+          // "info" subtype: backend grades by letter key (e.g. "A")
           return resolvedKey || answer;
         }
 
