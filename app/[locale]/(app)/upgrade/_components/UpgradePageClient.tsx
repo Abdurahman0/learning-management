@@ -31,13 +31,36 @@ function tierTone(tier: string) {
   return "border-slate-400/30 bg-slate-500/5 text-slate-600 dark:text-slate-300";
 }
 
+function getPackageBenefits(tier: string) {
+  const silverBenefits = [
+    "Barcha REAL exam reading testlar",
+    "Barcha REAL exam listening testlar (soon)",
+    "Ustuvor qo'llab-quvvatlash",
+    "Bezlimit AI analyze"
+  ];
+
+  if (tier.toUpperCase() === "GOLD") {
+    return [
+      ...silverBenefits.map((text) => ({text, highlight: false})),
+      {text: "Barcha marathonlarga access", highlight: true},
+      {text: "Online Reading course sovg'aga", highlight: true}
+    ];
+  }
+
+  if (tier.toUpperCase() === "SILVER") {
+    return silverBenefits.map((text) => ({text, highlight: false}));
+  }
+
+  return [
+    {text: "Paketga biriktirilgan premium testlar", highlight: false},
+    {text: "Paketga biriktirilgan marathon kontentlari", highlight: false},
+    {text: "Premium access backend subscription orqali boshqariladi", highlight: false}
+  ];
+}
+
 function PackageCard({item}: {item: StudentPackage}) {
   const hasDiscount = item.has_discount && item.discounted_price;
-  const features = [
-    "Premium testlarga kirish",
-    "Premium marathon kunlarini ochish",
-    "AI tahlil limitlari paketga qarab ishlaydi"
-  ];
+  const benefits = getPackageBenefits(item.tier);
 
   return (
     <Card className="overflow-hidden border-border/70 bg-card/80 py-0 shadow-sm">
@@ -63,10 +86,10 @@ function PackageCard({item}: {item: StudentPackage}) {
         </div>
 
         <ul className="mt-6 flex-1 space-y-3">
-          {features.map((feature) => (
-            <li key={feature} className="flex items-start gap-2.5 text-sm text-foreground/80">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
-              <span>{feature}</span>
+          {benefits.map((benefit) => (
+            <li key={benefit.text} className="flex items-start gap-2.5 text-sm text-foreground/80">
+              <CheckCircle2 className={`mt-0.5 size-4 shrink-0 ${benefit.highlight ? "text-amber-500" : "text-emerald-500"}`} />
+              <span className={benefit.highlight ? "font-semibold text-foreground" : undefined}>{benefit.text}</span>
             </li>
           ))}
         </ul>
@@ -178,8 +201,12 @@ export function UpgradePageClient() {
       ) : null}
 
       {packages.length ? (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {packages.map((item) => <PackageCard key={item.id} item={item} />)}
+        <div className="grid justify-center gap-5 [grid-template-columns:repeat(auto-fit,minmax(280px,380px))]">
+          {packages.map((item) => (
+            <div key={item.id} className="w-full">
+              <PackageCard item={item} />
+            </div>
+          ))}
         </div>
       ) : (
         <div className="rounded-3xl border border-dashed border-border/70 bg-card/60 px-6 py-12 text-center text-muted-foreground">
