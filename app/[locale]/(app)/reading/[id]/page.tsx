@@ -35,7 +35,7 @@ import {
   type AttemptMode,
 } from "@/lib/test-attempt-storage";
 import { authApi } from "@/lib/api/auth";
-import { gradeTest, type GradeableQuestion } from "@/lib/grading";
+import { gradeTest, gradeTestFromBackendVerdicts, type GradeableQuestion } from "@/lib/grading";
 import { HighlightableText } from "@/components/test/HighlightableText";
 import { BlankNumberBadge } from "@/components/test/BlankNumberBadge";
 import { FormattedInstructionText } from "@/components/test/FormattedInstructionText";
@@ -54,6 +54,7 @@ import { useTestAppearance } from "@/lib/test-appearance";
 import {
   extractMatchingInfoAnnotations,
   formatMatchingInfoOptionsAsPlainLines,
+  normalizeHeadingAnswerToKey,
   parseMatchingInfoOptionsFromInstructions,
   stripAllMatchingInfoMarkedLinesForDisplay
 } from "@/lib/matching-info-instructions";
@@ -249,14 +250,6 @@ function normalizeLetterKeyAnswerForBackend(value: string) {
   if (/^[A-Z]$/i.test(trimmed)) return trimmed.toUpperCase();
   const match = trimmed.match(/^\s*([A-Z])(?:\s*$|[\)\].:\-]\s+)/i);
   return match ? match[1].toUpperCase() : trimmed;
-}
-
-function normalizeRomanKeyAnswerForBackend(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return trimmed;
-  if (/^[ivxlcdm]+$/i.test(trimmed)) return trimmed.toLowerCase();
-  const match = trimmed.match(/^\s*([ivxlcdm]+)(?:\s*$|[\)\].:\-]\s+|\s+)/i);
-  return match ? match[1].toLowerCase() : trimmed;
 }
 
 function stripInlineBoldMarkup(value: string) {
@@ -1057,6 +1050,46 @@ type BackendAttemptAnswerEntry = {
   is_flagged: boolean;
 };
 
+// Single place that maps a stored answer to the backend's canonical value. Newly stored
+// answers are already canonical keys captured at click time, so for them this is a
+// pass-through; the resolution logic remains as a backward-compat boundary for attempts
+// persisted before keys became the stored format.
+function normalizeReadingAnswerForBackend(question: ReadingQuestion, answer: string | string[] | null) {
+  if (question.type === "tfng" && typeof answer === "string") {
+    return normalizeTfngAnswerForBackend(answer, question.options);
+  }
+
+  if (question.type === "mcq" && typeof answer === "string") {
+    const parsedOptions = question.options.map((option, optionIndex) => parseOptionChoice(option, optionIndex));
+    const resolvedKey = resolveChoiceKeyFromRawValue(answer, parsedOptions, question.options);
+    return resolvedKey ? resolvedKey : normalizeLetterKeyAnswerForBackend(answer);
+  }
+
+  if (question.type === "listSelection" && typeof answer === "string") {
+    return normalizeLetterKeyAnswerForBackend(answer);
+  }
+
+  if (question.type === "matchingInfo" && typeof answer === "string") {
+    // Backend grades all matching variants (info and features alike) by the option key.
+    const rawOpts = question.paragraphOptions;
+    const parsedOpts = rawOpts.map((opt, i) => parseMatchingInfoOption(opt, i));
+    const resolvedKey = resolveChoiceKeyFromRawValue(answer, parsedOpts, rawOpts);
+    return resolvedKey || answer;
+  }
+
+  if (question.type === "matchingHeadings" && typeof answer === "string") {
+    // The backend grades headings by roman key ("iii"); legacy stored values may
+    // still hold the full heading text, which resolves via the headings list.
+    return normalizeHeadingAnswerToKey(answer, question.headingOptions);
+  }
+
+  if (Array.isArray(answer)) {
+    return answer.map((entry) => entry.trim()).filter(Boolean);
+  }
+
+  return answer;
+}
+
 function collectBackendAttemptAnswerEntries(params: {
   questions: ReadingQuestion[];
   answers: Record<string, AnswerValue>;
@@ -1068,51 +1101,7 @@ function collectBackendAttemptAnswerEntries(params: {
   return params.questions
     .map((question) => {
       const answer = toSubmitAnswer(params.answers[question.id]);
-      const normalizedAnswer = (() => {
-        if (question.type === "tfng" && typeof answer === "string") {
-          return normalizeTfngAnswerForBackend(answer, question.options);
-        }
-
-        if (question.type === "mcq" && typeof answer === "string") {
-          const parsedOptions = question.options.map((option, optionIndex) => parseOptionChoice(option, optionIndex));
-          const resolvedKey = resolveChoiceKeyFromRawValue(answer, parsedOptions, question.options);
-          return resolvedKey ? resolvedKey : normalizeLetterKeyAnswerForBackend(answer);
-        }
-
-        if (question.type === "listSelection" && typeof answer === "string") {
-          return normalizeLetterKeyAnswerForBackend(answer);
-        }
-
-        if (question.type === "matchingInfo" && typeof answer === "string") {
-          const rawOpts = question.paragraphOptions;
-          const parsedOpts = rawOpts.map((opt, i) => parseMatchingInfoOption(opt, i));
-          const resolvedKey = resolveChoiceKeyFromRawValue(answer, parsedOpts, rawOpts);
-
-          if (question.matchingSubtype === "features") {
-            // Backend expects the choice text without letter prefix (e.g. "Giulio Tononi", not "A. Giulio Tononi").
-            const matchedOpt = resolvedKey ? parsedOpts.find((opt) => opt.key === resolvedKey) : null;
-            if (matchedOpt?.label) return matchedOpt.label;
-            return answer;
-          }
-
-          // "info" subtype: backend grades by letter key (e.g. "A")
-          return resolvedKey || answer;
-        }
-
-        if (question.type === "matchingHeadings" && typeof answer === "string") {
-          const key = normalizeRomanKeyAnswerForBackend(answer);
-          const idx = question.headingOptions
-            .map((opt, i) => parseMatchingHeadingOption(opt, i))
-            .findIndex((opt) => opt.key === key);
-          return idx >= 0 ? question.headingOptions[idx].trim() : answer;
-        }
-
-        if (Array.isArray(answer)) {
-          return answer.map((entry) => entry.trim()).filter(Boolean);
-        }
-
-        return answer;
-      })();
+      const normalizedAnswer = normalizeReadingAnswerForBackend(question, answer);
       const isFlagged = params.marked.has(question.id);
       const fromAttempt = params.submitCandidatesByNumber.get(question.number) ?? [];
       const fromQuestion = resolveSubmitCandidateIds(question);
@@ -2192,7 +2181,26 @@ function ReadingTestClient({
     [reviewQuestions]
   );
 
-  const grading = useMemo(() => gradeTest(gradeableQuestions, reviewAnswers), [gradeableQuestions, reviewAnswers]);
+  const grading = useMemo(() => {
+    // Grading verdicts always come from the backend when available; the frontend
+    // must never decide correctness itself. Local grading remains only for guest
+    // attempts that have no backend review at all.
+    if (backendReviewData?.verdicts?.length) {
+      const runtimeQuestionByNumber = new Map(test.questions.map((question) => [question.number, question]));
+      return gradeTestFromBackendVerdicts(
+        backendReviewData.verdicts.map((verdict) => {
+          const runtimeQuestion = typeof verdict.questionNumber === "number"
+            ? runtimeQuestionByNumber.get(verdict.questionNumber)
+            : undefined;
+          return {
+            ...verdict,
+            aliasQuestionIds: runtimeQuestion && runtimeQuestion.id !== verdict.questionId ? [runtimeQuestion.id] : undefined
+          };
+        })
+      );
+    }
+    return gradeTest(gradeableQuestions, reviewAnswers);
+  }, [backendReviewData, gradeableQuestions, reviewAnswers, test.questions]);
   const gradingByNumber = useMemo(() => {
     const map = new Map<number, (typeof grading.byQuestion)[string]>();
     reviewQuestions.forEach((question) => {
@@ -2949,6 +2957,7 @@ function ReadingTestClient({
 
       if (isGuest && !backendAttemptId) {
         const keyToBackend = new Map<string, string>();
+        const questionByLocalId = new Map(test.questions.map((question) => [question.id, question]));
         test.questions.forEach((question) => {
           const backendKey = (question.backendQuestionId ?? question.id).trim();
           if (backendKey) {
@@ -2959,11 +2968,17 @@ function ReadingTestClient({
         const queuedAnswers: Record<string, string | string[] | null> = {};
         for (const [key, value] of Object.entries(answers)) {
           const backendKey = keyToBackend.get(key) ?? key;
-          if (typeof value === "string") {
-            const trimmed = value.trim();
+          const question = questionByLocalId.get(key);
+          // Same canonicalization as the logged-in submit path, so guest-synced
+          // answers reach the backend as keys too.
+          const normalized = question
+            ? normalizeReadingAnswerForBackend(question, toSubmitAnswer(value))
+            : toSubmitAnswer(value);
+          if (typeof normalized === "string") {
+            const trimmed = normalized.trim();
             queuedAnswers[backendKey] = trimmed.length ? trimmed : null;
-          } else if (Array.isArray(value)) {
-            const cleaned = value.map((entry) => entry.trim()).filter(Boolean);
+          } else if (Array.isArray(normalized)) {
+            const cleaned = normalized.map((entry) => entry.trim()).filter(Boolean);
             queuedAnswers[backendKey] = cleaned.length ? cleaned : null;
           } else {
             queuedAnswers[backendKey] = null;
@@ -3968,7 +3983,7 @@ function ReadingTestClient({
                                       <input
                                         type="radio"
                                         name={question.id}
-                                        value={option}
+                                        value={normalizeTfngAnswerForBackend(option, question.options)}
                                         checked={formatAnswerForDisplay(typeof value === "string" ? value : "") === formatAnswerForDisplay(option)}
                                         disabled={reviewMode}
                                         onChange={(e) => setAnswers((prev) => ({ ...prev, [question.id]: e.target.value }))}
@@ -4363,17 +4378,17 @@ function ReadingTestClient({
                                                   event.stopPropagation();
                                                   setActiveQuestionNumber(targetQuestion.number);
                                                   if (!reviewMode) {
-                                                    assignMatchingInfo(targetQuestion.id, option.value);
+                                                    assignMatchingInfo(targetQuestion.id, option.key);
                                                   }
                                                 }}
                                               >
                                                 <input
                                                   type="radio"
                                                   name={targetQuestion.id}
-                                                  value={option.value}
+                                                  value={option.key}
                                                   checked={selectedKey === option.key}
                                                   disabled={reviewMode}
-                                                  onChange={() => assignMatchingInfo(targetQuestion.id, option.value)}
+                                                  onChange={() => assignMatchingInfo(targetQuestion.id, option.key)}
                                                   onFocus={() => setActiveQuestionNumber(targetQuestion.number)}
                                                   aria-label={`Question ${targetQuestion.number}, ${option.key}`}
                                                   className="size-5 accent-blue-600"

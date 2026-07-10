@@ -70,7 +70,9 @@ function toComparable(questionType: QuestionTypeForGrading, value: string) {
   if (questionType === "mcq" || questionType === "listSelection") return normalizeChoice(value);
   if (questionType === "tfng") return normalizeTfng(value);
   if (questionType === "matchingHeadings") return normalizeMatchingHeading(value);
-  if (questionType === "matching") return normalizeChoice(value);
+  // Both matching variants are graded by option key, so "C. Renaissance" and "C"
+  // must reduce to the same comparable value ("C").
+  if (questionType === "matching" || questionType === "matchingInfo") return normalizeChoice(value);
   return normalizeTextAnswer(value);
 }
 
@@ -128,6 +130,60 @@ export function gradeTest(questions: GradeableQuestion[], answers: Record<string
   }
 
   const total = questions.length;
+  const scorePercent = total ? Math.round((correctCount / total) * 100) : 0;
+
+  return {
+    correctCount,
+    incorrectCount,
+    unansweredCount,
+    total,
+    scorePercent,
+    byQuestion,
+  };
+}
+
+export type BackendGradedVerdict = {
+  questionId: string;
+  questionNumber?: number;
+  isCorrect: boolean;
+  isSkipped: boolean;
+  /** Extra IDs this verdict should also be reachable under (e.g. runtime question IDs). */
+  aliasQuestionIds?: string[];
+};
+
+/**
+ * Builds a GradeTestResult straight from backend-graded verdicts (is_correct /
+ * is_skipped on the attempt review), so review screens display exactly what the
+ * backend graded instead of re-grading answers in the frontend.
+ */
+export function gradeTestFromBackendVerdicts(verdicts: BackendGradedVerdict[]): GradeTestResult {
+  const byQuestion: Record<string, GradeResult> = {};
+  let correctCount = 0;
+  let incorrectCount = 0;
+  let unansweredCount = 0;
+
+  for (const verdict of verdicts) {
+    const result: GradeResult = {
+      isCorrect: verdict.isCorrect,
+      earned: verdict.isCorrect ? 1 : 0,
+      max: 1,
+      isUngraded: false,
+      // Consumers treat a missing normalizedUser as "skipped".
+      normalizedUser: verdict.isSkipped ? undefined : "answered",
+    };
+    byQuestion[verdict.questionId] = result;
+    for (const alias of verdict.aliasQuestionIds ?? []) {
+      if (alias && !(alias in byQuestion)) {
+        byQuestion[alias] = result;
+      }
+    }
+
+    if (verdict.isSkipped) unansweredCount += 1;
+    if (verdict.isCorrect) correctCount += 1;
+    if (!verdict.isCorrect && !verdict.isSkipped) incorrectCount += 1;
+  }
+
+  const total = verdicts.length;
   const scorePercent = total ? Math.round((correctCount / total) * 100) : 0;
 
   return {

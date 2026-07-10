@@ -10,7 +10,7 @@ import {getReadingTestById} from "@/data/reading-tests";
 import {Button} from "@/components/ui/button";
 import {Card} from "@/components/ui/card";
 import {PostTestMistakeReasonsPanel} from "@/components/mistake-reasons/PostTestMistakeReasonsPanel";
-import {gradeTest, type GradeableQuestion} from "@/lib/grading";
+import {gradeTest, gradeTestFromBackendVerdicts, type GradeableQuestion} from "@/lib/grading";
 import {loadAttemptResult} from "@/lib/test-attempt-storage";
 import {studentAttemptsService} from "@/src/services/student/attempts.service";
 import {studentMarathonService} from "@/src/services/student/marathon.service";
@@ -254,9 +254,13 @@ export function ReadingSummaryPageClient() {
   }, [gradingQuestions]);
 
   const grading = useMemo(() => {
+    // Correctness always comes from the backend's verdicts, never re-graded locally.
+    if (backendReview?.verdicts?.length) {
+      return gradeTestFromBackendVerdicts(backendReview.verdicts);
+    }
     if (!gradeableQuestions.length) return null;
     return gradeTest(gradeableQuestions, gradingAnswers);
-  }, [gradeableQuestions, gradingAnswers]);
+  }, [backendReview, gradeableQuestions, gradingAnswers]);
 
   const accuracyByType = useMemo(() => {
     if (!grading || !gradingQuestions.length) return [] as QuestionTypePerformanceItem[];

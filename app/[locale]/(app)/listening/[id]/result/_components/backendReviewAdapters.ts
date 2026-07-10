@@ -1,4 +1,5 @@
 import type {StudentAttemptReviewResponse} from "@/src/services/student/types";
+import type {BackendGradedVerdict} from "@/lib/grading";
 import type {FlattenedListeningQuestion} from "@/lib/listening-questions";
 import {parseMatchingInfoOptionsFromInstructions} from "@/lib/matching-info-instructions";
 import type {ListeningTypePerformance} from "@/lib/listening-review-insights";
@@ -173,6 +174,9 @@ export type AdaptedListeningBackendReview = {
   questions: FlattenedListeningQuestion[];
   answers: Record<string, ListeningAnswerValue>;
   answerMeta: ListeningBackendAnswerMeta[];
+  // Per-question grading as decided by the backend — review screens must display
+  // these verdicts instead of re-grading answers in the frontend.
+  verdicts: BackendGradedVerdict[];
   reviewSections: ListeningReviewSection[];
   sectionPerformance: ListeningSectionPerformanceItem[];
   typePerformance: ListeningTypePerformance[];
@@ -209,6 +213,7 @@ export function adaptListeningBackendReview(review: StudentAttemptReviewResponse
   const answers: Record<string, ListeningAnswerValue> = {};
   const answerMeta: ListeningBackendAnswerMeta[] = [];
   const questions: FlattenedListeningQuestion[] = [];
+  const verdicts: BackendGradedVerdict[] = [];
 
   const rawQuestionsByPart = (review.parts ?? []).map((part, partIndex) => {
     const sectionId = toSectionId(partIndex);
@@ -229,6 +234,12 @@ export function adaptListeningBackendReview(review: StudentAttemptReviewResponse
       });
 
       answers[question.id] = parseAnswerValue(question.student_answer);
+      verdicts.push({
+        questionId: question.id,
+        questionNumber: question.question_number,
+        isCorrect: question.is_correct === true,
+        isSkipped: question.is_skipped === true
+      });
       answerMeta.push({
         questionId: question.id,
         questionNumber: question.question_number,
@@ -332,6 +343,7 @@ export function adaptListeningBackendReview(review: StudentAttemptReviewResponse
     questions: questions.sort((a, b) => a.number - b.number),
     answers,
     answerMeta,
+    verdicts,
     reviewSections,
     sectionPerformance,
     typePerformance,

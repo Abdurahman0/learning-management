@@ -1,6 +1,7 @@
 import type {ReadingAnswerMeta} from "@/data/reading-answer-keys";
 import type {ReviewPassage} from "@/data/review-reading";
 import {normalizeEvidenceLookupText} from "@/lib/evidence-text";
+import type {BackendGradedVerdict} from "@/lib/grading";
 import {
   formatMatchingInfoOptionsAsPlainLines,
   parseMatchingInfoOptionsFromInstructions
@@ -374,6 +375,9 @@ export type AdaptedReadingBackendReview = {
   answers: Record<string, ReadingAnswerValue>;
   passages: ReviewPassage[];
   answerMeta: ReadingAnswerMeta[];
+  // Per-question grading as decided by the backend — review screens must display
+  // these verdicts instead of re-grading answers in the frontend.
+  verdicts: BackendGradedVerdict[];
   stats: {
     correct: number;
     incorrect: number;
@@ -400,6 +404,7 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
   const questions: ReadingQuestion[] = [];
   const answers: Record<string, ReadingAnswerValue> = {};
   const answerMeta: ReadingAnswerMeta[] = [];
+  const verdicts: BackendGradedVerdict[] = [];
   let fallbackQuestionNumber = 1;
 
   passages.forEach((passageInfo) => {
@@ -580,6 +585,12 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
 
         questions.push(readingQuestion);
         answers[readingQuestion.id] = userAnswer;
+        verdicts.push({
+          questionId: readingQuestion.id,
+          questionNumber: readingQuestion.number,
+          isCorrect: question.is_correct === true,
+          isSkipped: question.is_skipped === true
+        });
         answerMeta.push({
           questionId: readingQuestion.id,
           questionNumber: readingQuestion.number,
@@ -643,6 +654,7 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
     answers,
     passages: reviewPassages,
     answerMeta,
+    verdicts,
     stats: {
       correct,
       incorrect,

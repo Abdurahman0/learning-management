@@ -20,6 +20,7 @@ import {
 import {
   extractKeyFromChoiceLabel,
   formatMatchingInfoOptionsAsPlainLines,
+  normalizeHeadingAnswerToKey,
   normalizeMatchingAnswerToKey,
   parseMatchingInfoOptionsFromInstructions
 } from "@/lib/matching-info-instructions";
@@ -1041,10 +1042,12 @@ function mapBuilderQuestionToBulkPayload(question: BuilderQuestion, apiType: str
   }
 
   if (question.type === "matching_headings") {
+    // The backend grades headings by roman key ("iii"); legacy answers stored as the
+    // full heading text are resolved against the group's headings list.
     return {
       ...base,
       options_json: null,
-      correct_answer_json: {answer: question.correctAnswer.trim()}
+      correct_answer_json: {answer: normalizeHeadingAnswerToKey(question.correctAnswer, question.headings)}
     };
   }
 
@@ -1225,7 +1228,8 @@ function mapApiQuestionToBuilderQuestion(
       })
       .map((item) => item.trim())
       .filter(Boolean);
-    builderQuestion.correctAnswer = answer.answer;
+    // Older builder versions stored the full heading text; grading uses roman keys.
+    builderQuestion.correctAnswer = normalizeHeadingAnswerToKey(answer.answer, builderQuestion.headings);
     return builderQuestion;
   }
 

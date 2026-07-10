@@ -68,7 +68,7 @@ import {
 } from "@/lib/test-attempt-storage";
 import { authApi } from "@/lib/api/auth";
 import { getListeningAnswerMeta } from "@/data/listening-answer-keys";
-import { gradeTest, type GradeableQuestion } from "@/lib/grading";
+import { gradeTest, gradeTestFromBackendVerdicts, type GradeableQuestion } from "@/lib/grading";
 import { flattenListeningQuestions } from "@/lib/listening-questions";
 import { Highlightable } from "@/components/test/Highlightable";
 import { BlankNumberBadge } from "@/components/test/BlankNumberBadge";
@@ -1047,17 +1047,6 @@ function resolveChoiceKeyFromRawValue(
   return "";
 }
 
-function resolveMatchingRawOption(
-  rawValue: string | undefined,
-  parsedOptions: Array<{key: string; label: string}>,
-  rawOptions: string[]
-): string {
-  const key = resolveChoiceKeyFromRawValue(rawValue, parsedOptions, rawOptions);
-  if (!key) return "";
-  const idx = parsedOptions.findIndex((opt) => opt.key === key);
-  return idx >= 0 ? rawOptions[idx]?.trim() ?? "" : "";
-}
-
 type TemplateToken =
   | { kind: "text"; value: string; bold: boolean }
   | { kind: "placeholder"; questionNumber: number; bold: boolean };
@@ -1955,10 +1944,15 @@ function ListeningTestClient({
       };
     });
   }, [backendReviewData, localGradeableQuestions]);
-  const grading = useMemo(
-    () => gradeTest(reviewGradeableQuestions, reviewAnswersByQuestionId),
-    [reviewAnswersByQuestionId, reviewGradeableQuestions]
-  );
+  const grading = useMemo(() => {
+    // Grading verdicts always come from the backend when available; the frontend
+    // must never decide correctness itself. Local grading remains only for guest
+    // attempts that have no backend review at all.
+    if (backendReviewData?.verdicts?.length) {
+      return gradeTestFromBackendVerdicts(backendReviewData.verdicts);
+    }
+    return gradeTest(reviewGradeableQuestions, reviewAnswersByQuestionId);
+  }, [backendReviewData, reviewAnswersByQuestionId, reviewGradeableQuestions]);
   const reviewAnswerMetaByQuestionId = useMemo<Record<string, ListeningBackendAnswerMeta>>(() => {
     if (backendReviewData) {
       return backendReviewData.answerMeta.reduce<Record<string, ListeningBackendAnswerMeta>>((accumulator, item) => {
@@ -3591,7 +3585,7 @@ function ListeningTestClient({
                   <InlineBoldText text={item.prompt} />
                 </p>
                 <Select
-                  value={resolveMatchingRawOption(answers[item.questionNumber], parsedOptions, block.options)}
+                  value={resolveChoiceKeyFromRawValue(answers[item.questionNumber], parsedOptions, block.options)}
                   onValueChange={(value) =>
                     setAnswer(item.questionNumber, value)
                   }
@@ -3607,8 +3601,8 @@ function ListeningTestClient({
                     <SelectValue placeholder="-" />
                   </SelectTrigger>
                   <SelectContent>
-                    {parsedOptions.map((option, optionIndex) => (
-                      <SelectItem key={option.key} value={block.options[optionIndex]?.trim() ?? option.key}>
+                    {parsedOptions.map((option) => (
+                      <SelectItem key={option.key} value={option.key}>
                         {option.key}
                       </SelectItem>
                     ))}

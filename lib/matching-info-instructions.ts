@@ -202,6 +202,42 @@ export function normalizeMatchingAnswerToKey(value: string) {
   return prefixed ? prefixed[1].toUpperCase() : trimmed;
 }
 
+const ROMAN_KEYS = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii", "xiii", "xiv", "xv"];
+
+/** Roman-numeral option key for a heading at the given position ("i", "ii", …). */
+export function toRomanKey(index: number) {
+  return ROMAN_KEYS[index] ?? `h${index + 1}`;
+}
+
+/**
+ * Normalizes a stored Matching Headings answer to its roman-numeral key ("iii"), which
+ * is what the backend grades against. Accepts a bare roman key, a "iii. Heading text"
+ * prefixed string, or (legacy data) the full heading text — the latter is resolved by
+ * its position in the group's headings list. Unresolvable values pass through unchanged.
+ */
+export function normalizeHeadingAnswerToKey(value: string, headings: string[]) {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed) return trimmed;
+
+  // Legacy full-text answers take priority: a heading like "Mill" is made up entirely
+  // of roman-numeral characters and must not be mistaken for a key.
+  const headingIndex = headings.findIndex((heading) => heading.trim() === trimmed);
+  if (headingIndex >= 0) {
+    // Honor an explicit roman prefix in the heading itself ("iv. Heading text") —
+    // punctuation-separated only, so a heading starting with the word "I" isn't
+    // misread — otherwise fall back to its position in the list.
+    const ownPrefix = trimmed.match(/^([ivxlcdm]+)[)\].:\-]\s*/i);
+    return ownPrefix ? ownPrefix[1].toLowerCase() : ROMAN_KEYS[headingIndex] ?? trimmed;
+  }
+
+  if (/^[ivxlcdm]+$/i.test(trimmed)) return trimmed.toLowerCase();
+
+  const prefixed = trimmed.match(/^([ivxlcdm]+)(?:[)\].:\-]\s*|\s+)/i);
+  if (prefixed) return prefixed[1].toLowerCase();
+
+  return trimmed;
+}
+
 /** Derives a short option key (e.g. "A") from a choice string like "A. Marcel", or falls back positionally. */
 export function extractKeyFromChoiceLabel(value: string, fallbackIndex: number) {
   const trimmed = String(value ?? "").trim();

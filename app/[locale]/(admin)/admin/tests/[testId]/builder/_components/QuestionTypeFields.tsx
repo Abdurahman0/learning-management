@@ -8,7 +8,12 @@ import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
 import {InlineBoldText} from "@/components/test/InlineBoldText";
 import type {BuilderQuestion, TextInputQuestion} from "@/data/admin-test-builder";
-import {extractKeyFromChoiceLabel, normalizeMatchingAnswerToKey} from "@/lib/matching-info-instructions";
+import {
+  extractKeyFromChoiceLabel,
+  normalizeHeadingAnswerToKey,
+  normalizeMatchingAnswerToKey,
+  toRomanKey
+} from "@/lib/matching-info-instructions";
 import {BoldTextarea} from "./BoldTextarea";
 
 type QuestionTypeFieldsProps = {
@@ -288,7 +293,9 @@ export function QuestionTypeFields({
           <div className="space-y-1.5">
             <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctHeading")}</Label>
             <Select
-              value={question.correctAnswer}
+              // Answers are stored/graded as roman keys ("iii"); legacy full-text
+              // values resolve to their key so the current selection still shows.
+              value={normalizeHeadingAnswerToKey(question.correctAnswer, question.headings)}
               onValueChange={(value) => onChange({...question, correctAnswer: value})}
             >
               <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">
@@ -296,7 +303,7 @@ export function QuestionTypeFields({
               </SelectTrigger>
               <SelectContent>
                 {question.headings.map((heading, index) => (
-                  <SelectItem key={`${question.id}-heading-${index}`} value={heading}>
+                  <SelectItem key={`${question.id}-heading-${index}`} value={toRomanKey(index)}>
                     {heading}
                   </SelectItem>
                 ))}
