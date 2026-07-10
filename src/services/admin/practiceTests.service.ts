@@ -176,10 +176,8 @@ export const practiceTestsService = {
   },
 
   /**
-   * The backend rejects changing a test's `is_premium` while attached
-   * passages/parts carry a different premium status ("Update their is_premium
-   * first"), so align every child to the target status before touching the
-   * test itself. No-op for children that already match.
+   * Patches every attached passage/part whose `is_premium` differs from the
+   * given value. No-op for children that already match.
    */
   async alignContentPremium(testId: number | string, isPremium: boolean, detail?: PracticeTestDetailRecord) {
     const resolvedDetail = detail ?? (await practiceTestsService.getById(testId));
@@ -201,15 +199,44 @@ export const practiceTestsService = {
   },
 
   /**
+   * The backend enforces two rules that make premium transitions order
+   * sensitive: a free test may not contain premium passages/parts, and the
+   * test's own `is_premium` change is rejected while children are
+   * inconsistent. The only sequence valid in both directions is: make all
+   * children free, change the test, then (for premium) raise the children.
+   * This runs the "make children free" step when the status actually changes,
+   * or heals drift when it does not.
+   */
+  async prepareTestPremiumChange(testId: number | string, targetPremium: boolean) {
+    const detail = await practiceTestsService.getById(testId);
+    const current = Boolean(detail.is_premium);
+    const childTarget = Boolean(targetPremium) !== current ? false : current;
+    await practiceTestsService.alignContentPremium(testId, childTarget, detail);
+    return detail;
+  },
+
+  /**
    * Sets the test's premium status + unlocking packages in the order the
-   * backend requires: children first, then the test.
+   * backend requires (children freed, test flipped, children raised).
    */
   async setPremium(testId: number | string, options: {isPremium: boolean; packages: AdminEntityId[]}) {
-    await practiceTestsService.alignContentPremium(testId, options.isPremium);
-    return practiceTestsService.patch(testId, {
-      is_premium: Boolean(options.isPremium),
-      packages: options.isPremium ? options.packages : []
+    const target = Boolean(options.isPremium);
+    await practiceTestsService.prepareTestPremiumChange(testId, target);
+    const saved = await practiceTestsService.patch(testId, {
+      is_premium: target,
+      packages: target ? options.packages : []
     });
+
+    if (target) {
+      try {
+        await practiceTestsService.alignContentPremium(testId, true);
+      } catch {
+        // The test-level premium gate is already in place; child alignment
+        // failing here must not roll back the successful status change.
+      }
+    }
+
+    return saved;
   },
 
   async remove(testId: number | string, options?: {hard?: boolean}) {

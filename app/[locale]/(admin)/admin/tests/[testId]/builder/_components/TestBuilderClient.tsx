@@ -2594,9 +2594,10 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
 
     try {
       if (shouldSendAudience) {
-        // Backend rejects the test's is_premium change while attached
-        // passages/parts have a different premium status — align them first.
-        await practiceTestsService.alignContentPremium(test.id, Boolean(test.isPremium));
+        // Premium transitions are order sensitive: children must be free
+        // before the test's is_premium can change (they are raised back to
+        // premium by the per-structure patches below, after the test patch).
+        await practiceTestsService.prepareTestPremiumChange(test.id, Boolean(test.isPremium));
       }
 
       const savedTest = await practiceTestsService.patch(test.id, {
