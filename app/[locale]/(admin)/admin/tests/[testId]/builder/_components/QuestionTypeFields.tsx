@@ -322,11 +322,20 @@ export function QuestionTypeFields({
             // full option label, so the stored/selected value must be the key while the dropdown
             // still shows the full label for readability.
             if (matchingQuestion.type !== "matching_information") {
+              // The backend stores this answer as a bare key ("C"), so map it back to
+              // the full choice text this Select uses as its option values.
+              const trimmedStored = String(storedAnswer ?? "").trim();
+              const resolvedChoiceValue = matchingQuestion.choices.some((choice) => choice === trimmedStored)
+                ? trimmedStored
+                : matchingQuestion.choices.find(
+                    (choice, index) => extractKeyFromChoiceLabel(choice, index) === normalizeMatchingAnswerToKey(trimmedStored)
+                  ) ?? trimmedStored;
+
               return (
                 <div className="space-y-1.5">
                   <Label className="text-xs tracking-[0.12em] text-muted-foreground uppercase">{t("questions.fields.correctAnswer")}</Label>
                   <Select
-                    value={storedAnswer}
+                    value={resolvedChoiceValue}
                     onValueChange={(value) => onChange({...matchingQuestion, correctAnswer: {[matchingQuestion.prompt]: value}})}
                   >
                     <SelectTrigger className="h-9 rounded-lg border-border/70 bg-background/45">

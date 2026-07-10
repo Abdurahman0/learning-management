@@ -18,6 +18,7 @@ import {
   type ContentBankVariantSet
 } from "@/data/admin/selectors";
 import {
+  extractKeyFromChoiceLabel,
   formatMatchingInfoOptionsAsPlainLines,
   normalizeMatchingAnswerToKey,
   parseMatchingInfoOptionsFromInstructions
@@ -778,11 +779,16 @@ function resolveGroupContentForSync(group: QuestionGroup, module: "reading" | "l
   }
 
   if (group.type === "matching_features") {
+    // Honor an explicit letter prefix in the choice ("C. Renaissance" → key C) and only
+    // fall back to position, so the stored keys always agree with what students see.
     return {
-      categories: (group.questions[0] as any)?.choices.map((text: string, index: number) => ({
-        key: toOptionKey(index),
-        label: text
-      })) || []
+      categories: (group.questions[0] as any)?.choices.map((rawLabel: string, index: number) => {
+        const prefixed = rawLabel.trim().match(/^([A-Za-z])(?:[)\].:\-]\s*|\s+)(.+)$/);
+        return {
+          key: prefixed ? prefixed[1].toUpperCase() : toOptionKey(index),
+          label: prefixed ? prefixed[2].trim() : rawLabel.trim()
+        };
+      }) || []
     };
   }
 
@@ -1048,17 +1054,26 @@ function mapBuilderQuestionToBulkPayload(question: BuilderQuestion, apiType: str
     question.type === "selecting_from_a_list" ||
     question.type === "map"
   ) {
-    const mappedAnswer =
+    const mappedAnswer = String(
       question.correctAnswer[prompt]
       ?? Object.values(question.correctAnswer).find((value) => String(value ?? "").trim().length > 0)
-      ?? "";
+      ?? ""
+    ).trim();
 
-    // The backend grades these types by exact key match ("A"), so full-text answers
-    // saved by older builder versions ("A Alfred Binet") must be reduced to the key.
+    // The backend grades these types by exact key match ("A"), so answers stored as
+    // full choice text ("C.Renaissance", "Renaissance") must be reduced to the key.
+    // When the answer matches one of the choices, derive the key the same way the
+    // group content does (letter prefix if present, otherwise position), so the key
+    // sent here always agrees with the option keys students submit.
+    const matchedChoiceIndex = question.choices.findIndex((choice) => choice.trim() === mappedAnswer);
+    const normalizedAnswer = matchedChoiceIndex >= 0
+      ? extractKeyFromChoiceLabel(question.choices[matchedChoiceIndex], matchedChoiceIndex)
+      : normalizeMatchingAnswerToKey(mappedAnswer);
+
     return {
       ...base,
       options_json: question.type === "matching_information" && apiType !== "MATCHING" ? {statement: prompt} : null,
-      correct_answer_json: {answer: normalizeMatchingAnswerToKey(String(mappedAnswer))}
+      correct_answer_json: {answer: normalizedAnswer}
     };
   }
 

@@ -1,5 +1,6 @@
 import {createDefaultQuestion, type BuilderQuestion, type QuestionGroup, type QuestionType} from "@/data/admin-test-builder";
 import {
+  extractKeyFromChoiceLabel,
   formatMatchingInfoOptionsAsPlainLines,
   normalizeMatchingAnswerToKey,
   parseMatchingInfoOptionsFromInstructions
@@ -506,13 +507,23 @@ export function mapBuilderQuestionToBulkPayload(question: BuilderQuestion, apiTy
   }
 
   if (question.type === "matching_information" || question.type === "matching_features" || question.type === "selecting_from_a_list" || question.type === "map") {
-    const mappedAnswer = question.correctAnswer[prompt] ?? Object.values(question.correctAnswer).find((value) => String(value ?? "").trim().length > 0) ?? "";
-    // The backend grades these types by exact key match ("A"), so full-text answers
-    // saved by older builder versions ("A Alfred Binet") must be reduced to the key.
+    const mappedAnswer = String(
+      question.correctAnswer[prompt]
+      ?? Object.values(question.correctAnswer).find((value) => String(value ?? "").trim().length > 0)
+      ?? ""
+    ).trim();
+    // The backend grades these types by exact key match ("A"), so answers stored as
+    // full choice text ("C.Renaissance", "Renaissance") must be reduced to the key.
+    // When the answer matches one of the choices, derive the key the same way the
+    // group content does (letter prefix if present, otherwise position).
+    const matchedChoiceIndex = question.choices.findIndex((choice) => choice.trim() === mappedAnswer);
+    const normalizedAnswer = matchedChoiceIndex >= 0
+      ? extractKeyFromChoiceLabel(question.choices[matchedChoiceIndex], matchedChoiceIndex)
+      : normalizeMatchingAnswerToKey(mappedAnswer);
     return {
       ...base,
       options_json: question.type === "matching_information" && apiType !== "MATCHING" ? {statement: prompt} : null,
-      correct_answer_json: {answer: normalizeMatchingAnswerToKey(String(mappedAnswer))}
+      correct_answer_json: {answer: normalizedAnswer}
     };
   }
 
