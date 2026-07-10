@@ -623,10 +623,28 @@ export function TestsManagementClient() {
     }
   };
 
+  // The list endpoint does not return the current package assignment, so before
+  // the first package edit for a premium test we hydrate it from the detail
+  // endpoint to avoid wiping packages assigned elsewhere.
+  const resolveCurrentTestPackages = async (test: AdminTest) => {
+    if (test.packages?.length || !test.isPremium) {
+      return test.packages ?? [];
+    }
+
+    try {
+      const detail = await practiceTestsService.getById(test.id);
+      const detailPackages = (detail as {packages?: unknown}).packages;
+      return Array.isArray(detailPackages) ? detailPackages.map(String) : [];
+    } catch {
+      return [];
+    }
+  };
+
   const handleToggleTestPremium = async (testId: string, checked: boolean) => {
     const test = tests.find((item) => item.id === testId);
     if (!test) return;
-    const nextPackages = checked ? (test.packages?.length ? test.packages : activePackages.slice(0, 1).map((item) => item.id)) : [];
+    const knownPackages = checked ? await resolveCurrentTestPackages(test) : [];
+    const nextPackages = checked ? (knownPackages.length ? knownPackages : activePackages.slice(0, 1).map((item) => item.id)) : [];
     if (checked && nextPackages.length === 0) return;
 
     try {
@@ -635,7 +653,7 @@ export function TestsManagementClient() {
         packages: nextPackages
       });
       const mapped = mapPracticeTestToAdminTest(saved);
-      setTests((current) => current.map((item) => (item.id === testId ? {...item, isPremium: mapped.isPremium, packages: mapped.packages} : item)));
+      setTests((current) => current.map((item) => (item.id === testId ? {...item, isPremium: mapped.isPremium, packages: mapped.packages?.length ? mapped.packages : nextPackages} : item)));
     } catch {
       // Keep previous premium state if backend rejects it.
     }
@@ -644,7 +662,7 @@ export function TestsManagementClient() {
   const handleToggleTestPackage = async (testId: string, packageId: string) => {
     const test = tests.find((item) => item.id === testId);
     if (!test) return;
-    const currentPackages = new Set(test.packages ?? []);
+    const currentPackages = new Set(await resolveCurrentTestPackages(test));
     if (currentPackages.has(packageId)) {
       currentPackages.delete(packageId);
     } else {
@@ -659,7 +677,7 @@ export function TestsManagementClient() {
         packages: nextPackages
       });
       const mapped = mapPracticeTestToAdminTest(saved);
-      setTests((current) => current.map((item) => (item.id === testId ? {...item, isPremium: mapped.isPremium, packages: mapped.packages} : item)));
+      setTests((current) => current.map((item) => (item.id === testId ? {...item, isPremium: mapped.isPremium, packages: mapped.packages?.length ? mapped.packages : nextPackages} : item)));
     } catch {
       // Keep previous package assignments if backend rejects it.
     }

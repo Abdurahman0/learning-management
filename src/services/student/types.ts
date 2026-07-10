@@ -34,6 +34,31 @@ export class StudentApiError extends Error {
   }
 }
 
+/**
+ * Extracts the machine-readable error code (e.g. "PREMIUM_REQUIRED",
+ * "PERMISSION_DENIED") from a backend error payload, supporting both the
+ * `{error: {code}}` envelope and a top-level `{code}` field.
+ */
+export function getStudentApiErrorCode(error: unknown): string | null {
+  if (!(error instanceof StudentApiError)) {
+    return null;
+  }
+
+  const raw = error.raw;
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const record = raw as Record<string, unknown>;
+  const nested = record.error;
+  const nestedCode =
+    nested && typeof nested === "object" && !Array.isArray(nested)
+      ? (nested as Record<string, unknown>).code
+      : null;
+  const code = typeof nestedCode === "string" ? nestedCode : typeof record.code === "string" ? record.code : null;
+  return code ? code.trim().toUpperCase() : null;
+}
+
 export type StudentReadingPassagePreview = {
   id: string;
   passage_number: string;

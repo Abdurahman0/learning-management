@@ -94,7 +94,7 @@ import {
   adaptMarathonListeningReviewResponse,
 } from "@/src/services/student/marathon-runner-adapters";
 import { studentTestsService } from "@/src/services/student/tests.service";
-import { StudentApiError } from "@/src/services/student/types";
+import { StudentApiError, getStudentApiErrorCode } from "@/src/services/student/types";
 import type { StudentAttemptDetail, StudentAttemptQuestion, StudentAttemptQuestionGroup, StudentAttemptListeningPart, StudentTestRecord } from "@/src/services/student/types";
 import { useAppSessionRole } from "../../_components/session/AppSessionContext";
 import { enqueueGuestPendingAttempt } from "@/lib/guest-attempt-sync";
@@ -1145,6 +1145,7 @@ export default function ListeningTestPage() {
   const [resolvedTestId, setResolvedTestId] = useState<string>(testId);
   const [loadingBackendTest, setLoadingBackendTest] = useState(false);
   const [backendLoadError, setBackendLoadError] = useState<string | null>(null);
+  const [backendLoadErrorKind, setBackendLoadErrorKind] = useState<"premium" | "register" | null>(null);
   const [initialBackendAttemptId, setInitialBackendAttemptId] = useState<string | null>(null);
   const [initialSubmitMetaByNumber, setInitialSubmitMetaByNumber] = useState<Map<number, ListeningSubmitQuestionMeta>>(new Map());
   const [currentUserKey, setCurrentUserKey] = useState<string | null>(isGuest ? "guest" : null);
@@ -1205,6 +1206,7 @@ export default function ListeningTestPage() {
     const loadFromBackend = async () => {
       setLoadingBackendTest(true);
       setBackendLoadError(null);
+      setBackendLoadErrorKind(null);
 
       try {
         if (isMarathonContext) {
@@ -1267,6 +1269,15 @@ export default function ListeningTestPage() {
           throw new Error("Listening test not found in backend.");
         }
 
+        if (!isGuest && !reviewAttemptId && matched.is_accessible === false) {
+          setBackendLoadErrorKind(matched.is_premium ? "premium" : "register");
+          throw new Error(
+            matched.is_premium
+              ? (t.has("premiumRequiredDesc") ? t("premiumRequiredDesc") : "This is a premium test. Upgrade your plan to solve it.")
+              : (t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.")
+          );
+        }
+
         let finalAttempt: StudentAttemptDetail;
         let finalAttemptId: string | null = null;
 
@@ -1318,7 +1329,13 @@ export default function ListeningTestPage() {
           finalAttemptId = toStringSafe(finalAttempt.id).trim() || null;
         } else {
           if (matched.active_for_registered_users) {
+            setBackendLoadErrorKind("register");
             throw new Error(t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.");
+          }
+
+          if (matched.is_premium && matched.is_accessible === false) {
+            setBackendLoadErrorKind("premium");
+            throw new Error(t.has("premiumRequiredDesc") ? t("premiumRequiredDesc") : "This is a premium test. Upgrade your plan to solve it.");
           }
 
           const attemptResponse = await fetch("/api/public/attempts", {
@@ -1335,6 +1352,7 @@ export default function ListeningTestPage() {
           });
 
           if (!attemptResponse.ok) {
+            setBackendLoadErrorKind("register");
             throw new Error(t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.");
           }
 
@@ -1354,11 +1372,17 @@ export default function ListeningTestPage() {
         setInitialSubmitMetaByNumber(nextSubmitMetaByNumber);
       } catch (error) {
         if (!active) return;
-        const message =
-          error instanceof StudentApiError
-            ? error.message
-            : "Failed to load this listening test from backend.";
-        setBackendLoadError(message);
+        const errorCode = getStudentApiErrorCode(error);
+        if (error instanceof StudentApiError && error.status === 403 && errorCode === "PREMIUM_REQUIRED") {
+          setBackendLoadErrorKind("premium");
+          setBackendLoadError(t.has("premiumRequiredDesc") ? t("premiumRequiredDesc") : "This is a premium test. Upgrade your plan to solve it.");
+        } else {
+          const message =
+            error instanceof StudentApiError || error instanceof Error
+              ? error.message
+              : "Failed to load this listening test from backend.";
+          setBackendLoadError(message || "Failed to load this listening test from backend.");
+        }
       } finally {
         if (active) {
           setLoadingBackendTest(false);
@@ -1385,14 +1409,33 @@ export default function ListeningTestPage() {
   }
 
   if (!test) {
+    const lockTitle =
+      backendLoadErrorKind === "premium"
+        ? (t.has("premiumRequiredTitle") ? t("premiumRequiredTitle") : "Premium test")
+        : backendLoadErrorKind === "register"
+          ? (t.has("requiresAccountTitle") ? t("requiresAccountTitle") : "Account required")
+          : t("notFoundTitle");
+    const lockCtaHref = backendLoadErrorKind === "premium" && !isGuest ? `/${locale}/upgrade` : `/${locale}/register`;
+    const lockCtaLabel =
+      backendLoadErrorKind === "premium" && !isGuest
+        ? (t.has("upgradeCta") ? t("upgradeCta") : "Upgrade")
+        : (t.has("signUpCta") ? t("signUpCta") : "Sign up");
+
     return (
       <div className="mx-auto mt-8 max-w-xl px-4">
         <Card className="gap-3 p-6">
-          <h1 className="text-xl font-semibold">{t("notFoundTitle")}</h1>
+          <h1 className="text-xl font-semibold">{lockTitle}</h1>
           <p className="text-sm text-muted-foreground">{backendLoadError || t("notFoundDesc")}</p>
-          <Button asChild className="mt-2 w-fit">
-            <Link href={`/${locale}/listening`}>{t("backToListening")}</Link>
-          </Button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {backendLoadErrorKind ? (
+              <Button asChild className={backendLoadErrorKind === "premium" ? "w-fit bg-amber-500 text-white hover:bg-amber-500/90" : "w-fit"}>
+                <Link href={lockCtaHref}>{lockCtaLabel}</Link>
+              </Button>
+            ) : null}
+            <Button asChild variant={backendLoadErrorKind ? "outline" : "default"} className="w-fit">
+              <Link href={`/${locale}/listening`}>{t("backToListening")}</Link>
+            </Button>
+          </div>
         </Card>
       </div>
     );

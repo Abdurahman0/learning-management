@@ -35,6 +35,7 @@ type ReadingGuestTest = {
   testFormat: "full" | "part" | "both";
   isPremium: boolean;
   isAccessible?: boolean;
+  activeForRegisteredUsers?: boolean;
   lastAccuracyPercent?: number | null;
   durationMinutes: number;
   totalQuestions: number;
@@ -104,12 +105,14 @@ function ReadingCardsList({
   tests,
   layout = "stack",
   allowGroups = true,
-  isUserPremium = false
+  isUserPremium = false,
+  isGuest = false
 }: {
   tests: ReadingGuestTest[];
   layout?: "stack" | "grid";
   allowGroups?: boolean;
   isUserPremium?: boolean;
+  isGuest?: boolean;
 }) {
   const isGrid = layout === "grid";
   const rows = allowGroups
@@ -120,7 +123,7 @@ function ReadingCardsList({
     <div className={isGrid ? "grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-4" : "space-y-3.5"}>
       {rows.map((row) => {
         if (row.type === "test") {
-          return <ReadingTestCard key={row.test.listKey ?? row.test.id} test={row.test} isUserPremium={isUserPremium} />;
+          return <ReadingTestCard key={row.test.listKey ?? row.test.id} test={row.test} isUserPremium={isUserPremium} isGuest={isGuest} />;
         }
 
         return (
@@ -128,6 +131,7 @@ function ReadingCardsList({
             key={`group-${row.id}`}
             group={row}
             isUserPremium={isUserPremium}
+            isGuest={isGuest}
             className={isGrid ? "md:col-span-2 xl:col-span-4" : undefined}
           />
         );
@@ -139,10 +143,12 @@ function ReadingCardsList({
 function ReadingGroupCard({
   group,
   isUserPremium = false,
+  isGuest = false,
   className
 }: {
   group: Extract<ReadingListRow, {type: "group"}>;
   isUserPremium?: boolean;
+  isGuest?: boolean;
   className?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -168,7 +174,7 @@ function ReadingGroupCard({
         {isOpen ? (
           <div className="space-y-3 border-t border-border px-4 py-4">
             {group.tests.map((test) => (
-              <ReadingTestCard key={test.listKey ?? test.id} test={test} isUserPremium={isUserPremium} />
+              <ReadingTestCard key={test.listKey ?? test.id} test={test} isUserPremium={isUserPremium} isGuest={isGuest} />
             ))}
           </div>
         ) : null}
@@ -242,6 +248,7 @@ function mapStudentReadingTest(item: StudentTestRecord): ReadingGuestTest {
     testFormat: explicitFormat === "full" && passages.length === 1 ? "part" : explicitFormat,
     isPremium: item.is_premium,
     isAccessible: item.is_accessible,
+    activeForRegisteredUsers: Boolean(item.active_for_registered_users),
     lastAccuracyPercent:
       typeof item.user_attempt_status?.last_attempt_accuracy_percent === "number"
         ? item.user_attempt_status.last_attempt_accuracy_percent
@@ -332,8 +339,9 @@ export default function ReadingPage() {
             ? await fetchPublicReadingTests()
           : (await studentTestsService.listReadingAllPages({pageSize: 100, ordering: "display_order"})).results;
         if (!active) return;
-        const visible = isGuest ? results.filter((item) => !item.active_for_registered_users) : results;
-        setApiTests(visible.map(mapStudentReadingTestWithOrderFallback));
+        // Locked tests (premium without package, registration-gated for guests)
+        // stay listed — cards render them with the matching lock CTA.
+        setApiTests(results.map(mapStudentReadingTestWithOrderFallback));
       } catch {
         if (!active) return;
         setApiTests([]);
@@ -460,7 +468,7 @@ export default function ReadingPage() {
                 <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{fullTests.length}</span>
               </div>
               {fullTests.length ? (
-                <ReadingCardsList tests={fullTests} isUserPremium={isUserPremium} />
+                <ReadingCardsList tests={fullTests} isUserPremium={isUserPremium} isGuest={isGuest} />
               ) : (
                 <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("reading.noFullTests")}</p>
               )}
@@ -473,7 +481,7 @@ export default function ReadingPage() {
                 <span className="rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">{passageTests.length}</span>
               </div>
               {passageTests.length ? (
-                <ReadingCardsList tests={passageTests} layout="grid" allowGroups={false} isUserPremium={isUserPremium} />
+                <ReadingCardsList tests={passageTests} layout="grid" allowGroups={false} isUserPremium={isUserPremium} isGuest={isGuest} />
               ) : (
                 <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("reading.noPassages")}</p>
               )}

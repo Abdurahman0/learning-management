@@ -33,6 +33,7 @@ type ListeningTestItem = {
   testFormat: "full" | "part" | "both";
   isPremium: boolean;
   isAccessible?: boolean;
+  activeForRegisteredUsers?: boolean;
   lastAccuracyPercent?: number | null;
   difficulty: ListeningDifficulty;
   practiceSource: PracticeSource;
@@ -98,21 +99,21 @@ function buildListeningListRows(tests: ListeningTestItem[]): ListeningListRow[] 
   return rows;
 }
 
-function ListeningCardsList({tests}: {tests: ListeningTestItem[]}) {
+function ListeningCardsList({tests, isGuest = false}: {tests: ListeningTestItem[]; isGuest?: boolean}) {
   return (
     <div className="space-y-3.5">
       {buildListeningListRows(tests).map((row) => {
         if (row.type === "test") {
-          return <ListeningTestCard key={row.test.listKey ?? row.test.id} test={row.test} />;
+          return <ListeningTestCard key={row.test.listKey ?? row.test.id} test={row.test} isGuest={isGuest} />;
         }
 
-        return <ListeningGroupCard key={`group-${row.id}`} group={row} />;
+        return <ListeningGroupCard key={`group-${row.id}`} group={row} isGuest={isGuest} />;
       })}
     </div>
   );
 }
 
-function ListeningGroupCard({group}: {group: Extract<ListeningListRow, {type: "group"}>}) {
+function ListeningGroupCard({group, isGuest = false}: {group: Extract<ListeningListRow, {type: "group"}>; isGuest?: boolean}) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -136,7 +137,7 @@ function ListeningGroupCard({group}: {group: Extract<ListeningListRow, {type: "g
         {isOpen ? (
           <div className="space-y-3 border-t border-border px-4 py-4">
             {group.tests.map((test) => (
-              <ListeningTestCard key={test.listKey ?? test.id} test={test} />
+              <ListeningTestCard key={test.listKey ?? test.id} test={test} isGuest={isGuest} />
             ))}
           </div>
         ) : null}
@@ -230,6 +231,7 @@ function mapStudentListeningTest(item: StudentTestRecord): ListeningTestItem {
     testFormat: resolvedFormat,
     isPremium: item.is_premium,
     isAccessible: item.is_accessible,
+    activeForRegisteredUsers: Boolean(item.active_for_registered_users),
     lastAccuracyPercent:
       typeof item.user_attempt_status?.last_attempt_accuracy_percent === "number"
         ? item.user_attempt_status.last_attempt_accuracy_percent
@@ -316,8 +318,9 @@ export default function ListeningPage() {
           ? await fetchPublicListeningTests()
           : (await studentTestsService.listListeningAllPages({pageSize: 100, ordering: "display_order"})).results;
         if (!active) return;
-        const visible = isGuest ? results.filter((item) => !item.active_for_registered_users) : results;
-        setApiTests(visible.map(mapStudentListeningTestWithOrderFallback));
+        // Locked tests (premium without package, registration-gated for guests)
+        // stay listed — cards render them with the matching lock CTA.
+        setApiTests(results.map(mapStudentListeningTestWithOrderFallback));
       } catch {
         if (!active) return;
         setApiTests([]);
@@ -430,12 +433,12 @@ export default function ListeningPage() {
           <div className="mt-4 space-y-3.5">
             {kind === "full" ? (
               fullTests.length ? (
-                <ListeningCardsList tests={fullTests} />
+                <ListeningCardsList tests={fullTests} isGuest={isGuest} />
               ) : (
                 <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("listening.noFullTests")}</p>
               )
             ) : partTests.length ? (
-              <ListeningCardsList tests={partTests} />
+              <ListeningCardsList tests={partTests} isGuest={isGuest} />
             ) : (
               <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{t("listening.noParts")}</p>
             )}

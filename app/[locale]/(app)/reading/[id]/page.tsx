@@ -67,7 +67,7 @@ import {
   adaptMarathonReadingReviewResponse,
 } from "@/src/services/student/marathon-runner-adapters";
 import { studentTestsService } from "@/src/services/student/tests.service";
-import { StudentApiError } from "@/src/services/student/types";
+import { StudentApiError, getStudentApiErrorCode } from "@/src/services/student/types";
 import type { StudentAttemptDetail, StudentAttemptQuestion, StudentAttemptQuestionGroup, StudentAttemptReadingPassage, StudentTestRecord } from "@/src/services/student/types";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useLeaveConfirm } from "@/lib/use-leave-confirm";
@@ -1458,6 +1458,7 @@ export default function ReadingTestPage() {
   const [backendAttemptId, setBackendAttemptId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(shouldLoadFromBackend);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadErrorKind, setLoadErrorKind] = useState<"premium" | "register" | null>(null);
   const [currentUserKey, setCurrentUserKey] = useState<string | null>(isGuest ? "guest" : null);
 
   useEffect(() => {
@@ -1495,6 +1496,7 @@ export default function ReadingTestPage() {
     const loadBackendTest = async () => {
       setIsLoading(true);
       setLoadError(null);
+      setLoadErrorKind(null);
       try {
         if (isMarathonContext) {
           if (isGuest) {
@@ -1579,7 +1581,16 @@ export default function ReadingTestPage() {
           if (matched.active_for_registered_users) {
             setTest(null);
             setBackendAttemptId(null);
+            setLoadErrorKind("register");
             setLoadError(t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.");
+            return;
+          }
+
+          if (matched.is_premium && matched.is_accessible === false) {
+            setTest(null);
+            setBackendAttemptId(null);
+            setLoadErrorKind("premium");
+            setLoadError(t.has("premiumRequiredDesc") ? t("premiumRequiredDesc") : "This is a premium test. Upgrade your plan to solve it.");
             return;
           }
 
@@ -1598,6 +1609,7 @@ export default function ReadingTestPage() {
           if (!attemptResponse.ok) {
             setTest(null);
             setBackendAttemptId(null);
+            setLoadErrorKind("register");
             setLoadError(t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.");
             return;
           }
@@ -1621,6 +1633,18 @@ export default function ReadingTestPage() {
           setTest(null);
           setBackendAttemptId(null);
           setLoadError(t("notFoundDesc"));
+          return;
+        }
+
+        if (!reviewAttemptId && matched.is_accessible === false) {
+          setTest(null);
+          setBackendAttemptId(null);
+          setLoadErrorKind(matched.is_premium ? "premium" : "register");
+          setLoadError(
+            matched.is_premium
+              ? (t.has("premiumRequiredDesc") ? t("premiumRequiredDesc") : "This is a premium test. Upgrade your plan to solve it.")
+              : (t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.")
+          );
           return;
         }
 
@@ -1694,13 +1718,22 @@ export default function ReadingTestPage() {
         setTest(mappedTest);
       } catch (error) {
         if (!active) return;
-        const message =
-          error instanceof StudentApiError
-            ? error.message
-            : t.has("loadFailed")
-              ? t("loadFailed")
-              : "Failed to load this reading test from backend.";
-        setLoadError(message);
+        const errorCode = getStudentApiErrorCode(error);
+        if (error instanceof StudentApiError && error.status === 403 && errorCode === "PREMIUM_REQUIRED") {
+          setLoadErrorKind("premium");
+          setLoadError(t.has("premiumRequiredDesc") ? t("premiumRequiredDesc") : "This is a premium test. Upgrade your plan to solve it.");
+        } else if (error instanceof StudentApiError && error.status === 403 && isGuest) {
+          setLoadErrorKind("register");
+          setLoadError(t.has("requiresAccountDesc") ? t("requiresAccountDesc") : "This test requires an account.");
+        } else {
+          const message =
+            error instanceof StudentApiError
+              ? error.message
+              : t.has("loadFailed")
+                ? t("loadFailed")
+                : "Failed to load this reading test from backend.";
+          setLoadError(message);
+        }
         setBackendAttemptId(null);
         setTest(null);
       } finally {
@@ -1731,14 +1764,33 @@ export default function ReadingTestPage() {
   }
 
   if (!test) {
+    const lockTitle =
+      loadErrorKind === "premium"
+        ? (t.has("premiumRequiredTitle") ? t("premiumRequiredTitle") : "Premium test")
+        : loadErrorKind === "register"
+          ? (t.has("requiresAccountTitle") ? t("requiresAccountTitle") : "Account required")
+          : t("notFoundTitle");
+    const lockCtaHref = loadErrorKind === "premium" && !isGuest ? `/${locale}/upgrade` : `/${locale}/register`;
+    const lockCtaLabel =
+      loadErrorKind === "premium" && !isGuest
+        ? (t.has("upgradeCta") ? t("upgradeCta") : "Upgrade")
+        : (t.has("signUpCta") ? t("signUpCta") : "Sign up");
+
     return (
       <div className="mx-auto mt-8 max-w-xl px-4">
         <Card className="gap-3 p-6">
-          <h1 className="text-xl font-semibold">{t("notFoundTitle")}</h1>
+          <h1 className="text-xl font-semibold">{lockTitle}</h1>
           <p className="text-sm text-muted-foreground">{loadError ?? t("notFoundDesc")}</p>
-          <Button asChild className="mt-2 w-fit">
-            <Link href={`/${locale}/reading`}>{t("backToReading")}</Link>
-          </Button>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {loadErrorKind ? (
+              <Button asChild className={loadErrorKind === "premium" ? "w-fit bg-amber-500 text-white hover:bg-amber-500/90" : "w-fit"}>
+                <Link href={lockCtaHref}>{lockCtaLabel}</Link>
+              </Button>
+            ) : null}
+            <Button asChild variant={loadErrorKind ? "outline" : "default"} className="w-fit">
+              <Link href={`/${locale}/reading`}>{t("backToReading")}</Link>
+            </Button>
+          </div>
         </Card>
       </div>
     );

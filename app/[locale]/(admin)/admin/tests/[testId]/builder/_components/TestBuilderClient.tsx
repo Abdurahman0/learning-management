@@ -26,6 +26,7 @@ import {
 } from "@/lib/matching-info-instructions";
 import {AdminApiError} from "@/src/services/admin/types";
 import {adminContentBankService} from "@/src/services/admin/contentBank.service";
+import {adminPackagesService, type AdminPackage} from "@/src/services/admin/packages.service";
 import {listeningPartsService} from "@/src/services/admin/listeningParts.service";
 import {practiceTestsService} from "@/src/services/admin/practiceTests.service";
 import {questionGroupsService} from "@/src/services/admin/questionGroups.service";
@@ -1564,6 +1565,10 @@ function mapPracticeTestDetailToBuilder(testId: string, detail: PracticeTestDeta
     difficulty: mapApiDifficultyToBuilder(detail.difficulty_level),
     practiceSource: mapApiPracticeSourceToBuilder((detail as {practice_source?: unknown}).practice_source),
     activeForRegisteredUsers: Boolean((detail as {active_for_registered_users?: unknown}).active_for_registered_users),
+    isPremium: Boolean((detail as {is_premium?: unknown}).is_premium),
+    packages: Array.isArray((detail as {packages?: unknown}).packages)
+      ? ((detail as {packages?: unknown[]}).packages ?? []).map((value) => String(value))
+      : undefined,
     status: detail.is_active ? "published" : "draft",
     structures,
     questionGroupsByStructure
@@ -1591,6 +1596,31 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   const [fullListeningAudioOpen, setFullListeningAudioOpen] = useState(false);
   const [isPersisting, setIsPersisting] = useState(false);
   const [apiNotice, setApiNotice] = useState<SiteToastNotice | null>(null);
+  const [availablePackages, setAvailablePackages] = useState<AdminPackage[]>([]);
+  // Detail GET may omit the current package assignment; only send audience
+  // fields when the admin actually changed them (or the backend returned them).
+  const [audienceDirty, setAudienceDirty] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadPackages = async () => {
+      try {
+        const response = await adminPackagesService.list({pageSize: 100, is_active: true});
+        if (!active) return;
+        setAvailablePackages(response.results);
+      } catch {
+        if (!active) return;
+        setAvailablePackages([]);
+      }
+    };
+
+    void loadPackages();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!apiNotice) {
@@ -2423,6 +2453,28 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     }));
   };
 
+  const handleTestPremiumChange = (isPremium: boolean) => {
+    setAudienceDirty(true);
+    setTest((current) => ({
+      ...current,
+      isPremium,
+      packages: isPremium ? current.packages ?? [] : []
+    }));
+  };
+
+  const handleTestPackageToggle = (packageId: string) => {
+    setAudienceDirty(true);
+    setTest((current) => {
+      const selected = new Set(current.packages ?? []);
+      if (selected.has(packageId)) {
+        selected.delete(packageId);
+      } else {
+        selected.add(packageId);
+      }
+      return {...current, packages: [...selected]};
+    });
+  };
+
   const handleToggleRemoveAudio = (structureId: string, remove: boolean) => {
     setRemoveAudioByStructureId((current) => ({...current, [structureId]: remove}));
     if (remove) {
@@ -2526,19 +2578,38 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
       return;
     }
 
+    const shouldSendAudience = audienceDirty || Array.isArray(test.packages);
+    if (shouldSendAudience && test.isPremium && (test.packages ?? []).length === 0) {
+      setApiNotice({
+        title: t("validation.premiumPackagesRequiredTitle"),
+        description: t("validation.premiumPackagesRequired"),
+        tone: "error"
+      });
+      return;
+    }
+
     const normalizedTitle = test.name.trim() || test.book.trim() || "Practice Test";
     setIsPersisting(true);
     setApiNotice(null);
 
     try {
-      await practiceTestsService.patch(test.id, {
+      const savedTest = await practiceTestsService.patch(test.id, {
         title: normalizedTitle,
         difficulty_level: mapBuilderDifficultyToApi(test.difficulty),
         ...(typeof test.activeForRegisteredUsers === "boolean" ? {active_for_registered_users: test.activeForRegisteredUsers} : {}),
+        ...(shouldSendAudience
+          ? {
+              is_premium: Boolean(test.isPremium),
+              packages: test.isPremium ? test.packages ?? [] : []
+            }
+          : {}),
         ...(test.practiceSource ? {practice_source: mapBuilderPracticeSourceToApi(test.practiceSource)} : {}),
         ...(test.testFormat === "part" ? {total_questions: Math.max(totalAssignedQuestions, 1)} : {}),
         is_active: nextStatus === "published"
       });
+      const savedPackages = Array.isArray((savedTest as {packages?: unknown}).packages)
+        ? ((savedTest as {packages?: unknown[]}).packages ?? []).map((value) => String(value))
+        : null;
 
       const nextGroupsByStructure: Record<string, QuestionGroup[]> = {
         ...test.questionGroupsByStructure
@@ -2709,6 +2780,10 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         name: normalizedTitle,
         book: normalizedTitle,
         status: nextStatus,
+        isPremium: typeof (savedTest as {is_premium?: unknown}).is_premium === "boolean"
+          ? Boolean((savedTest as {is_premium?: unknown}).is_premium)
+          : current.isPremium,
+        packages: savedPackages ?? current.packages,
         structures: current.structures.map((structure) =>
           structure.id in nextAudioLabelByStructureId
             ? {...structure, audioLabel: nextAudioLabelByStructureId[structure.id]}
@@ -2726,7 +2801,9 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         tone: "success"
       });
     } catch (error) {
-      const message = error instanceof AdminApiError ? error.message : "Failed to save changes.";
+      const apiError = error instanceof AdminApiError ? error : null;
+      const packagesError = apiError?.fieldErrors?.packages?.[0] ?? apiError?.fieldErrors?.is_premium?.[0] ?? null;
+      const message = packagesError ?? apiError?.message ?? "Failed to save changes.";
       setApiNotice({
         title: "Could not save changes.",
         description: message,
@@ -2787,6 +2864,13 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             testDifficulty={test.difficulty}
             testPracticeSource={test.practiceSource}
             testRegisteredOnly={Boolean(test.activeForRegisteredUsers)}
+            testIsPremium={Boolean(test.isPremium)}
+            testPackages={test.packages ?? []}
+            availablePackages={availablePackages.map((item) => ({
+              id: item.id,
+              name: item.name,
+              tierDisplay: item.tier_display || item.tier
+            }))}
             module={test.module}
             mode={mode}
             status={test.status}
@@ -2806,6 +2890,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             onTestDifficultyChange={handleTestDifficultyChange}
             onTestPracticeSourceChange={handleTestPracticeSourceChange}
             onTestRegisteredOnlyChange={handleTestRegisteredOnlyChange}
+            onTestPremiumChange={handleTestPremiumChange}
+            onTestPackageToggle={handleTestPackageToggle}
             onModeChange={setMode}
             onSaveDraft={handleSaveDraft}
             onPublish={handlePublish}

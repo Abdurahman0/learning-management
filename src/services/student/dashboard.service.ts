@@ -162,7 +162,13 @@ function normalizeWeakAreas(values: unknown[]): StudentDashboardWeakArea[] {
       const title = titleFromPayload || getQuestionTypeHumanLabel(questionType, "") || "Weak Area";
       const accuracy = normalizeAccuracyLabel(pickString(record, ["accuracy", "score", "value"], "0"));
       return {
-        id: pickString(record, ["id"], questionType ? `weak-area-${questionType.toLowerCase()}-${index + 1}` : `weak-area-${index + 1}`),
+        // The same question_type can now appear once per module, so the
+        // fallback id includes the module to stay unique as a React key.
+        id: pickString(
+          record,
+          ["id"],
+          questionType ? `weak-area-${moduleKey}-${questionType.toLowerCase()}-${index + 1}` : `weak-area-${moduleKey}-${index + 1}`
+        ),
         title,
         module: moduleKey as StudentDashboardWeakArea["module"],
         questionType: questionType || undefined,

@@ -13,12 +13,21 @@ import type {BuilderMode, BuilderStatus, TestDifficulty, TestModule} from "@/dat
 
 type PracticeSource = "custom" | "real" | "cambridge";
 
+type BuilderPackageOption = {
+  id: string;
+  name: string;
+  tierDisplay?: string;
+};
+
 type BuilderTopbarProps = {
   bookName: string;
   testTitle: string;
   testDifficulty: TestDifficulty;
   testPracticeSource?: PracticeSource;
   testRegisteredOnly?: boolean;
+  testIsPremium?: boolean;
+  testPackages?: string[];
+  availablePackages?: BuilderPackageOption[];
   module: TestModule;
   mode: BuilderMode;
   status: BuilderStatus;
@@ -31,6 +40,8 @@ type BuilderTopbarProps = {
   onTestDifficultyChange: (value: TestDifficulty) => void;
   onTestPracticeSourceChange?: (value: PracticeSource) => void;
   onTestRegisteredOnlyChange?: (value: boolean) => void;
+  onTestPremiumChange?: (value: boolean) => void;
+  onTestPackageToggle?: (packageId: string) => void;
   onModeChange: (mode: BuilderMode) => void;
   onSaveDraft: () => void;
   onPublish: () => void;
@@ -42,6 +53,9 @@ export function BuilderTopbar({
   testDifficulty,
   testPracticeSource = "custom",
   testRegisteredOnly = false,
+  testIsPremium = false,
+  testPackages = [],
+  availablePackages = [],
   module,
   mode,
   status,
@@ -54,6 +68,8 @@ export function BuilderTopbar({
   onTestDifficultyChange,
   onTestPracticeSourceChange,
   onTestRegisteredOnlyChange,
+  onTestPremiumChange,
+  onTestPackageToggle,
   onModeChange,
   onSaveDraft,
   onPublish
@@ -150,6 +166,59 @@ export function BuilderTopbar({
                   aria-label={t("topbar.visibilityLabel")}
                 />
               </div>
+            </div>
+
+            <div className="rounded-2xl border border-amber-400/40 bg-amber-500/5 px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold tracking-tight">{t("topbar.premiumLabel")}</p>
+                  <p className="text-xs text-muted-foreground">{t("topbar.premiumHint")}</p>
+                </div>
+                <Switch
+                  checked={testIsPremium}
+                  onCheckedChange={(checked) => onTestPremiumChange?.(Boolean(checked))}
+                  disabled={isPersisting || !onTestPremiumChange}
+                  aria-label={t("topbar.premiumLabel")}
+                />
+              </div>
+
+              {testIsPremium ? (
+                <div className="mt-2.5">
+                  <p className="text-[11px] font-medium tracking-[0.1em] text-muted-foreground uppercase">
+                    {t("topbar.packagesLabel")}
+                  </p>
+                  {availablePackages.length ? (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {availablePackages.map((item) => {
+                        const selected = testPackages.includes(item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => onTestPackageToggle?.(item.id)}
+                            disabled={isPersisting || !onTestPackageToggle}
+                            className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                              selected
+                                ? "border-amber-400/60 bg-amber-500/15 text-amber-600 dark:text-amber-300"
+                                : "border-border/70 bg-card/50 text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {item.name}
+                            {item.tierDisplay ? (
+                              <span className="ml-1 font-normal opacity-70">({item.tierDisplay})</span>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="mt-1.5 text-xs text-muted-foreground">{t("topbar.packagesEmpty")}</p>
+                  )}
+                  {testPackages.length === 0 ? (
+                    <p className="mt-1.5 text-xs font-medium text-red-500">{t("topbar.packagesRequired")}</p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

@@ -83,7 +83,15 @@ type ContentLinkEditorState = {
 };
 
 function getAdminErrorDescription(cause: unknown, fallback: string) {
-  return cause instanceof AdminApiError && cause.message ? cause.message : fallback;
+  if (!(cause instanceof AdminApiError)) {
+    return fallback;
+  }
+
+  // Field-level validation (e.g. premium mismatch on reading_passages /
+  // listening_parts) carries the actionable message; prefer it over the
+  // generic envelope message.
+  const fieldMessage = Object.values(cause.fieldErrors ?? {}).flat().find((message) => typeof message === "string" && message.trim());
+  return fieldMessage ?? (cause.message || fallback);
 }
 
 function normalizeHttpUrl(value: string) {
@@ -559,8 +567,12 @@ export function AdminMarathonDetailPageClient({marathonId}: {marathonId: string}
       setDays((current) => current.map((item) => (item.day_number === updated.day_number ? updated : item)));
       hydrateDayForm(updated);
       setNotice({title: t("notices.daySaved.title"), description: t("notices.daySaved.description"), tone: "success"});
-    } catch {
-      setNotice({title: t("notices.dayFailed.title"), description: t("notices.dayFailed.description"), tone: "error"});
+    } catch (error) {
+      setNotice({
+        title: t("notices.dayFailed.title"),
+        description: getAdminErrorDescription(error, t("notices.dayFailed.description")),
+        tone: "error"
+      });
     } finally {
       setSavingDay(false);
     }

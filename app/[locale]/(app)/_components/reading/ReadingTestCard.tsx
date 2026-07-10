@@ -6,6 +6,7 @@ import {useRouter} from "next/navigation";
 import {useLocale, useTranslations} from "next-intl";
 
 import type {ReadingGuestTest} from "../tests/types";
+import {resolveTestLockReason} from "../tests/lockState";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
@@ -15,6 +16,7 @@ import {DifficultySignal} from "../guest-tests/DifficultySignal";
 type ReadingTestCardProps = {
   test: ReadingGuestTest;
   isUserPremium?: boolean;
+  isGuest?: boolean;
   action?: {
     href: string;
     label: string;
@@ -32,12 +34,17 @@ type ReadingTestCardProps = {
   badgeLabel?: string;
 };
 
-export function ReadingTestCard({test, isUserPremium = false, action, secondaryAction, resourceLink, badgeLabel}: ReadingTestCardProps) {
+export function ReadingTestCard({test, isUserPremium = false, isGuest = false, action, secondaryAction, resourceLink, badgeLabel}: ReadingTestCardProps) {
   const t = useTranslations("guest");
   const locale = useLocale();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const isLocked = typeof test.isAccessible === "boolean" ? !test.isAccessible : test.isPremium && !isUserPremium;
+  const lockReason = resolveTestLockReason({isPremium: test.isPremium, isAccessible: test.isAccessible, isUserPremium});
+  const isLocked = lockReason !== null;
+  const lockHref = lockReason === "premium" && !isGuest ? `/${locale}/upgrade` : `/${locale}/register`;
+  const lockCtaLabel = lockReason === "premium"
+    ? (isGuest ? t("card.signUpToUnlockPremium") : t("card.upgradeToUnlock"))
+    : t("card.signUpToSolve");
   const scopedPassage = test.testFormat === "part" && test.passages.length === 1 ? test.passages[0] : null;
   const practiceHref = scopedPassage?.id
     ? `/${locale}/reading/${test.id}?mode=practice&passageId=${encodeURIComponent(scopedPassage.id)}`
@@ -60,7 +67,9 @@ export function ReadingTestCard({test, isUserPremium = false, action, secondaryA
               className={cn(
                 "h-6 rounded-md px-2.5 text-[11px] font-semibold tracking-wide uppercase",
                 isLocked
-                  ? "bg-muted text-muted-foreground"
+                  ? lockReason === "premium"
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+                    : "bg-muted text-muted-foreground"
                   : test.isPremium
                     ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
                     : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
@@ -69,7 +78,7 @@ export function ReadingTestCard({test, isUserPremium = false, action, secondaryA
               {isLocked ? (
                 <span className="inline-flex items-center gap-1.5">
                   <Lock className="size-3" aria-hidden="true" />
-                  {t("card.premium")}
+                  {lockReason === "premium" ? t("card.premium") : t("card.membersOnly")}
                 </span>
               ) : test.isPremium ? (
                 <span className="inline-flex items-center gap-1.5">
@@ -127,9 +136,18 @@ export function ReadingTestCard({test, isUserPremium = false, action, secondaryA
 
             <div className="mt-3.5">
               {isLocked ? (
-                <Button type="button" disabled className="h-10 w-full rounded-xl border border-border bg-muted text-sm font-semibold text-muted-foreground">
+                <Button
+                  type="button"
+                  onClick={() => router.push(lockHref)}
+                  className={cn(
+                    "h-10 w-full rounded-xl text-sm font-semibold",
+                    lockReason === "premium"
+                      ? "bg-amber-500 text-white hover:bg-amber-500/90"
+                      : "bg-blue-600 text-white hover:bg-blue-600/90"
+                  )}
+                >
                   <Lock className="mr-2 size-4" aria-hidden="true" />
-                  {t("card.locked")}
+                  {lockCtaLabel}
                 </Button>
               ) : action ? (
                 <div className={cn("grid gap-2", secondaryAction && "grid-cols-[1fr_auto]")}>

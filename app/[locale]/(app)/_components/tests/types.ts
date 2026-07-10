@@ -10,6 +10,7 @@ export type ReadingGuestTest = {
   testFormat?: "full" | "part" | "both";
   isPremium: boolean;
   isAccessible?: boolean;
+  activeForRegisteredUsers?: boolean;
   lastAccuracyPercent?: number | null;
   durationMinutes: number;
   totalQuestions: number;
@@ -34,6 +35,7 @@ export type ListeningTestItem = {
   testFormat?: "full" | "part" | "both";
   isPremium: boolean;
   isAccessible?: boolean;
+  activeForRegisteredUsers?: boolean;
   lastAccuracyPercent?: number | null;
   difficulty: ListeningDifficulty;
   practiceSource: PracticeSource;

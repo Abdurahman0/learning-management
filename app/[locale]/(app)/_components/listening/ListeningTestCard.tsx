@@ -9,12 +9,14 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import type {ListeningTestItem} from "../tests/types";
+import {resolveTestLockReason} from "../tests/lockState";
 import {cn} from "@/lib/utils";
 import {DifficultySignal} from "./DifficultySignal";
 
 type ListeningTestCardProps = {
   test: ListeningTestItem;
   isUserPremium?: boolean;
+  isGuest?: boolean;
   action?: {
     href: string;
     label: string;
@@ -32,12 +34,17 @@ type ListeningTestCardProps = {
   badgeLabel?: string;
 };
 
-export function ListeningTestCard({test, isUserPremium = false, action, secondaryAction, resourceLink, badgeLabel}: ListeningTestCardProps) {
+export function ListeningTestCard({test, isUserPremium = false, isGuest = false, action, secondaryAction, resourceLink, badgeLabel}: ListeningTestCardProps) {
   const t = useTranslations("guest");
   const locale = useLocale();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const isLocked = typeof test.isAccessible === "boolean" ? !test.isAccessible : test.isPremium && !isUserPremium;
+  const lockReason = resolveTestLockReason({isPremium: test.isPremium, isAccessible: test.isAccessible, isUserPremium});
+  const isLocked = lockReason !== null;
+  const lockHref = lockReason === "premium" && !isGuest ? `/${locale}/upgrade` : `/${locale}/register`;
+  const lockCtaLabel = lockReason === "premium"
+    ? (isGuest ? t("card.signUpToUnlockPremium") : t("card.upgradeToUnlock"))
+    : t("card.signUpToSolve");
   const scopedSection = test.testFormat === "part" && test.sections.length === 1 ? test.sections[0] : null;
   const practiceHref = scopedSection?.id
     ? `/${locale}/listening/${test.id}?mode=practice&partId=${encodeURIComponent(scopedSection.id)}`
@@ -60,7 +67,9 @@ export function ListeningTestCard({test, isUserPremium = false, action, secondar
               className={cn(
                 "h-6 rounded-md px-2.5 text-[11px] font-semibold tracking-wide uppercase",
                 isLocked
-                  ? "bg-muted text-muted-foreground"
+                  ? lockReason === "premium"
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
+                    : "bg-muted text-muted-foreground"
                   : test.isPremium
                     ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300"
                   : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
@@ -69,7 +78,7 @@ export function ListeningTestCard({test, isUserPremium = false, action, secondar
               {isLocked ? (
                 <span className="inline-flex items-center gap-1.5">
                   <Lock className="size-3" aria-hidden="true" />
-                  {t("card.premium")}
+                  {lockReason === "premium" ? t("card.premium") : t("card.membersOnly")}
                 </span>
               ) : test.isPremium ? (
                 <span className="inline-flex items-center gap-1.5">
@@ -144,11 +153,16 @@ export function ListeningTestCard({test, isUserPremium = false, action, secondar
               {isLocked ? (
                 <Button
                   type="button"
-                  disabled
-                  className="h-10 w-full rounded-xl border border-border bg-muted text-sm font-semibold text-muted-foreground"
+                  onClick={() => router.push(lockHref)}
+                  className={cn(
+                    "h-10 w-full rounded-xl text-sm font-semibold",
+                    lockReason === "premium"
+                      ? "bg-amber-500 text-white hover:bg-amber-500/90"
+                      : "bg-blue-600 text-white hover:bg-blue-600/90"
+                  )}
                 >
                   <Lock className="mr-2 size-4" aria-hidden="true" />
-                  {t("card.locked")}
+                  {lockCtaLabel}
                 </Button>
               ) : action ? (
                 <div className={cn("grid gap-2", secondaryAction && "grid-cols-[1fr_auto]")}>

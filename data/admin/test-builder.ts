@@ -47,6 +47,11 @@ export type AdminBuilderTest = {
   // Test-level metadata stored on PracticeTest.
   practiceSource?: "custom" | "real" | "cambridge";
   activeForRegisteredUsers?: boolean;
+  isPremium?: boolean;
+  // Package ids that unlock this test when premium. `undefined` means the
+  // backend did not return the current assignment (older detail payloads),
+  // so it must not be overwritten unless the admin edits the audience.
+  packages?: string[];
   structures: BuilderStructureItem[];
   questionGroupsByStructure: Record<string, QuestionGroup[]>;
 };
