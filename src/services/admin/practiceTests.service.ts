@@ -1,7 +1,10 @@
 import type {AxiosProgressEvent} from "axios";
 
 import {adminHttpClient, toAdminApiError, toListQuery} from "./httpClient";
+import {listeningPartsService} from "./listeningParts.service";
+import {readingPassagesService} from "./readingPassages.service";
 import type {
+  AdminEntityId,
   AdminListQuery,
   AdminPaginatedResponse,
   PracticeTestCreatePayload,
@@ -170,6 +173,43 @@ export const practiceTestsService = {
 
       throw mapped;
     }
+  },
+
+  /**
+   * The backend rejects changing a test's `is_premium` while attached
+   * passages/parts carry a different premium status ("Update their is_premium
+   * first"), so align every child to the target status before touching the
+   * test itself. No-op for children that already match.
+   */
+  async alignContentPremium(testId: number | string, isPremium: boolean, detail?: PracticeTestDetailRecord) {
+    const resolvedDetail = detail ?? (await practiceTestsService.getById(testId));
+    const target = Boolean(isPremium);
+
+    for (const passage of resolvedDetail.reading_passages ?? []) {
+      if (passage.id != null && Boolean(passage.is_premium) !== target) {
+        await readingPassagesService.patch(passage.id, {is_premium: target});
+      }
+    }
+
+    for (const part of resolvedDetail.listening_parts ?? []) {
+      if (part.id != null && Boolean(part.is_premium) !== target) {
+        await listeningPartsService.patch(part.id, {is_premium: target});
+      }
+    }
+
+    return resolvedDetail;
+  },
+
+  /**
+   * Sets the test's premium status + unlocking packages in the order the
+   * backend requires: children first, then the test.
+   */
+  async setPremium(testId: number | string, options: {isPremium: boolean; packages: AdminEntityId[]}) {
+    await practiceTestsService.alignContentPremium(testId, options.isPremium);
+    return practiceTestsService.patch(testId, {
+      is_premium: Boolean(options.isPremium),
+      packages: options.isPremium ? options.packages : []
+    });
   },
 
   async remove(testId: number | string, options?: {hard?: boolean}) {

@@ -2593,6 +2593,12 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     setApiNotice(null);
 
     try {
+      if (shouldSendAudience) {
+        // Backend rejects the test's is_premium change while attached
+        // passages/parts have a different premium status — align them first.
+        await practiceTestsService.alignContentPremium(test.id, Boolean(test.isPremium));
+      }
+
       const savedTest = await practiceTestsService.patch(test.id, {
         title: normalizedTitle,
         difficulty_level: mapBuilderDifficultyToApi(test.difficulty),
@@ -2633,7 +2639,8 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             title: structure.title,
             passage_text: fullText || " ",
             max_questions: maxQuestions,
-            is_active: true
+            is_active: true,
+            is_premium: Boolean(test.isPremium)
           });
         } else {
           const selectedAudioFile = audioFilesByStructureId[structure.id] ?? null;
@@ -2644,6 +2651,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             transcript_text: fullText || " ",
             max_questions: maxQuestions,
             is_active: true,
+            is_premium: Boolean(test.isPremium),
             ...(selectedAudioFile ? {audio_file: selectedAudioFile} : {}),
             ...(removeCurrentAudio ? {remove_audio: true} : {})
           });

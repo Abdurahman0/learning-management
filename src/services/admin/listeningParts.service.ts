@@ -32,6 +32,7 @@ function appendListeningFormData(formData: FormData, payload: Partial<ListeningP
   if (typeof payload.time_limit_seconds === "number") formData.append("time_limit_seconds", String(payload.time_limit_seconds));
   if (payload.time_limit_seconds === null) formData.append("time_limit_seconds", "");
   if (typeof payload.is_active === "boolean") formData.append("is_active", String(payload.is_active));
+  if (typeof payload.is_premium === "boolean") formData.append("is_premium", String(payload.is_premium));
   if (payload.audio_file instanceof File) formData.append("audio_file", payload.audio_file);
   if (payload.remove_audio) formData.append("remove_audio", "true");
 }

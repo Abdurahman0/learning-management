@@ -648,8 +648,8 @@ export function TestsManagementClient() {
     if (checked && nextPackages.length === 0) return;
 
     try {
-      const saved = await practiceTestsService.patch(testId, {
-        is_premium: checked,
+      const saved = await practiceTestsService.setPremium(testId, {
+        isPremium: checked,
         packages: nextPackages
       });
       const mapped = mapPracticeTestToAdminTest(saved);
@@ -672,8 +672,8 @@ export function TestsManagementClient() {
     const nextPremium = nextPackages.length > 0;
 
     try {
-      const saved = await practiceTestsService.patch(testId, {
-        is_premium: nextPremium,
+      const saved = await practiceTestsService.setPremium(testId, {
+        isPremium: nextPremium,
         packages: nextPackages
       });
       const mapped = mapPracticeTestToAdminTest(saved);
