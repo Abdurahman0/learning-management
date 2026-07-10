@@ -58,12 +58,16 @@ function getPackageBenefits(tier: string) {
   ];
 }
 
-function PackageCard({item}: {item: StudentPackage}) {
+function PackageCard({item, isActive = false}: {item: StudentPackage; isActive?: boolean}) {
   const hasDiscount = item.has_discount && item.discounted_price;
   const benefits = getPackageBenefits(item.tier);
 
   return (
-    <Card className="overflow-hidden border-border/70 bg-card/80 py-0 shadow-sm">
+    <Card
+      className={`overflow-hidden py-0 shadow-sm ${
+        isActive ? "border-amber-500/50 bg-card/80 ring-2 ring-amber-500/30" : "border-border/70 bg-card/80"
+      }`}
+    >
       <CardContent className="flex h-full flex-col p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -72,7 +76,13 @@ function PackageCard({item}: {item: StudentPackage}) {
             </Badge>
             <h2 className="mt-4 text-xl font-bold tracking-tight">{item.name}</h2>
           </div>
-          {hasDiscount ? <Badge className="rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-300">Chegirma</Badge> : null}
+          {isActive ? (
+            <Badge className="rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300">
+              <Crown className="size-3.5" /> Faol paket
+            </Badge>
+          ) : hasDiscount ? (
+            <Badge className="rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-300">Chegirma</Badge>
+          ) : null}
         </div>
 
         <div className="mt-5">
@@ -94,7 +104,12 @@ function PackageCard({item}: {item: StudentPackage}) {
           ))}
         </ul>
 
-        {item.purchase_url ? (
+        {isActive ? (
+          <Button disabled className="mt-6 h-11 w-full rounded-2xl bg-amber-500/15 font-bold text-amber-600 disabled:opacity-100 dark:text-amber-300">
+            <CheckCircle2 className="size-4" />
+            Sizning faol paketingiz
+          </Button>
+        ) : item.purchase_url ? (
           <a href={item.purchase_url} target="_blank" rel="noopener noreferrer" className="mt-6 block">
             <Button className="h-11 w-full rounded-2xl bg-blue-600 font-bold text-white hover:bg-blue-600/90">
               Paketni olish
@@ -202,11 +217,22 @@ export function UpgradePageClient() {
 
       {packages.length ? (
         <div className="grid justify-center gap-5 [grid-template-columns:repeat(auto-fit,minmax(280px,380px))]">
-          {packages.map((item) => (
-            <div key={item.id} className="w-full">
-              <PackageCard item={item} />
-            </div>
-          ))}
+          {packages.map((item) => {
+            // Active plan is decided by the backend subscription: match by package id,
+            // falling back to package name if the id is absent in the response.
+            const activePackageId = String(activeSubscription?.package ?? "").trim();
+            const activePackageName = (activeSubscription?.package_name ?? "").trim().toLowerCase();
+            const isActive =
+              Boolean(activeSubscription)
+              && (activePackageId
+                ? String(item.id).trim() === activePackageId
+                : Boolean(activePackageName) && item.name.trim().toLowerCase() === activePackageName);
+            return (
+              <div key={item.id} className="w-full">
+                <PackageCard item={item} isActive={isActive} />
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="rounded-3xl border border-dashed border-border/70 bg-card/60 px-6 py-12 text-center text-muted-foreground">

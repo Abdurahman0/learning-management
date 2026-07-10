@@ -3,7 +3,7 @@
 import {useEffect, useState} from "react";
 import Link from "next/link";
 import {useRouter} from "next/navigation";
-import {Brain, Map, Sparkles} from "lucide-react";
+import {Brain, Map, Send, Sparkles} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {ContinueCard} from "./ContinueCard";
@@ -408,6 +408,12 @@ export function DashboardClient() {
           </Button>
           <EditOnboardingButton className="h-11" />
           <DashboardFeedbackButton className="h-11" onNotice={setNotice} />
+          <Button asChild variant="outline" className="h-11 rounded-xl border-border/70 bg-background/40 px-4 hover:bg-muted/40">
+            <a href="https://t.me/englishlabsadmin" target="_blank" rel="noopener noreferrer">
+              <Send className="size-4" />
+              {t("contactSupport")}
+            </a>
+          </Button>
           <Button asChild className="h-11 rounded-xl px-5 text-base font-semibold">
             <Link href={`/${locale}/reading`}>{t("startNewTest")}</Link>
           </Button>

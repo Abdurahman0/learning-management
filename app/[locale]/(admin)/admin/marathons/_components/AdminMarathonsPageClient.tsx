@@ -18,6 +18,7 @@ import {Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTi
 import {SiteToast, type SiteToastNotice} from "@/components/ui/site-toast";
 import {Switch} from "@/components/ui/switch";
 import {adminMarathonsService, adminMarathonSeriesService} from "@/src/services/admin/marathons.service";
+import {AdminApiError} from "@/src/services/admin/types";
 import {adminPackagesService, type AdminPackage} from "@/src/services/admin/packages.service";
 import type {AdminMarathonPayload, AdminMarathonRecord, AdminMarathonSeriesPayload, AdminMarathonSeriesRecord} from "@/src/services/admin/types";
 
@@ -218,6 +219,38 @@ export function AdminMarathonsPageClient() {
     }));
   };
 
+  // The backend requires every passage/part assigned to a marathon's days to carry the
+  // same is_premium as the marathon's for_premium_users (it 400s with "reconcile content
+  // first" otherwise). So before flipping the marathon's premium flag, align the assigned
+  // content — validation itself stays on the backend and is never bypassed.
+  const reconcileMarathonContentPremium = async (marathonId: string | number, targetPremium: boolean) => {
+    const days = await adminMarathonsService.listDays(marathonId);
+    const seenPassageIds = new Set<string>();
+    const seenPartIds = new Set<string>();
+
+    for (const day of days.results) {
+      const detail = await adminMarathonsService.getDay(marathonId, day.day_number);
+
+      for (const passage of detail.reading_passages ?? []) {
+        const passageId = String(passage.id);
+        if (seenPassageIds.has(passageId)) continue;
+        seenPassageIds.add(passageId);
+        if (passage.is_premium !== targetPremium) {
+          await adminMarathonsService.patchReadingPassage(passage.id, {is_premium: targetPremium});
+        }
+      }
+
+      for (const part of detail.listening_parts ?? []) {
+        const partId = String(part.id);
+        if (seenPartIds.has(partId)) continue;
+        seenPartIds.add(partId);
+        if (part.is_premium !== targetPremium) {
+          await adminMarathonsService.patchListeningPart(part.id, {is_premium: targetPremium});
+        }
+      }
+    }
+  };
+
   const upsertMarathon = async () => {
     const selectedPackages = Array.isArray(form.packages) ? form.packages.map(String).filter(Boolean) : [];
     if (form.for_premium_users && selectedPackages.length === 0) {
@@ -237,6 +270,12 @@ export function AdminMarathonsPageClient() {
         packages: form.for_premium_users ? selectedPackages : []
       };
 
+      const premiumChanged =
+        editingMarathon && Boolean(editingMarathon.for_premium_users) !== Boolean(form.for_premium_users);
+      if (editingMarathon && premiumChanged) {
+        await reconcileMarathonContentPremium(editingMarathon.id, Boolean(form.for_premium_users));
+      }
+
       const saved = editingMarathon
         ? await adminMarathonsService.patch(editingMarathon.id, payload)
         : await adminMarathonsService.create(payload);
@@ -247,8 +286,13 @@ export function AdminMarathonsPageClient() {
       setSheetOpen(false);
       resetForm();
       setNotice({title: editingMarathon ? t("notices.saved.title") : t("notices.created.title"), description: editingMarathon ? t("notices.saved.description") : t("notices.created.description"), tone: "success"});
-    } catch {
-      setNotice({title: t("notices.saveFailed.title"), description: t("notices.saveFailed.description"), tone: "error"});
+    } catch (error) {
+      const backendMessage = error instanceof AdminApiError && error.message ? error.message : "";
+      setNotice({
+        title: t("notices.saveFailed.title"),
+        description: backendMessage || t("notices.saveFailed.description"),
+        tone: "error"
+      });
     } finally {
       setSaving(false);
     }

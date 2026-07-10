@@ -324,6 +324,7 @@ export type AdminMarathonReadingPassageRecord = {
   max_questions: number;
   time_limit_seconds: number | null;
   is_active: boolean;
+  is_premium?: boolean;
   source?: string | null;
   question_groups_count?: number | null;
   external_link?: AdminMarathonContentLinkRecord | null;
@@ -358,6 +359,7 @@ export type AdminMarathonListeningPartRecord = {
   audio_file_url?: string | null;
   audio_url?: string | null;
   is_active: boolean;
+  is_premium?: boolean;
   source?: string | null;
   question_groups_count?: number | null;
   external_link?: AdminMarathonContentLinkRecord | null;
@@ -448,6 +450,7 @@ export type AdminMarathonReadingPassagePayload = {
   max_questions: number;
   time_limit_seconds?: number | null;
   is_active?: boolean;
+  is_premium?: boolean;
 };
 
 export type AdminMarathonListeningPartPayload = {
@@ -459,6 +462,7 @@ export type AdminMarathonListeningPartPayload = {
   max_questions: number;
   time_limit_seconds?: number | null;
   is_active?: boolean;
+  is_premium?: boolean;
   audio_file?: File | null;
   remove_audio?: boolean;
 };
