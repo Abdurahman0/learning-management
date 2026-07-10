@@ -2,6 +2,9 @@ export type ReadingPassage = {
   id: "p1" | "p2" | "p3";
   title: string;
   text: string;
+  // Real passage number from the backend (e.g. 4 for PASSAGE_4 marathon content);
+  // display falls back to the array position when absent.
+  displayNumber?: number;
 };
 
 export type ReadingEvidenceSpan = {

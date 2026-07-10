@@ -285,13 +285,19 @@ export function adaptListeningBackendReview(review: StudentAttemptReviewResponse
     };
   });
 
-  const reviewSections: ListeningReviewSection[] = rawQuestionsByPart.map(({part, sectionId, sectionQuestions}, index) => ({
+  const reviewSections: ListeningReviewSection[] = rawQuestionsByPart.map(({part, sectionId, sectionQuestions}, index) => {
+    // Marathon content carries the admin-assigned number (e.g. PART_3); label the
+    // section with it instead of its array position, falling back when unlabeled.
+    const assignedNumber = Number(toStringSafe(part.part_number).replace(/\D/g, ""));
+    const displayNumber = Number.isFinite(assignedNumber) && assignedNumber > 0 ? assignedNumber : index + 1;
+    const totalParts = Math.max(1, rawQuestionsByPart.length);
+    return {
     sectionId,
-    label: `Part ${index + 1}`,
-    title: part.title || `Part ${index + 1}`,
+    label: `Part ${displayNumber}`,
+    title: part.title || `Part ${displayNumber}`,
     instructions: part.question_groups[0]?.instructions || "",
-    nowPlayingLabel: `Part ${index + 1} of ${Math.max(1, rawQuestionsByPart.length)}`,
-    audioTitle: part.title || `Part ${index + 1}`,
+    nowPlayingLabel: totalParts > 1 ? `Part ${displayNumber} of ${totalParts}` : `Part ${displayNumber}`,
+    audioTitle: part.title || `Part ${displayNumber}`,
     transcriptText: toStringSafe(part.transcript_text, "").trim(),
     evidenceItems: sectionQuestions.map(({question}) => {
       const evidence = asRecord(question.answer_evidence_json);
@@ -309,7 +315,8 @@ export function adaptListeningBackendReview(review: StudentAttemptReviewResponse
         status: question.is_skipped ? "skipped" : question.is_correct ? "correct" : "incorrect"
       };
     })
-  }));
+    };
+  });
 
   const typeBuckets = new Map<FlattenedListeningQuestion["type"], {correct: number; total: number}>();
   questions.forEach((question) => {

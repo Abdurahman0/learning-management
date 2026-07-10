@@ -1177,11 +1177,17 @@ function mapBackendAttemptToReadingTest(
   attempt: StudentAttemptDetail,
   scopedPassageId?: string
 ): ReadingFullTest {
-  const passages: ReadingFullTest["passages"] = attempt.reading_passages.map((passage, index) => ({
-    id: (`p${index + 1}` as ReadingFullTest["passages"][number]["id"]),
-    title: toStringSafe(passage.title, `Passage ${index + 1}`),
-    text: toStringSafe(passage.passage_text)
-  }));
+  const passages: ReadingFullTest["passages"] = attempt.reading_passages.map((passage, index) => {
+    // Marathon content carries the admin-assigned number (e.g. PASSAGE_4); label the
+    // passage with it instead of its array position, falling back when unlabeled.
+    const assignedNumber = Number(toStringSafe(passage.passage_number).replace(/\D/g, ""));
+    return {
+      id: (`p${index + 1}` as ReadingFullTest["passages"][number]["id"]),
+      title: toStringSafe(passage.title, `Passage ${index + 1}`),
+      text: toStringSafe(passage.passage_text),
+      displayNumber: Number.isFinite(assignedNumber) && assignedNumber > 0 ? assignedNumber : index + 1
+    };
+  });
 
   const passageIdByBackendId = new Map<string, ReadingFullTest["passages"][number]["id"]>();
   attempt.reading_passages.forEach((passage, index) => {
@@ -2595,7 +2601,7 @@ function ReadingTestClient({
 
       return {
         passageId: passage.id,
-        index: index + 1,
+        index: passage.displayNumber ?? index + 1,
         numbers,
         answered,
       };
@@ -3412,7 +3418,7 @@ function ReadingTestClient({
             onClick={() => setMobilePanel("passage")}
             aria-label={t("passageLabel", { index: 1 })}
           >
-            {t("passageLabel", { index: Number(activePassageId.slice(1)) })}
+            {t("passageLabel", { index: activePassage?.displayNumber ?? Number(activePassageId.slice(1)) })}
           </Button>
           <Button
             type="button"
@@ -3440,8 +3446,8 @@ function ReadingTestClient({
               <div className="sticky top-0 z-10 border-b border-border/75 bg-background/92 px-3 pt-1 backdrop-blur supports-backdrop-filter:bg-background/90">
                 <TabsList className="h-11 w-full justify-start overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {test.passages.map((passage, index) => (
-                    <TabsTrigger key={passage.id} value={passage.id} className="h-11 shrink-0 px-4 text-sm" aria-label={`Passage ${index + 1}`}>
-                      {t("passageLabel", { index: index + 1 })}
+                    <TabsTrigger key={passage.id} value={passage.id} className="h-11 shrink-0 px-4 text-sm" aria-label={`Passage ${passage.displayNumber ?? index + 1}`}>
+                      {t("passageLabel", { index: passage.displayNumber ?? index + 1 })}
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -3453,7 +3459,7 @@ function ReadingTestClient({
               className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 lg:px-6 lg:py-6 [scrollbar-color:hsl(var(--border))_transparent]"
             >
               <div className="mx-auto flex max-w-[72ch] min-w-0 flex-col items-stretch justify-start space-y-5 pb-8">
-                <p className="text-xs font-semibold tracking-[0.18em] text-blue-600 uppercase dark:text-blue-400">{activePassageId.toUpperCase()}</p>
+                <p className="text-xs font-semibold tracking-[0.18em] text-blue-600 uppercase dark:text-blue-400">{`P${activePassage?.displayNumber ?? Number(activePassageId.slice(1))}`}</p>
                 <h2 className="wrap-break-word text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                   <HighlightableText
                     text={activePassage?.title ?? ""}

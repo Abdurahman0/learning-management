@@ -132,7 +132,7 @@ function normalizeAttemptReadingPassage(value: Record<string, unknown>): Student
 
   return {
     id: toStringSafe(value.id),
-    passage_number: toStringSafe(value.passage_number, "PASSAGE_1"),
+    passage_number: toStringSafe(value.passage_number, ""),
     title: toStringSafe(value.title, "Reading passage"),
     passage_text: toStringSafe(value.passage_text),
     max_questions: toNumberSafe(value.max_questions),
@@ -148,7 +148,7 @@ function normalizeAttemptListeningPart(value: Record<string, unknown>): StudentA
 
   return {
     id: toStringSafe(value.id),
-    part_number: toStringSafe(value.part_number, "PART_1"),
+    part_number: toStringSafe(value.part_number, ""),
     title: toStringSafe(value.title, "Listening part"),
     transcript_text: toStringSafe(value.transcript_text),
     audio_file_url: toStringSafe(value.audio_file_url) || null,
@@ -382,7 +382,7 @@ export function adaptMarathonReadingReviewResponse(params: {
 
   const passage: StudentAttemptReviewPassage = {
     id: toStringSafe(passageRoot.id),
-    passage_number: toStringSafe(passageRoot.passage_number, "PASSAGE_1"),
+    passage_number: toStringSafe(passageRoot.passage_number, ""),
     title: toStringSafe(passageRoot.title, "Marathon Reading"),
     passage_text: toStringSafe(passageRoot.passage_text),
     max_questions: toNumberSafe(passageRoot.max_questions, params.attempt.total_questions),
@@ -433,7 +433,7 @@ export function adaptMarathonListeningReviewResponse(params: {
 
   const part: StudentAttemptReviewPart = {
     id: toStringSafe(partRoot.id),
-    part_number: toStringSafe(partRoot.part_number, "PART_1"),
+    part_number: toStringSafe(partRoot.part_number, ""),
     title: toStringSafe(partRoot.title, "Marathon Listening"),
     transcript_text: toStringSafe(partRoot.transcript_text),
     audio_file_url: toStringSafe(partRoot.audio_file_url) || null,

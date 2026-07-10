@@ -965,20 +965,25 @@ function mapListeningAttemptToRuntimeTest(test: StudentTestRecord, attempt: Stud
     const allQuestionNumbers = groups.flatMap((group) => group.questions.map((question) => Number(question.question_number)));
     const minQuestion = allQuestionNumbers.length ? Math.min(...allQuestionNumbers) : index * 10 + 1;
     const maxQuestion = allQuestionNumbers.length ? Math.max(...allQuestionNumbers) : minQuestion + 9;
+    // Marathon content carries the admin-assigned number (e.g. PART_3); label the
+    // section with it instead of its array position, falling back when unlabeled.
+    const assignedNumber = Number(toStringSafe(part.part_number).replace(/\D/g, ""));
+    const displayNumber = Number.isFinite(assignedNumber) && assignedNumber > 0 ? assignedNumber : index + 1;
 
     return {
       id: (`s${index + 1}` as ListeningSectionId),
-      title: toStringSafe(part.title).trim() || `Part ${index + 1}`,
+      title: toStringSafe(part.title).trim() || `Part ${displayNumber}`,
       instructions: toStringSafe(groups[0]?.instructions).trim() || "Answer the questions below.",
       questionRangeLabel: `Questions ${minQuestion}-${maxQuestion}`,
       audioMeta: {
-        nowPlayingLabel: `Part ${index + 1} of ${totalParts}`,
+        nowPlayingLabel: totalParts > 1 ? `Part ${displayNumber} of ${totalParts}` : `Part ${displayNumber}`,
         durationSec: estimatedPartDuration,
-        currentTrackTitle: toStringSafe(part.title).trim() || `Listening Part ${index + 1}`,
+        currentTrackTitle: toStringSafe(part.title).trim() || `Listening Part ${displayNumber}`,
         audioUrl: toStringSafe(part.audio_file_url).trim() || null
       },
       transcriptText: toStringSafe(part.transcript_text).trim() || null,
-      blocks
+      blocks,
+      displayNumber
     };
   });
 
@@ -1856,7 +1861,7 @@ function ListeningTestClient({
       }, 0);
       return {
         sectionId: section.id,
-        index: index + 1,
+        index: section.displayNumber ?? index + 1,
         numbers,
         answered,
       };
@@ -1996,7 +2001,7 @@ function ListeningTestClient({
 
     return normalizedSections.map((section, index) => ({
       sectionId: section.id,
-      label: tListeningResult("partLabel", { index: index + 1 }),
+      label: tListeningResult("partLabel", { index: section.displayNumber ?? index + 1 }),
       title: section.title,
       instructions: section.instructions,
       nowPlayingLabel: section.audioMeta.nowPlayingLabel,
@@ -4335,7 +4340,11 @@ function ListeningTestClient({
                   className="h-8 rounded-lg"
                   onClick={() => setReviewMobilePanel("transcript")}
                 >
-                  {tListeningResult("partLabel", { index: Number(resolvedActiveSectionId.slice(1)) })}
+                  {tListeningResult("partLabel", {
+                    index:
+                      normalizedSections.find((section) => section.id === resolvedActiveSectionId)?.displayNumber
+                      ?? Number(resolvedActiveSectionId.slice(1))
+                  })}
                 </Button>
                 <Button
                   type="button"

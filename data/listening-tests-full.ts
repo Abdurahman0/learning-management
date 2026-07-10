@@ -107,6 +107,9 @@ export type ListeningSectionFull = {
   audioMeta: ListeningAudioMeta;
   transcriptText?: string | null;
   blocks: ListeningBlock[];
+  // Real part number from the backend (e.g. 3 for PART_3 marathon content);
+  // display falls back to the array position when absent.
+  displayNumber?: number;
 };
 
 export type ListeningFullTest = {

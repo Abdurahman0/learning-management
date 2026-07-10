@@ -625,10 +625,14 @@ export function adaptReadingBackendReview(review: StudentAttemptReviewResponse):
       });
 
     const paragraphs = passageInfo.paragraphs.length ? passageInfo.paragraphs : [passageInfo.text || "No passage text provided."];
+    // Marathon content carries the admin-assigned number (e.g. PASSAGE_4); label the
+    // passage with it instead of its array position, falling back when unlabeled.
+    const assignedNumber = Number(toStringSafe(passageInfo.source.passage_number).replace(/\D/g, ""));
+    const passageDisplayNumber = Number.isFinite(assignedNumber) && assignedNumber > 0 ? assignedNumber : passageInfo.index + 1;
     return {
       id: passageInfo.passageId,
-      title: toStringSafe(passageInfo.source.title, `Passage ${passageInfo.index + 1}`),
-      label: `Passage ${passageInfo.index + 1}`,
+      title: toStringSafe(passageInfo.source.title, `Passage ${passageDisplayNumber}`),
+      label: `Passage ${passageDisplayNumber}`,
       paragraphs: paragraphs.map((paragraphText, paragraphIndex) => ({
         id: `review-para-${passageInfo.passageId}-${paragraphIndex}`,
         label: String.fromCharCode(65 + paragraphIndex),
