@@ -23,7 +23,7 @@ import {
   type TestModule,
   type TestSort
 } from "@/data/admin-tests";
-import {practiceTestGroupsService, practiceTestsService} from "@/src/services/admin/practiceTests.service";
+import {isPremiumMismatchError, practiceTestGroupsService, practiceTestsService} from "@/src/services/admin/practiceTests.service";
 import {adminPackagesService, type AdminPackage} from "@/src/services/admin/packages.service";
 import type {PracticeTestDetailRecord, PracticeTestGroupRecord, PracticeTestRecord} from "@/src/services/admin/types";
 
@@ -640,6 +640,23 @@ export function TestsManagementClient() {
     }
   };
 
+  // Recommended cascade UX: try the strict request first; when the backend
+  // reports mismatching child content, ask the admin before re-sending with
+  // cascade_premium so child passages/parts are never flipped silently.
+  const setPremiumWithCascadeConfirm = async (testId: string, isPremium: boolean, packages: string[]) => {
+    try {
+      return await practiceTestsService.setPremium(testId, {isPremium, packages});
+    } catch (error) {
+      if (!isPremiumMismatchError(error)) {
+        throw error;
+      }
+      if (!window.confirm(t("premium.cascadeConfirm"))) {
+        return null;
+      }
+      return practiceTestsService.setPremium(testId, {isPremium, packages, cascadePremium: true});
+    }
+  };
+
   const handleToggleTestPremium = async (testId: string, checked: boolean) => {
     const test = tests.find((item) => item.id === testId);
     if (!test) return;
@@ -648,10 +665,8 @@ export function TestsManagementClient() {
     if (checked && nextPackages.length === 0) return;
 
     try {
-      const saved = await practiceTestsService.setPremium(testId, {
-        isPremium: checked,
-        packages: nextPackages
-      });
+      const saved = await setPremiumWithCascadeConfirm(testId, checked, nextPackages);
+      if (!saved) return;
       const mapped = mapPracticeTestToAdminTest(saved);
       setTests((current) => current.map((item) => (item.id === testId ? {...item, isPremium: mapped.isPremium, packages: mapped.packages?.length ? mapped.packages : nextPackages} : item)));
     } catch {
@@ -672,10 +687,8 @@ export function TestsManagementClient() {
     const nextPremium = nextPackages.length > 0;
 
     try {
-      const saved = await practiceTestsService.setPremium(testId, {
-        isPremium: nextPremium,
-        packages: nextPackages
-      });
+      const saved = await setPremiumWithCascadeConfirm(testId, nextPremium, nextPackages);
+      if (!saved) return;
       const mapped = mapPracticeTestToAdminTest(saved);
       setTests((current) => current.map((item) => (item.id === testId ? {...item, isPremium: mapped.isPremium, packages: mapped.packages?.length ? mapped.packages : nextPackages} : item)));
     } catch {

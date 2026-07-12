@@ -178,6 +178,9 @@ export type PracticeTestCreatePayload = {
   is_active: boolean;
   is_premium?: boolean;
   packages?: AdminEntityId[];
+  // Per-request action flag: when true the backend also sets every attached
+  // passage/part to the test's new is_premium in the same transaction.
+  cascade_premium?: boolean;
 };
 
 export type PracticeTestPatchPayload = Partial<PracticeTestCreatePayload>;
@@ -418,6 +421,9 @@ export type AdminMarathonPayload = {
   external_link?: string;
   external_link_title?: string;
   series?: AdminEntityId | null;
+  // Per-request action flag: cascades for_premium_users to every passage/part
+  // assigned to any day of the marathon in the same transaction.
+  cascade_premium?: boolean;
 };
 
 export type AdminMarathonSeriesPayload = {

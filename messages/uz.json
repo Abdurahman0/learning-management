@@ -1279,7 +1279,8 @@
       "premium": "Premium",
       "free": "Bepul",
       "enabled": "Premium yoqilgan",
-      "enable": "Premium qilish"
+      "enable": "Premium qilish",
+      "cascadeConfirm": "Bu testda premium holati boshqacha bo'lgan matn/qismlar bor. Ularni ham moslashtiraylikmi?"
     },
     "filters": {
       "moduleLabel": "Modul",
@@ -1618,6 +1619,7 @@
       "publishQuestionCount": "Hozircha nashr qilib bolmaydi. Jami savollar {required} bolishi va har bir passage/qism aniq toldirilgan bolishi kerak. Hozirgi jami: {current}.",
       "premiumPackagesRequiredTitle": "Paketlar talab qilinadi",
       "premiumPackagesRequired": "Premium test kamida bitta paketga bog'lanishi kerak. Uni ochadigan paketlarni tanlang.",
+      "cascadePremiumConfirm": "Bu testda premium holati boshqacha bo'lgan matn/qismlar bor. Ularni ham moslashtiraylikmi?",
       "syncing": "O'zgarishlar serverga saqlanmoqda...",
       "overlapIssue": "kesishuv bor",
       "outOfRangeIssue": "diapazondan tashqarida"
@@ -5066,6 +5068,7 @@
       "premiumHint": "Only premium students can enroll when this is enabled.",
       "created": "Created"
     },
+    "premiumCascadeConfirm": "Bu marafon kunlariga biriktirilgan barcha matn/qismlarning premium holati ham o'zgaradi (boshqa marafon bilan umumiy kontent u yerda ham o'zgaradi). Davom etaylikmi?",
     "options": {
       "beginner": "Beginner",
       "intermediate": "Intermediate",

@@ -28,7 +28,7 @@ import {AdminApiError} from "@/src/services/admin/types";
 import {adminContentBankService} from "@/src/services/admin/contentBank.service";
 import {adminPackagesService, type AdminPackage} from "@/src/services/admin/packages.service";
 import {listeningPartsService} from "@/src/services/admin/listeningParts.service";
-import {practiceTestsService} from "@/src/services/admin/practiceTests.service";
+import {isPremiumMismatchError, practiceTestsService} from "@/src/services/admin/practiceTests.service";
 import {questionGroupsService} from "@/src/services/admin/questionGroups.service";
 import {questionsService} from "@/src/services/admin/questions.service";
 import {readingPassagesService} from "@/src/services/admin/readingPassages.service";
@@ -1454,7 +1454,10 @@ async function ensureBackendStructuresForTest(testId: string, detail: PracticeTe
         passage_text: " ",
         max_questions: expectedCounts[slot - 1] ?? 13,
         time_limit_seconds: 1200,
-        is_active: true
+        is_active: true,
+        // New children must match the test's premium status or later
+        // is_premium changes on the test are rejected as inconsistent.
+        is_premium: Boolean(detail.is_premium)
       });
     } else {
       await listeningPartsService.create(testId, {
@@ -1464,6 +1467,7 @@ async function ensureBackendStructuresForTest(testId: string, detail: PracticeTe
         max_questions: expectedCounts[slot - 1] ?? 10,
         time_limit_seconds: 600,
         is_active: true,
+        is_premium: Boolean(detail.is_premium),
         audio_file: null
       });
     }
@@ -2593,14 +2597,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
     setApiNotice(null);
 
     try {
-      if (shouldSendAudience) {
-        // Premium transitions are order sensitive: children must be free
-        // before the test's is_premium can change (they are raised back to
-        // premium by the per-structure patches below, after the test patch).
-        await practiceTestsService.prepareTestPremiumChange(test.id, Boolean(test.isPremium));
-      }
-
-      const savedTest = await practiceTestsService.patch(test.id, {
+      const testPatchPayload = {
         title: normalizedTitle,
         difficulty_level: mapBuilderDifficultyToApi(test.difficulty),
         ...(typeof test.activeForRegisteredUsers === "boolean" ? {active_for_registered_users: test.activeForRegisteredUsers} : {}),
@@ -2613,10 +2610,30 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         ...(test.practiceSource ? {practice_source: mapBuilderPracticeSourceToApi(test.practiceSource)} : {}),
         ...(test.testFormat === "part" ? {total_questions: Math.max(totalAssignedQuestions, 1)} : {}),
         is_active: nextStatus === "published"
-      });
+      };
+
+      // Recommended cascade UX: strict request first; when children mismatch
+      // the new premium status, confirm before re-sending with
+      // cascade_premium (which flips every attached passage/part atomically).
+      let savedTest;
+      try {
+        savedTest = await practiceTestsService.patch(test.id, testPatchPayload);
+      } catch (patchError) {
+        if (!shouldSendAudience || !isPremiumMismatchError(patchError)) {
+          throw patchError;
+        }
+        if (!window.confirm(t("validation.cascadePremiumConfirm"))) {
+          throw patchError;
+        }
+        savedTest = await practiceTestsService.patch(test.id, {...testPatchPayload, cascade_premium: true});
+      }
       const savedPackages = Array.isArray((savedTest as {packages?: unknown}).packages)
         ? ((savedTest as {packages?: unknown[]}).packages ?? []).map((value) => String(value))
         : null;
+      const persistedPremium =
+        typeof (savedTest as {is_premium?: unknown}).is_premium === "boolean"
+          ? Boolean((savedTest as {is_premium?: unknown}).is_premium)
+          : Boolean(test.isPremium);
 
       const nextGroupsByStructure: Record<string, QuestionGroup[]> = {
         ...test.questionGroupsByStructure
@@ -2641,7 +2658,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             passage_text: fullText || " ",
             max_questions: maxQuestions,
             is_active: true,
-            is_premium: Boolean(test.isPremium)
+            is_premium: persistedPremium
           });
         } else {
           const selectedAudioFile = audioFilesByStructureId[structure.id] ?? null;
@@ -2652,7 +2669,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
             transcript_text: fullText || " ",
             max_questions: maxQuestions,
             is_active: true,
-            is_premium: Boolean(test.isPremium),
+            is_premium: persistedPremium,
             ...(selectedAudioFile ? {audio_file: selectedAudioFile} : {}),
             ...(removeCurrentAudio ? {remove_audio: true} : {})
           });

@@ -1279,7 +1279,8 @@
       "premium": "Premium",
       "free": "Free",
       "enabled": "Premium on",
-      "enable": "Make premium"
+      "enable": "Make premium",
+      "cascadeConfirm": "This test has passages/parts with a different premium status. Also update them to match?"
     },
     "filters": {
       "moduleLabel": "Module",
@@ -1618,6 +1619,7 @@
       "publishQuestionCount": "Cannot publish yet. Total questions must be {required} and each passage/part must be filled exactly. Current total: {current}.",
       "premiumPackagesRequiredTitle": "Packages required",
       "premiumPackagesRequired": "A premium test must be linked to at least one package. Select the packages that unlock it.",
+      "cascadePremiumConfirm": "This test has passages/parts with a different premium status. Also update them to match?",
       "syncing": "Saving your changes to the server...",
       "overlapIssue": "overlap",
       "outOfRangeIssue": "out of range"
@@ -5067,6 +5069,7 @@
       "premiumHint": "Only premium students can enroll when this is enabled.",
       "created": "Created"
     },
+    "premiumCascadeConfirm": "This also updates every passage/part assigned to this marathon's days to the same premium status (content shared with another marathon changes there too). Continue?",
     "options": {
       "beginner": "Beginner",
       "intermediate": "Intermediate",

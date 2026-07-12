@@ -1,8 +1,7 @@
 import type {AxiosProgressEvent} from "axios";
 
 import {adminHttpClient, toAdminApiError, toListQuery} from "./httpClient";
-import {listeningPartsService} from "./listeningParts.service";
-import {readingPassagesService} from "./readingPassages.service";
+import {AdminApiError} from "./types";
 import type {
   AdminEntityId,
   AdminListQuery,
@@ -13,6 +12,20 @@ import type {
   PracticeTestPatchPayload,
   PracticeTestRecord
 } from "./types";
+
+/**
+ * True when the backend rejected an is_premium change because attached
+ * passages/parts carry a different premium status — the caller may retry the
+ * same request with `cascade_premium: true` (after confirming with the admin).
+ */
+export function isPremiumMismatchError(error: unknown): boolean {
+  if (!(error instanceof AdminApiError) || error.status !== 400) {
+    return false;
+  }
+
+  const messages = [...(error.fieldErrors?.is_premium ?? []), ...(error.fieldErrors?.for_premium_users ?? []), error.message ?? ""];
+  return messages.some((message) => typeof message === "string" && message.toLowerCase().includes("different premium status"));
+}
 
 function normalizeListResponse<T>(data: AdminPaginatedResponse<T> | T[]): AdminPaginatedResponse<T> {
   if (Array.isArray(data)) {
@@ -176,67 +189,22 @@ export const practiceTestsService = {
   },
 
   /**
-   * Patches every attached passage/part whose `is_premium` differs from the
-   * given value. No-op for children that already match.
+   * Sets the test's premium status + unlocking packages. With `cascadePremium`
+   * the backend also flips every attached passage/part to the same status in
+   * one atomic transaction; without it, the request is rejected when children
+   * mismatch (see isPremiumMismatchError) so the UI can confirm the cascade
+   * with the admin first.
    */
-  async alignContentPremium(testId: number | string, isPremium: boolean, detail?: PracticeTestDetailRecord) {
-    const resolvedDetail = detail ?? (await practiceTestsService.getById(testId));
-    const target = Boolean(isPremium);
-
-    for (const passage of resolvedDetail.reading_passages ?? []) {
-      if (passage.id != null && Boolean(passage.is_premium) !== target) {
-        await readingPassagesService.patch(passage.id, {is_premium: target});
-      }
-    }
-
-    for (const part of resolvedDetail.listening_parts ?? []) {
-      if (part.id != null && Boolean(part.is_premium) !== target) {
-        await listeningPartsService.patch(part.id, {is_premium: target});
-      }
-    }
-
-    return resolvedDetail;
-  },
-
-  /**
-   * The backend enforces two rules that make premium transitions order
-   * sensitive: a free test may not contain premium passages/parts, and the
-   * test's own `is_premium` change is rejected while children are
-   * inconsistent. The only sequence valid in both directions is: make all
-   * children free, change the test, then (for premium) raise the children.
-   * This runs the "make children free" step when the status actually changes,
-   * or heals drift when it does not.
-   */
-  async prepareTestPremiumChange(testId: number | string, targetPremium: boolean) {
-    const detail = await practiceTestsService.getById(testId);
-    const current = Boolean(detail.is_premium);
-    const childTarget = Boolean(targetPremium) !== current ? false : current;
-    await practiceTestsService.alignContentPremium(testId, childTarget, detail);
-    return detail;
-  },
-
-  /**
-   * Sets the test's premium status + unlocking packages in the order the
-   * backend requires (children freed, test flipped, children raised).
-   */
-  async setPremium(testId: number | string, options: {isPremium: boolean; packages: AdminEntityId[]}) {
+  async setPremium(
+    testId: number | string,
+    options: {isPremium: boolean; packages: AdminEntityId[]; cascadePremium?: boolean}
+  ) {
     const target = Boolean(options.isPremium);
-    await practiceTestsService.prepareTestPremiumChange(testId, target);
-    const saved = await practiceTestsService.patch(testId, {
+    return practiceTestsService.patch(testId, {
       is_premium: target,
-      packages: target ? options.packages : []
+      packages: target ? options.packages : [],
+      ...(options.cascadePremium ? {cascade_premium: true} : {})
     });
-
-    if (target) {
-      try {
-        await practiceTestsService.alignContentPremium(testId, true);
-      } catch {
-        // The test-level premium gate is already in place; child alignment
-        // failing here must not roll back the successful status change.
-      }
-    }
-
-    return saved;
   },
 
   async remove(testId: number | string, options?: {hard?: boolean}) {
