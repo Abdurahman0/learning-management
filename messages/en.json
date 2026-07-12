@@ -1280,7 +1280,10 @@
       "free": "Free",
       "enabled": "Premium on",
       "enable": "Make premium",
-      "cascadeConfirm": "This test has passages/parts with a different premium status. Also update them to match?"
+      "cascadeConfirm": "This test has passages/parts with a different premium status. Also update them to match?",
+      "cascadeConfirmTitle": "Update attached content?",
+      "cascadeConfirmAction": "Update & continue",
+      "cascadeConfirmCancel": "Cancel"
     },
     "filters": {
       "moduleLabel": "Module",
@@ -1620,6 +1623,9 @@
       "premiumPackagesRequiredTitle": "Packages required",
       "premiumPackagesRequired": "A premium test must be linked to at least one package. Select the packages that unlock it.",
       "cascadePremiumConfirm": "This test has passages/parts with a different premium status. Also update them to match?",
+      "cascadePremiumConfirmTitle": "Update attached content?",
+      "cascadePremiumConfirmAction": "Update & continue",
+      "cascadePremiumConfirmCancel": "Cancel",
       "syncing": "Saving your changes to the server...",
       "overlapIssue": "overlap",
       "outOfRangeIssue": "out of range"
@@ -5070,6 +5076,8 @@
       "created": "Created"
     },
     "premiumCascadeConfirm": "This also updates every passage/part assigned to this marathon's days to the same premium status (content shared with another marathon changes there too). Continue?",
+    "premiumCascadeConfirmTitle": "Update assigned content?",
+    "premiumCascadeConfirmAction": "Update & continue",
     "options": {
       "beginner": "Beginner",
       "intermediate": "Intermediate",

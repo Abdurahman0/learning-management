@@ -11,6 +11,7 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
 import {ConfirmModal} from "@/components/ui/confirm-modal";
+import {useConfirmModal} from "@/components/ui/use-confirm-modal";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
@@ -96,6 +97,7 @@ export function AdminMarathonsPageClient() {
   const [editingSeries, setEditingSeries] = useState<AdminMarathonSeriesRecord | null>(null);
   const [deletingMarathon, setDeletingMarathon] = useState<AdminMarathonRecord | null>(null);
   const [deletingSeries, setDeletingSeries] = useState<AdminMarathonSeriesRecord | null>(null);
+  const cascadeConfirmModal = useConfirmModal();
   const [form, setForm] = useState<AdminMarathonPayload>(EMPTY_FORM);
   const [seriesForm, setSeriesForm] = useState<AdminMarathonSeriesPayload>(EMPTY_SERIES_FORM);
   const activePackages = useMemo(() => packages.filter((item) => item.is_active), [packages]);
@@ -225,6 +227,17 @@ export function AdminMarathonsPageClient() {
       setNotice({title: "Package required", description: "Select at least one package for premium marathon access.", tone: "error"});
       return;
     }
+
+    // Premium change on an existing marathon must cascade to every
+    // passage/part assigned to its days, or the backend rejects the request
+    // as inconsistent. Confirm first — cascaded marathon content shared with
+    // another marathon changes there too.
+    const premiumChanged =
+      editingMarathon && Boolean(editingMarathon.for_premium_users) !== Boolean(form.for_premium_users);
+    if (premiumChanged && !(await cascadeConfirmModal.confirm())) {
+      return;
+    }
+
     setSaving(true);
     try {
       const payload: AdminMarathonPayload = {
@@ -235,27 +248,9 @@ export function AdminMarathonsPageClient() {
         external_link: form.external_link?.trim() ?? "",
         external_link_title: form.external_link_title?.trim() ?? "",
         make_three_days_free: Boolean(form.for_premium_users && form.make_three_days_free),
-        packages: form.for_premium_users ? selectedPackages : []
+        packages: form.for_premium_users ? selectedPackages : [],
+        ...(premiumChanged ? {cascade_premium: true} : {})
       };
-
-      // Premium change on an existing marathon must cascade to every
-      // passage/part assigned to its days, or the backend rejects the request
-      // as inconsistent. Confirm first — cascaded marathon content shared with
-      // another marathon changes there too.
-      const premiumChanged =
-        editingMarathon && Boolean(editingMarathon.for_premium_users) !== Boolean(form.for_premium_users);
-      if (premiumChanged) {
-        const confirmed = window.confirm(
-          t.has("premiumCascadeConfirm")
-            ? t("premiumCascadeConfirm")
-            : "This also updates every passage/part assigned to this marathon's days to the same premium status. Continue?"
-        );
-        if (!confirmed) {
-          setSaving(false);
-          return;
-        }
-        payload.cascade_premium = true;
-      }
 
       const saved = editingMarathon
         ? await adminMarathonsService.patch(editingMarathon.id, payload)
@@ -552,6 +547,15 @@ export function AdminMarathonsPageClient() {
         </SheetContent>
       </Sheet>
 
+      <ConfirmModal
+        open={cascadeConfirmModal.isOpen}
+        title={t.has("premiumCascadeConfirmTitle") ? t("premiumCascadeConfirmTitle") : "Update assigned content?"}
+        description={t.has("premiumCascadeConfirm") ? t("premiumCascadeConfirm") : "This also updates every passage/part assigned to this marathon's days to the same premium status. Continue?"}
+        confirmText={t.has("premiumCascadeConfirmAction") ? t("premiumCascadeConfirmAction") : "Update & continue"}
+        cancelText={t("actions.cancel")}
+        onConfirm={cascadeConfirmModal.handleConfirm}
+        onCancel={cascadeConfirmModal.handleCancel}
+      />
       <ConfirmModal open={Boolean(deletingMarathon)} title={t("delete.title")} description={t("delete.description", {title: deletingMarathon?.title ?? ""})} confirmText={t("actions.delete")} cancelText={t("actions.cancel")} confirmVariant="destructive" onCancel={() => setDeletingMarathon(null)} onConfirm={() => void removeMarathon()} />
       <ConfirmModal open={Boolean(deletingSeries)} title={t("seriesDelete.title")} description={t("seriesDelete.description", {title: deletingSeries?.name ?? ""})} confirmText={t("actions.delete")} cancelText={t("actions.cancel")} confirmVariant="destructive" onCancel={() => setDeletingSeries(null)} onConfirm={() => void removeSeries()} />
       <SiteToast notice={notice} />

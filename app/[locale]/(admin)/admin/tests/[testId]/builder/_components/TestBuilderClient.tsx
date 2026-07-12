@@ -50,8 +50,10 @@ import {PassageEditor} from "./PassageEditor";
 import {QuestionEditorModal} from "./QuestionEditorModal";
 import {QuestionGroupsPanel} from "./QuestionGroupsPanel";
 import {TestStructurePanel} from "./TestStructurePanel";
+import {ConfirmModal} from "@/components/ui/confirm-modal";
 import {LoadingModal} from "@/components/ui/loading-modal";
 import {SiteToast, type SiteToastNotice} from "@/components/ui/site-toast";
+import {useConfirmModal} from "@/components/ui/use-confirm-modal";
 
 
 type TestBuilderClientProps = {
@@ -1604,6 +1606,7 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   // Detail GET may omit the current package assignment; only send audience
   // fields when the admin actually changed them (or the backend returned them).
   const [audienceDirty, setAudienceDirty] = useState(false);
+  const cascadeConfirmModal = useConfirmModal();
 
   useEffect(() => {
     let active = true;
@@ -2622,9 +2625,13 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
         if (!shouldSendAudience || !isPremiumMismatchError(patchError)) {
           throw patchError;
         }
-        if (!window.confirm(t("validation.cascadePremiumConfirm"))) {
+        // Hide the fullscreen saving overlay while the confirm modal is open.
+        setIsPersisting(false);
+        const confirmed = await cascadeConfirmModal.confirm();
+        if (!confirmed) {
           throw patchError;
         }
+        setIsPersisting(true);
         savedTest = await practiceTestsService.patch(test.id, {...testPatchPayload, cascade_premium: true});
       }
       const savedPackages = Array.isArray((savedTest as {packages?: unknown}).packages)
@@ -2880,6 +2887,15 @@ export function TestBuilderClient({testId, initialStructureId, initialMode}: Tes
   return (
     <div className="min-h-screen bg-background text-foreground">
       <SiteToast notice={apiNotice} />
+      <ConfirmModal
+        open={cascadeConfirmModal.isOpen}
+        title={t("validation.cascadePremiumConfirmTitle")}
+        description={t("validation.cascadePremiumConfirm")}
+        confirmText={t("validation.cascadePremiumConfirmAction")}
+        cancelText={t("validation.cascadePremiumConfirmCancel")}
+        onConfirm={cascadeConfirmModal.handleConfirm}
+        onCancel={cascadeConfirmModal.handleCancel}
+      />
       <div className="flex min-h-screen">
         <AdminSidebar />
 

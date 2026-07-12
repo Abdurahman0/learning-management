@@ -7,6 +7,7 @@ import {useRouter} from "next/navigation";
 
 import {Button} from "@/components/ui/button";
 import {ConfirmModal} from "@/components/ui/confirm-modal";
+import {useConfirmModal} from "@/components/ui/use-confirm-modal";
 import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger} from "@/components/ui/dropdown-menu";
 import {Input} from "@/components/ui/input";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select";
@@ -187,6 +188,7 @@ export function TestsManagementClient() {
   const [lastDownloadedTestName, setLastDownloadedTestName] = useState("");
 
   const activePackages = useMemo(() => packages.filter((item) => item.is_active), [packages]);
+  const cascadeConfirmModal = useConfirmModal();
 
   useEffect(() => {
     let active = true;
@@ -650,7 +652,7 @@ export function TestsManagementClient() {
       if (!isPremiumMismatchError(error)) {
         throw error;
       }
-      if (!window.confirm(t("premium.cascadeConfirm"))) {
+      if (!(await cascadeConfirmModal.confirm())) {
         return null;
       }
       return practiceTestsService.setPremium(testId, {isPremium, packages, cascadePremium: true});
@@ -1138,6 +1140,16 @@ export function TestsManagementClient() {
           </main>
         </div>
       </div>
+
+      <ConfirmModal
+        open={cascadeConfirmModal.isOpen}
+        title={t("premium.cascadeConfirmTitle")}
+        description={t("premium.cascadeConfirm")}
+        confirmText={t("premium.cascadeConfirmAction")}
+        cancelText={t("premium.cascadeConfirmCancel")}
+        onConfirm={cascadeConfirmModal.handleConfirm}
+        onCancel={cascadeConfirmModal.handleCancel}
+      />
 
       <ConfirmModal
         open={Boolean(pendingDeleteGroup)}
