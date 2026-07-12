@@ -245,6 +245,16 @@ export function MarathonDetailClient({marathonId}: {marathonId: string}) {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [selectedDayNumber]);
 
+  // Bring the opened day popup into view — for the last days it renders near
+  // (or past) the bottom edge of the viewport.
+  useEffect(() => {
+    if (selectedDayNumber == null || !selectedDay) return;
+    const timer = window.setTimeout(() => {
+      routeSelectionRef.current?.scrollIntoView({behavior: "smooth", block: "nearest"});
+    }, 60);
+    return () => window.clearTimeout(timer);
+  }, [selectedDayNumber, selectedDay]);
+
   const handleEnroll = async () => {
     try {
       setEnrollLoading(true);
@@ -305,6 +315,20 @@ export function MarathonDetailClient({marathonId}: {marathonId: string}) {
     () => Math.max(260, journeyDays.length * JOURNEY_ROW_HEIGHT + 144),
     [journeyDays.length],
   );
+
+  // The day popup opens 132px below its row and can be ~430px tall while the
+  // journey card clips overflow, so for days near the finish line reserve
+  // extra bottom space — otherwise the popup for the last day(s) is cut off
+  // and unclickable.
+  const selectedJourneyIndex = selectedDayNumber == null
+    ? -1
+    : journeyDays.findIndex((day) => day.day_number === selectedDayNumber);
+  const journeyPopupOverflowPx = selectedJourneyIndex >= 0
+    ? Math.max(
+        0,
+        132 + 430 - JOURNEY_ROW_HEIGHT - (journeyDays.length - 1 - selectedJourneyIndex) * JOURNEY_ROW_HEIGHT
+      )
+    : 0;
   const wavePath = useMemo(() => buildWavePath(journeyDays.length), [journeyDays.length]);
   const routeTerminalLabel = useMemo(() => getRouteTerminalLabel(journeyDays.length), [journeyDays.length]);
 
@@ -481,7 +505,7 @@ export function MarathonDetailClient({marathonId}: {marathonId: string}) {
               {/* Mobile vertical line */}
               <div className="pointer-events-none absolute bottom-0 left-1/2 top-0 w-px -translate-x-1/2 bg-gradient-to-b from-teal-400/25 via-teal-300/12 to-transparent dark:from-teal-500/20 dark:via-teal-500/10 lg:hidden" />
 
-              <div className="relative pb-4">
+              <div className="relative" style={{paddingBottom: `${16 + journeyPopupOverflowPx}px`}}>
                 {quotePositions.map(({quote, afterIndex}, qi) => (
                   <div
                     key={qi}
